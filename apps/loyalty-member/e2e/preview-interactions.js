@@ -51,10 +51,12 @@ async(page)=>{
   await page.emulateMedia({reducedMotion:'reduce'});
   await go('/');await page.getByRole('button',{name:'Your balances',exact:true}).click();await popup.waitFor();
   check(await popup.evaluate(n=>getComputedStyle(n).transform)==='none','Reduce Motion removes popup travel and scaling');
-  await page.setViewportSize({width:768,height:1024});await page.waitForTimeout(100);
+  await page.setViewportSize({width:768,height:1024});
+  await page.waitForFunction(()=>{const b=document.querySelector('[data-testid="action-popup"]')?.getBoundingClientRect();return b && b.width<=480 && Math.abs(b.x+b.width/2-innerWidth/2)<3;});
   const tablet=await popup.boundingBox();
   check(tablet.width<=480 && Math.abs(tablet.x+tablet.width/2-384)<3,'tablet popup is centred and width-limited');
-  await page.setViewportSize({width:320,height:480});await page.waitForTimeout(100);
+  await page.setViewportSize({width:320,height:480});
+  await page.waitForFunction(()=>{const b=document.querySelector('[data-testid="action-popup"]')?.getBoundingClientRect();return b && b.x>=16 && b.y>=0 && b.right<=innerWidth && b.bottom<=innerHeight;});
   const narrow=await popup.boundingBox();
   check(narrow.x>=16 && narrow.y>=0 && narrow.x+narrow.width<=320 && narrow.y+narrow.height<=480,'compact-height popup stays in bounds');
   await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:393,height:852});

@@ -1,42 +1,15 @@
-import { useEffect } from 'react'
-import { Redirect, router } from 'expo-router'
+import { Redirect } from 'expo-router'
 import { Tabs } from 'expo-router/js-tabs'
 import { useSession } from '../../lib/session'
-import { usePrefs } from '../../lib/prefs'
-import { useT } from '../../lib/i18n'
-import { refreshMemberFacts, useBoot } from '../../lib/queries'
-import { connectPush, usePushTaps } from '../../lib/push'
+import { useBoot } from '../../lib/queries'
 import { C } from '../../lib/theme'
 import { TabBar } from '../../components/TabBar'
-import { loyaltyFeatures } from '../../lib/loyalty'
-import { useQuery } from '@tanstack/react-query'
-import { api } from '../../lib/api'
 import { LoyaltyFeedbackBridge } from '../../components/Feedback'
 
 /** The five places of the app; signed out, the sign-in instead. Signed in, this phone receives the venue's messages. */
 export default function TabsLayout() {
   const token = useSession(s => s.token)
   const boot = useBoot()
-  const { t } = useT()
-  const loaded = usePrefs(s => s.loaded)
-  const alerts = usePrefs(s => s.alerts)
-  const events = useQuery({ queryKey: ['events'], queryFn: api.events, enabled: !!token && !!boot.data?.member, staleTime: 10_000 })
-
-  useEffect(() => {
-    if (!token || !loaded) return
-    let current = true
-    void connectPush({ on: alerts, channelName: t('push.channel'), authToken: token }).then(state => {
-      if (current) usePrefs.getState().setAlertsState(state)
-    })
-    return () => { current = false }
-  }, [token, loaded, alerts])
-
-  usePushTaps(
-    path => router.navigate(path),
-    // A message from the venue usually means something changed (points, a reward, a booking): read it all again.
-    () => { void refreshMemberFacts() },
-  )
-
   if (!token) return <Redirect href="/sign-in" />
 
   const unread = boot.data?.counts.unread_notifications ?? 0
@@ -48,9 +21,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="rewards" />
       <Tabs.Screen name="card" />
-      <Tabs.Protected guard={!boot.data || loyaltyFeatures(boot.data).events || events.isPending || events.isError || !!events.data?.attended.length} redirectTo="/">
-        <Tabs.Screen name="events" />
-      </Tabs.Protected>
+      {/* capabilities.events means an eligible event is coming up, so an empty calendar must not remove its tab. */}
+      <Tabs.Screen name="events" />
       <Tabs.Screen name="more" />
     </Tabs></>
   )

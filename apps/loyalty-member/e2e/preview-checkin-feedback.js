@@ -11,9 +11,8 @@ async(page)=>{
   await page.waitForTimeout(10500);await control({event:{checked_in:true}});
   await page.evaluate(()=>window.dispatchEvent(new Event('visibilitychange')));
   await page.getByTestId('member-feedback').getByText('Check-in recorded',{exact:true}).waitFor();checks.push('staff-confirmed check-in is acknowledged');
-  await page.waitForTimeout(200);
-  const pulse=page.getByTestId('award-pulse');
-  check(await pulse.count() && Number(await pulse.evaluate(n=>getComputedStyle(n).opacity))>0,'confirmed check-in gives the member card a brief pulse');
+  await page.waitForFunction(()=>{const pulse=document.querySelector('[data-testid="award-pulse"]');return pulse && Number(getComputedStyle(pulse).opacity)>0;});
+  checks.push('confirmed check-in gives the member card a brief pulse');
   await page.getByTestId('member-feedback').waitFor({state:'detached'});
   await page.waitForTimeout(10500);await control({stamps:card(4)});
   await page.evaluate(()=>window.dispatchEvent(new Event('visibilitychange')));

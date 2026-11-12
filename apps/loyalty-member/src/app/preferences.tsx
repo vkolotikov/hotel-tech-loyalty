@@ -38,7 +38,7 @@ export default function Preferences() {
     <Surface style={{ gap: 16 }}>
       <Setting title={t('more.lock')} hint={t('more.lockLine')}><Toggle value={lock} disabled={lockBusy} onChange={on => { void toggleLock(on) }} label={t('more.lock')} /></Setting>
       {lockProblem && <Notice tone="warning" text={t('more.lockMissing')} />}
-      <Setting title={t('more.alerts')} hint={t('more.alertsLine', { venue: boot.data?.venue.name ?? '' })}><Toggle value={alerts && alertsState !== 'blocked' && alertsState !== 'unavailable'} disabled={alertsState === 'unavailable'} onChange={on => { void usePrefs.getState().setAlerts(on) }} label={t('more.alerts')} /></Setting>
+      <Setting title={t('more.alerts')} hint={t('more.alertsLine', { venue: boot.data?.venue.name ?? '' })}><Toggle value={alerts} onChange={on => { void usePrefs.getState().setAlerts(on) }} label={t('more.alerts')} /></Setting>
       {alertsState === 'blocked' && <Notice tone="warning" text={t('more.alertsBlocked')} action={t('more.alertsSettings')} onAction={() => { void Linking.openSettings() }} />}
       {alertsState === 'unavailable' && <Text style={[fonts.small, { color: C.text3 }]}>{t('more.alertsUnavailable')}</Text>}
     </Surface>

@@ -1,13 +1,15 @@
-HexaTech Loyalty 2.1.0: the new members design, with icon-only navigation, contextual popups and confirmed loyalty feedback.
+HexaTech Loyalty 2.1.0: calendar visibility, device lock and notification safeguards for the new members design.
 
 Please check:
 - Sign in with a member account; existing sessions remain supported.
-- Home, Rewards, the central Card, Events and More: check icons and touch targets on iPhone and iPad.
+- Home, Rewards, the central Card, Events and More: check icons and touch targets on iPhone and iPad. Events must remain in the dock even without upcoming events or attendance history.
 - Card QR, membership dates, assigned benefits and programme/access details. Open balances for points, stamps and credit where configured.
 - Redeem once after confirming the cost; the returned code should appear in the same popup. Open/save/cancel a private PDF/image voucher from Offers and Inbox.
 - Register directly from Home or Events, confirm cancellation and view attended history. Check full/refused states and points-off memberships.
 - Have staff add points, confirm a check-in or add a stamp using isolated data. The app should refresh and acknowledge the confirmed change once, without replaying old awards.
-- Profile/birthday edits, Preferences, message switches, language, device lock, password and guarded account deletion.
+- Profile/birthday edits, Preferences, message switches, language, password and guarded account deletion. Check input labels with VoiceOver.
+- Enable device lock, restart, and verify authentication is required. Open a popup, leave for over two minutes, return and cancel authentication: private screens/popups must stay hidden until unlocked.
+- Switch device notifications off during connection/reconnection. Try offline then return online; the preference must remain actionable. Return from system notification settings and check the connection again.
 - Popup Close/outside tap/Back and long-sheet drag dismissal; keyboard layout, larger text, screen reader and Reduce Motion. Pending writes must not submit twice or dismiss early.
 - Wallet and push only where the venue/provider and physical device support them.
 

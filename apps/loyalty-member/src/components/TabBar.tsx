@@ -27,7 +27,7 @@ export function TabBar({ state, navigateToTab, insets }: BottomTabBarProps & { u
         const tab = TABS[name]
         const focused = state.routes[state.index]?.key === route.key
         const label = tab.member ? t(tab.member) : tp(tab.portal ?? '')
-        return <Pressable key={name} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: focused }} onPress={() => { if (!focused) { feel.tap(); navigateToTab(route.key) } }} style={styles.slot}>
+        return <Pressable key={name} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: focused }} aria-selected={focused} onPress={() => { if (!focused) { feel.tap(); navigateToTab(route.key) } }} style={styles.slot}>
           <View style={[styles.puck, name === 'card' && { backgroundColor: focused ? C.gold : C.surface3 }]}>
             <MemberIcon name={tab.icon} size={26} color={name === 'card' && focused ? C.onGold : focused ? C.gold : C.text} />
           </View>

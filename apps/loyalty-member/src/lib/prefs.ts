@@ -7,7 +7,7 @@ import type { AlertsState } from './alerts'
 const PREFS = 'hexatech_loyalty_prefs'
 
 interface Prefs {
-  /** Lock the app with Face ID, a fingerprint or the phone's passcode after two minutes away. */
+  /** Lock a restored session at launch and after two minutes away with device authentication. */
   lock: boolean
   /** Notifications on this phone (on unless switched off here). */
   alerts: boolean

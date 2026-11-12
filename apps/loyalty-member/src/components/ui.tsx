@@ -153,6 +153,8 @@ export function Field({ label, hint, problem, style, ...input }: TextInputProps 
       <View style={styles.field}>
       <Text style={[fonts.label, { color: C.text2 }]}>{label}</Text>
       <TextInput
+        accessibilityLabel={label}
+        accessibilityHint={problem || hint}
         placeholderTextColor={C.text3}
         selectionColor={C.gold}
         {...input}
@@ -272,7 +274,7 @@ export function Segments<T extends string>({ value, items, onChange }: { value: 
         {items.map(item => {
           const on = item.id === value
           return (
-            <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={[styles.segment, on && { backgroundColor: C.gold }]}>
+            <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: on }} aria-selected={on} onPress={() => { feel.tap(); onChange(item.id) }} style={[styles.segment, on && { backgroundColor: C.gold }]}>
               <Text style={[fonts.smallStrong, { color: on ? C.onGold : C.text2 }]} numberOfLines={1}>{item.label}</Text>
               {item.count !== undefined && item.count > 0 && (
                 <View style={[styles.segmentCount, { backgroundColor: on ? 'rgba(0,0,0,0.18)' : C.goldWash }]}>

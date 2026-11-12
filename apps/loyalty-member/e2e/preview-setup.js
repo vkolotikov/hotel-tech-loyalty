@@ -7,7 +7,7 @@ async (page) => {
       localStorage.setItem('auth_token', 'fixture-member-session');
       localStorage.setItem('auth_user', JSON.stringify({ id: 1, name: 'Alex Morgan', email: 'alex@example.test', user_type: 'member' }));
     }
-    localStorage.setItem('hexatech_loyalty_prefs', JSON.stringify({ language: query.get('lang') || 'en', alerts: false, lock: false }));
+    localStorage.setItem('hexatech_loyalty_prefs', JSON.stringify({ language: query.get('lang') || 'en', alerts: false, lock: query.get('lock') === '1' }));
   });
   const boot = {
     venue: { name: 'Aurora Members Club', logo_url: null, industry: 'other', currency: 'EUR', timezone: 'Europe/Riga', contact: { email:'team@example.test', phone:null }, accent:{ dark_hex:'#8fb3ff', dark_ink:'#0b1220', dark_deep:'#4a6fd0' }, display_face:'playfair' },

@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { AppState, Platform, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Platform, StyleSheet, View } from 'react-native'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import * as LocalAuthentication from 'expo-local-authentication'
 import { useFonts } from 'expo-font'
 import { CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold } from '@expo-google-fonts/cormorant-garamond'
 import { PlayfairDisplay_500Medium_Italic, PlayfairDisplay_600SemiBold } from '@expo-google-fonts/playfair-display'
@@ -15,20 +14,16 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } f
 import { QueryClientProvider } from '@tanstack/react-query'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
 import { queryClient, restoreLook } from '../lib/queries'
 import { useSession } from '../lib/session'
 import { usePrefs } from '../lib/prefs'
-import { useT } from '../lib/i18n'
-import { C, CONTENT_MAX_WIDTH, fonts, useLook } from '../lib/theme'
-import { Backdrop, GoldButton } from '../components/ui'
+import { C, CONTENT_MAX_WIDTH, useLook } from '../lib/theme'
 import { UpdateGate } from '../components/UpdateGate'
 import { FeedbackHost } from '../components/Feedback'
+import { AppLock } from '../components/AppLock'
+import { MemberConnections } from '../components/MemberConnections'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
-
-/** How long the app may be away before the lock (when switched on) asks again. */
-const LOCK_AFTER_MS = 2 * 60_000
 
 export default function RootLayout() {
   // Every venue's heading face is bundled (the portal's six), so a venue's look never waits for a download.
@@ -66,6 +61,8 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="light" />
+          <AppLock>
+          {token && <MemberConnections authToken={token} />}
           <View key={`look-${lookVersion}`} style={styles.column}>
             <Stack
               screenOptions={{
@@ -93,7 +90,7 @@ export default function RootLayout() {
             </Stack>
           </View>
           <FeedbackHost />
-          <LockGate />
+          </AppLock>
           <UpdateGate />
         </QueryClientProvider>
       </SafeAreaProvider>
@@ -101,59 +98,6 @@ export default function RootLayout() {
   )
 }
 
-/**
- * The lock, when the member switched it on: after two minutes away, Face ID, a fingerprint or the phone's passcode
- * before the app shows anything again.
- */
-function LockGate() {
-  const lockOn = usePrefs(s => s.lock)
-  const signedIn = useSession(s => !!s.token)
-  const [locked, setLocked] = useState(false)
-  const awaySince = useRef<number | null>(null)
-  const { t } = useT()
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', next => {
-      if (next === 'background' || next === 'inactive') {
-        awaySince.current ??= Date.now()
-      } else if (next === 'active') {
-        const since = awaySince.current
-        awaySince.current = null
-        if (lockOn && signedIn && since !== null && Date.now() - since >= LOCK_AFTER_MS) setLocked(true)
-      }
-    })
-    return () => subscription.remove()
-  }, [lockOn, signedIn])
-
-  const unlock = async () => {
-    try {
-      const result = await LocalAuthentication.authenticateAsync({ promptMessage: t('lock.prompt') })
-      if (result.success) setLocked(false)
-    } catch {
-      // The phone refused; the lock stays.
-    }
-  }
-
-  useEffect(() => {
-    if (locked) void unlock()
-  }, [locked])
-
-  if (!locked) return null
-  return (
-    <View style={StyleSheet.absoluteFill}>
-      <Backdrop style={styles.lock}>
-        <View style={[styles.lockMark, { backgroundColor: C.goldWash, borderColor: C.goldEdge }]}>
-          <Ionicons name="lock-closed" size={30} color={C.gold} />
-        </View>
-        <Text style={[fonts.title, { color: C.text, textAlign: 'center' }]}>{t('lock.title')}</Text>
-        <GoldButton title={t('lock.unlock')} icon="finger-print" onPress={() => { void unlock() }} style={{ alignSelf: 'stretch' }} />
-      </Backdrop>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
   column: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
-  lock: { alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 },
-  lockMark: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
 })

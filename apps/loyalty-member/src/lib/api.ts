@@ -144,7 +144,7 @@ export const api = {
   referral: (): Promise<{ enabled?: boolean; reward_on?: 'signup' | 'first_visit'; referral_code: string | null; referral_link: string | null; total_referrals: number; rewarded_referrals: number }> => read('/v1/member/referral'),
 
   /** This phone's push token for the member (one per member, as the server keeps it). */
-  savePushToken: (token: string): Promise<unknown> => send('POST', '/v1/auth/push-token', { expo_push_token: token }),
+  savePushToken: (token: string, authToken: string): Promise<unknown> => send('POST', '/v1/auth/push-token', { expo_push_token: token }, undefined, authToken),
   /** Before signing out, with the session's own token: the member's push token is cleared when it is this phone's. */
   forgetPushToken: (token: string, authToken: string): Promise<unknown> => send('DELETE', '/v1/auth/push-token', { expo_push_token: token }, undefined, authToken),
 
