@@ -1,0 +1,22 @@
+{
+  "title": "Email history",
+  "refresh": "Refresh from Zoho",
+  "loading": "Loading…",
+  "error": "Email history is temporarily unavailable.",
+  "retry": "Try again",
+  "read_only": "Read-only · Zoho Mail",
+  "disconnected": "Reconnect Zoho in Contacts to refresh history.",
+  "empty": "No emails fetched yet. Refresh to look for matching messages.",
+  "no_subject": "No subject",
+  "unknown_date": "Date unavailable",
+  "pages": "Email pages",
+  "previous": "Previous page",
+  "next": "Next page",
+  "count_one": "{{count}} email",
+  "count_other": "{{count}} emails",
+  "older": "Fetch older emails",
+  "mail_setup_required": "Email history is prepared. The server connection still needs activation.",
+  "mail_email_required": "Add a valid email address to this CRM contact first.",
+  "crm_contact_review_required": "Sync this contact to Contacts and review its CRM match and email address before opening history.",
+  "count": "{{count}}"
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AdminCrmEmailHistory as CrmEmailHistory } from '../components/AdminCrmEmailHistory';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -135,6 +136,7 @@ export function GuestDetail() {
 
   return (
     <div className="p-6 space-y-6">
+      <CrmEmailHistory key={g.id} resource="guests" id={g.id} />
       {/* Back button */}
       <button onClick={() => navigate('/guests')} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
         <ArrowLeft size={18} /> {t('guest_detail.back', 'Back to Guests')}

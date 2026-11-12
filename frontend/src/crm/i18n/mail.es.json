@@ -1,0 +1,22 @@
+{
+  "title": "Historial de correo",
+  "refresh": "Actualizar desde Zoho",
+  "loading": "Cargando…",
+  "error": "El historial de correo no está disponible temporalmente.",
+  "retry": "Volver a intentar",
+  "read_only": "Solo lectura · Zoho Mail",
+  "disconnected": "Vuelva a conectar Zoho en Contacts para actualizar el historial.",
+  "empty": "Todavía no se han obtenido correos. Actualice para buscar mensajes coincidentes.",
+  "no_subject": "Sin asunto",
+  "unknown_date": "Fecha no disponible",
+  "pages": "Páginas de correo",
+  "previous": "Página anterior",
+  "next": "Página siguiente",
+  "count_one": "{{count}} correo",
+  "count_other": "{{count}} correos",
+  "older": "Obtener correos anteriores",
+  "mail_setup_required": "El historial está preparado. Falta activar la conexión entre servidores.",
+  "mail_email_required": "Añada primero una dirección de correo válida a este contacto del CRM.",
+  "crm_contact_review_required": "Sincronice este contacto con Contacts y revise la vinculación del CRM y su dirección de correo antes de abrir el historial.",
+  "count": "{{count}}"
+}
