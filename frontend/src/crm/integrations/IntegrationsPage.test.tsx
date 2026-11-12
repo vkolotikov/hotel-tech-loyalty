@@ -74,7 +74,7 @@ describe('IntegrationsPage', () => {
     expect(html).toContain('/api/v1/integrations/leads')
     expect(html).toContain('Authorization: Bearer YOUR_API_TOKEN')
     expect(html).toContain('Harbour · default')
-    expect(html).toContain('"brand_id": 3,')
+    expect(html).toContain('&quot;brand_id&quot;: 3,')
   })
 
   it('shows staff only the sender, read only, with how the next email reads', () => {

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CrmContext } from '../CrmProvider'
 import type { Bootstrap, BotGap } from '../lib/types'
 import { AssistantPage } from './AssistantPage'
-import { BEHAVIOUR_KEY, GAPS_KEY, KNOWLEDGE_KEY, POPUPS_KEY } from './queries'
+import { BEHAVIOUR_KEY, GAPS_KEY, KNOWLEDGE_KEY, MODEL_KEY, POPUPS_KEY } from './queries'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -61,34 +61,62 @@ describe('AssistantPage', () => {
     expect(html).toContain('aria-labelledby="assistant-section-behaviour"')
   })
 
-  it('groups the behaviour in titled cards, says whether it answers, and shows no save bar before a change', () => {
+  it('splits the behaviour into parts in the address, says whether it answers, and shows no save bar before a change', () => {
     const html = render('/crm/assistant', {}, qc => qc.setQueryData(BEHAVIOUR_KEY, behaviour))
-    for (const title of ['On the website', 'Who it is', 'How it talks', 'What it may promise', 'When to hand over', 'More options']) expect(html).toContain(title)
+    for (const title of ['Basics', 'Who it is', 'How it talks', 'Rules', 'Hand over', 'AI model', 'More']) expect(html).toContain(title)
+    expect(html).toContain('aria-labelledby="assistant-behaviour-basics"')
     expect(html).toContain('value="Ava"')
-    expect(html).toContain('value="Never promise a price"')
     expect(html).toContain('Answering visitors')
     expect(html).toContain('Try the assistant')
+    expect(html).toContain('Next: Who it is')
     expect(html).not.toContain('Unsaved changes')
-    expect(html).toContain('aria-expanded="false"')
+    const rules = render('/crm/assistant?part=rules', {}, qc => qc.setQueryData(BEHAVIOUR_KEY, behaviour))
+    expect(rules).toContain('value="Never promise a price"')
+    expect(rules).toContain('What it may promise')
   })
 
-  it('opens the section ?tab= names: the knowledge, with a toolbar, its answers, categories and documents', () => {
-    const html = render('/crm/assistant?tab=knowledge', {}, qc => {
+  it('offers the AI model choice, marks what the plan lacks and says when the saved model cannot answer', () => {
+    const html = render('/crm/assistant?part=model', {}, qc => {
+      qc.setQueryData(BEHAVIOUR_KEY, behaviour)
+      qc.setQueryData(MODEL_KEY, { provider: 'openai', model_name: 'gpt-5.5', temperature: 0.7, max_tokens: 1024, allowed_models: ['gpt-5.6-luna'] })
+    })
+    expect(html).toContain('Provider')
+    expect(html).toContain('GPT-5.6 Luna')
+    expect(html).toMatch(/<option value="gpt-5.6-terra" disabled="">[^<]*not in your plan/)
+    // The saved model stays chosen (it is the current one), and the page says it cannot answer with it.
+    expect(html).toMatch(/<option value="gpt-5.5" selected="">/)
+    expect(html).toContain('Your plan does not include gpt-5.5')
+    expect(html).toContain('Fine-tuning')
+    expect(html).toContain('aria-label="Check that the model answers"')
+    const open = render('/crm/assistant?part=model', {}, qc => {
+      qc.setQueryData(BEHAVIOUR_KEY, behaviour)
+      qc.setQueryData(MODEL_KEY, { provider: 'anthropic', model_name: 'claude-haiku-5-5', allowed_models: null })
+    })
+    expect(open).not.toContain('not in your plan')
+    expect(open).not.toContain('Your plan does not include')
+  })
+
+  it('opens the section ?tab= names: the knowledge in three parts, its answers with a toolbar, its categories and documents', () => {
+    const seed = (qc: QueryClient) => {
       qc.setQueryData([...KNOWLEDGE_KEY, 'items'], [{ id: 1, question: 'Is there parking?', answer: 'Yes, 20 € a night.', category_id: 2, category: { id: 2, name: 'Getting here' }, keywords: ['car'], priority: 0, use_count: 3, is_active: true }])
       qc.setQueryData([...KNOWLEDGE_KEY, 'categories'], [{ id: 2, name: 'Getting here', description: null, priority: 0, sort_order: 0, is_active: true, items_count: 1 }])
       qc.setQueryData([...KNOWLEDGE_KEY, 'documents'], [])
-    })
+    }
+    const html = render('/crm/assistant?tab=knowledge', {}, seed)
+    for (const part of ['Answers', 'Categories', 'Documents']) expect(html).toContain(part)
     expect(html).toContain('Is there parking?')
     expect(html).toContain('Used 3 times')
     expect(html).toContain('Draft from a text')
     expect(html).toContain('Search questions and answers')
     expect(html).toContain('All categories')
-    expect(html).toContain('Show the answers in Getting here')
-    expect(html).toContain('1 answers')
-    expect(html).toContain('PDF, Word (.docx) or text (.txt), up to 10 MB.')
-    expect(html).toContain('accept=".pdf,.docx,.txt"')
-    expect(html).not.toContain('.doc,')
     expect(html).toContain('aria-selected="true"')
+    const categories = render('/crm/assistant?tab=knowledge&part=categories', {}, seed)
+    expect(categories).toContain('Show the answers in Getting here')
+    expect(categories).toContain('1 answers')
+    const documents = render('/crm/assistant?tab=knowledge&part=documents', {}, seed)
+    expect(documents).toContain('PDF, Word (.docx) or text (.txt), up to 10 MB.')
+    expect(documents).toContain('accept=".pdf,.docx,.txt"')
+    expect(documents).not.toContain('.doc,')
   })
 
   it('lists an answer to fix with its question and lets a manager teach it', () => {

@@ -101,7 +101,7 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
   ]
 
   return (
-    <li className={`group flex items-center gap-2 py-1.5 pl-2 pr-2 transition-colors hover:bg-a-surface-2/50 sm:gap-3 sm:pl-3 ${state === 'overdue' ? 'border-l-2 border-a-danger' : 'border-l-2 border-transparent'}`}>
+    <li className={`group flex items-center gap-2 py-1.5 pl-2 pr-2 transition-colors hover:bg-a-surface-2/50 sm:gap-3 sm:pl-3 border-l-2 ${state === 'overdue' ? 'border-l-a-danger' : 'border-l-transparent'}`}>
       {done ? (
         <button type="button" onClick={() => reopen.mutate()} disabled={reopen.isPending}
           aria-label={t('crm.tasks.reopen_named', 'Open again: {{title}}', { title: task.title })} title={t('crm.tasks.reopen', 'Open again')}

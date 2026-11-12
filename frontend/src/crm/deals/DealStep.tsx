@@ -1,30 +1,12 @@
-import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, Check, ChevronDown } from 'lucide-react'
-import { send } from '../lib/api'
-import { errorText } from '../lib/errors'
 import { ActionMenu, type MenuItem } from '../ui/Menu'
 import { Pill } from '../ui/Pill'
 import { TONE_CHIP } from '../ui/tones'
-import { useToast } from '../ui/Toast'
-import { useLeadChanged } from '../leads/leadData'
 import { FULFILMENT, fulfilmentProgress, isFulfilment, nextFulfilment, type DealRow } from './dealLogic'
 import { fulfilmentLabel, fulfilmentTone, paymentLabel, paymentTone } from './dealWords'
+import type { Step } from './useStep'
 
-/** Change a deal's fulfilment step (`PATCH deals/{id}/stage`). */
-export function useStep() {
-  const { t } = useTranslation()
-  const toast = useToast()
-  const changed = useLeadChanged()
-  const stage = useMutation({
-    mutationFn: ({ id, next }: { id: number; next: string }) => send('patch', `deals/${id}/stage`, { stage: next }),
-    onSuccess: (_r, { next }) => { changed(); toast(t('crm.deals.deal_moved', 'Now: {{step}}', { step: fulfilmentLabel(t, next) })) },
-    onError: e => toast(errorText(t, e), 'danger'),
-  })
-  return { set: (id: number, next: string) => stage.mutate({ id, next }), busy: (id: number) => stage.isPending && stage.variables?.id === id }
-}
-
-export type Step = ReturnType<typeof useStep>
 
 /**
  * A deal's step in one compact control (round 5, owner 2026-11-12: "takes much less room"): its step as a pill that

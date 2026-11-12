@@ -241,7 +241,7 @@ function IntakeGuide({ token }: { token: string | null }) {
             {t('crm.integrations.guide.token', 'Token in the examples')}
             <InfoTip text={t('crm.integrations.guide.token_tip', 'Only put into the text you copy: it is not saved or sent anywhere.')} />
           </span>
-          <TextInput value={pasted} onChange={e => setPasted(e.target.value)} className="font-a-mono"
+          <TextInput value={pasted} onChange={e => setPasted(e.target.value)}
             placeholder={token ? t('crm.integrations.guide.token_fresh', 'Your new token is in the examples') : 'YOUR_API_TOKEN'} />
         </label>
 

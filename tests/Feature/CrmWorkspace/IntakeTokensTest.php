@@ -103,7 +103,7 @@ class IntakeTokensTest extends TestCase
         $this->assertStringNotContainsString(explode('|', $plain)[1], $list->getContent());
 
         // The audit names the token, never the token itself.
-        $audit = DB::table('audit_logs')->where('action', 'api_token.created')->get();
+        $audit = DB::table('audit_logs')->where('organization_id', $this->org->id)->where('action', 'api_token.created')->get();
         $this->assertCount(1, $audit);
         $this->assertStringNotContainsString(explode('|', $plain)[1], json_encode($audit));
 
@@ -113,7 +113,7 @@ class IntakeTokensTest extends TestCase
         $this->asManager()->deleteJson($this->crmApi('intake-tokens/' . $made->json('id')))->assertOk();
         $this->assertSame([], $this->asManager()->getJson($this->crmApi('intake-tokens'))->json('data'));
         $this->assertNull(PersonalAccessToken::query()->find((int) $made->json('id')));
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'api_token.revoked')->count());
+        $this->assertSame(1, DB::table('audit_logs')->where('organization_id', $this->org->id)->where('action', 'api_token.revoked')->count());
 
         $this->bearer($plain)->postJson(self::INTAKE, $this->lead())->assertStatus(401);
     }

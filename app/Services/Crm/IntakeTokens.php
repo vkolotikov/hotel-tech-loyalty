@@ -50,8 +50,8 @@ final class IntakeTokens
     }
 
     /**
-     * A new lead-intake token for the caller: the row and, once, the plain token. Null with a reason when the label is
-     * taken by one of the caller's integration tokens or the caller holds LIMIT of them.
+     * A new lead-intake token for the caller: the row and, once, the plain token; `refused` (`label_taken`,
+     * `too_many_tokens`) when the label is taken by one of the caller's integration tokens or the caller holds LIMIT.
      *
      * @return array{row: array{id: int, label: string, last_used_at: ?string, created_at: ?string}, token: string}|array{refused: string}
      */

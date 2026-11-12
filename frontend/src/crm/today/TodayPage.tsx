@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity, AlarmClock, ArrowRight, BarChart3, CalendarClock, Check, CheckSquare, Coins, Inbox, ListPlus, Loader2, MessageCircle,
+  Activity, AlarmClock, ArrowRight, BarChart3, CalendarClock, CalendarPlus, Check, CheckSquare, Coins, Inbox, Loader2, MessageCircle,
   PartyPopper, Rocket, Sun, UserPlus, UserX,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -23,7 +23,7 @@ import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { sectionAfter } from '../ui/SectionNav'
-import { StatRow, StatTile } from '../ui/StatTile'
+import { StatTile } from '../ui/StatTile'
 import { useToast } from '../ui/Toast'
 import { TONE_CHIP, type Tone } from '../ui/tones'
 import { nextStepWord, TASK_ICONS } from '../tasks/taskWords'
@@ -65,7 +65,7 @@ export function TodayPage() {
       line={t('crm.today.line', 'What needs you now, from the website chat and your pipeline.')}
       actions={(
         <>
-          <IconButton icon={ListPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
+          <IconButton icon={CalendarPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
           <Button onClick={() => records.create('lead')} className="min-h-10 rounded-full"><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Button>
         </>
       )}>
@@ -100,32 +100,30 @@ function TodayBody({ data, lang, zone, currency }: { data: Today; lang: string; 
   const figures = figuresOf(data)
 
   return (
-    <div className="space-y-4">
-      {figures.length > 0 && (
-        <StatRow label={t('crm.today.figures', 'The day at a glance')} count={figures.length}>
-          {figures.map((key, i) => {
-            const last = i === figures.length - 1 && figures.length % 2 === 1
-            const tile = key === 'open_chats'
-              ? <StatTile icon={Inbox} tone="progress" label={t('crm.today.open_chats', 'Open chats')} value={count(data.chats.open, lang)}
-                  hint={data.chats.unassigned > 0 ? t('crm.today.with_nobody', '{{count}} with nobody', { count: data.chats.unassigned }) : undefined} to="/crm/inbox" />
-              : key === 'new_leads'
-                ? <StatTile icon={UserPlus} tone="accent" label={t('crm.today.new_leads', 'New leads')} value={count(data.leads.new, lang)} hint={t('crm.today.last_24h_short', '24 h')} to="/crm/leads" />
-                : <StatTile icon={Coins} tone="success" label={t('crm.today.pipeline', 'Open pipeline')} value={money(data.pipeline.open_value, currency, lang)}
-                    hint={t('crm.today.open_short', '{{count}} open', { count: data.pipeline.open_count })} to="/crm/pipeline" />
-            return <div key={key} className={last ? 'col-span-2 md:col-span-1' : undefined}>{tile}</div>
-          })}
-        </StatRow>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="min-w-0 space-y-4 lg:col-span-2">
-          <NeedsNow data={data} lang={lang} zone={zone} currency={currency} />
-          <TeamActivity lang={lang} />
-        </div>
-        <div className="min-w-0 space-y-4">
-          <NewLeads data={data} lang={lang} currency={currency} />
-          <Week data={data} lang={lang} />
-        </div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="min-w-0 space-y-4 lg:col-span-2">
+        <NeedsNow data={data} lang={lang} zone={zone} currency={currency} />
+        <TeamActivity lang={lang} />
+      </div>
+      <div className="min-w-0 space-y-4">
+        {/* The figures that are not nought, beside the work rather than above it (a phone shows the work first). */}
+        {figures.length > 0 && (
+          <div role="group" aria-label={t('crm.today.figures', 'The day at a glance')} className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1">
+            {figures.map((key, i) => {
+              const last = i === figures.length - 1 && figures.length % 2 === 1
+              const tile = key === 'open_chats'
+                ? <StatTile icon={Inbox} tone="progress" label={t('crm.today.open_chats', 'Open chats')} value={count(data.chats.open, lang)}
+                    hint={data.chats.unassigned > 0 ? t('crm.today.with_nobody', '{{count}} with nobody', { count: data.chats.unassigned }) : undefined} to="/crm/inbox" />
+                : key === 'new_leads'
+                  ? <StatTile icon={UserPlus} tone="accent" label={t('crm.today.new_leads', 'New leads')} value={count(data.leads.new, lang)} hint={t('crm.today.last_24h_short', '24 h')} to="/crm/leads" />
+                  : <StatTile icon={Coins} tone="success" label={t('crm.today.pipeline', 'Open pipeline')} value={money(data.pipeline.open_value, currency, lang)}
+                      hint={t('crm.today.open_short', '{{count}} open', { count: data.pipeline.open_count })} to="/crm/pipeline" />
+              return <div key={key} className={last ? 'col-span-2 lg:col-span-1' : undefined}>{tile}</div>
+            })}
+          </div>
+        )}
+        <NewLeads data={data} lang={lang} currency={currency} />
+        <Week data={data} lang={lang} />
       </div>
     </div>
   )
@@ -435,21 +433,21 @@ function NewLeads({ data, lang, currency }: { data: Today; lang: string; currenc
 function Week({ data, lang }: { data: Today; lang: string }) {
   const { t } = useTranslation()
   const aiShare = percent(data.week.ai_resolved, data.week.conversations)
-  const cell = 'min-w-0 rounded-xl px-2.5 py-2'
+  const cell = 'flex min-w-0 flex-col justify-between rounded-xl px-2.5 py-2'
   return (
     <Card title={t('crm.today.week_title', 'The website chat this week')} icon={MessageCircle} tone="ai"
       action={<IconButton icon={BarChart3} size="sm" label={t('crm.today.week_more', 'Insights')} to="/crm/insights?days=7" />}>
       <dl className="grid grid-cols-3 gap-2">
         <div className={`${cell} bg-a-surface-2`}>
-          <dt className="truncate text-xs text-a-text-2" title={t('crm.today.week_chats', 'Conversations')}>{t('crm.today.week_chats', 'Conversations')}</dt>
+          <dt className="text-xs leading-tight text-a-text-2" title={t('crm.today.week_chats', 'Conversations')}>{t('crm.today.week_chats', 'Conversations')}</dt>
           <dd className="font-a-display text-xl leading-tight text-a-text">{count(data.week.conversations, lang)}</dd>
         </div>
         <div className={`${cell} crm-ai-soft`}>
-          <dt className="truncate text-xs" title={t('crm.today.week_hint', 'Chats the assistant closed with nobody from your team stepping in.')}>{t('crm.today.week_ai', 'Closed by the AI')}</dt>
+          <dt className="text-xs leading-tight" title={t('crm.today.week_hint', 'Chats the assistant closed with nobody from your team stepping in.')}>{t('crm.today.week_ai', 'Closed by the AI')}</dt>
           <dd className="font-a-display text-xl leading-tight">{aiShare === null ? '—' : `${aiShare} %`}</dd>
         </div>
         <div className={`${cell} bg-a-surface-2`}>
-          <dt className="truncate text-xs text-a-text-2" title={t('crm.today.week_leads', 'Leads from chat')}>{t('crm.today.week_leads', 'Leads from chat')}</dt>
+          <dt className="text-xs leading-tight text-a-text-2" title={t('crm.today.week_leads', 'Leads from chat')}>{t('crm.today.week_leads', 'Leads from chat')}</dt>
           <dd className="font-a-display text-xl leading-tight text-a-text">{count(data.week.leads_from_chat, lang)}</dd>
         </div>
       </dl>

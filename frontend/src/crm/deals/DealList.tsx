@@ -11,7 +11,8 @@ import { ContactLinks } from '../leads/parts'
 import { dueInLabel, dueInTone } from '../leads/leadWords'
 import { rowOpens } from '../leads/recordLogic'
 import { dealItem, stillOwed, type DealColumn, type DealRow } from './dealLogic'
-import { DealStep, PayPill, useStep, type Step } from './DealStep'
+import { DealStep, PayPill } from './DealStep'
+import { useStep, type Step } from './useStep'
 import { nextStepWord } from '../tasks/taskWords'
 
 /**

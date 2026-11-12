@@ -247,7 +247,7 @@ function AccountRow({ account, config, busy, onCheck, onVerify, onResubscribe, o
           <p className="min-w-0 truncate text-sm font-medium text-a-text">{name}</p>
           <Pill tone={accountTone(account.status)}>{statusWord(t, account.status)}</Pill>
         </div>
-        <p className="truncate text-xs text-a-text-2">
+        <p className="break-words text-xs text-a-text-2">
           {t('crm.integrations.messenger.last_message', 'Last message')}{' '}
           <Ago iso={account.last_webhook_at} never={t('crm.integrations.messenger.never', 'never')} />
           {' · '}ID {account.external_id}
@@ -255,11 +255,11 @@ function AccountRow({ account, config, busy, onCheck, onVerify, onResubscribe, o
         {account.last_error && (
           <p className="mt-1 flex min-w-0 items-start gap-1.5 text-xs text-a-danger" title={account.last_error}>
             <AlertCircle size={13} aria-hidden className="mt-0.5 shrink-0" />
-            <span className="min-w-0 truncate">{t('crm.integrations.messenger.problem', 'Something needs attention: run Check.')}</span>
+            <span className="min-w-0">{t('crm.integrations.messenger.problem', 'Something needs attention: run Check.')}</span>
           </p>
         )}
       </div>
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:ml-auto sm:w-auto">
         {reconnectable && (
           <Button size="sm" onClick={onReconnect} loading={busy}><RefreshCw size={14} aria-hidden />{t('crm.integrations.messenger.reconnect', 'Reconnect')}</Button>
         )}

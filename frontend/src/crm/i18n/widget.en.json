@@ -46,7 +46,9 @@
     "person_line": "Ways to reach your team from the chat.",
     "privacy_line": "Before a chat, after it, and in your inbox.",
     "hours_card_line": "When your team answers, and what the chat says the rest of the time.",
-    "same_weekdays": "Use Monday's hours for Tuesday to Friday"
+    "same_weekdays": "Use Monday's hours for Tuesday to Friday",
+    "parts": "Parts of the behaviour",
+    "same_weekdays_short": "Monday to all weekdays"
   },
   "discard": "Discard",
   "fix_first": "Fix the marked fields to save.",
@@ -97,7 +99,8 @@
     "builders": "Website builder",
     "rotate_confirm_title": "Replace the widget key?",
     "rotate_confirm_warn": "The chat disappears from your website at once.",
-    "rotate_confirm_line": "The code on your website stops working as soon as the key is replaced. The chat shows again once you paste the new code there. Do this only if the key was misused."
+    "rotate_confirm_line": "The code on your website stops working as soon as the key is replaced. The chat shows again once you paste the new code there. Do this only if the key was misused.",
+    "code_short": "Paste once, just before </body>."
   },
   "line": "The chat on your website: how it looks, how it greets visitors, and how to put it on your site.",
   "look": {
@@ -166,7 +169,9 @@
     "box_title": "The message box",
     "box_line": "More options: the text inside it and the hint under it.",
     "suggestions_line": "Buttons a visitor taps instead of typing.",
-    "avatar_line": "The assistant's picture, and the line under the chat."
+    "avatar_line": "The assistant's picture, and the line under the chat.",
+    "avatar_short": "Square PNG or JPG, 2 MB at most",
+    "parts": "Parts of the look"
   },
   "preview": {
     "branding": "Powered by your business",
@@ -224,5 +229,18 @@
   "state_on": "Shown on your website",
   "state_off": "Switched off",
   "get_code": "Get the code",
-  "unsaved_line": "your website shows them after saving"
+  "unsaved_line": "your website shows them after saving",
+  "part": {
+    "contact": "Contact details",
+    "hours": "Opening hours",
+    "launcher": "Launcher",
+    "person": "Talk to a person",
+    "picture": "Picture",
+    "privacy": "Consent and ratings",
+    "questions": "Questions",
+    "site": "On the website",
+    "style": "Style",
+    "words": "Words"
+  },
+  "read_only_short": "Read only: a manager makes changes here."
 }

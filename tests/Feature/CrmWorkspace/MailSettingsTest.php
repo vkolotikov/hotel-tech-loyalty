@@ -58,18 +58,18 @@ class MailSettingsTest extends TestCase
 
         $this->asOwner()->putJson($this->crmApi('mail-settings'), ['from_name' => "Harbour\r\nBcc: x@y.z", 'reply_to' => null])->assertStatus(422)->assertJsonValidationErrors('from_name');
         $this->asOwner()->putJson($this->crmApi('mail-settings'), ['from_name' => 'Harbour', 'reply_to' => 'not an address'])->assertStatus(422)->assertJsonValidationErrors('reply_to');
-        $this->assertSame(0, DB::table('hotel_settings')->whereIn('key', ['mail_from_name', 'mail_reply_to'])->count());
+        $this->assertSame(0, DB::table('hotel_settings')->where('organization_id', $this->org->id)->whereIn('key', ['mail_from_name', 'mail_reply_to'])->count());
 
         $saved = $this->asOwner()->putJson($this->crmApi('mail-settings'), ['from_name' => 'Harbour Clinic Riga', 'reply_to' => 'Hello@Harbour.test'])->assertOk();
         $this->assertSame(['Harbour Clinic Riga', 'hello@harbour.test', true], [$saved->json('from_name'), $saved->json('reply_to'), $saved->json('can_change')]);
         $this->assertSame(['from_name' => 'Harbour Clinic Riga', 'from_address' => 'noreply@platform.test', 'reply_to' => 'hello@harbour.test'], $saved->json('identity'));
         $rows = DB::table('hotel_settings')->where('organization_id', $this->org->id)->whereIn('key', ['mail_from_name', 'mail_reply_to'])->orderBy('key')->get(['key', 'value', 'group']);
         $this->assertSame([['mail_from_name', 'Harbour Clinic Riga', 'integrations'], ['mail_reply_to', 'hello@harbour.test', 'integrations']], $rows->map(fn ($r) => [$r->key, $r->value, $r->group])->all());
-        $this->assertSame(2, DB::table('audit_logs')->where('action', 'setting_updated')->count());
+        $this->assertSame(2, DB::table('audit_logs')->where('organization_id', $this->org->id)->where('action', 'setting_updated')->count());
 
         // Saving the same values writes and audits nothing; an empty one clears it, so the default applies again.
         $this->asOwner()->putJson($this->crmApi('mail-settings'), ['from_name' => 'Harbour Clinic Riga', 'reply_to' => 'hello@harbour.test'])->assertOk();
-        $this->assertSame(2, DB::table('audit_logs')->where('action', 'setting_updated')->count());
+        $this->assertSame(2, DB::table('audit_logs')->where('organization_id', $this->org->id)->where('action', 'setting_updated')->count());
         $cleared = $this->asOwner()->putJson($this->crmApi('mail-settings'), ['from_name' => '', 'reply_to' => 'hello@harbour.test'])->assertOk();
         $this->assertSame([null, 'Harbour Clinic'], [$cleared->json('from_name'), $cleared->json('identity.from_name')]);
     }

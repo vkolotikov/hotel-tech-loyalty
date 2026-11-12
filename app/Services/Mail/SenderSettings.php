@@ -5,6 +5,7 @@ namespace App\Services\Mail;
 use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use App\Models\Organization;
+use App\Models\Staff;
 use App\Models\User;
 use App\Services\MailIdentityService;
 use App\Support\SettingRegistry;
@@ -52,7 +53,8 @@ final class SenderSettings
     public static function mayChange(?User $user): bool
     {
         $owner = static function () use ($user): bool {
-            $staff = $user?->staff;
+            // This organisation's staff row (TenantScope), an active one first, as AdminAccess reads it.
+            $staff = $user === null ? null : Staff::query()->where('user_id', $user->id)->orderByDesc('is_active')->first();
 
             return $staff !== null && $staff->role === 'super_admin' && (bool) $staff->is_active;
         };
