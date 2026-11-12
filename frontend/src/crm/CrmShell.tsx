@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BrandSwitcher } from './shell/BrandSwitcher'
+import { QuickCreate } from './shell/QuickCreate'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -23,6 +24,7 @@ import { failureOf } from './lib/api'
 import { APP_NAME, FULL_ADMIN } from './lib/links'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
 import { AREAS, areaOf, countOf, type AreaGroup, type AreaKey } from './shell/nav'
+import { withCreate } from './lib/records'
 
 const ICONS: Record<AreaKey, LucideIcon> = {
   today: Home,
@@ -92,8 +94,9 @@ export function CrmShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
-    return onShortcuts(window, document, { letters: { i: 'inbox', l: 'leads', t: 'tasks' } }, (hit, e) => {
+    return onShortcuts(window, document, { letters: { i: 'inbox', l: 'leads', t: 'tasks', n: 'new' } }, (hit, e) => {
       if (hit === 'find') setFindOpen(true)
+      else if (hit === 'new') navigate({ search: withCreate(new URLSearchParams(window.location.search), 'lead').toString() })
       else if (hit === 'help') setHelpOpen(true)
       else if (hit === 'inbox') navigate('/crm/inbox')
       else if (hit === 'leads') navigate('/crm/leads')
@@ -154,6 +157,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
           <kbd aria-hidden="true" className="ml-auto hidden shrink-0 rounded-md border border-a-border px-1.5 font-a-mono text-xs sm:inline">{modKey} K</kbd>
         </button>
         <div className="ml-auto sm:hidden" />
+        {ready && <div className="ml-2 shrink-0"><QuickCreate /></div>}
       </>}
       overlays={ready ? <>
         <CrmFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} nav={nav} dark={look.resolved === 'dark'} slim={slim}
@@ -165,6 +169,8 @@ export function CrmShell({ children }: { children: ReactNode }) {
               { name: t('crm.nav.inbox', 'Inbox'), keys: [['I']] },
               { name: t('crm.nav.leads', 'Leads'), keys: [['L']] },
               { name: t('crm.nav.tasks', 'Tasks'), keys: [['T']] },
+              { name: t('crm.create.lead_new', 'New lead'), keys: [['N']] },
+              { name: t('crm.record.step', 'Previous or next record'), keys: [['['], [']']] },
               { name: t('workspace.shortcuts.title', 'Keyboard shortcuts'), keys: [['?']] },
             ],
           }]} />

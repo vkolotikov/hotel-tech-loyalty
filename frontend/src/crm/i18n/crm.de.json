@@ -208,5 +208,22 @@
     "done_task": "Aufgabe als erledigt markiert",
     "mark_done": "„{{name}}“ als erledigt markieren",
     "done": "Erledigt"
+  },
+  "record": {
+    "previous": "Vorheriger",
+    "next": "Nächster",
+    "full_page": "Als Seite öffnen",
+    "overview": "Übersicht",
+    "step": "Vorheriger oder nächster Eintrag"
+  },
+  "create": {
+    "label": "Neu",
+    "lead": "Lead",
+    "deal": "Deal",
+    "task": "Aufgabe",
+    "contact": "Kontakt",
+    "company": "Firma",
+    "capture": "Lead aus einer Nachricht",
+    "lead_new": "Neuer Lead"
   }
 }

@@ -5,7 +5,7 @@ import { Check, ChevronDown, Layers } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { currentBrand, setBrand, showsSwitcher, type BrandChoice } from '../lib/brand'
 import { resolveImage } from '../../lib/api'
-import { Popover } from '../leads/Menu'
+import { Popover } from '../ui/Menu'
 
 /**
  * Which brand the CRM shows (owner 2026-11-09): every brand of the organisation together, or one. It stands where the

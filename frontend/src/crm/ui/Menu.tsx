@@ -5,7 +5,7 @@ import { Check, MoreHorizontal } from 'lucide-react'
 /**
  * A button that opens a small panel under it (the Columns, Views and row menus of round 2): it closes on Escape (the
  * focus goes back to the button), on a press outside, and on a press of anything in it marked `data-close` (a menu's
- * item, a view applied). The panel keeps to the screen's edge on a phone. Local to Sales: the shared ui has no menu.
+ * item, a view applied). The panel keeps to the screen's edge on a phone. Moved from Sales to the shared ui in round 5.
  */
 export function Popover({ label, button, className = '', align = 'right', width = 'w-64', children }: {
   /** The button's name for a screen reader (its visible content may be only an icon). */

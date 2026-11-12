@@ -208,5 +208,22 @@
     "done_task": "Task marked done",
     "mark_done": "Mark “{{name}}” done",
     "done": "Done"
+  },
+  "record": {
+    "previous": "Previous",
+    "next": "Next",
+    "full_page": "Open as a page",
+    "overview": "Overview",
+    "step": "Previous or next record"
+  },
+  "create": {
+    "label": "New",
+    "lead": "Lead",
+    "deal": "Deal",
+    "task": "Task",
+    "contact": "Contact",
+    "company": "Company",
+    "capture": "Lead from a message",
+    "lead_new": "New lead"
   }
 }

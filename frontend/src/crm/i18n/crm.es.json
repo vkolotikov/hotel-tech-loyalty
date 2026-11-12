@@ -208,5 +208,22 @@
     "done_task": "Tarea marcada como hecha",
     "mark_done": "Marcar «{{name}}» como hecho",
     "done": "Hecho"
+  },
+  "record": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "full_page": "Abrir como página",
+    "overview": "Resumen",
+    "step": "Ficha anterior o siguiente"
+  },
+  "create": {
+    "label": "Nuevo",
+    "lead": "Cliente potencial",
+    "deal": "Negocio",
+    "task": "Tarea",
+    "contact": "Contacto",
+    "company": "Empresa",
+    "capture": "Cliente potencial desde un mensaje",
+    "lead_new": "Nuevo cliente potencial"
   }
 }

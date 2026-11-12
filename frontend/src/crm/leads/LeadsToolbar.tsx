@@ -17,7 +17,7 @@ import { InlineSelect } from './InlineSelect'
 import { useColumnSwitch, useGuestFacets, useLeadSettings, useSavedViews } from './leadData'
 import { activeFilterCount, NOBODY, ownerOptions, PANEL_CLEARED, sortChoices, sourceOptions, type LeadFilters, type PhoneFilter } from './leadLogic'
 import { activeChips, filtersFromView, hasViewState, leadColumnChoices, orderedViews, viewBody, type LeadColumn } from './listLogic'
-import { Popover } from './Menu'
+import { Popover } from '../ui/Menu'
 import type { SavedView, Stage } from './leadTypes'
 import { columnLabel, dueLabel, phoneLabel, sortLabel, sourceLabel, viewLabel } from './leadWords'
 

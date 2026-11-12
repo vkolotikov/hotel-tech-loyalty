@@ -32,7 +32,7 @@ import {
 import { LeadOverview } from './LeadOverview'
 import { AiCard, AttachmentsCard, ChatCard, ContactCard, CustomFieldsCard, StayCard } from './LeadSide'
 import { LeadTimeline, type ComposerSeed } from './LeadTimeline'
-import { ActionMenu } from './Menu'
+import { ActionMenu } from '../ui/Menu'
 import { StagePill } from './parts'
 import { SendTemplate } from './SendTemplate'
 import type { LeadDetail, MetaList, Stage } from './leadTypes'

@@ -25,7 +25,7 @@ import { InlineSelect } from '../leads/InlineSelect'
 import { useColumnSwitch, useCrmSettings, useLeadSettings } from '../leads/leadData'
 import { LeadForm } from '../leads/LeadForm'
 import { ownerOptions, type LeadDraft } from '../leads/leadLogic'
-import { Popover } from '../leads/Menu'
+import { Popover } from '../ui/Menu'
 import { DealList } from './DealList'
 import { PaymentDialog } from './PaymentDialog'
 import {
