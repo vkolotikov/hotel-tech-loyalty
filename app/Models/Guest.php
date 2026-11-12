@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\BelongsToOrganization;
 
+/**
+ * @property int|null $organization_id
+ */
 class Guest extends Model
 {
     use BelongsToOrganization;
