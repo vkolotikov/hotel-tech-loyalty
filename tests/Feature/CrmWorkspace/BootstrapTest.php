@@ -51,6 +51,8 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('staff.can.manage_widget', false)
             ->assertJsonPath('staff.can.manage_canned', false)
             ->assertJsonPath('staff.can.delete_records', true)
+            ->assertJsonPath('staff.can.manage_templates', false)
+            ->assertJsonPath('staff.can.manage_integrations', false)
             ->assertJsonPath('widget', null)
             ->assertJsonPath('counts.tasks_due', 0);
     }

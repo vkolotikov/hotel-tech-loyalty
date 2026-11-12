@@ -18,6 +18,10 @@ export interface Bootstrap {
       manage_canned: boolean
       manage_team: boolean
       delete_records: boolean
+      /** Round 5: making and changing email templates (a manager's). */
+      manage_templates?: boolean
+      /** Round 5: the Integrations page (a manager's). */
+      manage_integrations?: boolean
     }
   }
   widget: { key: string; active: boolean } | null

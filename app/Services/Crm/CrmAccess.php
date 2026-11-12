@@ -55,6 +55,11 @@ final class CrmAccess
             'manage_canned'    => $manager,
             // admin/team (product account): a manager's.
             'manage_team'      => $manager,
+            // Round 5 (2026-11-12): admin/email-templates — making and changing templates is a manager's (sending one is
+            // everyone's, admin/email-templates/{template}/send).
+            'manage_templates' => $manager,
+            // Round 5: the Integrations page (lead-intake tokens, email sending, AI usage, channels) — a manager's.
+            'manage_integrations' => $manager,
             // Deleting a lead, a contact or a visitor: every staff member may in the full admin; the workspace asks
             // first and shows what goes with it (delete-impact).
             'delete_records'   => true,

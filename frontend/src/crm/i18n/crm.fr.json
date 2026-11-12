@@ -56,7 +56,13 @@
     "new_lead": "Ajouter un prospect",
     "searching": "Recherche…",
     "theme_dark": "Passer en sombre",
-    "theme_light": "Passer en clair"
+    "theme_light": "Passer en clair",
+    "new_deal": "Ajouter une affaire",
+    "new_task": "Ajouter une tâche",
+    "new_contact": "Ajouter un contact",
+    "new_company": "Ajouter une entreprise",
+    "companies": "Entreprises",
+    "chats": "Chats du site"
   },
   "nav": {
     "today": "Aujourd'hui",
@@ -75,7 +81,8 @@
       "sales": "Ventes",
       "reports": "Rapports",
       "setup": "Configuration"
-    }
+    },
+    "integrations": "Intégrations"
   },
   "shell": {
     "ai_over": "Le crédit IA de ce mois est épuisé : l'assistant transmet chaque chat à votre équipe, et les brouillons s'arrêtent jusqu'au mois prochain.",

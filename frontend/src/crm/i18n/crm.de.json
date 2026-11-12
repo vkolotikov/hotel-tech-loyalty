@@ -56,7 +56,13 @@
     "new_lead": "Lead hinzufügen",
     "searching": "Wird gesucht…",
     "theme_dark": "Zu dunkel wechseln",
-    "theme_light": "Zu hell wechseln"
+    "theme_light": "Zu hell wechseln",
+    "new_deal": "Deal anlegen",
+    "new_task": "Aufgabe anlegen",
+    "new_contact": "Kontakt anlegen",
+    "new_company": "Firma anlegen",
+    "companies": "Firmen",
+    "chats": "Website-Chats"
   },
   "nav": {
     "today": "Heute",
@@ -75,7 +81,8 @@
       "sales": "Vertrieb",
       "reports": "Berichte",
       "setup": "Einrichtung"
-    }
+    },
+    "integrations": "Integrationen"
   },
   "shell": {
     "ai_over": "Das KI-Kontingent dieses Monats ist aufgebraucht: Der Chat-Assistent übergibt jeden Chat an Ihr Team, und Entwürfe pausieren bis nächsten Monat.",

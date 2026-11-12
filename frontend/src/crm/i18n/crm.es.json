@@ -56,7 +56,13 @@
     "new_lead": "Añadir un cliente potencial",
     "searching": "Buscando…",
     "theme_dark": "Cambiar a oscuro",
-    "theme_light": "Cambiar a claro"
+    "theme_light": "Cambiar a claro",
+    "new_deal": "Añadir un negocio",
+    "new_task": "Añadir una tarea",
+    "new_contact": "Añadir un contacto",
+    "new_company": "Añadir una empresa",
+    "companies": "Empresas",
+    "chats": "Chats de la web"
   },
   "nav": {
     "today": "Hoy",
@@ -75,7 +81,8 @@
       "sales": "Ventas",
       "reports": "Informes",
       "setup": "Configuración"
-    }
+    },
+    "integrations": "Integraciones"
   },
   "shell": {
     "ai_over": "Se agotó el saldo de IA de este mes: el asistente pasa cada chat a su equipo y los borradores se detienen hasta el próximo mes.",

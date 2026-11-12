@@ -5,7 +5,7 @@ import type { Bootstrap } from '../lib/types'
  * sections"): Today; Conversations (the website chat); Sales (as the main platform's Leads and Deals); Reports; Set up.
  * Each area has its address, whether the phone's top bar has it, and its group (an i18n key under crm.nav.groups).
  */
-export type AreaKey = 'today' | 'inbox' | 'visitors' | 'leads' | 'deals' | 'contacts' | 'tasks' | 'insights' | 'assistant' | 'widget' | 'settings'
+export type AreaKey = 'today' | 'inbox' | 'visitors' | 'leads' | 'deals' | 'contacts' | 'tasks' | 'insights' | 'assistant' | 'widget' | 'integrations' | 'settings'
 
 export type AreaGroup = 'conversations' | 'sales' | 'reports' | 'setup'
 
@@ -22,6 +22,7 @@ export const AREAS: readonly AreaDef[] = [
   { key: 'insights', to: '/crm/insights', end: false, phone: false, group: 'reports' },
   { key: 'assistant', to: '/crm/assistant', end: false, phone: false, group: 'setup' },
   { key: 'widget', to: '/crm/widget', end: false, phone: false, group: 'setup' },
+  { key: 'integrations', to: '/crm/integrations', end: false, phone: false, group: 'setup' },
   { key: 'settings', to: '/crm/settings', end: false, phone: false, group: 'setup' },
 ]
 

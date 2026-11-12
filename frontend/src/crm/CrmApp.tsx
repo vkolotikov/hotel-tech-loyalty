@@ -29,6 +29,7 @@ const AssistantPage = lazy(() => import('./assistant/AssistantPage').then(m => (
 const WidgetPage = lazy(() => import('./widget/WidgetPage').then(m => ({ default: m.WidgetPage })))
 const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const SettingsPage = lazy(() => import('./settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const IntegrationsPage = lazy(() => import('./integrations/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })))
 
 function PageLoad({ children }: { children: ReactNode }) {
   return (
@@ -73,6 +74,7 @@ export function CrmApp() {
               <Route path="assistant" element={<AssistantPage />} />
               <Route path="widget" element={<WidgetPage />} />
               <Route path="insights" element={<InsightsPage />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/crm" replace />} />
             </Routes>

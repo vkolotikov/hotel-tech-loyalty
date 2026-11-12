@@ -56,7 +56,13 @@
     "new_lead": "Add a lead",
     "searching": "Searching…",
     "theme_dark": "Switch to dark",
-    "theme_light": "Switch to light"
+    "theme_light": "Switch to light",
+    "new_deal": "Add a deal",
+    "new_task": "Add a task",
+    "new_contact": "Add a contact",
+    "new_company": "Add a company",
+    "companies": "Companies",
+    "chats": "Website chats"
   },
   "nav": {
     "assistant": "AI assistant",
@@ -75,7 +81,8 @@
       "sales": "Sales",
       "reports": "Reports",
       "setup": "Set up"
-    }
+    },
+    "integrations": "Integrations"
   },
   "shell": {
     "ai_over": "This month's AI allowance is used up: the chat assistant hands every chat to your team, and drafts stop until next month.",
