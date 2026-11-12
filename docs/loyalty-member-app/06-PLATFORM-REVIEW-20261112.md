@@ -1,5 +1,7 @@
 # Members app platform review — 12 November 2026
 
+**Delivered:** source **90ab7db2b** is verified as **TestFlight 2.1.0 (25) / Play internal 2.1.0 (31)**, with matching package/upload identity and current testing notes. This is internal testing availability. [Exact delivery evidence](../handoff/2026-11-12-member-platform-review.md).
+
 Scope: HexaTech Loyalty members app, `com.hotelloyalty.app`, `apps/loyalty-member`, on `feature/member-loyalty-refresh-20261111`. This follows the owner's report that the Events/calendar button was missing on iOS and request to review features/design on iOS and Android. The approved design and loyalty-only scope remain; event registration uses the existing server decisions.
 
 ## Confirmed findings and corrections
@@ -27,4 +29,4 @@ Check the installed replacement testing builds on iPhone, supported iPad, and An
 
 Build/upload identifiers and actual package evidence belong in [the current handoff](../handoff/2026-11-12-member-platform-review.md). Never merge this native branch into Laravel main.
 
-The initial correction binaries **iOS24 / Android30** were superseded before tester delivery when the logout integration defect was confirmed. iOS24 finished and was inspected but not uploaded; Android30 was cancelled. Only the final source including the logout correction should be delivered. Offline/server-failure withdrawal remains best effort; these fixes address the deterministic online ordering races and retain a receipt for retry.
+The initial correction binaries **iOS 24 / Android 30** were superseded before tester delivery when the logout integration defect was confirmed. iOS 24 finished and was inspected but not uploaded; Android 30 was cancelled. Only the final source including the logout correction should be delivered. Offline/server-failure withdrawal remains best effort; these fixes address the deterministic online ordering races and retain a receipt for retry.

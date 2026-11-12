@@ -1,5 +1,7 @@
 # Members design builds — 12 November 2026
 
+**Superseded testing binaries:** the later calendar/platform review is delivered as **iOS 25 / Android 31** from `90ab7db2b`. [Current handoff](2026-11-12-member-platform-review.md) records the verified fixes, packages and uploads. The 23/29 evidence below is historical and must not trigger duplicate builds/uploads.
+
 Scope: **HexaTech Loyalty members app only**, `com.hotelloyalty.app`, source `C:/wamp64/www/hexatech-apps`, branch `feature/member-loyalty-refresh-20261111`. Never merge this native branch into Laravel main. Staff, Laravel and production store releases are outside this build continuation.
 
 The owner requested fresh binaries for the latest approved design. Runtime source **257c5e85f645db184dc670581f1cd94872fcf2c3** includes the contextual popups, icon-only dock, direct event registration, consolidated account/preferences screens and confirmed points/check-in/stamp feedback. [Implementation and prior review](../loyalty-member-app/05-NATIVE-DESIGN-20261111.md).
