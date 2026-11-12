@@ -29,6 +29,7 @@ export const portalApi = {
   redemptions: (): Promise<{ redemptions: Redemption[] }> => api.get('/v1/member/my/redemptions').then(r => r.data),
   offers: (): Promise<{ general: Offer[]; personalized: Claim[] }> => api.get('/v1/member/offers').then(r => r.data),
   claimOffer: (offerId: number) => api.post(`/v1/member/offers/${offerId}/claim`).then(r => r.data),
+  offerAttachment: (offerId: number): Promise<Blob> => api.get(`/v1/member/portal/offers/${offerId}/attachment`, { responseType: 'blob' }).then(r => r.data),
   pointsHistory: (page: number): Promise<LaravelPage<Activity>> =>
     api.get('/v1/member/points/history', { params: { page, per_page: 20 } }).then(r => r.data),
   updateProfile: (payload: Record<string, unknown>) => api.put('/v1/member/profile', payload).then(r => r.data),

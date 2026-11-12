@@ -46,7 +46,7 @@ class ValidityEnrolImportTest extends TestCase
     {
         $member = $this->enrol('dated@example.test', '2027-10-04');
         $this->assertSame('2027-10-04', DB::table('loyalty_members')->where('id', $member->id)->value('membership_valid_until'));
-        $this->assertSame(['valid_until' => '2027-10-04', 'state' => 'active'], MembershipValidity::summaryFor($member->fresh()));
+        $this->assertSame(['valid_from' => null, 'valid_until' => '2027-10-04', 'state' => 'active'], MembershipValidity::summaryFor($member->fresh()));
 
         $plain = $this->enrol('plain@example.test', null);
         $this->assertNull(DB::table('loyalty_members')->where('id', $plain->id)->value('membership_valid_until'));
@@ -93,6 +93,17 @@ class ValidityEnrolImportTest extends TestCase
 
         $old = LoyaltyMember::query()->whereHas('user', fn ($q) => $q->where('email', 'old@example.test'))->firstOrFail();
         $this->assertSame('expired', MembershipValidity::summaryFor($old)['state']);
+    }
+
+    public function test_import_preserves_start_dates_and_refuses_reversed_periods(): void
+    {
+        $csv = "name,email,Valid from,Valid until\nScheduled,schedule-import@example.test,2027-01-01,2027-12-31\nWrong,wrong-period@example.test,2028-01-01,2027-12-31\n";
+        $upload = $this->asManager()->post($this->api('members/imports'), ['file' => UploadedFile::fake()->createWithContent('period.csv', $csv)], ['Accept' => 'application/json'])
+            ->assertOk()->assertJsonPath('preview.new', 1)->assertJsonPath('preview.refused', 1);
+        $this->asManager()->postJson($this->api('members/imports/' . $upload->json('batch.id') . '/run'))->assertOk()->assertJsonPath('batch.created', 1);
+        $member = LoyaltyMember::query()->whereHas('user', fn ($q) => $q->where('email', 'schedule-import@example.test'))->firstOrFail();
+        $this->assertSame('2027-01-01', MembershipValidity::startOf($member));
+        $this->assertSame(0, DB::table('users')->where('email', 'wrong-period@example.test')->count());
     }
 
     public function test_the_column_is_one_an_import_understands_and_its_sentence_has_a_code(): void

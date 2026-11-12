@@ -13,6 +13,7 @@ final class AccessVerdict
     public const MEMBER_ERASED = 'member_erased';
     public const MEMBER_OFF = 'member_off';
     public const EXPIRED = 'expired';
+    public const NOT_STARTED = 'not_started';
     public const PLACE_OFF = 'place_off';
     public const TIER_NOT_ALLOWED = 'tier_not_allowed';
     public const EVENT_NOT_OPEN = 'event_not_open';
@@ -33,16 +34,18 @@ final class AccessVerdict
         public readonly ?int $expiresInDays = null,
         public readonly ?array $tier = null,
         public readonly array $allowedTiers = [],
+        public readonly ?string $validFrom = null,
     ) {
     }
 
-    /** @return array{granted: bool, reason: string, valid_until: ?string, expires_in_days: ?int, tier: ?array, allowed_tiers: list<string>} */
+    /** @return array{granted: bool, reason: string, valid_from: ?string, valid_until: ?string, expires_in_days: ?int, tier: ?array, allowed_tiers: list<string>} */
     public function toArray(): array
     {
         return [
             'granted'         => $this->granted,
             'reason'          => $this->reason,
             'valid_until'     => $this->validUntil,
+            'valid_from'      => $this->validFrom,
             'expires_in_days' => $this->expiresInDays,
             'tier'            => $this->tier,
             'allowed_tiers'   => $this->allowedTiers,

@@ -32,9 +32,9 @@ function page(search = '', answer: OptionsAnswer | null = answerFixture({ setup_
 describe('WE01–03 server integration', () => {
   it('retains all six existing earning methods, setup and checks on the new root', () => {
     const html = page()
-    for (const key of ['earn_rate', 'points_on_spend', 'stamp_card', 'check_in', 'desk_earn', 'cashback']) expect(html).toContain(`data-way="${key}"`)
-    expect(html).toContain('/loyalty/options/setup')
-    expect(html).toContain('/loyalty/options?tab=overview')
+    for (const key of ['earn_rate', 'points_on_spend', 'stamp_card', 'check_in', 'desk_earn', 'cashback']) expect(html).toContain(`data-record="way-${key}"`)
+    expect(html).toContain('/loyalty/options?tab=earn&amp;settings=points')
+    expect(html).toContain('/loyalty/program?tab=tiers&amp;settings=qualification')
     expect(html).toContain('Stamp card')
     expect(html).not.toContain('Booking stamps')
   })
@@ -70,11 +70,11 @@ describe('WE01–03 server integration', () => {
     const data = answerFixture(); data.options.points_expiry_months = 7; data.options.tier_progress_by = 'visits'
     data.ways.push({ key: 'tier_progress', switch: null, zero_off: null, fields: ['tier_progress_by'] })
     data.fields.tier_progress_by = { type: 'enum', default: 'points', choices: ['points', 'visits'], min: null, max: null, when: null }
-    const html = page('?tab=bonus', data)
+    const html = page('?tab=earn&settings=points', data)
     expect(html).toContain('value="custom" selected=""')
     expect(html).toContain('value="7"')
     expect(html).toContain('value="0">Never')
-    expect(html).toContain('value="visits" selected=""')
+    expect(html).not.toContain('value="visits" selected=""') // Qualification has its own Program home.
     expect(html).not.toContain('value="spend"')
   })
   it('shows filtered empty, actual empty and loading states without fixture rows', () => {
@@ -87,6 +87,6 @@ describe('WE01–03 server integration', () => {
   it('preserves unknown server methods and the original checks/journey route', () => {
     const data = answerFixture(); data.ways.push({ key: 'future_method', fields: [], switch: null, zero_off: null })
     expect(page('?tab=more', data)).toContain('data-way="future_method"')
-    expect(page('?tab=overview', data)).toContain('options-tab-overview')
+    expect(page('?tab=overview', data)).not.toContain('options-tab-overview') // The app redirects this legacy address to Program readiness.
   })
 })

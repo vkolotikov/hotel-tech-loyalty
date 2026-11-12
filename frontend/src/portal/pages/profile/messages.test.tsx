@@ -102,7 +102,7 @@ describe('MessagesCard', () => {
     expect(switchOf(html, 'Your level')?.checked).toBe(true)
     expect(switchOf(html, 'Your vocab')).toBeNull()
     expect(html).toContain('is not sent to you at all: no push on your phone, and nothing in your inbox')
-    expect(html).toContain('id="messages"')
+    expect(html).toContain('id="p-message-preferences"')
   })
 
   it('names the bookings kind in the venue’s own word', () => {

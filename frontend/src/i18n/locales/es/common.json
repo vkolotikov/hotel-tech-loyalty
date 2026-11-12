@@ -80,7 +80,8 @@
       "bookings": "Reservas",
       "crm_marketing": "CRM y Marketing",
       "operations": "Operaciones",
-      "system": "Sistema"
+      "system": "Sistema",
+      "workspaces": "Espacios de trabajo"
     },
     "items": {
       "dashboard": "Panel",
@@ -120,7 +121,18 @@
       "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Reseñas destacadas"
-    }
+    },
+    "apps": {
+      "loyalty": "Fidelización",
+      "appointments": "Citas",
+      "crm": "CRM",
+      "content": "Contenido",
+      "time": "Planificador"
+    },
+    "menu_label": "Menú principal",
+    "find_placeholder": "Buscar en el menú",
+    "find_label": "Buscar una página en el menú",
+    "find_none": "Ninguna página coincide con «{{query}}»."
   },
   "topbar": {
     "search_placeholder": "Buscar miembros, huéspedes, reservas…",
@@ -425,16 +437,10 @@
   },
   "dashboard": {
     "title": "Panel",
-    "greeting": {
-      "morning": "Buenos días",
-      "afternoon": "Buenas tardes",
-      "evening": "Buenas noches"
-    },
     "actions": {
       "scan_card": "Escanear tarjeta",
       "send_campaign": "Enviar campaña"
     },
-    "needs_attention": "Requiere tu atención",
     "all_clear": "Todo en orden.",
     "all_clear_sub": "Ahora mismo no hay nada esperando.",
     "alerts": {
@@ -455,7 +461,9 @@
       "services": "Servicios",
       "none_today": "Ninguno hoy.",
       "with": "con {{name}}",
-      "more": "{{count}} más"
+      "more": "{{count}} más",
+      "guest": "Huésped",
+      "events": "{{count}} eventos"
     },
     "kpis": {
       "active_members": "Miembros activos",
@@ -467,20 +475,157 @@
       "pipeline": "Pipeline",
       "open_count": "{{count}} abiertas"
     },
-    "quick_access": "Acceso rápido",
-    "quick": {
-      "members": "Miembros",
-      "bookings": "Reservas",
-      "calendar": "Calendario",
-      "services": "Servicios",
-      "inbox": "Bandeja",
-      "offers": "Ofertas",
-      "analytics": "Analíticas",
-      "ai_insights": "Insights IA"
-    },
     "recent_activity": "Actividad reciente",
     "view_all": "Ver todo",
-    "no_activity": "Sin actividad reciente."
+    "no_activity": "Sin actividad reciente.",
+    "apps": {
+      "title": "Sus espacios de trabajo",
+      "loyalty_line": "Miembros, puntos, recompensas y campañas",
+      "appointments_line": "El calendario, los clientes y la caja",
+      "crm_line": "Chat web, contactos y el embudo",
+      "content_line": "Publicaciones planificadas y escritas con IA",
+      "time_line": "La jornada del equipo, planificada con IA"
+    },
+    "chart": {
+      "title": "Día a día",
+      "sub": "{{from}} – {{to}}",
+      "revenue": "Ingresos",
+      "bookings": "Reservas",
+      "points": "Puntos",
+      "leads": "Contactos y chats",
+      "leads_line": "Contactos",
+      "chats": "Chats",
+      "stays": "Estancias",
+      "services": "Servicios",
+      "appointments": "Citas",
+      "earned": "Ganados",
+      "redeemed": "Canjeados",
+      "empty": "Aún no hay nada en estos días."
+    },
+    "customize": {
+      "button": "Personalizar",
+      "title": "Personalice su panel",
+      "sub": "Muestre, oculte y ordene los widgets. Se guarda en este navegador para usted.",
+      "reset": "Restablecer",
+      "close": "Cerrar",
+      "up": "Subir {{name}}",
+      "down": "Bajar {{name}}",
+      "none": "Todos los widgets están ocultos. «Personalizar» los recupera."
+    },
+    "hero": {
+      "label": "Ahora en el establecimiento",
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas tardes",
+      "night": "Buenas noches",
+      "hello_name": "{{greeting}}, {{name}}",
+      "place_time": "{{place}} · hora local ({{zone}})",
+      "zone_time": "Hora local ({{zone}})",
+      "local_time": "Hora local",
+      "feels_like": "Sensación de {{temp}}",
+      "high_low": "Máx. {{max}} Mín. {{min}}",
+      "humidity": "{{value}} % de humedad",
+      "next_hours": "Las próximas horas",
+      "now": "Ahora",
+      "sun": "Amanecer {{rise}}, atardecer {{set}}",
+      "no_place": "Añada su ciudad a una ubicación para ver aquí el tiempo.",
+      "add_city": "Añadir una ciudad",
+      "no_place_staff": "El tiempo aparecerá aquí cuando una ubicación tenga su ciudad.",
+      "no_weather": "El tiempo no está disponible ahora mismo.",
+      "not_found": "No encontramos «{{city}}» en el mapa. Elija la ciudad de la lista en Ubicaciones.",
+      "not_found_staff": "El tiempo aparecerá aquí cuando la ciudad de la ubicación se encuentre en el mapa.",
+      "open_locations": "Abrir Ubicaciones"
+    },
+    "kpi": {
+      "title": "Los últimos {{days}} días",
+      "was": "antes {{value}}",
+      "new": "Nuevo",
+      "revenue": "Ingresos",
+      "revenue_sub": "Estancias y servicios",
+      "bookings": "Reservas",
+      "bookings_sub": "Estancias reservadas",
+      "services": "Citas",
+      "services_sub": "En el calendario",
+      "members": "Nuevos miembros",
+      "members_sub": "Se unieron",
+      "points": "Puntos ganados",
+      "points_sub": "Por los miembros",
+      "leads": "Nuevos contactos",
+      "leads_sub": "Solicitudes recibidas",
+      "chats": "Chats web",
+      "chats_sub": "Conversaciones"
+    },
+    "live": {
+      "title": "En directo",
+      "sub": "Se actualiza cada 30 segundos",
+      "online": "{{count}} en la web ahora",
+      "online_one": "{{count}} en la web ahora",
+      "online_other": "{{count}} en la web ahora"
+    },
+    "live_label": "En directo",
+    "loyalty": {
+      "title": "Miembros y niveles",
+      "birthdays": "Cumpleaños de hoy",
+      "no_birthdays": "Hoy no hay cumpleaños.",
+      "close": "Cerca del siguiente nivel",
+      "to_go": "{{points}} pts para {{tier}}",
+      "sub": "{{count}} miembros activos",
+      "sub_one": "{{count}} miembro activo",
+      "sub_other": "{{count}} miembros activos"
+    },
+    "period": {
+      "label": "Periodo",
+      "days": "{{count}} d",
+      "days_one": "{{count}} d",
+      "days_other": "{{count}} d"
+    },
+    "pipeline": {
+      "title": "Embudo",
+      "value": "Valor",
+      "empty": "Aún no hay contactos.",
+      "sub": "{{count}} contactos por etapa",
+      "sub_one": "{{count}} contacto por etapa",
+      "sub_other": "{{count}} contactos por etapa"
+    },
+    "tasks": {
+      "title": "Seguimientos pendientes",
+      "sub": "Los próximos tres días",
+      "empty": "Nada pendiente en los próximos tres días.",
+      "late": "Vencido",
+      "today": "Hoy",
+      "overdue": "{{count}} vencidos",
+      "overdue_one": "{{count}} vencido",
+      "overdue_other": "{{count}} vencidos"
+    },
+    "widgets": {
+      "now": "Hora y tiempo",
+      "live": "En directo",
+      "kpis": "Cifras clave",
+      "trend": "Gráfico principal",
+      "pipeline": "Embudo",
+      "schedule": "Agenda de hoy",
+      "loyalty": "Miembros y niveles",
+      "workspaces": "Sus espacios de trabajo",
+      "tasks": "Seguimientos pendientes",
+      "activity": "Actividad reciente"
+    },
+    "weather": {
+      "clear": "Cielo despejado",
+      "mainly_clear": "Mayormente despejado",
+      "partly_cloudy": "Parcialmente nublado",
+      "overcast": "Cubierto",
+      "fog": "Niebla",
+      "drizzle": "Llovizna",
+      "freezing_drizzle": "Llovizna helada",
+      "rain": "Lluvia",
+      "freezing_rain": "Lluvia helada",
+      "snow": "Nieve",
+      "showers": "Chubascos",
+      "snow_showers": "Chubascos de nieve",
+      "thunderstorm": "Tormenta",
+      "thunder_hail": "Tormenta con granizo",
+      "unknown": "Tiempo"
+    }
   },
   "notifications": {
     "title": "Campañas de notificación",
@@ -3700,6 +3845,8 @@
       "over_limit_booking": "Este paquete permite {{limit}} miembros del equipo reservables y usted tiene {{count}} activos. Elija un paquete mayor o desactive algunos en Configuración primero."
     },
     "team": {
+      "manage_partner": "Gestionar acceso de socios",
+      "partner": "Socio: solo escaneo",
       "title": "Equipo",
       "subtitle": "Quién puede iniciar sesión en sus espacios.",
       "invite_title": "Invitar a un colega",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { answerFixture } from '../options/fixture'
-import { baseExample, earningUrl, earnLocation, filteredWays } from './model'
+import { baseExample, ruleExample, earningUrl, earnLocation, filteredWays } from './model'
 import { EARN_WORDS } from './words'
 import en from '../i18n/earn.en.json'
 
@@ -34,5 +34,14 @@ describe('Ways to earn navigation and illustrative amounts', () => {
   })
   it('registers every dynamic English phrase exactly; the locale suite checks all five translations', () => {
     expect(en).toEqual(EARN_WORDS)
+  })
+  it('shows no booking or desk award while its own trigger is off or unavailable', () => {
+    const data = answerFixture(); data.options.points_per_currency = 2.5
+    expect(ruleExample('points_on_spend', data, '50')).toBe(125)
+    expect(ruleExample('desk_earn', data, '50')).toBe(0)
+    data.not_used = ['points_on_spend']
+    expect(ruleExample('points_on_spend', data, '50')).toBe(0)
+    data.options.desk_earn_enabled = true
+    expect(ruleExample('desk_earn', data, '50')).toBe(125)
   })
 })

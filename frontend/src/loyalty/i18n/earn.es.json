@@ -56,7 +56,7 @@
   "advancedLine": "Revise el redondeo y los multiplicadores del programa.",
   "calculation": "La cantidad final se redondea hacia abajo a puntos enteros tras aplicar los multiplicadores de nivel, establecimiento, beneficio y promoción. Si se solapan promociones, se usa el mayor multiplicador aplicable.",
   "desk": "Compras registradas por el equipo",
-  "deskLine": "Las compras registradas por el personal usan sus propias reglas.",
+  "deskLine": "Las compras en recepción usan la tasa común y una activación independiente.",
   "deskLink": "Configuración de compras en recepción →",
   "memberExample": "EJEMPLO PARA EL SOCIO",
   "seeEarn": "Vea cuánto acumulan los socios",

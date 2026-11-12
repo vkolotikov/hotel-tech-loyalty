@@ -187,6 +187,10 @@ export function refusalReason(answer: ScanAnswer, facts: VerdictFacts): Sentence
   switch (verdict.reason) {
     case 'member_erased': return reasonWord('member_erased')
     case 'member_off': return reasonWord('member_off')
+    case 'not_started': {
+      const from = verdict.valid_from ?? answer.member.valid_from
+      return from ? reasonWord('not_started', { date: dayWords(from, facts.today, facts.locale) }) : reasonWord('not_started_plain')
+    }
     case 'expired': {
       const until = verdict.valid_until ?? answer.member.valid_until ?? null
       return until ? reasonWord('expired', { date: dayWords(until, facts.today, facts.locale) }) : reasonWord('expired_plain')

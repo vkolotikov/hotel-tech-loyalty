@@ -47,7 +47,7 @@ export function SetupBanner() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="ghost" onClick={() => setAsking(true)}>{t('loyalty.options.banner.not_now', 'Not now')}</Button>
-        <Link to="/loyalty/options/setup" className={START}>{t('loyalty.options.banner.start', 'Start')}</Link>
+        <Link to="/loyalty/program/setup" className={START}>{t('loyalty.options.banner.start', 'Start')}</Link>
       </div>
 
       {asking && (

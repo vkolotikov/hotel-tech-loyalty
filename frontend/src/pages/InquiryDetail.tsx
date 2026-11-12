@@ -15,6 +15,7 @@ import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
 import { InquiryAttachmentsPanel } from '../components/InquiryAttachmentsPanel'
 import { ChatHistoryPanel } from '../components/ChatHistoryPanel'
+import { AdminCrmEmailHistory as CrmEmailHistory } from '../components/AdminCrmEmailHistory'
 import { SendTemplateModal } from '../components/SendTemplateModal'
 import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 import { useDataInk } from '../theme/hx'
@@ -929,6 +930,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
           a trip back to the Engagement Hub. Backend looks up the chain
           inquiry → guest → visitor → conversations in one round-trip. */}
       {fieldCfg.chat_history && <ChatHistoryPanel inquiryId={inq.id} />}
+      <CrmEmailHistory key={inq.id} resource="inquiries" id={inq.id} />
 
       {adding && (
         <TaskDrawer

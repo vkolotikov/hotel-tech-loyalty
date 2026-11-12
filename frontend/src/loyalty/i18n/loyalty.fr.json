@@ -194,6 +194,9 @@
     "decline_title": "Refuser : {{benefit}}",
     "done": "Marquer comme traitée",
     "error": {
+      "member_inactive": "Cette adhésion est désactivée. Un responsable peut la vérifier sur la page du membre.",
+      "membership_expired": "Cette adhésion a pris fin. Renouvelez-la avant d’utiliser cet avantage.",
+      "membership_not_started": "Cette adhésion n’a pas encore commencé. Vérifiez les dates sur la page du membre.",
       "invalid": "Indiquez pourquoi la demande est refusée.",
       "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
       "not_found": "Cette demande n’existe plus.",
@@ -312,5 +315,20 @@
     "help": "Cette liste",
     "on_member": "Sur la page d’un membre",
     "scan": "Scanner une carte"
+  },
+  "launchpolish": {
+    "firstSteps": "Premiers pas",
+    "setupSettingsLine": "Revoyez à tout moment votre modèle sectoriel, les règles de cumul et la configuration du programme.",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "deleteReward": "Supprimer la récompense",
+    "deleteBody": "Supprimer « {{name}} » ? Seules les récompenses inutilisées peuvent être supprimées. Désactivez celles qui ont un historique d’échanges ou un lien avec une carte à tampons.",
+    "confirmDelete": "Supprimer",
+    "rewardInUse": "Cette récompense a un historique d’échanges ou un lien avec une carte à tampons. Désactivez-la plutôt.",
+    "actionFailed": "La modification n’a pas pu être enregistrée. Veuillez réessayer.",
+    "templateKeepLine": "Choisissez un modèle sectoriel pour les règles de cumul suggérées. Vos niveaux, avantages et récompenses restent inchangés. Vérifiez chaque modification avant de l’appliquer.",
+    "lastTemplate": "Dernier modèle utilisé",
+    "templateReview": "Règles de cumul suggérées : {{preset}}. Vos niveaux, avantages et récompenses restent inchangés.",
+    "keepRules": "Conserver les règles de cumul actuelles"
   }
 }

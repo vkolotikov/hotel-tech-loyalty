@@ -5,6 +5,8 @@ names. This session adds **HexaTech Time Planner**, the sixth workspace. Runbook
 
 ## The owner's request
 
+Loyalty continuation, evening 9 November: active source branch `feature/loyalty-setup-polish-20261109` adds clearer guided setup and industry template selection, real Overview first steps, Settings re-entry, member spacing, place radio fixes, compact offers and safe reward enable/disable/delete. Backend controls preserve every redemption and stamp-card reference. See `docs/audits/2026-11-09-loyalty-setup-polish.md`. SiteGround confirms hotel-tech.ai DKIM ACTIVE and SPF published; the owner confirmed removing the short duplicate hexa-tech.uk DMARC record, now verified on both authoritative nameservers while preserving Zoho. Source checks: 126 PHP tests, 140 focused frontend tests, Larastan, TypeScript and 36 real-backend browser checks passed before final artifact preparation. Full release gates and final production evidence follow below when complete. The latest native checkout confirms FCM V1 assignment and staff iOS push entitlements; physical push and Wallet acceptance remain unverified. Previous Cloud media migration below remains complete.
+
 "We do before portals for loyalty, crm and AI chat widget, booking and content planner. Now lets make a separate portal
 for time planner. Use all data which we have before, style, settings, features etc., build a powerful AI powered …
 planner, additional features AI plan and analyse employees day depends on employees knowledge etc., ai capture data, ai
@@ -254,4 +256,307 @@ gates: `docs/audits/2026-11-09-loyalty-launch-rehearsal.md`. Reproduction: `fron
   media recovery, physical wallet/reader or push acceptance. DNS/provider/device gates remain in the audit report.
 
 Feature: `feature/loyalty-launch-readiness-20261109`, based on fresh main, merged Time Planner round 3 without overlap.
-No migrations. A source-patch release with fresh artifact checks is required; feature build outputs are not deployed.
+No migrations. Release source **a9f22c006**, fresh build **db0673f64** on main **690b2961d**, pushed by the source-patch
+recipe. Exact 22-file allowlist and whole-source parity with feature **1c60c26f7** (next source-patch baseline; later
+documentation is not the baseline). Artifact: **2,369 scoped PHP tests** (the required 2,042 plus 327 affected tests),
+**457 Vitest files / 6,733 tests**, TypeScript, lint baseline (1,398 legacy), Larastan and fresh build all passed.
+The exact artifact's real-backend browser journey passed **72 checks**, zero runtime errors or unexpected 5xx.
+Feature build outputs were not deployed. Live content verified at **09:42:27 UTC / 11:42 Riga** on
+`loyalty.hotel-tech.ai`, then `app.hexa-tech.uk`: `index-BlKjKFiG.js`, `PortalApp-CWPBeOFf.js`, all six new auth input
+IDs and member wallet availability gating present; protected bootstrap/portal/wallet endpoints remain 401.
+After deploy, public landing continuity passed (Nocturne CSS, zero `rp-` markers, retired CSS 404, all three Poppins
+font files with expected bytes). Owned HTTP/proxy services and PostgreSQL cluster stopped; verified release
+worktree and only its dependency junction removed, private evidence retained. Owner's production diagnostic at
+**09:45:26 / 09:46:31 UTC**: scheduler heartbeats 21/27 seconds old, database shared cache and asynchronous queue;
+the same probe processed at 09:45:26, zero ready jobs and failed jobs in the second reading. SMTP configuration
+present, From domain `hotel-tech.ai`. This verifies one worker execution, not continuous monitoring or Cloud mail
+delivery. Owner then ran `media:check-recovery`: fresh status at **09:47:42 UTC is attention**, no recovery marker.
+Versioning is not Enabled. Prepared `docs/audits/2026-11-09-media-recovery-plan.md`; **owner approved 30-day noncurrent
+retention**. The owner could not find resource details and requested direct inspection. A fresh CUA check found
+native computer pipe and browser access host unavailable; no usable Cloud connector or CLI session was found.
+Reconnection requested. Do not ask for the policy choice again. Database backup observations and verified production
+target/provider access remain pending. Local storage configuration did not match the documented production target;
+inspection refused that path, no provider request/change was made. Physical provider/device acceptance remains
+external and optional channels stay on hold until accepted.
+
+Release CI `42594935207`: Larastan, dependency audit, both Node builds and all three SQLite shards green; PostgreSQL
+was still running when concurrent CRM round 4 **b20ef451e** superseded the run (cancelled, not failed). That release
+preserves these Loyalty/auth sources byte-for-byte. Its replacement CI is `42596640691`; do not claim the cancelled
+run completed PostgreSQL. Local affected PostgreSQL checks above passed. Replacement CI passed both Node builds,
+dependency audit and all SQLite shards, but Larastan found `App\\Models\\Task::$custom_data` undefined in the concurrent
+CRM change; PostgreSQL subsequently passed, leaving only that static finding. Upstream **c69b0db7e** fixes the model
+annotation; adopt that version, not a duplicate local model edit. The guarded `media:recovery-policy` operator command
+is being added for the approved 30-day policy, with explicit bucket/host checks, default preview, shared recovery lock,
+unmanaged-rule refusal, noncurrent-only expiration, provider read-back and idempotence. Nine policy tests plus existing
+Wallet and diagnostic tests pass (**31 total**); static analysis is clean. Deployment/artifact evidence follows.
+
+Owner confirmed the current target through Cloud: disk `do`, `hotel-tech-assets`, `lon1.digitaloceanspaces.com`, region
+lon1; PostgreSQL `hotel_loyalty`. Local storage credentials are unavailable; do not ask for them to be pasted. Existing
+`docs/audits/2026-10-30-restore-rehearsal.md` already proves a seven-day PITR configuration and isolated recovery of
+`hotel_loyalty` on cluster `hotel_tech_loyalty`. Cloud labels its attachment `main`; preserve the application's database
+name override. Only a fresh current-window observation is missing, not a new paid restore. The same report records
+production queue email inbox receipt on 29 October; avoid another send merely to repeat passing evidence.
+
+### Latest production follow-up and owner direction
+
+- Guarded policy release: sources **02af77050 / 1b80e5dcc**, fresh build **f275699a4** on **c69b0db7e**; whole-source
+  parity with feature **cc4a29688** (next source-patch code baseline). Artifact **2,074 PHP tests**, **461 frontend
+  files / 6,760 tests**, TypeScript, lint (1,393 legacy), Larastan and fresh build passed. Actual AWS SDK XML payloads
+  validated with a transport mock. CI **42602197110 is success**, including its PostgreSQL known-failure gate.
+- Owner executed the deployed command. Apply and preview stopped; safe read-only diagnosis returned
+  `GetBucketLifecycleConfiguration`, HTTP **403**, **AccessDenied**. The runtime's limited Spaces key lacks bucket
+  management access. No successful policy application or media byte-recovery check is recorded.
+- Owner found the current Cloud backup section and confirmed **PITR enabled for the last seven days**. This plus
+  the 30 October isolated restore evidence closes the database backup checks for this review.
+- Owner approved a temporary full-access Spaces operator key then questioned the extra provider before reporting
+  a key created. After research, explicitly chose **Move media to Laravel Cloud**. Do not pursue the DigitalOcean
+  admin-key setup for this migration; retain the existing source read connection and data through verification.
+  No key was reported created. If one was created, only that new temporary key needs revocation.
+- Cloud Object Storage is Cloudflare R2: bucket-level visibility (no mixed ACLs), no S3 versioning. Prepare public
+  media plus private 30-day backups and a real restore check, preserving old URLs/source during the copy. Current
+  MediaService uses storePublicly and a DO-specific delete resolver, so a disk toggle alone is unsafe. No Cloud
+  buckets, migration copies, URL rewrites, cutover or source deletion have been performed yet.
+- Browser/Computer Use remains unavailable after the owner's reconnect attempt; DevTools' shared profile is busy.
+  doctl exists but has no authentication; no local DigitalOcean or Laravel Cloud management token is configured.
+  Never request key values in chat. Cloud resource creation may need the owner's dashboard action when the concrete
+  bucket plan is ready. Continue prelaunch work with the selected Cloud media migration.
+
+## The full admin's menu and dashboards for every portal (9 Nov, branch `claude/portal-dashboard-redesign-jpxojc`)
+
+The owner, with screenshots of the full admin's menu and dashboard: "we make all portals for our apps, now need better
+logic for main portal, better menu structure. And I think we need to make more engaging, interesting, maybe animated
+dashboard with grids to all portals, KPI, main graphs, maybe weather info, time or smth, make really powerful
+dashboards." Runbook: `docs/dashboards.md`; rules in CLAUDE.md ("Full admin menu and dashboards").
+
+- **The menu**: the five HexaTech workspaces gathered in a **Workspaces** launcher of tiles under the Dashboard (each still
+  hides with the group it came from: `home`); Scan in Members & Loyalty (still hidden with Operations); groups as an
+  accordion (open: Overview, Workspaces, the page's own group, and whatever the person opened; a fresh storage key) that
+  slides and shows each closed group's page count; **Find in menu**; the one item whose address matches longest is lit
+  (Payments no longer lights Reservations); Brands and Billing have icons of their own. Settings → Sidebar Menu lists
+  Workspaces.
+- **The full admin's dashboard**: a grid of ten widgets the person may hide and reorder (Customize, kept in the browser):
+  the venue's clock, greeting and weather under a sky that follows its part of the day, Live now, the industry's tiles and
+  the period's figures (7/30/90 days) counting up with change and sparkline, a day-by-day chart with tabs, the pipeline as
+  a ring, today's schedule, members & tiers (birthdays, close to the next tier), your workspaces, follow-ups, recent
+  activity. SVG charts of our own (no chart library in the first bundle); motion stops for reduced motion.
+- **Every workspace**: the shared `PulseCard` (clock, weather, next hours, sun) — CRM Today, Time Planner My day, Loyalty
+  Overview, Appointments Insights, and a one-line strip on Content's plan.
+- **Server (reads only, no migration)**: `App\Services\Dashboard\VenuePulse` at `admin/dashboard/pulse` and each
+  workspace's `…/pulse` (zone, day, currency, place = first location's city or the zone's city, Open-Meteo weather cached
+  in SharedCache, failures remembered 5 min); `App\Services\Dashboard\DashboardTrends` at `admin/dashboard/trends`
+  (aligned daily series with the previous period). New config `services.weather` (`WEATHER_ENABLED`, default on).
+
+### Checks (this container, 9 Nov)
+
+- PHP: new `tests/Feature/Dashboard` (VenuePulse 8, DashboardTrends 5) on SQLite and on PostgreSQL 16 (`hexa_test`, every
+  migration: 11 passed, 2 skipped by design — the two cases that need the test's own SQLite tables; a PostgreSQL-only
+  case checks that every measure reads). AdminAccess 91, CrmWorkspace 82 on PostgreSQL. Larastan: no errors.
+- Frontend: `tsc -b` clean; Vitest 463 files / 6,814 tests; lint baseline passed (1,383 legacy, none new — fewer than
+  before, the old dashboard's went with it).
+- Real browser (Vite, every API answer a local fixture): the full admin's dashboard at 1440 and 390 in Glass and Clean
+  light and in Russian, the chart's crosshair, Customize, the menu (open, icon-only, a Bookings page), CRM Today at 1440
+  and 390, Content's plan strip — no horizontal scroll, no raw key, no new console error (the known BrandSwitcher
+  warning remains). Found and fixed that way: the chart's tabs squeezing its title on a phone, the last day label off the
+  edge, a seventh figure alone on its row, workspace names cut, light-sky clouds too pale, figures repeated on CRM Today.
+- Not exercised for real: Open-Meteo (this container's network refuses it; tested with recorded answers).
+
+## Cloud media migration preparation (Windows workstation, 9 November)
+
+Owner selected Laravel Cloud rather than provisioning a temporary DigitalOcean administrator key. Complete source
+inventory: **209 objects / 202,034,601 bytes**. Architecture and resource evidence:
+`docs/audits/2026-11-09-cloud-media-architecture.md`; commands: `docs/wallet-and-media-operations.md`.
+
+The owner is using Codex **inside VS Code**. Native Computer Use and browser host are unavailable. Existing Chrome
+was successfully connected through the official Chrome DevTools MCP `--autoConnect` route after the owner enabled
+`chrome://inspect/#remote-debugging` and accepted Chrome's connection consent. Two EU-jurisdiction Cloud buckets
+were created and attached: public disk **media**, private/default **media_private**. Cloud requires the first
+attached disk to be default, so private was attached first. Existing commit **a455e01** redeployed successfully as
+Cloud deployment **1150**, only to load those resource connections. App-cluster safe metadata read saw both Cloud
+disks and **active media still do**. No credentials extracted, no files copied, no source deletion or URL rewrite.
+
+Feature `feature/loyalty-cloud-media-20261109`: provider-neutral URL resolution; R2 ACL-free bounded object I/O;
+private byte-verified recovery copies and durable manifests; current copies kept, retired copies retained 30 days;
+guarded resumable copy, explicit preparation/backup/restore and reviewed URL migration commands; Cloud health requires
+backup plus recent isolated restore; member avatars use the shared durable writer and save before releasing only
+their owned predecessor. Operations wording updated in five languages. Source baseline **6fc522b14** was deployed
+by source patch as **b695fdaa7** after final artifact checks. Live content verified at **13:44 UTC** on both
+loyalty.hotel-tech.ai and app.hexa-tech.uk: `index-P6hPd3aU.js` loads `SystemStatus-DIfxctLq.js` with the new generic
+Media recovery/Cloud backup-and-restore wording, no old native-versioning-only hint. Six sign-in/recovery IDs and
+wallet capability gating remain present. Protected loyalty/member/wallet/operations endpoints answer 401.
+Landing continuity passes: 200 kit page/styles, zero `rp-` markers, retired stylesheet 404, three exact Poppins fonts.
+CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 — **success**, all eight jobs including
+PostgreSQL's known-failure gate passed.
+
+Feature checks so far: required Support/Landing scopes **2,058 passed**, Wallet **27**, member avatar **3**,
+LoyaltyWorkspace **660 passed / one skipped**, **2,748 total / zero failed**. Two additional archive failure/health
+tests and two reference migration tests subsequently passed. Actual SDK transport mock proves no object ACL header,
+If-Match source reads, paginated listing, bounded/no-retry calls and missing-bucket refusal. Static analysis was
+clean before the last small command/reference changes; rerun on final source/artifact. One operations locale render
+test passed. Final artifact checks are now complete: **2,102 distinct PHP tests** across required and affected scopes,
+**60 PostgreSQL tests**, TypeScript, **464 Vitest files / 6,823 tests**, lint baseline (1,383 legacy diagnostics,
+none new), Larastan and fresh build passed. The exact final artifact completed **74 real-backend browser checks**,
+including multipart avatar upload and actual image retrieval, with zero browser errors or unexpected 5xx responses.
+Source patch has whole-tree source parity with **6fc522b14**, excluding only the three built roots. This remains the
+next source-patch code baseline; subsequent documentation evidence is not a new code release. Artifact source
+commits end at **5c5d8fb35**, build/deploy **b695fdaa7**. No source media was copied or removed by deployment.
+
+The deployment killed the first console (exit 137); a fresh session then disconnected (1006). A later read-only ACL
+inventory was typed into the terminated console and **never ran**. The task browser connector was restarted to filter
+excessive debug output and now awaits renewed Chrome connection consent. Do not claim source ACL classification or
+Cloud recovery acceptance. The earlier native-version policy route is superseded; keep source DO files/settings
+through copy, delta verification, URL checks, cutover and any legacy-link review. New upstream weather/location
+release **f11a4e950** was adopted before artifact parity/deploy. Native PC access subsequently returned through
+cua_repl (the standalone node_repl helper still fails). Chrome visibly has an **Allow remote debugging?** modal.
+Stopped only the task-owned debugging connector, but its prompt remained. Owner was asked to close it with Cancel
+so work can continue through direct PC access. Do not act on the permission prompt automatically.
+
+Task-owned loopback API/SPA services and PostgreSQL 18 were stopped after evidence collection. The deployment
+worktree was removed after validating/unlinking its two owned junctions; shared dependencies and private rehearsal
+evidence remain. Next production action, after the owner closes Chrome's prompt: start a fresh App-cluster console,
+confirm active `do` and the verified Cloud bucket identities, then run the **read-only**
+`php artisan media:cloud-migrate` preview. Continue copy/recovery/URL/cutover acceptance from the Cloud architecture
+and operations runbook, preserving DigitalOcean files/settings throughout. Do not treat the code release or empty
+provisioned buckets as completed migration.
+
+**Continuation:** the Chrome prompt closed and direct native controls worked. Fresh App-cluster read confirms
+active disk `do`, database `hotel_loyalty`, new migration command loaded. Complete read-only migration preview:
+**209 objects / 202,034,601 bytes; 202 public / seven private review**. Source ACL reads all succeeded.
+Guarded apply stopped with TypeError after partial copying; a read-only listing saw **one public / three private
+objects**. Guarded diagnostic resume identified Migration.php:66 `fclose`: the SDK closed the caller's snapshot.
+Two new real-SDK tests reproduced the ownership bug, then passed with a retained/detached PSR-7 wrapper in ObjectStore.
+Prepare/deploy this correction by the source-patch recipe before continuing the idempotent migration. No URL or
+active-disk change, no source deletion, and no completed recovery acceptance.
+
+The stream correction has now passed artifact checks and was deployed as **079e7feb1** (source **6fb748979**;
+whole-source parity with feature code baseline **cce6e479c**, next source-patch baseline). Artifact **2,104 PHP tests**,
+TypeScript, **464 / 6,823** frontend tests, lint baseline, Larastan and fresh build passed. Its normalized-LF
+ObjectStore hash is `f6241ea8c0b02c95d55837bf02f6fc242313088bbf3b7c789e0497dea9c009af`; verify in a fresh
+App-cluster console after the rolling deploy before resuming migration. CI run **42632156397** passed all jobs.
+One pre-existing local `/storage/` avatar is absent on production local, DO and Cloud. No profile data was cleared;
+check local project copies before asking for a replacement image. See the Cloud audit for counts and evidence.
+
+**Current production continuation:** Cloud deploy **1153 / 079e7feb1** completed and its fresh App-cluster source
+hash matches the correction. Resumed guarded migration **completed: 209 objects / 202,034,601 bytes; 202 public /
+seven private review**, source intact. Created one controlled 68-byte PNG via the real Cloud writer (no profile row
+change); receipt `SharedCache::store()->get('ops:cloud-media-launch-20261109')` holds URL/key/SHA/bytes. Anonymous
+workstation GET at **14:29:29 UTC** passed, exact bytes/image/png. Full guarded backup preparation is currently
+running in the existing native Cloud Commands console. Next: finish that sweep, perform exact receipt-based
+`media:verify-cloud --apply`, check private unsigned access denial, preview reviewed URLs and resolve counts,
+apply URLs, then set MEDIA_DISK=media/redeploy and verify persistence/health/deltas. Keep probe until after redeploy.
+No active-disk or DB URL change yet. Legacy avatar is also absent from all 23 project worktrees; original needed.
+
+**Recovery accepted on continuation:** full backup **203 objects / 201,805,975 bytes**, completed 14:35:38 UTC;
+isolated private restore **verified/exit 0** at **14:41:30 UTC**, exact 68-byte SHA match and cleanup, health **ok**,
+marker false. Provider UI explicitly confirms private EU bucket, runtime has no public URL. Public media-domain
+requests for backup payload and manifest both 404. Raw unsigned S3 returns 400/InvalidArgument and unconfigured
+private hostname 530; those errors alone were not treated as privacy proof.
+
+URL preview completed: **159 mapped rows/references**, **six private-review references** (KnowledgeDocument DOCX),
+**four local-legacy references** (one user, three widget configs), zero unmapped. Source review confirmed all seven
+DOCX already public, registered Word MIME, valid OOXML package parts, no macros. A strict DOCX MIME/extension
+compatibility patch and regression fixture are being prepared for source-patch deployment so current knowledge
+documents can retain their working access after the move. Private ACLs and disguised/credential/zip files remain
+private. MEDIA_DISK remains do; URL apply and cutover remain to be completed.
+
+**Next continuation:** the guarded URL apply updated **159 rows / 159 references**, zero stale/unmapped; six DOCX
+references still await publication. All four local-legacy images (user 109/org 23; widget configs 7/org 16,
+10/org 12, 22/org 35) are absent from production local, DO, Cloud and local project checkouts. Preserve their
+references; original images need re-uploading. DOCX compatibility deployed as **cb7b69fe3**, Cloud **1154**, from
+feature source baseline **65bd74c8c**. Artifact 2,105 PHP tests, full 6,823 frontend tests, TypeScript, lint,
+Larastan and fresh build passed. Fresh production Migration hash matches the Cloud audit. Guarded 209-object
+migration resume is running in the App console.
+
+That deployment erased shared database-cache receipts: Composer's post-install `optimize:clear` also clears the
+default database cache. A minimal follow-up adds `--except=cache`, preserving compiled-cache cleanup and operational
+state. A regression executes the configured command with real database cache; receipt loss reproduced before
+the fix, then passed with an active lock preserved. Verify/deploy by the source-patch recipe, refresh backup and
+restore acceptance, complete six DOCX URLs, switch MEDIA_DISK to media and verify receipts survive the redeploy.
+
+**15:36 UTC acceptance:** guarded copy completed, **209 objects / 202,034,601 bytes**, all public, zero private
+review. Full private backup **210 objects / 202,034,669 bytes** (includes controlled PNG) at **15:31:34 UTC**;
+exact private restore/cleanup passed **15:31:35 UTC**. Remaining **six URLs applied**, zero unmapped/stale/private
+review, leaving only the four known missing local images. All six current Word URLs passed real HTTPS byte/MIME
+checks. Recovery health **ok**. DO inventory digest recorded in shared cache at
+`ops:cloud-media-source-inventory-20261109`, counts unchanged; compare after cutover.
+
+The cache fix passed artifact Support **214**, Unit/Landing **118**, Feature/Landing **1,735** (2,067 total), full
+**6,823** frontend tests, TypeScript, lint, Larastan, Composer validation and a fresh identical build. Source patch
+**6e76c7133**, verified build receipt **31c1b568e**, pushed to main. **Next source-patch code baseline: b0ecd9479**;
+this later evidence is not a code baseline. Verify deployed Composer cleanup excludes cache and the accepted
+backup/restore/inventory receipts survived. Then change only MEDIA_DISK from do to media, redeploy, verify active
+disk/source inventory/public probe durability, exercise the default writer, clean exact controlled probes, final
+backup and Operations observation. Keep all DigitalOcean files/settings for legacy links. DOCX CI **42642060991**
+finished successfully in all eight jobs. Active App console is idle; Cloud deployment may end it.
+
+Local cleanup note: the old stream artifact worktree was deregistered and its node_modules junction safely removed,
+but Git hit a Windows long-path deletion error. Automatic approval blocked recursive removal of the remainder
+(only reason: blocked by policy). Leave that task-owned remainder in place; do not bypass the rejection. The current
+artifact remains at `C:/wamp64/www/Hexa-Tech-deploy-cloud-word-20261109`, now on branch
+`deploy/loyalty-cloud-cache-20261109`, with its own physical vendor and the root node_modules junction.
+
+**Cutover live:** cache fix Cloud **1155 / 31c1b568e** preserved the 15:31 backup/restore and 15:36 source-inventory
+receipts (fresh App console at **15:42:23 UTC**). Changed **only MEDIA_DISK=do to MEDIA_DISK=media** in the Cloud UI;
+full editor comparison confirmed every other value unchanged. Deployment **1156 / 31c1b568e**, one configuration
+change, completed. Fresh App console **15:59:24 UTC** confirms active media, database hotel_loyalty, retention 30,
+health ok, no rehearsal marker, all receipts preserved and the complete DO key/size/last-modified digest unchanged
+(209 objects / 202,034,601 bytes).
+
+The default writer (no disk override) passed at **16:00:06 UTC**: new 68-byte PNG, real anonymous HTTPS download,
+exact SHA/bytes and independently matched private recovery payload. The earlier controlled upload also survived
+the redeploy with identical bytes. Receipt `ops:cloud-media-cutover-acceptance-20261109` records that result.
+Both exact controlled public probes were removed through MediaService at **16:02:04 UTC**, with their private
+revisions matched and retired for 30-day retention; receipt `ops:cloud-media-probe-cleanup-20261109`.
+
+Final backup, read-only reviewed-reference audit and Operations observation are running in the existing App console.
+They persist `ops:cloud-media-final-acceptance-20261109` only if all succeed. Read that result before repeating
+long checks after any browser interruption. Never recreate the deleted probes just to repeat passing evidence.
+Public verification at 16:00-16:02 UTC passed on both app hosts; auth/wallet gates and landing continuity passed,
+public recovery payload/manifest both 404. CI **42646509815** passed all eight jobs. No further code release is
+pending; **b0ecd9479** remains the source-patch code baseline. Keep DO files/settings for legacy consumers.
+
+**COMPLETE, 16:12 UTC:** final backup finished **16:08:40 UTC**, **209 objects / 202,034,601 bytes**. Final reference
+preview has zero remaining mapped references, zero private-review/unmapped entries; only the four pre-existing
+missing local images remain for original re-upload. Operations media status and Archive health are **ok**, no
+rehearsal marker. Final receipt `ops:cloud-media-final-acceptance-20261109` was persisted **16:11:58 UTC** and
+extended with a fresh unchanged complete source-inventory comparison at **16:12:37 UTC**. No source file changed.
+The web console disconnected during this run, but the original PHP process remained active; read its persisted
+result instead of repeating the sweep or clearing its lock. Both controlled live probes are already removed,
+their exact private revisions retained for 30 days. Active MEDIA_DISK is media; the Cloud migration is accepted.
+
+The current word/cache deployment artifact was safely removed with Git long-path support after its dependency
+junction was unlinked. Root dependencies and the owner's untracked files remain. Only the earlier stream-artifact
+remainder is left after its blocked cleanup; do not retry that rejected removal. No local rehearsal service or
+database is running. Final docs are source-only evidence; the next code source-patch baseline stays **b0ecd9479**,
+production code **31c1b568e**, environment deployment **1156**. Optional provider/device acceptance and sending-domain
+DNS/provider observations are still listed in `docs/audits/2026-11-09-loyalty-launch-rehearsal.md`; do not represent
+those as completed or enable unconfigured channels. DO retirement is a later review, not a remaining cutover step.
+
+## Dashboard deploy (9 Nov, 11:53 UTC)
+
+Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no
+overlapping file): source patch **d0b8b90** (62 files of the branch at 30f4e7d: 25 added, 37 changed, none deleted;
+whole-tree parity with the tip, built paths aside), fresh build **7c15358** (`frontend/dist`, `public/spa`,
+`resources/spa-shell` only), and follow-up **a455e01** (the Time Planner's `pulse` moved behind `time_management`, which
+`GateAndBootstrapTest` requires — found on PostgreSQL before the push). No migration. **Next source-patch baseline:
+9992d5e.**
+
+- Artifact checks (the deploy checkout): the full PHP sweep, 81 runs, **7,578 passed, 0 failed, 25 skipped**; after the
+  follow-up AdminAccess, Dashboard, Security, TimeWorkspace and the route tests again (164 passed, 1 skipped); Larastan no
+  errors; `tsc -b` clean; Vitest **463 files / 6,814 tests**; `npm run build` succeeded (the first bundle grew 35 kB raw,
+  about 10 kB gzipped); the built SPA served like Laravel renders the dashboard and CRM Today with no console error.
+- Live, verified by content: `https://app.hexa-tech.uk/` serves `index-12Wrra6-.js`, holding `loyalty-nav-groups-v2`,
+  `hx-dashboard-layout-v1`, `dashboard/pulse`, `dashboard/trends`, `nav-app-tile` and "Find in menu"; `admin/dashboard/pulse`,
+  `admin/dashboard/trends` and the `pulse` of crm, loyalty, appointments, content and time answer 401 unauthenticated (a
+  missing route answers 404). Landing continuity: `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet
+  (64,577 bytes) with zero `rp-` markers.
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42612548439 (in progress at recording).
+
+### What the owner does by hand
+
+1. Nothing for the release. To see the weather, a location (Locations / Properties) needs its city; otherwise the zone's
+   city is used (Europe/Riga → Riga). A venue on UTC with no city sees the clock alone and, as a manager, "Add a city".
+2. Worth a look once signed in: that the weather shows (Laravel Cloud must reach `api.open-meteo.com` and
+   `geocoding-api.open-meteo.com`; if it cannot, the card shows the clock alone and the log has
+   `dashboard.pulse.weather_unavailable`). `WEATHER_ENABLED=false` in Laravel Cloud switches the weather off.
+3. Everyone's menu starts folded the new way (only Overview, Workspaces and the page's own group open); each person's own
+   opening and closing is kept from then on.

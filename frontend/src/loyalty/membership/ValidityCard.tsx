@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CalendarCheck, CalendarClock, CalendarDays, CalendarOff, CalendarPlus, CalendarX2, Infinity as Endless, type LucideIcon } from 'lucide-react'
 import { formatDate } from '../../workspace/lib/wallClock'
+import { isDateKey } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -21,6 +22,8 @@ import {
   type Extension, type MembershipState, type Say, type ValidityHeadline,
 } from './validityMath'
 import { EXTEND_WORDS, VALIDITY_PROBLEM_WORDS } from './words'
+import { ASSIGNMENT_WORDS } from './words'
+import { AssignmentDialog } from './AssignmentDialog'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 const LONG: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
@@ -43,7 +46,7 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   const titleId = useId()
   const choicesId = useId()
   const [choosing, setChoosing] = useState(false)
-  const [dialog, setDialog] = useState<'set' | 'remove' | null>(null)
+  const [dialog, setDialog] = useState<'set' | 'remove' | 'assign' | null>(null)
   const [key, setKey] = useState(() => newPressKey())
   const [done, setDone] = useState<ValidityAnswer | null>(null)
   // The page's member as it stood when the answer came: until it is read again, the card shows the answer.
@@ -65,15 +68,15 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   }
   const finish = (answer: ValidityAnswer) => {
     setDone(answer)
-    setBefore(member.valid_until ?? null)
+    setBefore(JSON.stringify([member.valid_from ?? null, member.valid_until ?? null, member.membership_state]))
     setKey(newPressKey())
     setDialog(null)
     afterMemberChange(client, member.id)
   }
 
   if (member.is_erased) return null
-  const stale = done !== null && (member.valid_until ?? null) === before
-  const shown: Member = done && stale ? { ...member, valid_until: done.valid_until, membership_state: done.state } : member
+  const stale = done !== null && JSON.stringify([member.valid_from ?? null, member.valid_until ?? null, member.membership_state]) === before
+  const shown: Member = done && stale ? { ...member, valid_from: done.valid_from, valid_until: done.valid_until, membership_state: done.state } : member
   const headline = headlineOf(shown, today)
   const state: MembershipState = shown.membership_state ?? (shown.is_active ? 'active' : 'off')
   const day = (date: string) => formatDate(date, locale, LONG)
@@ -86,6 +89,8 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   return (
     <section aria-labelledby={titleId} data-validity={headline.kind} className={CARD}>
       <CardHead id={titleId} icon={CalendarClock} title={t('loyalty.membership.validity.title', 'Membership')} />
+      {member.membership_mode === 'assigned' && <p className="text-sm text-a-text-2">{t('loyalty.membership.assignment.assigned', ASSIGNMENT_WORDS.assigned)}</p>}
+      {change && <Button variant="secondary" onClick={() => setDialog('assign')}>{t('loyalty.membership.assignment.manage', ASSIGNMENT_WORDS.manage)}</Button>}
 
       {/* One line of status: the state's colour and icon on the headline, the time left (or what follows) beside it. */}
       <div className="space-y-1">
@@ -96,6 +101,7 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
           {headline.kind === 'active' && detail && <span className="text-sm text-a-text-2">{detail}</span>}
         </p>
         {headline.kind !== 'active' && detail && <p className="text-sm text-a-text-2">{detail}</p>}
+        {shown.valid_from && headline.kind !== 'scheduled' && <p className="text-sm text-a-text-2">{t('loyalty.membership.validity.starts', 'Valid from {{day}}', { day: day(shown.valid_from) })}</p>}
       </div>
 
       {done && (
@@ -149,6 +155,7 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
       {dialog === 'set' && (
         <SetDateDialog member={shown} today={today} pressKey={key} onClose={() => setDialog(null)} onDone={finish} onRefused={refused} />
       )}
+      {dialog === 'assign' && <AssignmentDialog member={member} onClose={() => setDialog(null)} />}
       {dialog === 'remove' && (
         <RemoveDialog member={shown} pressKey={key} onClose={() => setDialog(null)} onDone={finish} onRefused={refused} />
       )}
@@ -158,12 +165,14 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
 
 /** The headline's icon, by what it says. */
 const HEADLINE_ICONS: Record<ValidityHeadline['kind'], LucideIcon> = {
-  none: Endless, active: CalendarCheck, expiring: CalendarClock, expired: CalendarX2, off: CalendarOff,
+  none: Endless, active: CalendarCheck, expiring: CalendarClock, expired: CalendarX2, off: CalendarOff, scheduled: CalendarDays,
 }
 
 /** The card's first line, in the state's words. */
 function headlineText(h: ValidityHeadline, say: Say, day: (d: string) => string): string {
   switch (h.kind) {
+    case 'scheduled':
+      return say('loyalty.membership.validity.starts', 'Valid from {{day}}', { day: day(h.from) })
     case 'none':
       return say('loyalty.membership.validity.none', 'No end date')
     case 'active':
@@ -186,6 +195,8 @@ function headlineText(h: ValidityHeadline, say: Say, day: (d: string) => string)
 /** The words beside or under it: the time left, or what happens now (none for a membership without an end). */
 function detailText(h: ValidityHeadline, say: Say, day: (d: string) => string): string | null {
   switch (h.kind) {
+    case 'scheduled':
+      return h.until ? say('loyalty.membership.validity.until', 'Valid until {{day}}', { day: day(h.until) }) : say('loyalty.membership.validity.none', 'No end date')
     case 'none':
       return null
     case 'active':
@@ -207,23 +218,27 @@ function SetDateDialog({ member, today, pressKey, onClose, onDone, onRefused }: 
   const locale = i18n.language || 'en'
   const first = useFirstFocus<HTMLInputElement>()
   const [date, setDate] = useState(member.valid_until && member.valid_until >= today ? member.valid_until : '')
+  const [from, setFrom] = useState(member.valid_from ?? '')
   const [tried, setTried] = useState(false)
-  const save = useMutation({ mutationFn: () => membershipApi.validity(member.id, setBody(date, pressKey)), onSuccess: onDone, onError: onRefused })
+  const save = useMutation({ mutationFn: () => membershipApi.validity(member.id, { valid_until: date || null, valid_from: from || null, idempotency_key: pressKey }), onSuccess: onDone, onError: onRefused })
   const failure = save.isError ? failureOf(save.error) : null
-  const local = dateProblem(date, today)
-  const code = tried ? local : failure?.code === 'invalid' ? 'past' : null
+  const local = from && !isDateKey(from) ? 'start' : from && date && from > date ? 'range' : date ? dateProblem(date, today) : from ? null : 'date'
+  const code = tried ? local : failure?.fields?.valid_from ? 'range' : failure?.code === 'invalid' ? 'past' : null
   const problem = code ? t(`loyalty.membership.validity.problem.${code}`, VALIDITY_PROBLEM_WORDS[code]) : null
 
   return (
-    <Dialog title={t('loyalty.membership.validity.set_title', 'Valid until')} onClose={onClose} busy={save.isPending}>
+    <Dialog title={t('loyalty.membership.validity.period_title', 'Membership dates')} onClose={onClose} busy={save.isPending}>
       <form className="space-y-4" noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
         if (local === null) save.mutate()
       }}>
+        <FormField label={t('loyalty.membership.validity.from_label', 'Valid from (optional)')} hint={t('loyalty.membership.validity.from_hint', 'Leave empty for immediate access. A future date schedules this membership.')}>
+          <input ref={first} type="date" value={from} onChange={e => { setFrom(e.target.value); save.reset() }} className={INPUT} />
+        </FormField>
         <FormField label={t('loyalty.membership.validity.set_label', 'Last day of the membership')} problem={problem}
           hint={t('loyalty.membership.validity.set_hint', 'The member is let in on this day and refused from the day after.')}>
-          <input ref={first} type="date" value={date} min={firstEndDay(today)} onChange={(e) => { setDate(e.target.value); save.reset() }} className={INPUT} />
+          <input type="date" value={date} min={firstEndDay(today)} onChange={(e) => { setDate(e.target.value); save.reset() }} className={INPUT} />
         </FormField>
         {date && local === null && (
           <p className="text-sm text-a-text-2">{t('loyalty.membership.validity.set_preview', 'Valid until {{day}}.', { day: formatDate(date, locale, LONG) })}</p>

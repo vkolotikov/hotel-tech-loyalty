@@ -313,5 +313,24 @@
     "bonus": "Geschenke zum Start, zum Geburtstag und für Empfehlungen",
     "rule": "Wie Mitglieder aufsteigen und wann Punkte verfallen",
     "more": "Weitere Wege in Ihrem Programm"
+  },
+  "preview": {
+    "title": "Ihr Programm auf einen Blick",
+    "template": "Branchenvorlage",
+    "current": "Ihr aktuelles Programm",
+    "currentLine": "Ihre gespeicherten Mitgliedsstufen, Prämien und Sammelregeln.",
+    "catalogue": "Mitgliedschaft & Prämien",
+    "kept": "Ihre bestehenden Stufen und Prämien bleiben erhalten.",
+    "starting": "Vorgeschlagene Stufen und Prämienideen. Sie können sie später ändern.",
+    "levels": "{{n}} Mitgliedsstufen",
+    "rewards": "{{n}} Prämien",
+    "rewardExamples": "Prämienbeispiele:",
+    "noRewards": "Fügen Sie Ihre erste Prämie unter Prämien & Vorteile hinzu.",
+    "journey": "Der Weg Ihrer Mitglieder",
+    "join": "Beitreten",
+    "earn": "Punkte sammeln",
+    "use": "Prämien nutzen",
+    "off": "Nicht aktiviert: {{ways}}.",
+    "templateLine": "Vorgeschlagene Sammelregeln. Wählen Sie im nächsten Schritt, was Sie nutzen möchten."
   }
 }

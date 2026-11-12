@@ -10,6 +10,11 @@ const can = (manager: boolean): Can => ({
 })
 
 describe('a membership’s end date (release 8 §3)', () => {
+  it('shows the first day of a scheduled membership even without an end date', () => {
+    expect(headlineOf({ valid_from: '2027-01-01', valid_until: null, membership_state: 'scheduled', is_active: true }, '2026-10-05'))
+      .toEqual({ kind: 'scheduled', from: '2027-01-01', until: null })
+    expect(stateTone('scheduled')).toBe('pending')
+  })
   it('is changed by a manager only, and never on a deleted member', () => {
     expect(validityActions(can(true), {})).toEqual({ change: true })
     expect(validityActions(can(false), {})).toEqual({ change: false })

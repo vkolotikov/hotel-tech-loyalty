@@ -6,7 +6,7 @@ export const REDESIGN_WORDS = {
   level: 'Level', allLevels: 'All levels', membership: 'Membership', allStates: 'All statuses', sort: 'Sort by',
   listHint: 'Search and filters apply to the list. Open a member to view benefits, history, membership dates and cards.',
   showing: 'Showing {{from}}–{{to}} of {{total}} members', perPage: '{{n}} per page', pageSize: 'Members per page',
-  openMember: 'Open {{name}}', active: 'Active', off: 'Switched off', expiring: 'Expires soon', expired: 'Expired',
+  openMember: 'Open {{name}}', active: 'Active', off: 'Switched off', expiring: 'Expires soon', expired: 'Expired', scheduled: 'Scheduled',
   pointsBalance: 'Points balance', available: 'Available to spend', lifetime: '{{n}} points earned in total',
   progress: 'Progress to {{name}}', qualification: 'Level progress', qualifying: '{{current}} of {{target}} qualifying points',
   qualifyingVisits: '{{current}} of {{target}} qualifying visits', qualifyingSpend: '{{current}} of {{target}} qualifying spend',

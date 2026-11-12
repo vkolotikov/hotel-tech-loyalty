@@ -15,7 +15,7 @@ export function EarnFields({ way, form, answer, problems, disabled, currency, on
   way: Way; form: WayForm; answer: OptionsAnswer; problems: Problems; disabled: boolean; currency: string;
   onChange: (key: string, value: string) => void; bonus?: boolean
 }) {
-  return <div className="l-earn-fields">{way.fields.filter(key => shown(key, form, answer.fields)).map(key => <EarnField key={key} field={key} way={way} form={form} answer={answer} problems={problems} disabled={disabled || !form.on} currency={currency} onChange={onChange} bonus={bonus} />)}</div>
+  return <div className={way.key === 'referrals' ? "l-earn-fields l-editor-referral-fields" : "l-earn-fields"}>{way.fields.filter(key => shown(key, form, answer.fields)).map(key => <EarnField key={key} field={key} way={way} form={form} answer={answer} problems={problems} disabled={disabled || !form.on} currency={currency} onChange={onChange} bonus={bonus} />)}</div>
 }
 
 function EarnField({ field, way, form, answer, problems, disabled, currency, onChange, bonus }: {

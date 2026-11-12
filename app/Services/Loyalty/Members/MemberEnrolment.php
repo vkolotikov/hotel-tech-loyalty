@@ -56,7 +56,7 @@ final class MemberEnrolment
     }
 
     /**
-     * @param array{name: string, email: string, password?: ?string, phone?: ?string, tier_id?: ?int, nfc_uid?: ?string, valid_until?: ?string} $data
+     * @param array{name: string, email: string, password?: ?string, phone?: ?string, tier_id?: ?int, nfc_uid?: ?string, valid_from?: ?string, valid_until?: ?string, membership_mode?: string} $data
      * @return array{member: LoyaltyMember, tier: LoyaltyTier, invite_flow: bool, email_sent: bool}
      *
      * @throws LoyaltyRefused `member_limit` (402, the plan's sentence as its message) or `no_tier` (422)
@@ -64,6 +64,13 @@ final class MemberEnrolment
      */
     public function enrol(array $data, User $by, ?bool $sendWelcome = null): array
     {
+        $mode = array_key_exists('membership_mode', $data) ? MembershipAssignment::checkedMode($data['membership_mode']) : null;
+        if ($mode !== null) {
+            \App\Services\Loyalty\LoyaltyAccess::requireManager($by);
+        }
+        if ($mode === 'assigned' && empty($data['tier_id'])) {
+            throw new LoyaltyRefused('bad_tier', 'Choose a membership level.', 422);
+        }
         // The plan's member cap (max_loyalty_members).
         if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_MEMBERS)) {
             throw new LoyaltyRefused('member_limit', $block, 402);
@@ -75,16 +82,21 @@ final class MemberEnrolment
         if (!$tier) {
             throw new LoyaltyRefused('no_tier', 'No loyalty tiers configured for this organization.', 422);
         }
+        if ($mode === 'assigned' && !$tier->is_active) {
+            throw new LoyaltyRefused('bad_tier', 'Choose an active membership level.', 422);
+        }
 
         $inviteFlow = empty($data['password']);
         // Required: TenantScope fails closed, so a member user without an organisation signs in to nothing.
         $orgId = $by->organization_id ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
         $validUntil = self::validUntil($data['valid_until'] ?? null, (int) $orgId);
+        $validFrom = MembershipValidity::checkedStart($data['valid_from'] ?? null);
+        MembershipValidity::assertInterval($validFrom, $validUntil);
         // Release 7: the venue's option, read through ProgrammeOptions (500 when never set, as before).
         $welcomeBonus = (int) ProgrammeOptions::get((int) $orgId, 'welcome_bonus_points');
         $sendEmail = $sendWelcome ?? $inviteFlow;
 
-        [$member, $inviteCode] = DB::transaction(function () use ($data, $by, $tier, $inviteFlow, $welcomeBonus, $orgId, $validUntil) {
+        [$member, $inviteCode] = DB::transaction(function () use ($data, $by, $tier, $inviteFlow, $welcomeBonus, $orgId, $validUntil, $validFrom, $mode) {
             $user = User::create([
                 'name'      => $data['name'],
                 'email'     => $data['email'],
@@ -110,7 +122,10 @@ final class MemberEnrolment
             $this->qrCode->generateToken($member);
 
             // Release 8: the membership's end date, when one was given (MembershipValidity is its one writer).
-            MembershipValidity::onCreate($member, $validUntil);
+            MembershipValidity::onCreate($member, $validUntil, $validFrom);
+            if ($mode !== null) {
+                MembershipAssignment::onCreate($member, $mode, $by);
+            }
 
             if (!empty($data['nfc_uid'])) {
                 // Through NfcCards (release 6): the ID stored normalised, one card for one member across every

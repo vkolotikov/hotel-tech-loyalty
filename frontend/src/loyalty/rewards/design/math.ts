@@ -1,5 +1,5 @@
 import type { Benefit, Tier } from '../../program/types'
-import type { Reward } from '../types'
+import type { Offer, Reward } from '../types'
 import type { RewardOptions } from '../types'
 import { rewardProblems, type RewardForm } from '../rewardsMath'
 
@@ -22,6 +22,40 @@ export function rewardStatus(reward: Reward, now = Date.now()): 'off' | 'ended' 
 
 export function benefitAssignments(benefit: Benefit, tiers: Tier[]) {
   return tiers.flatMap(tier => tier.benefits.filter(b => b.benefit_id === benefit.id).map(value => ({ tier, value })))
+}
+export function benefitState(benefit: Benefit, tiers: Tier[]): 'off' | 'active' | 'unassigned' {
+  return !benefit.is_active ? 'off' : benefitAssignments(benefit, tiers).some(a => a.tier.is_active) ? 'active' : 'unassigned'
+}
+export function benefitPreview(benefit: Benefit, tiers: Tier[], tierId?: number | null) {
+  const assignments = benefitAssignments(benefit, tiers)
+  return tierId != null ? assignments.find(a => a.tier.id === tierId) : assignments.find(a => a.tier.is_active) ?? assignments[0]
+}
+export function offerCounts(offers: Offer[]): Record<string, number> {
+  const counts: Record<string, number> = { all: offers.length, current: 0, live: 0, upcoming: 0, off: 0, ended: 0 }
+  for (const offer of offers) { if (offer.state in counts) counts[offer.state]++; if (['live', 'upcoming'].includes(offer.state)) counts.current++ }
+  return counts
+}
+
+export interface OfferFilters { q: string; brand: string; status: string }
+
+/** One filter decision for both the list and the return from an editor. */
+export function offerMatches(offer: Offer, filters: OfferFilters, brandName: string): boolean {
+  return `${offer.title} ${brandName} ${offer.code ?? ''}`.toLocaleLowerCase().includes(filters.q.toLocaleLowerCase())
+    && (filters.brand === 'all' || (filters.brand === 'every' ? offer.brand_id == null : String(offer.brand_id) === filters.brand))
+    && (filters.status === 'all' || (filters.status === 'current' ? ['live', 'upcoming'].includes(offer.state) : offer.state === filters.status))
+}
+
+/** Keep the saved/cancelled selection visible, retaining each filter that still matches it. */
+export function offerReadUrl(search: string, offer: Offer, brandName: string, saved = false): string {
+  const params = new URLSearchParams(search)
+  const filters = { q: params.get('q') ?? '', brand: params.get('brand') ?? 'all', status: params.get('status') ?? 'current' }
+  const any = { q: '', brand: 'all', status: 'all' }
+  return rewardsUrl('offers', {
+    q: offerMatches(offer, { ...any, q: filters.q }, brandName) ? filters.q : null,
+    brand: offerMatches(offer, { ...any, brand: filters.brand }, brandName) ? filters.brand : 'all',
+    status: offerMatches(offer, { ...any, status: filters.status }, brandName) ? filters.status : 'all',
+    selected: offer.id, saved: saved ? '1' : null,
+  })
 }
 
 /** Keep legacy tab addresses intact and isolate list filters from editor addresses. */

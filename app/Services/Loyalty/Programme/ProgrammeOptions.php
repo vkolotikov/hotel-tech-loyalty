@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use App\Models\Reward;
 use App\Models\User;
+use App\Support\AdvisoryLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -57,6 +58,7 @@ final class ProgrammeOptions
         'tier_progress_by'            => ['enum:points|visits|spend', 'points', 'Tier Progress By'],
         // The wizard
         'programme_setup_completed_at' => ['time', null, 'Programme Setup Completed'],
+        'programme_setup_template' => ['string', null, 'Programme Setup Template'],
     ];
 
     /** Bounds a value must stay within, by option (inclusive). @var array<string, array{0: float|int, 1: float|int}> */
@@ -107,7 +109,7 @@ final class ProgrammeOptions
     ];
 
     /** Written only by the setup wizard's apply and skip (markSetUp()), never by a change. */
-    public const WIZARD_ONLY = ['programme_setup_completed_at'];
+    public const WIZARD_ONLY = ['programme_setup_completed_at', 'programme_setup_template'];
 
     /**
      * The cards, as the workspace reads them.
@@ -235,6 +237,12 @@ final class ProgrammeOptions
      */
     public static function save(int $orgId, array $changes, ?User $by): array
     {
+        return AdvisoryLock::transaction("loyalty-setup:{$orgId}", fn () => self::saveLocked($orgId, $changes, $by));
+    }
+
+    /** @param array<string, mixed> $changes @return array<string, mixed> */
+    private static function saveLocked(int $orgId, array $changes, ?User $by): array
+    {
         $clean = self::validate($orgId, $changes);
         if ($clean === []) {
             return self::for($orgId);
@@ -328,6 +336,12 @@ final class ProgrammeOptions
         self::write($orgId, ['programme_setup_completed_at' => $at]);
 
         return $at;
+    }
+
+    /** Wizard metadata only; choosing a template never changes the organisation's other products. */
+    public static function rememberTemplate(int $orgId, ?string $template): void
+    {
+        self::write($orgId, ['programme_setup_template' => $template]);
     }
 
     /**

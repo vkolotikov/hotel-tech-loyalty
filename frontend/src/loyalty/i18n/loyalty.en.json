@@ -194,6 +194,9 @@
     "decline_title": "Decline {{benefit}}",
     "done": "Mark done",
     "error": {
+      "member_inactive": "This membership is switched off. A manager can review it on the member’s page.",
+      "membership_expired": "This membership has ended. Renew it before using this benefit.",
+      "membership_not_started": "This membership has not started yet. Review its dates on the member’s page.",
       "invalid": "Say why the request is declined.",
       "network": "No connection: nothing was saved. Try again.",
       "not_found": "This request no longer exists.",
@@ -312,5 +315,20 @@
     "help": "This list",
     "on_member": "On a member’s page",
     "scan": "Scan a card"
+  },
+  "launchpolish": {
+    "firstSteps": "First steps",
+    "setupSettingsLine": "Review your industry template, earning rules and programme setup at any time.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "deleteReward": "Delete reward",
+    "deleteBody": "Delete “{{name}}”? Only unused rewards can be deleted. Rewards with redemption history or a stamp-card link must be disabled instead.",
+    "confirmDelete": "Delete",
+    "rewardInUse": "This reward has redemption history or is linked to a stamp card. Disable it instead.",
+    "actionFailed": "The change could not be saved. Please try again.",
+    "templateKeepLine": "Choose an industry template for suggested earning rules. Your existing tiers, benefits and rewards stay as they are. Review every change before applying.",
+    "lastTemplate": "Last used template",
+    "templateReview": "Suggested earning rules: {{preset}}. Your tiers, benefits and rewards stay as they are.",
+    "keepRules": "Keep current earning rules"
   }
 }

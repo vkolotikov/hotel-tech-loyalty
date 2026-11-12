@@ -55,14 +55,24 @@ class MediaService
         $prefix = $orgId ? "org-{$orgId}/{$folder}" : $folder;
 
         try {
-            $path = $file->storePublicly($prefix, $disk);
+            if ($disk === config('media.cloud_disk')) {
+                $path = trim($prefix, '/').'/'.$file->hashName();
+                $stream = fopen($file->getPathname(), 'rb');
+                if (!$stream) throw new \RuntimeException('media_read_failed');
+                try {
+                    self::writeCloud($disk, $path, $stream, (int) $file->getSize(),
+                        (string) hash_file('sha256', $file->getPathname()), $file->getMimeType() ?: 'application/octet-stream');
+                } finally { fclose($stream); }
+            } else {
+                $path = $file->storePublicly($prefix, $disk);
+            }
         } catch (\Throwable $e) {
             Log::error('MediaService upload failed', [
                 'disk'   => $disk,
                 'folder' => $folder,
-                'error'  => $e->getMessage(),
+                'error'  => $e::class,
             ]);
-            throw new \RuntimeException("File upload failed ({$disk}): " . $e->getMessage());
+            throw new \RuntimeException('File upload failed', previous: $e);
         }
 
         if (!$path) {
@@ -94,14 +104,26 @@ class MediaService
         $path = trim($prefix, '/') . '/' . $name;
 
         try {
-            Storage::disk($disk)->put($path, $contents, $visibility);
+            if ($disk === config('media.cloud_disk')) {
+                if ($visibility !== 'public') throw new \RuntimeException('private_media_requires_private_disk');
+                $stream = tmpfile();
+                if (!$stream) throw new \RuntimeException('media_spool_failed');
+                try {
+                    if (fwrite($stream, $contents) !== strlen($contents)) throw new \RuntimeException('media_spool_failed');
+                    rewind($stream);
+                    self::writeCloud($disk, $path, $stream, strlen($contents), hash('sha256', $contents),
+                        (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents) ?: 'application/octet-stream');
+                } finally { fclose($stream); }
+            } elseif (!Storage::disk($disk)->put($path, $contents, $visibility)) {
+                throw new \RuntimeException('media_write_failed');
+            }
         } catch (\Throwable $e) {
             Log::error('MediaService putRaw failed', [
                 'disk'   => $disk,
                 'folder' => $folder,
-                'error'  => $e->getMessage(),
+                'error'  => $e::class,
             ]);
-            throw new \RuntimeException("Media store failed ({$disk}): " . $e->getMessage());
+            throw new \RuntimeException('Media store failed', previous: $e);
         }
 
         if ($disk === 'public') {
@@ -125,19 +147,34 @@ class MediaService
         // cloud disk. Resolving against the CURRENTLY configured disk (what this
         // method did before) silently no-ops for every file written before a
         // disk change - which is how every replace-image flow leaked its old file.
-        if (str_starts_with($url, '/storage/')) {
-            Storage::disk('public')->delete(substr($url, strlen('/storage/')));
-            return;
-        }
-
-        $cloudBase = rtrim((string) config('filesystems.disks.do.url'), '/');
-        if ($cloudBase !== '' && str_starts_with($url, $cloudBase . '/')) {
-            Storage::disk('do')->delete(substr($url, strlen($cloudBase) + 1));
+        $where = \App\Services\Media\Location::resolve($url);
+        if ($where) {
+            $org = app()->bound('current_organization_id') ? (int) app('current_organization_id') : 0;
+            if ($where['disk'] === config('media.cloud_disk') && $org > 0 && !str_starts_with($where['key'], 'org-'.$org.'/')) {
+                Log::warning('media.delete.foreign_or_legacy');
+                return;
+            }
+            // Keep legacy provider-owned URLs working throughout the Cloud transition.
+            if (static::disk() === config('media.cloud_disk') && $where['disk'] === 'do') return;
+            if ($where['disk'] === config('media.cloud_disk')) {
+                app(\App\Services\Media\CloudUploads::class)->delete($where['disk'], $where['key']);
+            } else {
+                Storage::disk($where['disk'])->delete($where['key']);
+            }
             return;
         }
 
         // Not ours to delete - but say so. A silent no-op here is the old bug
         // wearing a different hat.
-        Log::warning('media.delete.unresolvable', ['url' => $url]);
+        Log::warning('media.delete.unresolvable');
+    }
+
+    /** @param resource $stream */
+    private static function writeCloud(string $disk, string $key, $stream, int $bytes, string $sha, string $mime): void
+    {
+        $base = (string) config('filesystems.disks.'.$disk.'.url');
+        if (parse_url($base, PHP_URL_SCHEME) !== 'https') throw new \RuntimeException('media_public_url_missing');
+        app(\App\Services\Media\CloudUploads::class)->write($disk, $key,
+            ['stream' => $stream, 'bytes' => $bytes, 'sha256' => $sha, 'mime' => $mime]);
     }
 }

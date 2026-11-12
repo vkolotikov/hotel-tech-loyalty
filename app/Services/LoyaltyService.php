@@ -443,7 +443,8 @@ class LoyaltyService
             $base = 1.0;
         }
 
-        $earnRate = (float) ($member->tier?->earn_rate ?? 1.0);
+        $earnRate = \App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($member)
+            ? (float) ($member->tier?->earn_rate ?? 1.0) : 1.0;
 
         // Check outlet override
         if ($outletId) {
@@ -534,7 +535,7 @@ class LoyaltyService
                 ->where('so.organization_id', $member->organization_id)
                 ->where('so.type', 'points_multiplier')
                 ->where('so.is_active', true)
-                ->get(['so.value', 'so.start_date', 'so.end_date', 'mo.expires_at']));
+                ->get(['so.*', 'mo.expires_at']));
         } catch (\Throwable) {
             // A database without the offer tables (a narrower test schema): no offer boost.
             return 1.0;
@@ -542,6 +543,8 @@ class LoyaltyService
 
         $best = 1.0;
         foreach ($claims as $claim) {
+            $offer = (new \App\Models\SpecialOffer)->setRawAttributes((array) $claim, true);
+            if (!$offer->allowsMembership($member)) continue;
             if ($claim->start_date && \Illuminate\Support\Carbon::parse($claim->start_date)->startOfDay()->isFuture()) {
                 continue;
             }
@@ -562,6 +565,21 @@ class LoyaltyService
      * Supports soft landing (drop only one tier at a time).
      */
     public function assessTier(LoyaltyMember $member, ?User $assessedBy = null, string $reason = 'qualification'): bool
+    {
+        // Manual assignment and automatic assessment serialise on the same member, including callers holding an
+        // older model instance. A stale assessment can never replace a newly assigned package.
+        return DB::transaction(function () use ($member, $assessedBy, $reason) {
+            $current = LoyaltyMember::withoutGlobalScope(\App\Scopes\TenantScope::class)
+                ->where('organization_id', $member->getAttribute('organization_id'))->whereKey($member->id)->lockForUpdate()->first();
+            if ($current === null || $current->getAttribute('membership_mode') === 'assigned') {
+                return false;
+            }
+
+            return $this->assessEarnedTier($member, $assessedBy, $reason);
+        });
+    }
+
+    private function assessEarnedTier(LoyaltyMember $member, ?User $assessedBy, string $reason): bool
     {
         $member->loadMissing('tier');
         $currentTier = $member->tier;
@@ -1157,6 +1175,9 @@ class LoyaltyService
             };
             $current = $member->tier;
             $floor = $money ? (float) ($current?->{$column} ?? 0) : (int) ($current?->{$column} ?? 0);
+            if ($member->getAttribute('membership_mode') === 'assigned') {
+                return ['by' => $by, 'qualifying' => $qualifying, 'next_tier' => null, 'needed' => 0, 'percent' => 100];
+            }
 
             // The next tier is above the member's own on the ladder (ladderPlaces(), as assessTier() reads a move's
             // direction) and has a floor on the measure: never a tier below or level with theirs — a member put on an

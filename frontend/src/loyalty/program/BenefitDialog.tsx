@@ -1,14 +1,17 @@
+import { useEditorClose } from '../editors/useEditorClose'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Dialog } from '../../workspace/ui/Dialog'
+import { EditorDialog, EditorDisclosure, EditorNote, EditorFooter } from '../editors/EditorUI'
+import { useEditorWords } from '../editors/words'
+import { useAdminWords } from '../management/words'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
-import { FormField, FormFoot } from '../ui/formParts'
+import { FormField } from '../ui/formParts'
 import { BENEFIT_FIELDS, benefitBody, benefitFormOf, benefitProblems, type BenefitForm } from './programMath'
 import { named, serverProblems } from '../lib/forms'
 import type { Benefit, ProgramOptions } from './types'
@@ -25,6 +28,7 @@ export function BenefitDialog({ benefit, options, onClose }: { benefit: Benefit 
   const { t } = useTranslation()
   const client = useQueryClient()
   const first = useFirstFocus<HTMLInputElement>()
+  const editor = useEditorWords(), admin = useAdminWords()
   const creating = benefit === null
   const [form, setForm] = useState<BenefitForm>(() => benefitFormOf(benefit))
   const [tried, setTried] = useState(false)
@@ -50,14 +54,15 @@ export function BenefitDialog({ benefit, options, onClose }: { benefit: Benefit 
     return key ? t(...key) : value
   }
 
+  const close = useEditorClose(form, onClose, save.isPending)
   return (
-    <Dialog title={benefit ? t('loyalty.program.benefit.edit_title', 'Change {{name}}', { name: benefit.name }) : t('loyalty.program.benefit.new_title', 'Add a benefit')}
-      onClose={onClose} busy={save.isPending}>
-      <form className="space-y-4" noValidate onSubmit={(e) => {
+    <><EditorDialog area="rewards" icon="perk" section={admin('perks')} title={benefit ? t('loyalty.program.benefit.edit_title', 'Change {{name}}', { name: benefit.name }) : t('loyalty.program.benefit.new_title', 'Add a benefit')}
+      onClose={close.cancel} busy={save.isPending}>
+      <form className="l-editor-form" noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
         if (Object.keys(benefitProblems(form, creating, options)).length === 0) save.mutate()
-      }}>
+      }}><div className="l-editor-body"><fieldset disabled={save.isPending} className="l-editor-stack"><div className="l-editor-two">
         <FormField label={t('loyalty.program.benefit.name', 'Name')} problem={problem('name')}>
           <input ref={first} type="text" value={form.name} maxLength={255} onChange={(e) => update({ name: e.target.value })} className={INPUT}
             placeholder={t('loyalty.program.benefit.name_example', 'e.g. Late checkout')} />
@@ -76,7 +81,7 @@ export function BenefitDialog({ benefit, options, onClose }: { benefit: Benefit 
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        </div><div className="l-editor-two">
           <FormField label={t('loyalty.program.benefit.category', 'Category')} problem={problem('category')}>
             <select value={form.category} onChange={(e) => update({ category: e.target.value })} className={INPUT}>
               <option value="">{t('loyalty.program.benefit.choose', 'Choose…')}</option>
@@ -93,16 +98,15 @@ export function BenefitDialog({ benefit, options, onClose }: { benefit: Benefit 
           </FormField>
         </div>
 
-        <FormField label={t('loyalty.program.benefit.description', 'Description')} hint={t('loyalty.program.benefit.description_hint', 'Optional. Members read it in the app.')}
+        <EditorDisclosure title={editor('memberDescription')} open={!!problem('description')}><FormField label={t('loyalty.program.benefit.description', 'Description')} hint={t('loyalty.program.benefit.description_hint', 'Optional. Members read it in the app.')}
           problem={problem('description')}>
           <textarea value={form.description} rows={3} onChange={(e) => update({ description: e.target.value })} className={INPUT} />
-        </FormField>
-
+        </FormField></EditorDisclosure>
+        {creating && <EditorNote icon="level" title={editor('assignLater')}>{editor('assignLaterLine')}</EditorNote>}
         {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'benefit', failure))}</Notice>}
 
-        <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose}
-          save={benefit ? t('loyalty.program.benefit.save', 'Save benefit') : t('loyalty.program.benefit.create', 'Add benefit')} />
+        </fieldset></div><EditorFooter dirty={close.dirty} creating={creating} busy={save.isPending} onCancel={close.cancel} save={benefit ? t('loyalty.program.benefit.save', 'Save benefit') : t('loyalty.program.benefit.create', 'Add benefit')} />
       </form>
-    </Dialog>
+    </EditorDialog>{close.warning}</>
   )
 }

@@ -32,6 +32,16 @@ final class MemberStatus
         }
     }
 
+    public static function assertMembershipBenefits(?LoyaltyMember $member): void
+    {
+        self::assertActive($member);
+        if ($member !== null && !MembershipValidity::benefitsAvailable($member)) {
+            $scheduled = MembershipValidity::summaryFor($member)['state'] === MembershipValidity::SCHEDULED;
+            throw new LoyaltyRefused($scheduled ? 'membership_not_started' : 'membership_expired',
+                $scheduled ? 'This membership has not started yet.' : 'This membership has ended.', 403);
+        }
+    }
+
     public function deactivate(LoyaltyMember $member, User $by): LoyaltyMember
     {
         return $this->set($member, false, $by);

@@ -15,7 +15,7 @@ class CheckMediaRecovery extends Command
     {
         try { $status = $recovery->versioning(); } catch (\Throwable) { $status = 'unavailable'; }
         SharedCache::store()->put('ops:media-versioning', ['status' => $status, 'last_seen_at' => now()->toIso8601String()], now()->addHours(26));
-        $this->info('Media versioning: '.$status.'. Versioning alone does not verify recovery.');
+        $this->info('Media recovery: '.$status.'. Configuration alone does not verify recovery.');
         return $status === 'unavailable' ? self::FAILURE : self::SUCCESS;
     }
 }

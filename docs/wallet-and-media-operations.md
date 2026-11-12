@@ -46,10 +46,69 @@ create customer passes or marketing messages merely to test.
 
 ## Media versioning and recovery
 
-Database backups do not contain object-storage media. `php artisan media:check-recovery` reads bucket versioning
-and records an observation for 26 hours; the scheduler runs daily at 04:20 server time. Platform admins alone see
-this check. Local `MEDIA_DISK=public` causes no cloud request. Disabled/suspended versioning is attention,
-missing/stale observations are unobserved. The command does not enable versioning or change retention/costs.
+### Cloud migration (9 November 2026)
+
+Owner selected Laravel Cloud storage and 30-day recovery. Architecture, verified resource identities and actual
+acceptance: `audits/2026-11-09-cloud-media-architecture.md`. **Production MEDIA_DISK is media**, accepted at 16:12 UTC:
+209 files, 165 migrated references, real default upload and private restore verified, recovery healthy. DigitalOcean
+files/settings remain for historical URLs and external consumers. Four pre-existing missing local images need their
+originals re-uploaded; no available migration source file was lost. Do not undo the cutover or remove source objects
+or credentials as part of routine maintenance. The following steps also document the guarded migration procedure.
+
+`php artisan media:cloud-migrate` reads a complete inventory, source visibility and bytes; it writes no objects by
+default. `--apply` additionally requires `--expected-source=<source bucket>`, `--expected-source-host=<source host>`,
+`--expected-public=<public bucket>`, `--expected-private=<private bucket>` and `--expected-host=<Cloud endpoint host>`.
+It creates verified private recovery copies and publishes only explicitly public, recognised safe file types;
+private, unknown and credential-like objects remain private for review. Supported DOCX files, like PDF/text, retain
+public access only when both the original ACL and the detected MIME type establish it. Matching destination bytes resume safely;
+conflicting bytes stop instead of overwriting. Checkpoints are private self-contained manifests, never local files.
+The command does not switch MEDIA_DISK or update database URLs.
+
+Before cutover, run `php artisan media:backup-cloud --prepare --expected-public=<verified public bucket>
+--expected-private=<verified private bucket> --apply` (one command line) to verify destination backups while DO is
+still active. Complete `media:verify-cloud --apply` for an exact org-owned revision. Then
+`php artisan media:cloud-urls` previews the reviewed reference fields, reporting private, unmapped and local-legacy
+references separately. Applying additionally requires `--apply --expected-source=<source bucket>
+--expected-public=<public bucket>` (one command line), recent backup/restore receipts, and valid live/recovery bytes
+for the mapped public files. Exact URL leaves only; no credentials, audit records, sent messages or broad string
+replacement. Model saves preserve cache hooks, changed rows are rechecked under row locks, and all provider reads
+finish before those row locks. Resolve references with available source files before acceptance. Record pre-existing
+missing local assets separately for original re-upload; never clear or fabricate them to obtain a clean count.
+
+When MEDIA_DISK is `media`, the shared writer uses ACL-free SDK writes and requires a verified private copy. Member
+avatars use the same writer and save their new reference before releasing an owned predecessor. Legacy DO URLs are
+kept during the transition. `php artisan media:backup-cloud --apply --prune` runs daily at 03:40; it does nothing
+while Cloud media is inactive. It retains current backups indefinitely and retired revisions for 30 days after
+retirement, checks the live key again under a shared lock, and only deletes validated managed private pairs.
+Storage errors and missing buckets never count as a deleted asset. No rule expires current public objects.
+
+Composer's install cleanup excludes the application cache (`optimize:clear --except=cache`). Production uses the
+database for both the default and shared cache: flushing it during deployment erases recovery receipts and pending
+operation markers. Clear compiled configuration/routes/views independently; never flush shared operational state
+as deployment housekeeping. A regression test runs the configured install command against real database cache.
+
+`php artisan media:verify-cloud --org=<organisation id> --key=<org-prefixed key> --sha256=<exact backup SHA-256>`
+previews one manifest. `--apply` restores only to a new isolated private `_recovery_checks/` key, compares bytes,
+then removes that exact probe. The persisted `ops:cloud-media-recovery-copy` marker blocks another rehearsal after
+an ambiguous write or cleanup failure. Inspect and clean only its exact private key before clearing it. Never clear
+shared cache to hide an unresolved rehearsal. A successful backup sweep plus a restore receipt within 30 days is
+required for a clean Cloud observation. These are application recovery copies, not native R2 versioning or a backup
+outside the Cloud account.
+
+Database backups do not contain object-storage media. `php artisan media:check-recovery` checks the active provider:
+Cloud requires recent private backup and restore receipts; legacy S3 reads native versioning. It records an
+observation for 26 hours; the scheduler runs daily at 04:20 server time. Platform admins alone see this check.
+Local MEDIA_DISK=public causes no cloud request. Missing/stale observations are unobserved; incomplete Cloud recovery
+or disabled legacy versioning needs attention. Repeat an exact authorised Cloud restore rehearsal within 30 days
+to keep its acceptance current. The command does not enable versioning or change retention/costs.
+
+**Legacy S3 procedure, superseded for current production:** `php artisan media:recovery-policy --noncurrent-days=30` previews the
+configured bucket's versioning and lifecycle without writing. Applying requires `--apply`, explicit retention,
+`--expected-bucket=<verified production bucket>` and `--expected-host=<configured endpoint hostname>`. The command
+refuses unrelated/advanced lifecycle rules and unresolved recovery-copy markers, shares the recovery lock, sets only
+noncurrent expiration, then enables and reads back versioning. A matching policy is idempotent. No credential or
+provider exception text is printed. The owner approved 30-day noncurrent retention for `hotel-tech-assets` in lon1;
+the exact command and outstanding backup/recovery acceptance are in `audits/2026-11-09-media-recovery-plan.md`.
 
 Preview an exact tenant-owned version:
 

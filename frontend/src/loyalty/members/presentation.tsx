@@ -6,11 +6,11 @@ import type { TierRef } from '../lib/types'
 import { overviewAssets } from '../overview/assets'
 import { memberTierPaint } from './memberPaint'
 import { memberAssets } from './assets'
-export type MemberStatusName = 'active' | 'off' | 'expiring' | 'expired'
+export type MemberStatusName = 'active' | 'off' | 'expiring' | 'expired' | 'scheduled'
 
 export function MemberStatus({ state, pill = false }: { state: MemberStatusName; pill?: boolean }) {
   const say = useRedesignWords()
-  const dot = state === 'active' ? overviewAssets.green : state === 'expiring' ? overviewAssets.amber : state === 'expired' ? memberAssets.expiredDot : overviewAssets.neutral
+  const dot = state === 'active' ? overviewAssets.green : state === 'expiring' || state === 'scheduled' ? overviewAssets.amber : state === 'expired' ? memberAssets.expiredDot : overviewAssets.neutral
   return <span className={`l-mb-status l-mb-status-${state}`} data-pill={pill || undefined}><img src={dot} alt="" />{say(state)}</span>
 }
 

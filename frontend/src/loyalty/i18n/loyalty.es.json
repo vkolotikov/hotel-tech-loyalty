@@ -194,6 +194,9 @@
     "decline_title": "Rechazar: {{benefit}}",
     "done": "Marcar como hecha",
     "error": {
+      "member_inactive": "Esta membresía está desactivada. Un responsable puede revisarla en la página del miembro.",
+      "membership_expired": "Esta membresía ha finalizado. Renuévela antes de utilizar este beneficio.",
+      "membership_not_started": "Esta membresía aún no ha comenzado. Revise las fechas en la página del miembro.",
       "invalid": "Indique por qué se rechaza la solicitud.",
       "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
       "not_found": "Esta solicitud ya no existe.",
@@ -312,5 +315,20 @@
     "help": "Esta lista",
     "on_member": "En la página de un miembro",
     "scan": "Escanear una tarjeta"
+  },
+  "launchpolish": {
+    "firstSteps": "Primeros pasos",
+    "setupSettingsLine": "Revise cuando quiera su plantilla de sector, las reglas de acumulación y la configuración del programa.",
+    "enable": "Activar",
+    "disable": "Desactivar",
+    "deleteReward": "Eliminar recompensa",
+    "deleteBody": "¿Eliminar «{{name}}»? Solo se pueden eliminar recompensas sin uso. Desactive las que tengan historial de canjes o un vínculo con una tarjeta de sellos.",
+    "confirmDelete": "Eliminar",
+    "rewardInUse": "Esta recompensa tiene historial de canjes o está vinculada a una tarjeta de sellos. Desactívela en su lugar.",
+    "actionFailed": "No se pudo guardar el cambio. Vuelva a intentarlo.",
+    "templateKeepLine": "Elija una plantilla de sector con reglas de acumulación sugeridas. Sus niveles, beneficios y recompensas actuales se conservan. Revise cada cambio antes de aplicarlo.",
+    "lastTemplate": "Última plantilla utilizada",
+    "templateReview": "Reglas de acumulación sugeridas: {{preset}}. Sus niveles, beneficios y recompensas se conservan.",
+    "keepRules": "Conservar las reglas de acumulación actuales"
   }
 }

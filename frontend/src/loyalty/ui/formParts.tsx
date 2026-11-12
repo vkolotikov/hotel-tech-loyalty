@@ -1,3 +1,4 @@
+import { DesignDialog } from '../redesign/DesignUI'
 import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
@@ -73,18 +74,20 @@ export function ToneBadge({ tone, children }: { tone: Tone; children: ReactNode 
  * The step before an action that cannot be taken back: what it does, in a sentence, and two plain answers, the safe
  * one first.
  */
-export function ConfirmDialog({ title, children, confirm, keep, busy, failure, onConfirm, onClose }: {
+export function ConfirmDialog({ title, children, confirm, keep, busy, failure, onConfirm, onClose, native = false }: {
   title: string
   children: ReactNode
   confirm: string
+  native?: boolean
   keep: string
   busy: boolean
   failure: string | null
   onConfirm: () => void
   onClose: () => void
 }) {
+  const Surface = native ? DesignDialog : Dialog
   return (
-    <Dialog title={title} onClose={onClose} busy={busy}>
+    <Surface title={title} onClose={onClose} busy={busy}>
       <div className="space-y-4">
         <div className="space-y-2 text-sm text-a-text">{children}</div>
         {failure && <Notice tone="danger">{failure}</Notice>}
@@ -93,7 +96,7 @@ export function ConfirmDialog({ title, children, confirm, keep, busy, failure, o
           <Button type="button" variant="danger" loading={busy} onClick={onConfirm}>{confirm}</Button>
         </div>
       </div>
-    </Dialog>
+    </Surface>
   )
 }
 

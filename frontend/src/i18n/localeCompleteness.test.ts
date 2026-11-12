@@ -5,6 +5,7 @@ import path from 'node:path'
 // question the editor's label site asks — which key does this leaf read —
 // rather than re-deriving the collapse rules a second time here.
 import { fieldHintKey, fieldLabelKey } from '../pages/landing/editorSections'
+import { weatherWords } from '../pages/dashboard/dashboardMath'
 
 /**
  * Task 5's locale-sweep net.
@@ -53,9 +54,13 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'pages/AccountTeam.tsx'),
   // The full admin's task drawer, redesigned on 2026-11-09 (its words had been in English in every language).
   path.join(SRC_DIR, 'components/TaskDrawer.tsx'),
+  // The full admin's dashboard and menu, rebuilt on 2026-11-09.
+  path.join(SRC_DIR, 'pages/Dashboard.tsx'),
+  path.join(SRC_DIR, 'pages/dashboard'),
+  path.join(SRC_DIR, 'components/Layout.tsx'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_', 'auth.product.', 'account.products.', 'account.team.', 'taskDrawer.', 'tasks.types.']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_', 'auth.product.', 'account.products.', 'account.team.', 'taskDrawer.', 'tasks.types.', 'dashboard.', 'nav.find_', 'nav.menu_label']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)
@@ -705,6 +710,21 @@ describe('locale completeness — builder tabs, filter chips, badges and placeme
         missing,
         `${locale}/common.json is missing (or has a blank) builder-shape key: ${missing.join(', ') || '(none)'}`,
       ).toEqual([])
+    })
+  }
+})
+
+/**
+ * The dashboard's weather words (2026-11-09) are asked for as `dashboard.weather.<key>` through a template, which the
+ * scan above cannot see: every word weatherWords() can name, for every WMO code 0–99, in every language.
+ */
+describe('locale completeness — the dashboard\'s weather words', () => {
+  const keys = [...new Set(Array.from({ length: 100 }, (_, code) => weatherWords(code).key))].map(k => `dashboard.weather.${k}`)
+  it('names more than ten kinds of weather', () => expect(keys.length).toBeGreaterThan(10))
+  for (const locale of LOCALES) {
+    it(`has every weather word in ${locale}`, () => {
+      const json = readLocale(locale)
+      expect(keys.filter(key => typeof readAt(json, key) !== 'string')).toEqual([])
     })
   }
 })

@@ -80,7 +80,8 @@
       "bookings": "Bookings",
       "crm_marketing": "CRM & Marketing",
       "operations": "Operations",
-      "system": "System"
+      "system": "System",
+      "workspaces": "Workspaces"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -120,7 +121,18 @@
       "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Featured reviews"
-    }
+    },
+    "apps": {
+      "loyalty": "Loyalty",
+      "appointments": "Appointments",
+      "crm": "CRM",
+      "content": "Content",
+      "time": "Time Planner"
+    },
+    "menu_label": "Main menu",
+    "find_placeholder": "Find in menu",
+    "find_label": "Find a page in the menu",
+    "find_none": "No page matches “{{query}}”."
   },
   "topbar": {
     "search_placeholder": "Search members, guests, bookings…",
@@ -425,16 +437,10 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "greeting": {
-      "morning": "Good morning",
-      "afternoon": "Good afternoon",
-      "evening": "Good evening"
-    },
     "actions": {
       "scan_card": "Scan Card",
       "send_campaign": "Send Campaign"
     },
-    "needs_attention": "Needs your attention",
     "all_clear": "All clear.",
     "all_clear_sub": "Nothing waiting on you right now.",
     "alerts": {
@@ -455,7 +461,9 @@
       "services": "Services",
       "none_today": "None today.",
       "with": "with {{name}}",
-      "more": "{{count}} more"
+      "more": "{{count}} more",
+      "guest": "Guest",
+      "events": "{{count}} events"
     },
     "kpis": {
       "active_members": "Active Members",
@@ -467,20 +475,157 @@
       "pipeline": "Pipeline",
       "open_count": "{{count}} open"
     },
-    "quick_access": "Quick access",
-    "quick": {
-      "members": "Members",
-      "bookings": "Bookings",
-      "calendar": "Calendar",
-      "services": "Services",
-      "inbox": "Inbox",
-      "offers": "Offers",
-      "analytics": "Analytics",
-      "ai_insights": "AI Insights"
-    },
     "recent_activity": "Recent activity",
     "view_all": "View all",
-    "no_activity": "No recent activity yet."
+    "no_activity": "No recent activity yet.",
+    "apps": {
+      "title": "Your workspaces",
+      "loyalty_line": "Members, points, rewards and campaigns",
+      "appointments_line": "The calendar, clients and takings",
+      "crm_line": "Website chat, leads and the pipeline",
+      "content_line": "Posts planned and written with AI",
+      "time_line": "The team's day, planned with AI"
+    },
+    "chart": {
+      "title": "Day by day",
+      "sub": "{{from}} – {{to}}",
+      "revenue": "Revenue",
+      "bookings": "Bookings",
+      "points": "Points",
+      "leads": "Leads & chats",
+      "leads_line": "Leads",
+      "chats": "Chats",
+      "stays": "Stays",
+      "services": "Services",
+      "appointments": "Appointments",
+      "earned": "Earned",
+      "redeemed": "Redeemed",
+      "empty": "Nothing in these days yet."
+    },
+    "customize": {
+      "button": "Customize",
+      "title": "Customize your dashboard",
+      "sub": "Show, hide and order the widgets. Kept in this browser for you.",
+      "reset": "Reset",
+      "close": "Close",
+      "up": "Move {{name}} up",
+      "down": "Move {{name}} down",
+      "none": "Every widget is hidden. Customize brings them back."
+    },
+    "hero": {
+      "label": "Now at the venue",
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good night",
+      "hello_name": "{{greeting}}, {{name}}",
+      "place_time": "{{place}} · venue time ({{zone}})",
+      "zone_time": "Venue time ({{zone}})",
+      "local_time": "Local time",
+      "feels_like": "Feels like {{temp}}",
+      "high_low": "H {{max}} L {{min}}",
+      "humidity": "{{value}}% humidity",
+      "next_hours": "The next hours",
+      "now": "Now",
+      "sun": "Sunrise {{rise}}, sunset {{set}}",
+      "no_place": "Add your city to a location to see the weather here.",
+      "add_city": "Add a city",
+      "no_place_staff": "The weather shows here once a location has its city.",
+      "no_weather": "The weather is not available right now.",
+      "not_found": "We could not find “{{city}}” on the map. Pick the city from the list in Locations.",
+      "not_found_staff": "The weather shows here once the location’s city is found on the map.",
+      "open_locations": "Open Locations"
+    },
+    "kpi": {
+      "title": "The last {{days}} days",
+      "was": "was {{value}}",
+      "new": "New",
+      "revenue": "Revenue",
+      "revenue_sub": "Stays and services",
+      "bookings": "Bookings",
+      "bookings_sub": "Stays booked",
+      "services": "Appointments",
+      "services_sub": "On the calendar",
+      "members": "New members",
+      "members_sub": "Joined",
+      "points": "Points earned",
+      "points_sub": "By members",
+      "leads": "New leads",
+      "leads_sub": "Inquiries in",
+      "chats": "Website chats",
+      "chats_sub": "Conversations"
+    },
+    "live": {
+      "title": "Live now",
+      "sub": "Refreshes every 30 seconds",
+      "online": "{{count}} on the website now",
+      "online_one": "{{count}} on the website now",
+      "online_other": "{{count}} on the website now"
+    },
+    "live_label": "Live",
+    "loyalty": {
+      "title": "Members & tiers",
+      "birthdays": "Birthdays today",
+      "no_birthdays": "No birthdays today.",
+      "close": "Close to the next tier",
+      "to_go": "{{points}} pts to {{tier}}",
+      "sub": "{{count}} active members",
+      "sub_one": "{{count}} active member",
+      "sub_other": "{{count}} active members"
+    },
+    "period": {
+      "label": "Period",
+      "days": "{{count}} d",
+      "days_one": "{{count}} d",
+      "days_other": "{{count}} d"
+    },
+    "pipeline": {
+      "title": "Pipeline",
+      "value": "Value",
+      "empty": "No leads yet.",
+      "sub": "{{count}} leads by stage",
+      "sub_one": "{{count}} lead by stage",
+      "sub_other": "{{count}} leads by stage"
+    },
+    "tasks": {
+      "title": "Follow-ups due",
+      "sub": "The next three days",
+      "empty": "Nothing due in the next three days.",
+      "late": "Overdue",
+      "today": "Today",
+      "overdue": "{{count}} overdue",
+      "overdue_one": "{{count}} overdue",
+      "overdue_other": "{{count}} overdue"
+    },
+    "widgets": {
+      "now": "Clock & weather",
+      "live": "Live now",
+      "kpis": "Key figures",
+      "trend": "Main chart",
+      "pipeline": "Pipeline",
+      "schedule": "Today's schedule",
+      "loyalty": "Members & tiers",
+      "workspaces": "Your workspaces",
+      "tasks": "Follow-ups due",
+      "activity": "Recent activity"
+    },
+    "weather": {
+      "clear": "Clear sky",
+      "mainly_clear": "Mainly clear",
+      "partly_cloudy": "Partly cloudy",
+      "overcast": "Overcast",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "freezing_drizzle": "Freezing drizzle",
+      "rain": "Rain",
+      "freezing_rain": "Freezing rain",
+      "snow": "Snow",
+      "showers": "Rain showers",
+      "snow_showers": "Snow showers",
+      "thunderstorm": "Thunderstorm",
+      "thunder_hail": "Thunderstorm with hail",
+      "unknown": "Weather"
+    }
   },
   "notifications": {
     "title": "Notification Campaigns",
@@ -3744,6 +3889,8 @@
       "over_limit_booking": "This package allows {{limit}} team members who can be booked and you have {{count}} active. Choose a larger package, or switch some off in Setup first."
     },
     "team": {
+      "manage_partner": "Manage partner access",
+      "partner": "Scan-only partner",
       "title": "Team",
       "subtitle": "Who can sign in to your workspaces.",
       "invite_title": "Invite a colleague",

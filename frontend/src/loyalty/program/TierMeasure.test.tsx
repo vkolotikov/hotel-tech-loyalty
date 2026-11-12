@@ -55,12 +55,14 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 describe('tiers on the programme’s measure', () => {
   it('cards show the visits or the spend that reach each tier, or that none is set', () => {
     const visits = text(wrap('visits', <ProgramPage />, program))
-    expect(visits).toContain('10 Visits to reach')
-    expect(visits).toContain('Not set Visits to reach')
+    expect(visits).toContain('Visits to reach')
+    expect(visits).toMatch(/Regular Tier 2 of 3 10 ×1/)
+    expect(visits).toContain('Not set')
     expect(visits).not.toContain('Points to reach')
 
     const spend = text(wrap('spend', <ProgramPage />, program))
-    expect(spend).toContain('€250 Spend to reach')
+    expect(spend).toContain('Spend to reach')
+    expect(spend).toMatch(/Regular Tier 2 of 3 €250 ×1/)
     expect(spend).not.toContain('Visits to reach')
 
     expect(text(wrap('points', <ProgramPage />, program))).toContain('1,000 Points to reach')

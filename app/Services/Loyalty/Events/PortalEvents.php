@@ -113,6 +113,10 @@ class PortalEvents
             return 'inactive';
         }
         $validUntil = $member->membership_valid_until?->toDateString();
+        $validFrom = \App\Services\Loyalty\Members\MembershipValidity::startOf($member);
+        if ($validFrom !== null && $validFrom > EventClock::day($event)) {
+            return 'membership_not_started';
+        }
         if ($validUntil !== null && $validUntil < EventClock::day($event)) {
             return 'membership_expired';
         }

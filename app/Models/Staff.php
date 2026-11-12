@@ -13,12 +13,14 @@ class Staff extends Model
         'organization_id', 'user_id', 'role', 'hotel_name', 'department',
         'can_award_points', 'can_redeem_points', 'can_manage_offers',
         'can_view_analytics', 'allowed_nav_groups', 'planner_skills',
-        'is_active', 'expo_push_token', 'last_login_at',
+        'is_active', 'expo_push_token', 'last_login_at', 'loyalty_scan_only', 'loyalty_place_ids',
     ];
 
     protected $hidden = ['organization_id', 'created_at', 'updated_at'];
 
     protected $casts = [
+        'loyalty_scan_only' => 'boolean',
+        'loyalty_place_ids' => 'array',
         'can_award_points' => 'boolean',
         'can_redeem_points' => 'boolean',
         'can_manage_offers' => 'boolean',

@@ -29,7 +29,7 @@ import type { PortalBootstrap } from '../../lib/types'
 import { EventsLink } from './EventsLink'
 import { EventsPage } from './EventsPage'
 import { NextEvent } from './NextEvent'
-import { ERROR_WORDS, EVENT_COUNTED, EVENT_WORDS, WHY_WORDS, actionOf, counted, errorPhrase, eventsInMenu, nextEvent, noteOf, pastEvents, timeRange, whenPhrase, whyPhrase } from './eventMath'
+import { ERROR_WORDS, EVENT_COUNTED, EVENT_WORDS, WHY_WORDS, actionOf, counted, errorPhrase, nextEvent, noteOf, pastEvents, timeRange, whenPhrase, whyPhrase } from './eventMath'
 import type { PortalEvent, PortalEvents } from './eventsApi'
 
 const event = (more: Partial<PortalEvent> = {}): PortalEvent => ({
@@ -178,23 +178,23 @@ describe('Home’s card and the way in', () => {
   it('the Rewards header links to Events while the venue has one and the menu does not show it', () => {
     const caps = (more: Partial<PortalBootstrap['capabilities']>) => ({ ...base, capabilities: { ...base.capabilities, ...more } })
     expect(render(<EventsLink />, undefined, caps({ services: true }))).toContain('href="/portal/events"')
-    expect(render(<EventsLink />)).toBe('')
+    expect(render(<EventsLink />)).toContain('href="/portal/events"')
     expect(render(<EventsLink />, undefined, caps({ services: true, events: false }))).toBe('')
     // The same rule as the menu's: Events is there exactly when Rewards does not link to it.
     for (const more of [{}, { services: true }, { stays: true }, { loyalty: false }, { loyalty: false, services: true }]) {
       const shell = render(<PortalShell><p>page</p></PortalShell>, undefined, caps(more))
-      expect(shell.includes('href="/portal/events"'), JSON.stringify(more)).toBe(eventsInMenu(caps(more).capabilities))
+      expect(shell.includes('href="/portal/events"'), JSON.stringify(more)).toBe(false)
     }
   })
 
   it('the menu holds Events as a fifth item, never a sixth', () => {
     const shell = (caps: Partial<PortalBootstrap['capabilities']>) => render(<PortalShell><p>page</p></PortalShell>, undefined, { ...base, capabilities: { ...base.capabilities, ...caps } })
     const four = shell({})
-    expect(four.match(/href="\/portal\/events"/g)?.length).toBe(2)
-    expect(four).toContain('grid-cols-5')
+    expect(four).not.toContain('href="/portal/events"')
+    expect(four).toContain('grid-cols-4')
     const full = shell({ services: true })
     expect(full).not.toContain('href="/portal/events"')
-    expect(full).toContain('grid-cols-5')
+    expect(full).toContain('grid-cols-4')
     expect(shell({ events: false })).not.toContain('href="/portal/events"')
   })
 })

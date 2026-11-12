@@ -97,7 +97,7 @@ class BenefitController extends Controller
         if (!$member) {
             return response()->json(['message' => 'Your membership is not set up yet.'], 404);
         }
-        \App\Services\Loyalty\Members\MemberStatus::assertActive($member);
+        \App\Services\Loyalty\Members\MemberStatus::assertMembershipBenefits($member);
 
         $tierBenefit = TierBenefit::with('benefit')
             ->where('tier_id', $member->tier_id)

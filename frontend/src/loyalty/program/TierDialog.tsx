@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Notice } from '../../workspace/ui/Notice'
@@ -18,10 +18,9 @@ import { TIER_PROBLEM_WORDS } from './words'
 import { DesignDialog, NumberControl } from '../redesign/DesignUI'
 import { useRedesignWords } from '../redesign/words'
 import { OverviewButton } from '../overview/OverviewUI'
-import { tierTextStyle } from '../redesign/designMath'
-import { programAssets, levelAssets } from './design/assets'
-import { programTierPaint } from './design/programPaint'
-import { useLook } from '../lib/look'
+import { EditorDialog, EditorSection, EditorDisclosure, EditorPreview, EditorArt, EditorFooter } from '../editors/EditorUI'
+import { useEditorWords } from '../editors/words'
+import { ManagementFact } from '../management/ManagementUI'
 import './design/program.css'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -44,7 +43,7 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
   const say = useRedesignWords()
   const locale = i18n.language || 'en'
   const boot = useBoot()
-  const look = useLook()
+  const editor = useEditorWords()
   const by = boot.programme.progress_by ?? 'points'
   const client = useQueryClient()
   const colourId = useId()
@@ -94,49 +93,29 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
   const rate = decimalOf(form.earn_rate)
 
 
-  const paint = programTierPaint(form.color, look.resolved)
   const floor = floorField(by)
   const floorLabel = t(`loyalty.program.tier.${floor}`, by === 'visits' ? 'Visits to reach this tier' : by === 'spend' ? 'Spend to reach this tier' : 'Points to reach it')
   const floorValue = form[floor] ?? ''
   const title = tier ? say('editTitle', { name: tier.name }) : say('newTitle')
-  const content = <form className="l-rd-level-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(tierProblems(form, by)).length === 0) save.mutate() }}>
-    <div className="l-rd-editor-columns">
-      <div className="l-rd-editor-main">
-        <section className="l-ov-panel l-rd-level-basics">
-          <div className="l-rd-basics-row">
-            <FormField label={say('levelName')} problem={problem('name')}><input ref={first} type="text" value={form.name} maxLength={255} onChange={e => update({ name: e.target.value })} className={INPUT} placeholder={t('loyalty.program.tier.name_example', 'e.g. Gold')} /></FormField>
-            <div><span id={colourId} className="l-rd-label">{t('loyalty.program.tier.color', 'Colour')}</span><div className="l-rd-colour-input">
-              <input type="color" value={isHex(form.color) ? form.color.trim().toLowerCase() : NO_COLOUR} onChange={e => update({ color: e.target.value })} aria-labelledby={colourId} />
-              <input type="text" value={form.color} maxLength={7} onChange={e => update({ color: e.target.value })} spellCheck={false} aria-label={t('loyalty.program.tier.color_hex', 'Colour as a hex code')} aria-invalid={!!colourProblem} placeholder="#c9a227" />
-            </div>{colourProblem && <p className="text-a-danger">{colourProblem}</p>}</div>
-            <label><span className="l-rd-label">{say('status')}</span><select value={String(form.is_active)} onChange={e => update({ is_active: e.target.value === 'true' })}><option value="true">{say('active')}</option><option value="false">{say('off')}</option></select></label>
-          </div>
-          <FormField label={say('description')} problem={problem('description')}><textarea value={form.description} rows={1} onChange={e => update({ description: e.target.value })} className={INPUT} /></FormField>
-        </section>
-        <section className="l-ov-panel l-rd-qualification"><h2><span className="l-pg-icon"><img src={programAssets.points} alt="" /></span>{say('qualificationEarning')}</h2>
-          <div className="l-rd-two-fields"><div><span className="l-rd-label">{floorLabel}</span><NumberControl label={floorLabel} value={floorValue} onValue={value => update({ [floor]: value })} max={by === 'visits' ? MAX_MIN_VISITS : by === 'spend' ? MAX_MIN_SPEND : MAX_MIN_POINTS} step={by === 'spend' ? .01 : 1} invalid={!!problem(floor)} disabled={save.isPending} />{problem(floor) && <p className="text-a-danger">{problem(floor)}</p>}</div>
-          <div><span className="l-rd-label">{say('rate')}</span><NumberControl label={say('rate')} value={form.earn_rate} onValue={earn_rate => update({ earn_rate })} step={.01} max={MAX_EARN_RATE} invalid={!!problem('earn_rate')} disabled={save.isPending} />{problem('earn_rate') && <p className="text-a-danger">{problem('earn_rate')}</p>}{example !== null && <small className="l-rd-accent">{say('rateExample', { n: points(example, locale) })}</small>}</div></div>
-          {by !== 'points' && <p data-measure={by}>{by === 'visits' ? t('loyalty.program.tier.min_visits_hint', 'One a day counts: appointments, stays, check-ins, purchases and events. Empty: no one moves up to it by visits.') : t('loyalty.program.tier.min_spend_hint', 'In {{currency}}, what members spent at their visits. Empty: no one moves up to it by spend.', { currency: boot.venue.currency })}</p>}
-          <div className="l-rd-split-line"><small>{say('levelRules')}</small><Link className="l-ov-link" to="/loyalty/options?tab=rules">{say('qualificationRules')}</Link></div>
-        </section>
-        {benefits}
-      </div>
-      <aside className="l-rd-editor-aside">
-        <section data-member-preview="" className="l-ov-panel l-rd-level-preview" aria-label={say('memberPreview')}><span className="l-pg-preview-card"><img src={levelAssets[paint.tone].card} alt="" /></span><span className="l-ov-eyebrow">{say('memberPreview')}</span>
-          <h2 className="l-rd-tier-text" style={tierTextStyle(form.color)}>{form.name.trim() || t('loyalty.program.tier.preview', 'Preview')}</h2>
-          {form.description && <p>{form.description}</p>}<hr />
-          {floorValue !== '' && Number.isFinite(Number(floorValue)) && <small>{by === 'spend' ? money(Number(floorValue), boot.venue.currency, locale) : points(Number(floorValue), locale)} · {floorLabel}</small>}
-          {rate !== null && <strong>{t('loyalty.program.tier.preview_rate', '×{{rate}} points on what they spend', { rate: decimal(rate, locale) })}</strong>}
-          {tier?.benefits.length ? <ul>{tier.benefits.map(tb => <li key={tb.id}>✓ {tb.name}</li>)}</ul> : <p>{t('loyalty.program.tier.preview_no_benefits', 'No benefit yet: add them on the tier’s card in the ladder.')}</p>}
-          <small>{say('previewUpdates')}</small>
-        </section>
-        <section className="l-ov-inset l-rd-before-save"><h3>{say('beforeSave')}</h3>{tier && <p>{say('membersInLevel', { n: points(tier.members, locale) })}</p>}<p>{say('beforeSaveLine')}</p><small>{say('offNote')}</small></section>
-      </aside>
-    </div>
-    {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier', failure))}</Notice>}
-    <footer className="l-rd-editor-footer"><small>{dirty ? say('unsaved') : ''}</small><OverviewButton type="button" onClick={cancel} disabled={save.isPending}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton><OverviewButton type="submit" primary disabled={save.isPending} aria-busy={save.isPending}>{say('saveLevel')}</OverviewButton></footer>
-  </form>
   const keepEditing = () => { setDiscard(false); setDestination(null) }
-  const warning = discard && <DesignDialog title={say('discardTitle')} onClose={keepEditing}><div className="l-rd-form"><p>{say('discardLine')}</p><div className="l-rd-form-foot"><OverviewButton onClick={keepEditing}>{say('keepEditing')}</OverviewButton><OverviewButton primary onClick={() => { if (destination) navigate(destination); else onClose() }}>{say('discard')}</OverviewButton></div></div></DesignDialog>
-  return page ? <div className="l-ov-page l-rd-page l-pg-editor" style={paint.style}><button className="l-ov-link self-start" onClick={cancel}>{say('allLevelsBack')}</button><header className="l-ov-page-heading"><div><h1>{title}</h1><p>{say('editLine')}</p></div>{more}</header>{content}{warning}</div> : <DesignDialog title={title} wide onClose={cancel} busy={save.isPending}>{content}{warning}</DesignDialog>
+  return <><EditorDialog title={title} section={t('loyalty.program.title', 'Program') + ' / ' + say('levels')} icon="level" wide onClose={cancel} busy={save.isPending} tone="gold">
+    <form className="l-editor-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(tierProblems(form, by)).length === 0) save.mutate() }}>
+      <div className="l-editor-body"><div className="l-editor-columns"><div className="l-editor-stack"><fieldset disabled={save.isPending} className="l-editor-stack">
+        <EditorSection icon="level" title={editor('levelDetails')}><div className="l-editor-two">
+          <FormField label={say('levelName')} problem={problem('name')}><input ref={first} type="text" value={form.name} maxLength={255} onChange={e => update({ name: e.target.value })} className={INPUT} placeholder={t('loyalty.program.tier.name_example', 'e.g. Gold')} /></FormField>
+          <FormField label={say('status')}><select value={String(form.is_active)} onChange={e => update({ is_active: e.target.value === 'true' })}><option value="true">{say('active')}</option><option value="false">{say('off')}</option></select></FormField>
+        </div><div><span id={colourId} className="l-rd-label">{t('loyalty.program.tier.color', 'Colour')}</span><div className="l-rd-colour-input"><input type="color" value={isHex(form.color) ? form.color.trim().toLowerCase() : NO_COLOUR} onChange={e => update({ color: e.target.value })} aria-labelledby={colourId} /><input type="text" value={form.color} maxLength={7} onChange={e => update({ color: e.target.value })} spellCheck={false} aria-label={t('loyalty.program.tier.color_hex', 'Colour as a hex code')} aria-invalid={!!colourProblem} placeholder="#c9a227" /></div>{colourProblem && <p className="text-a-danger">{colourProblem}</p>}</div></EditorSection>
+        <EditorSection icon="steps" title={say('qualificationEarning')}><div className="l-editor-two"><div><span className="l-rd-label">{floorLabel}</span><NumberControl label={floorLabel} value={floorValue} onValue={value => update({ [floor]: value })} max={by === 'visits' ? MAX_MIN_VISITS : by === 'spend' ? MAX_MIN_SPEND : MAX_MIN_POINTS} step={by === 'spend' ? .01 : 1} invalid={!!problem(floor)} disabled={save.isPending} />{problem(floor) && <p className="text-a-danger">{problem(floor)}</p>}</div><div><span className="l-rd-label">{say('rate')}</span><NumberControl label={say('rate')} value={form.earn_rate} onValue={earn_rate => update({ earn_rate })} step={.01} max={MAX_EARN_RATE} invalid={!!problem('earn_rate')} disabled={save.isPending} />{problem('earn_rate') && <p className="text-a-danger">{problem('earn_rate')}</p>}</div></div>
+        {by !== 'points' && <small data-measure={by}>{by === 'visits' ? t('loyalty.program.tier.min_visits_hint', 'One a day counts: appointments, stays, check-ins, purchases and events. Empty: no one moves up to it by visits.') : t('loyalty.program.tier.min_spend_hint', 'In {{currency}}, what members spent at their visits. Empty: no one moves up to it by spend.', { currency: boot.venue.currency })}</small>}</EditorSection>
+        <EditorDisclosure title={editor('memberDescription')} open={!!problem('description')}><FormField label={say('description')} problem={problem('description')}><textarea value={form.description} rows={2} onChange={e => update({ description: e.target.value })} /></FormField></EditorDisclosure>
+      </fieldset>{benefits && <div className="l-editor-benefits"><EditorDisclosure title={say('includedBenefits')}>{benefits}</EditorDisclosure></div>}
+      {tier && <small>{say('beforeSaveLine')}</small>}
+      {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier', failure))}</Notice>}
+      </div><EditorPreview tone="gold"><EditorArt kind="levelArt" label={say('memberPreview')} title={form.name.trim() || t('loyalty.program.tier.preview', 'Preview')} line={floorValue !== '' && Number.isFinite(Number(floorValue)) ? (by === 'spend' ? money(Number(floorValue), boot.venue.currency, locale) : points(Number(floorValue), locale)) + ' ' + floorLabel : undefined} />
+        <ManagementFact icon="purchase" label={say('rate')}>{rate !== null ? <strong>{t('loyalty.program.tier.preview_rate', '×{{rate}} points on what they spend', { rate: decimal(rate, locale) })}</strong> : '—'}{example !== null && <small>{say('rateExample', { n: points(example, locale) })}</small>}</ManagementFact>
+        <ManagementFact icon="perkSpark" label={say('includedBenefits')}>{tier?.benefits.length ? tier.benefits.map(tb => tb.name).join(' · ') : t('loyalty.program.tier.preview_no_benefits', 'No benefit yet: add them on the tier’s card in the ladder.')}</ManagementFact>{form.description && <small>{form.description}</small>}
+      </EditorPreview></div></div>
+      <EditorFooter dirty={dirty} creating={!tier} onCancel={cancel} busy={save.isPending} save={tier ? say('saveLevel') : say('addLevel')}>{more}</EditorFooter>
+    </form>
+  </EditorDialog>{discard && <DesignDialog title={say('discardTitle')} onClose={keepEditing}><div className="l-rd-form"><p>{say('discardLine')}</p><div className="l-rd-form-foot"><OverviewButton onClick={keepEditing}>{say('keepEditing')}</OverviewButton><OverviewButton primary onClick={() => { if (destination) navigate(destination); else onClose() }}>{say('discard')}</OverviewButton></div></div></DesignDialog>}</>
 }

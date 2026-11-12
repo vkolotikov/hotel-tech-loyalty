@@ -23,6 +23,10 @@ const event: EventRow = { id: 5, title: 'Wine tasting', starts_at: '2026-10-25T1
 const say = (s: Sentence | null) => (s ? s.fallback.replace(/\{\{(\w+)\}\}/g, (_, k) => s.vars?.[k] ?? `{{${k}}}`) : null)
 
 describe('the verdict band (release 8 §2)', () => {
+  it('explains the start date when a membership has not started', () => {
+    const view = answerVerdict(answer({ granted: false, reason: 'not_started', valid_from: '2026-11-01' }), facts)
+    expect(say(view.reason)).toBe('Membership starts on Nov 1.')
+  })
   it('a welcome is green with a check and "Welcome" (the name is written once, beneath), the member and their benefits', () => {
     const view = answerVerdict(answer({}, { benefits: [{ name: 'Lounge access', value: null, category: 'access' }, { name: 'Late check-out', value: '14:00', category: 'stay' }] }), facts)
     expect(view.tone).toBe('granted')

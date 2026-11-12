@@ -20,6 +20,7 @@ final class MemberProfile
         $user = $member->user;
 
         return MemberDirectory::row($member) + [
+            'membership_mode' => $member->getAttribute('membership_mode') ?? 'earned',
             'qualifying_points'   => (int) $member->qualifying_points,
             'referral_code'       => $member->referral_code,
             'language'            => $user?->language,

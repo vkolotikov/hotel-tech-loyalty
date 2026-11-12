@@ -42,6 +42,7 @@ import { WeekGrid } from './WeekGrid'
 import { NumbersLine } from './NumbersLine'
 import { PlanLegend } from './PlanLegend'
 import { PageHeader } from '../ui/PageHeader'
+import { PulseCard } from '../../workspace/pulse/PulseCard'
 
 /** The line under the toolbar after a move (with its Undo) or a refusal. */
 interface Note { tone: 'info' | 'danger'; text: string; undo: (() => void) | null }
@@ -129,6 +130,8 @@ export function PlanPage() {
 
   // The brand's channels (the same read as the panel's): what a new post from a day starts on, and each platform's usual time.
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
+  // The venue's clock and weather above the plan (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['content', 'pulse'], queryFn: api.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
   const channels = useMemo(() => brandInfo.data?.channels ?? [], [brandInfo.data])
   const industry = boot.organization.industry
   const times = useMemo(() => usualTimes(channels, industry), [channels, industry])
@@ -286,6 +289,7 @@ export function PlanPage() {
       <div className="px-4 pb-3 pt-4 lg:px-6">
         <PageHeader title={t('content.nav.plan', 'Plan')} line={t('content.plan.line', 'A clear view of what comes next.')}
           below={<NumbersLine figures={data && view === 'month' ? monthFigures(data.posts, data.slots, date) : data?.figures} pending={!data || query.isPlaceholderData} />} newPost />
+        <div className="mt-3"><PulseCard variant="strip" pulse={pulse.data} name={boot.staff.name ? boot.staff.name.trim().split(/\s+/)[0] : null} /></div>
       </div>
       {/* The owner's filter row, above the calendar bar (spec 2026-10-21 §6.2); the tray is the Unscheduled chip's list. */}
       <FilterRow platforms={chips} filter={prefs.filter} statuses={boot.statuses} onFilter={(filter) => setPrefs({ ...prefs, filter })}

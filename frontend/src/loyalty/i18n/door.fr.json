@@ -58,6 +58,8 @@
     "choose_again": "Choisir à nouveau"
   },
   "reason": {
+    "not_started_plain": "Cette adhésion n’a pas encore commencé.",
+    "not_started": "L’adhésion commence le {{date}}.",
     "member_erased": "Ce membre a été supprimé.",
     "member_off": "Cette adhésion est désactivée.",
     "expired": "L’adhésion a expiré le {{date}}.",

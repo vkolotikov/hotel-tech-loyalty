@@ -56,27 +56,32 @@ class MembershipValidity
     public const EXPIRING = 'expiring';
     public const EXPIRED = 'expired';
     public const OFF = 'off';
+    public const SCHEDULED = 'scheduled';
 
     /**
      * What the portal and the screens show of a member's validity: the end date (Y-m-d, or null) and the state on the
      * venue's clock — `off` for a switched-off member, else `expired` after the end date, `expiring` within
      * EXPIRING_DAYS of it, `active` otherwise (no end date included).
      *
-     * @return array{valid_until: ?string, state: string}
+     * @return array{valid_from: ?string, valid_until: ?string, state: string}
      */
     public static function summaryFor(LoyaltyMember $member): array
     {
         $validUntil = self::endOf($member);
-        $today = $validUntil !== null ? VenueClock::today((int) $member->organization_id) : null;
+        $validFrom = self::startOf($member);
+        $today = $validUntil !== null || $validFrom !== null ? VenueClock::today((int) $member->organization_id) : null;
 
-        return ['valid_until' => $validUntil, 'state' => self::stateOf($validUntil, (bool) $member->is_active, $today)];
+        return ['valid_from' => $validFrom, 'valid_until' => $validUntil, 'state' => self::stateOf($validUntil, (bool) $member->is_active, $today, $validFrom)];
     }
 
     /** The state of an end date on a venue day (`$today` Y-m-d; not read when there is no end date). */
-    public static function stateOf(?string $validUntil, bool $active, ?string $today): string
+    public static function stateOf(?string $validUntil, bool $active, ?string $today, ?string $validFrom = null): string
     {
         if (!$active) {
             return self::OFF;
+        }
+        if ($today !== null && $validFrom !== null && $validFrom > $today) {
+            return self::SCHEDULED;
         }
         if ($validUntil === null || $today === null) {
             return self::ACTIVE;
@@ -94,6 +99,33 @@ class MembershipValidity
         $raw = $member->getAttributes()['membership_valid_until'] ?? null;
 
         return $raw === null || $raw === '' ? null : $member->membership_valid_until?->toDateString();
+    }
+
+    public static function startOf(LoyaltyMember $member): ?string
+    {
+        $raw = $member->getAttributes()['membership_valid_from'] ?? null;
+
+        return $raw === null || $raw === '' ? null : $member->membership_valid_from?->toDateString();
+    }
+
+    /** Inclusive venue days; callers keep their own erased-account checks. */
+    public static function validOn(LoyaltyMember $member, string $day): bool
+    {
+        return $member->is_active && (self::startOf($member) === null || self::startOf($member) <= $day)
+            && (self::endOf($member) === null || self::endOf($member) >= $day);
+    }
+
+    /** New dated/assigned memberships have a bounded benefit term; legacy end-only memberships keep desk rules. */
+    public static function benefitsAvailable(LoyaltyMember $member): bool
+    {
+        $today = VenueClock::today((int) $member->getAttribute('organization_id'));
+        $from = self::startOf($member);
+        if ((array_key_exists('is_active', $member->getAttributes()) && !$member->is_active) || ($from !== null && $from > $today)) {
+            return false;
+        }
+        $limited = $from !== null || $member->getAttribute('membership_mode') === 'assigned' || $member->getAttribute('membership_period_enforced');
+
+        return !$limited || self::endOf($member) === null || self::endOf($member) >= $today;
     }
 
     /**
@@ -131,8 +163,8 @@ class MembershipValidity
      * A manager's change: `['valid_until' => 'Y-m-d'|null]` (set a date, or remove it) or `['extend' => '1m'|'3m'|'6m'|'1y']`.
      * The caller has checked the manager and that the member is this organisation's and not deleted.
      *
-     * @param array{valid_until?: ?string, extend?: string} $change
-     * @return array{member: LoyaltyMember, valid_until: ?string, state: string, changed: bool, replayed: bool}
+     * @param array{valid_from?: ?string, valid_until?: ?string, extend?: string} $change
+     * @return array{member: LoyaltyMember, valid_from: ?string, valid_until: ?string, state: string, changed: bool, replayed: bool}
      *
      * @throws ValidationException a date that is not a day, before the venue's today or too far ahead; an unknown extension
      * @throws LoyaltyRefused `key_reused` (409) a key already used for another change
@@ -157,13 +189,18 @@ class MembershipValidity
             }
 
             $old = self::endOf($locked);
+            $oldFrom = self::startOf($locked);
+            $newFrom = array_key_exists('valid_from', $wanted) ? $wanted['valid_from'] : $oldFrom;
             $new = array_key_exists('extend', $wanted)
                 ? self::extended($old, $today, self::EXTENSIONS[$wanted['extend']])
-                : $wanted['valid_until'];
+                : (array_key_exists('valid_until', $wanted) ? $wanted['valid_until'] : $old);
+            self::assertInterval($newFrom, $new);
 
-            $changed = $new !== $old;
+            $changed = $new !== $old || $newFrom !== $oldFrom;
             if ($changed) {
-                self::write($orgId, (int) $locked->id, ['membership_valid_until' => $new, 'membership_reminded_for' => null]);
+                self::write($orgId, (int) $locked->id, ['membership_valid_until' => $new, 'membership_reminded_for' => null]
+                    + ($newFrom !== $oldFrom ? ['membership_valid_from' => $newFrom] : [])
+                    + self::periodIntent($newFrom !== null || $oldFrom !== null));
                 AuditLog::create([
                     'organization_id' => $orgId,
                     'causer_type'     => User::class,
@@ -171,8 +208,8 @@ class MembershipValidity
                     'action'          => 'member.validity_changed',
                     'subject_type'    => LoyaltyMember::class,
                     'subject_id'      => $locked->id,
-                    'old_values'      => ['valid_until' => $old],
-                    'new_values'      => ['valid_until' => $new] + (isset($wanted['extend']) ? ['extend' => $wanted['extend']] : []),
+                    'old_values'      => ['valid_until' => $old] + (array_key_exists('valid_from', $wanted) ? ['valid_from' => $oldFrom] : []),
+                    'new_values'      => ['valid_until' => $new] + (array_key_exists('valid_from', $wanted) ? ['valid_from' => $newFrom] : []) + (isset($wanted['extend']) ? ['extend' => $wanted['extend']] : []),
                     'description'     => $new === null
                         ? 'Membership end date removed'
                         : ($old === null ? "Membership valid until {$new}" : "Membership end date changed from {$old} to {$new}"),
@@ -191,6 +228,7 @@ class MembershipValidity
 
         return [
             'member'      => $fresh,
+            'valid_from'  => self::startOf($fresh),
             'valid_until' => self::endOf($fresh),
             'state'       => self::summaryFor($fresh)['state'],
             'changed'     => $outcome['changed'],
@@ -201,14 +239,15 @@ class MembershipValidity
     /**
      * The change, checked against the venue's today: exactly one of a date (or null) and an extension.
      *
-     * @param array{valid_until?: ?string, extend?: string} $change
-     * @return array{valid_until?: ?string, extend?: string}
+     * @param array{valid_from?: ?string, valid_until?: ?string, extend?: string} $change
+     * @return array{valid_from?: ?string, valid_until?: ?string, extend?: string}
      */
     private static function checked(array $change, string $today): array
     {
         $hasDate = array_key_exists('valid_until', $change);
+        $hasStart = array_key_exists('valid_from', $change);
         $hasExtend = array_key_exists('extend', $change) && $change['extend'] !== null;
-        if ($hasDate === $hasExtend) {
+        if ((!$hasDate && !$hasStart && !$hasExtend) || ($hasExtend && ($hasDate || $hasStart))) {
             throw ValidationException::withMessages(['valid_until' => ['Send an end date, no end date, or an extension.']]);
         }
         if ($hasExtend) {
@@ -219,9 +258,16 @@ class MembershipValidity
             return ['extend' => $change['extend']];
         }
 
+        $start = [];
+        if ($hasStart) {
+            $start = ['valid_from' => self::checkedStart($change['valid_from'])];
+        }
+        if (!$hasDate) {
+            return $start;
+        }
         $date = $change['valid_until'];
         if ($date === null || $date === '') {
-            return ['valid_until' => null];
+            return ['valid_until' => null] + $start;
         }
         if (!self::isDay($date)) {
             throw ValidationException::withMessages(['valid_until' => ['The end date must be a day written YYYY-MM-DD.']]);
@@ -233,20 +279,49 @@ class MembershipValidity
             throw ValidationException::withMessages(['valid_until' => ['The end date is too far ahead.']]);
         }
 
-        return ['valid_until' => $date];
+        return ['valid_until' => $date] + $start;
+    }
+
+    public static function assertInterval(?string $from, ?string $until): void
+    {
+        if ($from !== null && !self::isDay($from)) {
+            throw ValidationException::withMessages(['valid_from' => ['Choose a valid start date.']]);
+        }
+        if ($until !== null && !self::isDay($until)) {
+            throw ValidationException::withMessages(['valid_until' => ['Choose a valid end date.']]);
+        }
+        if ($from !== null && $until !== null && $from > $until) {
+            throw ValidationException::withMessages(['valid_from' => ['The start date must be on or before the end date.']]);
+        }
+    }
+
+    public static function checkedStart(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (!self::isDay($value)) {
+            throw ValidationException::withMessages(['valid_from' => ['The start date must be a day written YYYY-MM-DD.']]);
+        }
+
+        return $value;
     }
 
     /**
      * The end date a new member starts with (an enrolment's or an import's), written on the row inside the caller's
      * transaction, never audited on its own: the enrolment and the import are. The caller has checked it is a day.
      */
-    public static function onCreate(LoyaltyMember $member, ?string $validUntil): void
+    public static function onCreate(LoyaltyMember $member, ?string $validUntil, ?string $validFrom = null): void
     {
-        if ($validUntil === null || $validUntil === '') {
+        $validUntil = $validUntil === '' ? null : $validUntil;
+        if ($validUntil === null && $validFrom === null) {
             return;
         }
-        self::write((int) $member->organization_id, (int) $member->id, ['membership_valid_until' => $validUntil, 'membership_reminded_for' => null]);
-        $member->setRawAttributes(array_merge($member->getAttributes(), ['membership_valid_until' => $validUntil, 'membership_reminded_for' => null]), true);
+        self::assertInterval($validFrom, $validUntil);
+        $values = ['membership_valid_until' => $validUntil, 'membership_reminded_for' => null]
+            + ($validFrom !== null ? ['membership_valid_from' => self::checkedStart($validFrom)] : []) + self::periodIntent($validFrom !== null);
+        self::write((int) $member->organization_id, (int) $member->id, $values);
+        $member->setRawAttributes(array_merge($member->getAttributes(), $values), true);
     }
 
     /**
@@ -258,19 +333,37 @@ class MembershipValidity
     {
         $a = self::endOf($winner);
         $b = self::endOf($loser);
-        if ($b === null || ($a !== null && $a >= $b)) {
-            return;
+        $aFrom = self::startOf($winner);
+        $bFrom = self::startOf($loser);
+        if (($a !== null && $bFrom !== null && self::daysBetween($a, $bFrom) > 1)
+            || ($b !== null && $aFrom !== null && self::daysBetween($b, $aFrom) > 1)) {
+            throw new LoyaltyRefused('membership_period_conflict', 'These membership periods are separate. Choose the intended dates before merging.', 409);
         }
+        $changes = [];
+        if ($loser->getAttribute('membership_period_enforced')) $changes['membership_period_enforced'] = true;
+        if ($aFrom !== null && $bFrom !== null && $bFrom < $aFrom) {
+            $changes['membership_valid_from'] = $bFrom;
+        }
+        if ($b !== null && ($a === null || $a < $b)) {
+            $changes += ['membership_valid_until' => $b, 'membership_reminded_for' => $loser->membership_reminded_for?->toDateString()];
+            if ($a === null && $aFrom === null && $bFrom !== null) $changes['membership_valid_from'] = $bFrom;
+        }
+        if ($changes === []) return;
         // Raw, as write() stores them (a plain Y-m-d): the merge's save writes them as they are.
-        $reminded = $loser->membership_reminded_for?->toDateString();
-        $winner->setRawAttributes(array_merge($winner->getAttributes(), ['membership_valid_until' => $b, 'membership_reminded_for' => $reminded]));
+        $winner->setRawAttributes(array_merge($winner->getAttributes(), $changes));
+    }
+
+    private static function periodIntent(bool $bounded): array
+    {
+        return $bounded && \Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', 'membership_period_enforced')
+            ? ['membership_period_enforced' => true] : [];
     }
 
     /**
      * The one statement that stores the dates: plain `Y-m-d` strings, never through the model's date cast, which would
      * write `Y-m-d 00:00:00` on SQLite and break the day comparisons the list, the reminder and the access check make.
      *
-     * @param array{membership_valid_until?: ?string, membership_reminded_for?: ?string} $values
+     * @param array{membership_valid_from?: ?string, membership_valid_until?: ?string, membership_reminded_for?: ?string} $values
      */
     private static function write(int $orgId, int $memberId, array $values): void
     {

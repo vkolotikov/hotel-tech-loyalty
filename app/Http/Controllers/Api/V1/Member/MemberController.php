@@ -192,18 +192,17 @@ class MemberController extends Controller
 
         $user = $request->user();
 
-        // Delete old avatar if it exists
-        if ($user->avatar_url) {
-            $oldPath = str_replace('/storage/', '', $user->avatar_url);
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
-        }
-
-        $path = $request->file('avatar')->storePublicly('avatars', 'public');
-        $user->update(['avatar_url' => '/storage/' . $path]);
+        $org = (int) $user->organization_id;
+        abort_unless($org > 0 && (int) app('current_organization_id') === $org, 403);
+        $folder = 'avatars/user-'.$user->id;
+        $previous = $user->avatar_url;
+        $url = \App\Services\MediaService::upload($request->file('avatar'), $folder);
+        $user->update(['avatar_url' => $url]);
+        \App\Services\Loyalty\App\OwnMedia::forget($previous, $org, $folder);
 
         return response()->json([
             'message'    => 'Avatar updated',
-            'avatar_url' => '/storage/' . $path,
+            'avatar_url' => $url,
         ]);
     }
 

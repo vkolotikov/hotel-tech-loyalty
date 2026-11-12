@@ -41,5 +41,37 @@
     "more_areas": "Другие разделы",
     "plan": "План и продукты",
     "team": "Команда"
+  },
+  "pulse": {
+    "label": "Сейчас на месте",
+    "morning": "Доброе утро",
+    "afternoon": "Добрый день",
+    "evening": "Добрый вечер",
+    "night": "Доброй ночи",
+    "hello_name": "{{greeting}}, {{name}}",
+    "place_time": "{{place}} · местное время",
+    "zone_time": "Местное время ({{zone}})",
+    "feels_like": "Ощущается как {{temp}}",
+    "high_low": "Макс. {{max}} Мин. {{min}}",
+    "next_hours": "Ближайшие часы",
+    "now": "Сейчас",
+    "sun": "Восход {{rise}}, закат {{set}}",
+    "weather": {
+      "clear": "Ясно",
+      "mainly_clear": "Преимущественно ясно",
+      "partly_cloudy": "Переменная облачность",
+      "overcast": "Пасмурно",
+      "fog": "Туман",
+      "drizzle": "Морось",
+      "freezing_drizzle": "Ледяная морось",
+      "rain": "Дождь",
+      "freezing_rain": "Ледяной дождь",
+      "snow": "Снег",
+      "showers": "Ливни",
+      "snow_showers": "Снегопад",
+      "thunderstorm": "Гроза",
+      "thunder_hail": "Гроза с градом",
+      "unknown": "Погода"
+    }
   }
 }

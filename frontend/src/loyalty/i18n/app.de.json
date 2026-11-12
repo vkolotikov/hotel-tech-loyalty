@@ -74,6 +74,9 @@
     }
   },
   "logo": {
+    "back_to_setup": "Zurück zur Einrichtung",
+    "saved": "Logo gespeichert. Ihre Einrichtungsliste wurde aktualisiert.",
+    "tab_caption": "Logo und Verfügbarkeit der Designfunktionen",
     "alt": "Das Logo des Betriebs",
     "error": {
       "invalid": "Verwenden Sie ein JPEG-, PNG- oder WebP-Bild bis {{mb}} MB und höchstens {{edge}} Pixel an der längsten Seite.",
@@ -84,7 +87,7 @@
       "unknown": "Das Logo konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut."
     },
     "hint": "JPEG, PNG oder WebP, bis {{mb}} MB. Wird sofort gespeichert.",
-    "line": "Erscheint in der App und im Mitgliederportal. Es ist dasselbe Logo wie unter „Branding“ in der vollständigen Verwaltung.",
+    "line": "Erscheint auf Mitgliedskarten, in der App und im Mitgliederportal.",
     "none": "Noch kein Logo.",
     "replace": "Logo ersetzen",
     "title": "Logo",

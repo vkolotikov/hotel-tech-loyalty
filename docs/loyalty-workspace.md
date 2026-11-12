@@ -1,5 +1,34 @@
 # HexaTech Loyalty — runbook
 
+Events simplification (10 November 2026): one sidebar Events button; Upcoming, Past and Drafts are page filters.
+The compact directory groups search/location/level filters with date rows and selected details, and add/edit
+uses the common staff popup with a live member preview. Attendance uses matching rows, summary icons and ten
+people per page. Existing API, permissions, lifecycle and scan/door workflows are retained. See
+[the Events audit](audits/2026-11-10-loyalty-events-compact.md).
+
+Catalogue layout follow-up (10 November 2026): Program, Ways to earn and Rewards use shared aligned row/header
+columns, compact original Figma artwork and grouped assignment/filter controls. The member search reserves its icon
+inset against the general input rule. Both themes and responsive layouts are covered by a compiled real-backend
+geometry/typing regression. No backend, permission or API changes. See
+[the layout audit](audits/2026-11-10-loyalty-layout-polish.md).
+
+Manual memberships and partner access (10 November 2026): [customer setup guide](loyalty-memberships-and-partners.md),
+[API additions](api/loyalty-membership-partners.md) and [verification audit](audits/2026-11-10-loyalty-membership-partners.md).
+Assign an existing level and dates under Members → Manage membership; Settings → Partner access invites staff to
+scan/check in only at their selected places. These rights are enforced on the server, including access report mode.
+The first distribution is the web scanner `/loyalty/partner`; it does not update installed native staff apps.
+Assigned/start-dated terms restrict level benefits, queued fulfillment, level offers and earning privileges to their
+term; switching back to earned preserves dates. Legacy end-only records retain their previous rules. Physical Card QR
+follows the reusable card ID; personal QR and Wallet credentials stay with their member.
+
+Guided setup preview (10 November 2026): the right side is fully expanded in normal page flow, with coloured
+industry icons, a Join → Earn points → Use rewards journey and separate membership/reward, earning, bonus and rule
+sections. Selecting a template or editing a draft updates the canonical explanation immediately; existing levels
+and rewards remain the actual catalogue. Review and explicit Apply are unchanged. Five languages, both themes,
+mobile wrapping and reduced motion are covered. See `audits/2026-11-10-loyalty-setup-preview.md` and the current handoff.
+
+Setup and catalogue follow-up (9 November 2026): industry templates are selectable for existing programmes and propose earning rules for explicit review; existing tiers, benefits and rewards are retained. Setup is available from Settings and Overview's real first-steps checklist. Member fields have explicit spacing and native place radios keep their native geometry. Offers default to a compact read view with Edit. RewardManagement owns enable/disable and deletion in both admin interfaces; deletion refuses any redemption history or stamp-card reference. ProgrammeOptions saves and reward deletion share the organisation setup lock. Wizard template metadata cannot be set by a general option update. See [the implementation and email authentication audit](audits/2026-11-09-loyalty-setup-polish.md).
+
 Launch rehearsal (9 November 2026): see [the audit report](audits/2026-11-09-loyalty-launch-rehearsal.md) for real-backend journeys, delivery evidence and outstanding production/device gates. `php artisan loyalty:launch-audit` reads safe platform observations. Its explicit `--queue-probe` queues one harmless infrastructure job at most once per 15 minutes; run the default command afterwards to observe completion. No messages are sent. A processed probe proves one job ran, not continuous worker monitoring. Wallet actions now follow the member bootstrap's provider availability flags.
 
 Rewards & benefits simplification (6 November 2026): RB-B01/02/03 (`308:10648`, `308:10947`, `308:11226`) group filters with catalogue rows, align costs/assignments/statuses, add original coloured icons and compact shortcuts, separate reward details/claim settings and consolidate offer actions in a save footer. The benefits catalogue follows the same compact composition. Actual all-member/code eligibility, typed discounts, media writes, server offer state/date contracts, per-level benefit assignments, permissions and unsaved guards remain. No backend/API/Places change. See `loyalty-redesign/27-REWARDS-SIMPLIFICATION-REPORT.md` and the current handoff for release evidence.
@@ -149,7 +178,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Credit (release 7) | `GET members/{id}/credit?page` (25 a page), `POST members/{id}/credit/spend` (`amount`, `note`, `idempotency_key`), `POST members/{id}/credit/adjust` (`amount`, signed, `reason`, `idempotency_key`) |
 | Places (release 8) | `GET places`, `POST places`, `PUT places/{id}` (`name`, `description`, `admits` all\|tiers, `tier_ids`, `is_active`, `sort_order`, `idempotency_key`), `DELETE places/{id}` (switched off instead once it has entries or an event names it), `GET places/{id}/entries?day=&page=` (50 a page); `POST scan` takes `place_id` or `event_id` |
 | Membership (release 8) | `PUT members/{id}/validity` (`valid_until` Y-m-d\|null, or `extend` 1m\|3m\|6m\|1y; `idempotency_key`); `GET members?state=expiring\|expired` |
-| Events (release 8; design pass 2026-10-28) | `GET events?when=upcoming\|today\|past\|drafts&q=&place_id=&location=&tier_id=&sort=soonest\|latest&page=`, `GET events/options` (places, tiers, tenant custom locations), `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?q=&attendance=all\|not_checked_in\|checked_in\|walk_in\|cancelled&per_page=5..200&page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
+| Events (release 8; design pass 2026-10-28) | `GET events?when=upcoming\|today\|past\|drafts&q=&place_id=&location=&tier_id=&sort=soonest\|latest&page=`, options in list/detail responses (places and tenant custom locations; tiers from bootstrap), `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?q=&attendance=all\|not_checked_in\|checked_in\|walk_in\|cancelled&per_page=5..200&page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
@@ -606,7 +635,7 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   at the entrance — continuous camera or reader, a duplicate within 3 seconds ignored, the verdict clearing after 4
   seconds, an optional sound, the screen kept awake.
 - **Events** (release 8; design pass 2026-10-28, `events/`): upcoming, past and drafts in the Overview shell,
-  server search/location/level filters, selected event details; full editors at `/events/new` and `/events/:id/edit`
+  server search/location/level filters, selected event details; native popup editors at `/events/new` and `/events/:id/edit`
   with member preview, draft save and review/publish. An event's existing page contains attendance counts,
   searchable/filterable people, actual historical points, confirmation, member profile and signup cancellation.
   Scan and Door mode retain event context; by-name check-in, add a member, edit/publish/cancel/delete remain available.
@@ -1497,3 +1526,55 @@ files on disk): run them one after the other.
 - Campaigns: build a segment, write a draft, send yourself a test; send a real one only to a segment you chose.
 - Card & app: the wallet pass's readiness; the member app's colours (the native app shows them on its next start).
 - Rewards: add a picture to a reward and see it on the catalogue.
+
+## Personal offers and voucher files — 11 November 2026
+
+Offers may use the programme/level audience or an explicit nonempty list of individual members. Selected-member offers clear the tier restriction and remain private even when members are removed or erased. Canonical eligibility also protects claims, coupon codes, desk usage and earning multipliers. Recipient pivots move and deduplicate during a member merge.
+
+Staff with manage-offer permission enter **Attach & send** from the Offers heading or the sticky create/edit footer. The editor validates and saves first, then opens the same attachment and delivery popup (`send=1`); the exact requested offer stays selected even if a later refresh makes it inactive. One PDF/JPEG/PNG/WebP up to 5 MiB may be uploaded there. Actual MIME and image dimensions are checked; bytes live in the database, and authenticated download checks current eligibility.
+
+Delivery chooses **Selected members** or **All eligible members**, previews saved content and email/portal reach, then explicitly confirms both channels. All-member preview (`recipient_mode=all`) resolves only active members of this organisation who qualify for this offer, up to the existing 5,000-target limit. Private offers still reach only their saved recipients. The preview returns the exact reviewed `member_ids`; the unchanged send endpoint takes those explicit IDs, so enrolments after review cannot silently expand the send. File/recipient changes reset review, and file metadata participates in the revision. Saving, uploading and reviewing never send or claim. Marketing consent/suppression and offer-message preferences still apply.
+
+`OfferDelivery` persists a tenant/idempotency-key outbox before handing its immutable campaign to `CampaignStart`. `SendEmailCampaignChunk` alone sends email, attaches the saved snapshot and rechecks current eligibility. `NotificationService::keep` alone writes portal inbox messages, once per send. Generic campaign editing/reset/start cannot alter an offer outbox; duplicates drop the offer pointer. Additive member API metadata exposes no recipient list or file bytes. New endpoints: staff `offers/{id}/attachment`, `send-preview`, `send`; member `member/portal/offers/{id}/attachment`.
+
+## Administration UX pass — 10 November 2026
+
+The eight management screens follow Figma page353:8135, with original local SVGs and a common list/detail layout.
+Asset provenance, hashes, intrinsic dimensions and consumers are in `docs/loyalty-redesign/28-ADMIN-UX-ASSETS.json`.
+These screens keep the same tenant-scoped APIs, saved records and permissions. No payment setup or new migration.
+
+- Program: **Levels & tiers**, **Places & access**. Qualification is in Levels; **Guided setup** and **Readiness checks**
+  are actions there. Setup's canonical address is `/loyalty/program/setup`.
+- Ways to earn: **Earning rules**, **Bonuses & boosts**. **Points settings** in Earning rules owns expiry. The purchase
+  rate is still `points_per_currency`; booking and desk switches are independent. An unavailable/off trigger's example
+  gives zero while showing its configured inherited rate.
+- Rewards & benefits: **Points rewards**, **Tier perks**, **Offers**. Redemptions is linked from Points rewards;
+  referral activity from Bonuses & boosts. Existing activity routes stay valid.
+
+`management/navigation.ts` resolves old rules/rule, expiry, qualification, benefits, boosts, readiness and setup links.
+Selection IDs and applicable filters survive. Direct record editors keep their canonical writers and deletion guards.
+Unknown server ways remain available under advanced More. Do not recreate a benefit catalogue in Program.
+
+`TierAdvice` adds `tiers_missing_threshold`: on the programme's measure, later active non-invitation tiers with a null
+floor are named; the first active non-invitation entry tier is excluded. Existing duplicate floors and unused benefits
+remain canonical server advice. Correction links open the named tier or perk. Perks assigned only to inactive tiers
+still need an active tier; the page uses the server advice and previews the explicitly selected assignment's own value.
+
+`TierAssignmentEditor` is shared by Levels, the tier editor and Tier perks. It composes `TierBenefitDialog` and `TakeOff`.
+Cancelling removal retains the mounted form's unsaved values. Assignment defaults to a real option even when all tiers
+are off. Deletion, detach, points, options, offers and redemption writers have not been duplicated.
+
+Promotion math is unchanged: highest eligible timed boost or claimed offer once, with existing independent tier rate
+and standing tier multiplier. Milestones, automatic schedules and member-claimed offers are separate presentations.
+Offer counts use the returned venue-day state; a reached usage cap is displayed separately. Setup's reward example
+reads the actual redeemable catalogue and effective draft, without inventing a reward cost or enabled booking source.
+
+Places show the real tier access rules and today's granted/refused entries; no entrance/hour model is implied.
+Supported secure Web NFC is preferred and still needs a user press. QR and member lookup are visible fallbacks with
+the place preserved. General NFC keeps NDEF member-record precedence and namespaces the serial fallback as HTCARD.
+The partner scanner's explicit physical-card behavior remains as documented in `loyalty-memberships-and-partners.md`.
+Physical NFC/camera acceptance still requires devices; this release does not configure Wallet issuers or push providers.
+
+Local acceptance: `frontend/e2e/loyalty-admin-ux.mjs` and `loyalty-admin-ux-regression.mjs`, using the isolated launch
+environment in `frontend/e2e/LAUNCH-REHEARSAL.md`. A frozen rehearsal clock also freezes limiter time, so the full
+screenshot runner clears only its disposable demo's cache counters between batches. Production throttles are unchanged.

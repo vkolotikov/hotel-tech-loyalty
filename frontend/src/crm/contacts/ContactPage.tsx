@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
+import { RecordEmails } from '../mail/RecordEmails'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -73,6 +74,7 @@ export function ContactPage() {
           <div className="grid gap-5 lg:grid-cols-5">
             <div className="min-w-0 lg:col-span-3"><DetailsCard guest={g} /></div>
             <div className="min-w-0 lg:col-span-2 lg:row-span-2 lg:self-start"><LeadsCard id={g.id} /></div>
+            <div className="min-w-0 lg:col-span-3"><RecordEmails resource="guests" id={g.id} /></div>
             <div className="min-w-0 lg:col-span-3"><TimelineCard id={g.id} /></div>
           </div>
         )}

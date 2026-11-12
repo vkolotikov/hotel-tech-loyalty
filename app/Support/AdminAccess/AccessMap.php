@@ -94,6 +94,9 @@ final class AccessMap
         'admin/loyalty/program/boosts/confirm-times' => ['manager',       'manager',            'loyalty'],       // Release 6: "These times are right" for boosts flagged "check the time" (manager)
         'admin/loyalty/rewards'                 => ['staff',              'can_manage_offers',  'loyalty'],       // The rewards catalogue (changes: can_manage_offers, as admin/rewards)
         'admin/loyalty/offers'                  => ['staff',              'can_manage_offers',  'loyalty'],       // Offers (changes: can_manage_offers, as admin/offers)
+        'admin/loyalty/offers/{id}/attachment' => ['staff', 'can_manage_offers', 'loyalty'],
+        'admin/loyalty/offers/{id}/send-preview' => ['can_manage_offers', 'can_manage_offers', 'loyalty'],
+        'admin/loyalty/offers/{id}/send' => ['can_manage_offers', 'can_manage_offers', 'loyalty'],
         'admin/loyalty/redemptions'             => ['staff',              'can_redeem_points',  'loyalty'],       // Fulfil or cancel a redemption (can_redeem_points, as the full admin's routes)
         'admin/loyalty/members/{id}/tier'       => ['staff',              'manager',            'loyalty'],       // Release 2: a member's tier is a manager's correction
         'admin/loyalty/members/{id}/deactivate' => ['staff',              'manager',            'loyalty'],       // Deactivate a member (manager)
@@ -113,6 +116,9 @@ final class AccessMap
         'admin/loyalty/push'                    => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/sms'                     => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/members/{id}/cards'      => ['staff',              'staff',              'loyalty'],       // Release 5: a member's NFC cards (link, switch off: every staff member, as Edit details and admin/nfc-cards)
+        'admin/loyalty/members/{id}/membership' => ['manager',            'manager',            'loyalty'],
+        'admin/loyalty/partner'                 => ['staff',              'staff',              'loyalty'],
+        'admin/loyalty/partners'                => ['manager',            'manager',            'loyalty'],
         'admin/loyalty/options'                 => ['staff',              'manager',            'loyalty'],       // Release 7: the programme's options and the setup wizard (changes: manager, as Program)
         'admin/loyalty/start'                   => ['staff',              'manager',            'loyalty'],       // Release 10: "Start here", the setup steps and which are done (reads only)
         'admin/loyalty/members/{id}/check-in'   => ['staff',              'can_award_points',   'loyalty'],       // Release 7: a check-in or a purchase at the desk (it writes points: can_award_points, as Award)
@@ -197,6 +203,8 @@ final class AccessMap
         'admin/deals'                           => ['staff',              'staff',              'crm'],           // Deals (menu: everyone)
         'admin/email-campaigns'                 => ['staff',              'manager',            'crm'],           // Email campaigns (Marketing, manager)
         'admin/email-templates'                 => ['staff',              'manager',            'crm'],           // Email templates (Marketing, manager); sending one is overridden below
+        'admin/guests/{guest}/email-history'     => ['staff',              'staff',              'crm'],
+        'admin/inquiries/{inquiry}/email-history' => ['staff',             'staff',              'crm'],
         'admin/guests'                          => ['staff',              'staff',              'crm'],           // Guests and clients
         'admin/inquiries'                       => ['staff',              'staff',              'crm'],           // Leads (menu: everyone)
         'admin/inquiry-lost-reasons'            => ['staff',              'manager',            'crm'],           // Lost reasons (Pipelines admin)

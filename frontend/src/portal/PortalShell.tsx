@@ -1,138 +1,61 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut, Bell, Ticket, CircleHelp } from 'lucide-react'
-import { useAuthStore } from '../stores/authStore'
-import { logoutAndRedirect } from '../lib/logout'
 import { usePortal } from './PortalProvider'
 import { badgeText } from './pages/inbox/inboxState'
 import { Notice } from './ui/Notice'
 import { Button } from './ui/Button'
 import { PageSkeleton } from './ui/Skeleton'
+import { PortalIcon, type PortalIconName } from './design/PortalIcon'
+import { usePortalPanels } from './design/panels'
 
-// Tailwind only generates classes it can see as literals, so the column
-// count per visible nav item must be spelled out rather than interpolated.
-const MOBILE_COLS: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5' }
-
-/**
- * The member's frame: venue name up top, a thumb-reachable bar on phones,
- * tabs from `sm`. Destinations follow what the venue can do — no Rewards
- * for a clinic, no Book for a venue that sells neither appointments nor stays — so
- * nothing points at a page that would be empty. The inbox is the bell in the
- * header, at every width, with the unread count on it: a sixth tab would not
- * fit the phone bar, nor the tab strip at `sm` in the longer languages.
- */
+/** Four core destinations; booking, events and help remain actions within their pages. */
 export function PortalShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
-  const { user } = useAuthStore()
   const { data, isLoading, isError, error, refetch } = usePortal()
-
-  const items = [
-    { to: '/portal', label: t('portal.nav.home', 'Home'), icon: Home, end: true, show: true, badge: 0 },
-    { to: '/portal/book', label: t('portal.nav.book', 'Book'), icon: CalendarPlus, end: false, show: !!data?.capabilities.services || !!data?.capabilities.stays, badge: 0 },
-    { to: '/portal/rewards', label: t('portal.nav.rewards', 'Rewards'), icon: Gift, end: false, show: !!data?.capabilities.loyalty, badge: 0 },
-    // Release 8: Events while the venue has one coming — never as a sixth item (then Home's card and Rewards lead there).
-    { to: '/portal/events', label: t('portal.nav.events', 'Events'), icon: Ticket, end: false, show: !!data?.capabilities.events, badge: 0 },
-    { to: '/portal/bookings', label: t('portal.nav.bookings', 'Bookings'), icon: CalendarDays, end: false, show: true, badge: data?.counts.upcoming_bookings ?? 0 },
-    { to: '/portal/profile', label: t('portal.nav.profile', 'Profile'), icon: User, end: false, show: true, badge: 0 },
-  ].filter(i => i.show).filter((i, _, shown) => i.to !== '/portal/events' || shown.length <= 5)
-  // The inbox needs a membership row: the member endpoints answer for a member only.
+  const panels = usePortalPanels()
+  const items: { to: string; label: string; icon: PortalIconName; active: PortalIconName; end?: boolean; show: boolean }[] = [
+    { to: '/portal', label: t('portal.nav.home', 'Home'), icon: 'home', active: 'homeActive', end: true, show: true },
+    { to: '/portal/rewards', label: t('portal.nav.rewards', 'Rewards'), icon: 'rewards', active: 'rewardsActive', show: !!data?.capabilities.loyalty },
+    { to: '/portal/bookings', label: t('portal.nav.bookings', 'Bookings'), icon: 'bookings', active: 'bookingsActive', show: true },
+    { to: '/portal/profile', label: t('portal.nav.profile', 'Profile'), icon: 'profile', active: 'profileActive', show: true },
+  ]
+  const shown = items.filter(i => i.show)
   const unread = badgeText(data?.counts.unread_notifications ?? 0)
-  const showInbox = !!data?.member
-
-  const firstName = user?.name?.split(' ')[0]
   const status = (error as { response?: { status?: number; data?: { error?: string } } })?.response
   const portalOff = status?.status === 403 && status.data?.error === 'portal_disabled'
-  // A venue that switched the portal off should never keep showing the page
-  // (blocking regardless of cached data). Any other error only blocks when
-  // there is nothing cached to show yet — a background refetch failing on a
-  // flaky connection should not replace a page the member was already
-  // reading with the error screen.
   const blockingError = isError && !portalOff && !data
-
+  const links = shown.map(({ to, label, icon, active, end }) => <NavLink key={to} to={to} end={end} className="p-nav-link">
+    {({ isActive }) => <><PortalIcon name={isActive ? active : icon} /><span>{label}</span></>}
+  </NavLink>)
   return (
-    <div data-portal="" className="min-h-screen flex flex-col font-p-body">
-      <header className="sticky top-0 z-30 bg-p-bg/90 backdrop-blur-sm border-b border-p-border">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            {data?.venue.logo_url && <img src={data.venue.logo_url} alt="" className="h-7 w-7 rounded-full object-cover" />}
-            <span className="font-p-display text-lg truncate">{data?.venue.name ?? t('portal.shell.membership', 'My membership')}</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {firstName && <span className="hidden sm:inline text-sm text-p-text-2">{t('portal.shell.greeting', 'Hello, {{name}}', { name: firstName })}</span>}
-            {/* Help (2026-10-26): a question mark beside the bell at every width, like the inbox — not a menu item. */}
-            <NavLink to="/portal/help" title={t('portal.help.title', 'Help')} data-help-link=""
-              className={({ isActive }) => `flex items-center justify-center w-11 h-11 rounded-p-control transition-colors ${isActive ? 'text-p-accent-deep bg-p-accent/10' : 'text-p-text-2 hover:text-p-text'}`}>
-              <CircleHelp size={19} aria-hidden />
-              <span className="sr-only">{t('portal.help.title', 'Help')}</span>
-            </NavLink>
-            {showInbox && (
-              <NavLink to="/portal/inbox" title={t('portal.nav.inbox', 'Inbox')}
-                className={({ isActive }) => `relative flex items-center justify-center w-11 h-11 rounded-p-control transition-colors ${isActive ? 'text-p-accent-deep bg-p-accent/10' : 'text-p-text-2 hover:text-p-text'}`}>
-                <Bell size={19} aria-hidden />
-                <span className="sr-only">{t('portal.nav.inbox', 'Inbox')}</span>
-                {unread && (
-                  <span data-inbox-badge="" className="absolute top-1 right-0.5 min-w-[18px] text-center rounded-full bg-p-accent text-p-accent-ink text-[10px] font-bold px-1">
-                    {unread}<span className="sr-only"> {t('portal.inbox.unread', 'Unread')}</span>
-                  </span>
-                )}
-              </NavLink>
-            )}
-            <button
-              onClick={() => { void logoutAndRedirect('/login') }}
-              className="flex items-center gap-1.5 text-xs text-p-text-2 hover:text-p-text rounded-p-control px-2 min-h-11"
-            >
-              <LogOut size={14} aria-hidden /> {t('portal.common.sign_out', 'Sign out')}
-            </button>
+    <div data-portal="" className="p-portal flex flex-col font-p-body">
+      <header className="p-header">
+        <div className="p-header-inner">
+          <NavLink to="/portal" className="p-brand">
+            <span className="p-brand-logo">{data?.venue.logo_url ? <img src={data.venue.logo_url} alt="" /> : <PortalIcon name="star" />}</span>
+            <span className="min-w-0"><span className="p-brand-name block">{data?.venue.name ?? t('portal.shell.membership', 'My membership')}</span><span className="p-brand-caption">{t('portal.design.member_club', 'Member club')}</span></span>
+          </NavLink>
+          <nav className="p-desktop-nav" aria-label={t('portal.shell.menu', 'Menu')}>{links}</nav>
+          <div className="p-header-actions">
+            {data?.member && !portalOff && <>
+              <Button variant="secondary" size="sm" onClick={() => panels.open('card')}><PortalIcon name="qr" />{t('portal.design.my_card', 'My card')}</Button>
+              <button type="button" className="p-header-bell" title={t('portal.inbox.title', 'Inbox')} aria-label={t('portal.design.updates', 'Updates')} onClick={() => panels.open('updates')}>
+                <PortalIcon name="bell" />
+                {unread && <span data-inbox-badge="" className="absolute -top-1 -right-1 min-w-[17px] rounded-full bg-p-accent text-p-accent-ink text-[10px] font-bold px-1">{unread}<span className="sr-only"> {t('portal.inbox.unread', 'Unread')}</span></span>}
+              </button>
+            </>}
           </div>
         </div>
-        <nav className="hidden sm:block border-t border-p-border" aria-label={t('portal.shell.menu', 'Menu')}>
-          <div className="max-w-3xl mx-auto px-4 flex gap-1">
-            {items.map(({ to, label, icon: Icon, end, badge }) => (
-              <NavLink key={to} to={to} end={end}
-                className={({ isActive }) => `flex items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${isActive ? 'border-p-accent text-p-text' : 'border-transparent text-p-text-2 hover:text-p-text'}`}>
-                <Icon size={15} aria-hidden /> {label}
-                {badge > 0 && <span className="ml-1 rounded-full bg-p-accent text-p-accent-ink text-[10px] font-bold px-1.5">{badge}</span>}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
       </header>
-
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-5 pb-24 sm:pb-8">
+      <main className="p-main flex-1">
         {isLoading && <PageSkeleton />}
         {isError && portalOff && <Notice tone="warning">{t('portal.shell.portal_off', 'The member portal is switched off for this venue. Please contact them directly.')}</Notice>}
-        {blockingError && (
-          <div className="space-y-3">
-            <Notice tone="danger">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice>
-            <Button variant="secondary" onClick={refetch}>{t('portal.common.retry', 'Try again')}</Button>
-          </div>
-        )}
-        {isError && !portalOff && data && (
-          <div className="mb-3">
-            <Notice tone="warning">
-              <div className="flex items-center justify-between gap-3">
-                <span>{t('portal.common.error', 'Something went wrong. Please try again.')}</span>
-                <Button variant="secondary" size="sm" onClick={refetch}>{t('portal.common.retry', 'Try again')}</Button>
-              </div>
-            </Notice>
-          </div>
-        )}
+        {blockingError && <div className="space-y-3"><Notice tone="danger">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice><Button variant="secondary" onClick={refetch}>{t('portal.common.retry', 'Try again')}</Button></div>}
+        {isError && !portalOff && data && <div className="mb-3"><Notice tone="warning"><div className="flex items-center justify-between gap-3"><span>{t('portal.common.error', 'Something went wrong. Please try again.')}</span><Button variant="secondary" size="sm" onClick={refetch}>{t('portal.common.retry', 'Try again')}</Button></div></Notice></div>}
         {!isLoading && !portalOff && !blockingError && children}
       </main>
-
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-p-surface/95 backdrop-blur-sm border-t border-p-border" aria-label={t('portal.shell.menu', 'Menu')} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className={`grid ${MOBILE_COLS[items.length] ?? 'grid-cols-4'}`}>
-          {items.map(({ to, label, icon: Icon, end, badge }) => (
-            <NavLink key={to} to={to} end={end}
-              className={({ isActive }) => `relative flex flex-col items-center gap-0.5 py-2 min-h-14 text-[11px] font-medium transition-colors ${isActive ? 'text-p-accent-deep' : 'text-p-text-2'}`}>
-              <Icon size={20} aria-hidden />
-              {label}
-              {badge > 0 && <span className="absolute top-1.5 right-[calc(50%-18px)] rounded-full bg-p-accent text-p-accent-ink text-[10px] font-bold px-1.5">{badge}</span>}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+      <nav className="p-mobile-nav" aria-label={t('portal.shell.menu', 'Menu')}><div className={shown.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}>{links}</div></nav>
     </div>
   )
 }

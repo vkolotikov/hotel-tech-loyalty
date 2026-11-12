@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { AdminCrmEmailHistory as CrmEmailHistory } from '../components/AdminCrmEmailHistory'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -594,6 +595,7 @@ export function MemberDetail() {
 
       {activeTab === 'crm' && linkedGuest && (
         <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
+          <CrmEmailHistory key={linkedGuest.id} resource="guests" id={linkedGuest.id} />
           {/* Header with status pills + quick-send action */}
           <div className="px-6 py-4 border-b border-dark-border flex items-center gap-2 flex-wrap">
             <Crown size={16} className="text-primary-400" />

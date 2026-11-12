@@ -1,0 +1,1 @@
+import{t as e}from"./vendor-react-B90Q-QDl.js";import{N as t}from"./index-C11oCdFH.js";import{t as n}from"./CrmEmailHistory-DahOBAYC.js";var r=e();function i({resource:e,id:i}){let a=t();return(0,r.jsx)(`div`,{"data-workspace":``,"data-theme":a.theme_style===`light`?`light`:`dark`,className:`rounded-2xl`,children:(0,r.jsx)(n,{resource:e,id:i})})}export{i as t};

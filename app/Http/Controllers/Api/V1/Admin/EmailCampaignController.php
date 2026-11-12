@@ -94,7 +94,7 @@ class EmailCampaignController extends Controller
         $source = EmailCampaign::findOrFail($id);
         $copy = $source->replicate([
             'status', 'sent_at', 'sent_count', 'failed_count',
-            'recipient_count', 'error_message', 'sent_by_user_id',
+            'recipient_count', 'error_message', 'sent_by_user_id', 'offer_send_id',
         ]);
         $copy->name               = mb_substr($source->name . ' (copy)', 0, 120);
         $copy->status             = EmailCampaign::STATUS_DRAFT;
@@ -118,6 +118,7 @@ class EmailCampaignController extends Controller
     public function test(Request $request, int $id): JsonResponse
     {
         $campaign = EmailCampaign::findOrFail($id);
+        $campaign->assertIndependent();
         $user     = $request->user();
         $email    = $user?->email;
 
@@ -176,6 +177,7 @@ class EmailCampaignController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $campaign = EmailCampaign::findOrFail($id);
+        $campaign->assertIndependent();
         if ($campaign->status !== EmailCampaign::STATUS_DRAFT) {
             return response()->json([
                 'message' => 'Sent or in-flight campaigns cannot be edited.',
@@ -188,6 +190,7 @@ class EmailCampaignController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         $campaign = EmailCampaign::findOrFail($id);
+        $campaign->assertIndependent();
         if (in_array($campaign->status, [EmailCampaign::STATUS_SENDING, EmailCampaign::STATUS_SENT], true)) {
             return response()->json([
                 'message' => 'Sent campaigns are kept in history — cannot delete.',
@@ -274,6 +277,7 @@ class EmailCampaignController extends Controller
     public function reset(Request $request, int $id): JsonResponse
     {
         $campaign = EmailCampaign::findOrFail($id);
+        $campaign->assertIndependent();
 
         if (!in_array($campaign->status, [EmailCampaign::STATUS_FAILED, EmailCampaign::STATUS_CANCELLED], true)) {
             return response()->json([

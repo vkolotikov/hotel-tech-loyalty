@@ -1,0 +1,23 @@
+{
+  "title": "Historique des e-mails",
+  "refresh": "Actualiser depuis Zoho",
+  "loading": "Chargement…",
+  "error": "L’historique des e-mails est temporairement indisponible.",
+  "retry": "Réessayer",
+  "read_only": "Lecture seule · Zoho Mail",
+  "disconnected": "Reconnectez Zoho dans Contacts pour actualiser l’historique.",
+  "empty": "Aucun e-mail récupéré. Actualisez pour rechercher les messages correspondants.",
+  "no_matches": "Aucun e-mail correspondant trouvé dans la boîte Zoho connectée.",
+  "no_subject": "Sans objet",
+  "unknown_date": "Date indisponible",
+  "pages": "Pages d’e-mails",
+  "previous": "Page précédente",
+  "next": "Page suivante",
+  "count_one": "{{count}} e-mail",
+  "count_other": "{{count}} e-mails",
+  "older": "Récupérer les e-mails plus anciens",
+  "mail_setup_required": "L’historique est prêt. La connexion entre serveurs doit encore être activée.",
+  "mail_email_required": "Ajoutez d’abord une adresse e-mail valide à ce contact CRM.",
+  "crm_contact_review_required": "Synchronisez ce contact avec Contacts et vérifiez son association CRM et son adresse e-mail avant d’ouvrir l’historique.",
+  "count": "{{count}}"
+}

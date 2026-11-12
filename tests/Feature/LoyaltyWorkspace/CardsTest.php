@@ -84,6 +84,43 @@ class CardsTest extends TestCase
         $this->assertSame(1, AuditLog::where('action', 'nfc_card_linked')->count());
     }
 
+    public function test_a_reusable_card_qr_keeps_its_code_when_the_card_moves_to_a_new_member(): void
+    {
+        $card = $this->link($this->ada->id, '04a2b3c4')->assertCreated()->json('card.id');
+        $before = $this->getJson($this->api("members/{$this->ada->id}/cards/{$card}/qr"))->assertOk()
+            ->assertJsonPath('code', 'HTCARD:04a2b3c4')->json('qr_svg');
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $before);
+        $this->postJson($this->api("members/{$this->ada->id}/cards/{$card}/off"))->assertOk();
+        $this->link($this->grace->id, '04a2b3c4')->assertCreated();
+        $this->getJson($this->api("members/{$this->grace->id}/cards/{$card}/qr"))->assertOk()->assertJsonPath('qr_svg', $before);
+        $this->getJson($this->api("members/{$this->ada->id}/cards/{$card}/qr"))->assertNotFound();
+        $this->postJson($this->api('scan'), ['code' => '04a2b3c4'])->assertOk()->assertJsonPath('member.id', $this->grace->id);
+    }
+
+    public function test_explicit_physical_card_reassignment_preserves_legacy_personal_wallet_tokens(): void
+    {
+        $uid = '04a2b3c4';
+        $this->ada->update(['qr_code_token' => $uid]);
+        $card = $this->link($this->ada->id, $uid)->assertCreated()->json('card.id');
+        $this->postJson($this->api("members/{$this->ada->id}/cards/{$card}/off"))->assertOk();
+        $this->link($this->grace->id, $uid)->assertCreated();
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:'.$uid])->assertOk()->assertJsonPath('member.id', $this->grace->id);
+        $this->postJson($this->api('scan'), ['code' => $uid])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        $personal = json_encode(['type' => 'hotel_loyalty', 'token' => $uid, 'version' => 1]);
+        $this->postJson($this->api('scan'), ['code' => $personal])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        $this->assertSame($uid, $this->ada->fresh()->qr_code_token);
+    }
+
+    public function test_explicit_card_codes_are_normalised_and_fail_closed_when_unknown_or_off(): void
+    {
+        $card = $this->link($this->ada->id, '04a2b3c4')->assertCreated()->json('card.id');
+        $this->postJson($this->api('scan'), ['code' => 'htcard:04:A2:B3:C4'])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        $this->ada->update(['qr_code_token' => 'HTCARD:not-a-card']);
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:not-a-card'])->assertNotFound();
+        $this->postJson($this->api("members/{$this->ada->id}/cards/{$card}/off"))->assertOk();
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:04a2b3c4'])->assertNotFound()->assertJsonPath('card', 'off');
+    }
+
     public function test_qr_and_nfc_identify_the_same_member_and_disabling_nfc_preserves_qr(): void
     {
         $qr = hash('sha256', 'dual-card-fixture');
@@ -148,6 +185,10 @@ class CardsTest extends TestCase
         $other = $this->otherOrganization();
         $this->card($other['member']->id, '04E1E2E3', true, $other['org']->id);
         $this->card($other['member']->id, '04f1f2f3', false, $other['org']->id);
+
+        foreach (['HTCARD:04e1e2e3', 'HTCARD:04f1f2f3'] as $code) {
+            $this->asStaffMember()->postJson($this->api('scan'), ['code' => $code])->assertNotFound()->assertJsonMissingPath('member');
+        }
 
         foreach (['04:e1:e2:e3', '04F1F2F3', (string) hexdec('04e1e2e3')] as $uid) {
             $this->link($this->ada->id, $uid)->assertStatus(409)

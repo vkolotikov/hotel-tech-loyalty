@@ -342,7 +342,7 @@ export function stepAfter(step: Step, delta: 1 | -1): Step | null {
 /** The first step's choice: a preset's key, or `keep` (a venue that has tiers keeps them and its rewards). */
 export const KEEP = 'keep'
 
-/** A venue with any tier keeps its ladder: the presets are shown, not chosen. */
+/** An existing tier ladder is preserved even when a template proposes earning rules. */
 export function keepsTiers(answer: Pick<OptionsAnswer, 'catalogue'>): boolean {
   return answer.catalogue.tiers > 0
 }

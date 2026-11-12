@@ -313,5 +313,24 @@
     "bonus": "Cadeaux de bienvenue, d’anniversaire et de parrainage",
     "rule": "Comment les membres montent et quand les points expirent",
     "more": "Autres façons proposées par votre programme"
+  },
+  "preview": {
+    "title": "Votre programme en un coup d’œil",
+    "template": "Modèle par secteur",
+    "current": "Votre programme actuel",
+    "currentLine": "Vos niveaux, récompenses et règles de cumul enregistrés.",
+    "catalogue": "Adhésion et récompenses",
+    "kept": "Vos niveaux et récompenses existants sont conservés.",
+    "starting": "Niveaux suggérés et idées de récompenses. Vous pourrez les modifier ensuite.",
+    "levels": "{{n}} niveaux d’adhésion",
+    "rewards": "{{n}} récompenses",
+    "rewardExamples": "Exemples de récompenses :",
+    "noRewards": "Ajoutez votre première récompense dans Récompenses et avantages.",
+    "journey": "Le parcours du membre",
+    "join": "Adhérer",
+    "earn": "Cumuler des points",
+    "use": "Utiliser les récompenses",
+    "off": "Non activé : {{ways}}.",
+    "templateLine": "Règles de cumul suggérées. Choisissez celles à utiliser à l’étape suivante."
   }
 }

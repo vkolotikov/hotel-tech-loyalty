@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 
+/** @property int|null $organization_id The persisted tenant column, nullable for legacy global settings. */
 class HotelSetting extends Model
 {
     use BelongsToOrganization;

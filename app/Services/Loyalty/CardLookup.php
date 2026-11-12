@@ -10,6 +10,7 @@ use App\Models\ScanEvent;
 use App\Models\User;
 use App\Services\Loyalty\Cards\CardRead;
 use App\Services\Loyalty\Cards\CodeReader;
+use App\Services\Loyalty\Cards\NfcCards;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,7 +21,8 @@ use Illuminate\Support\Facades\DB;
  *
  * The code is read tolerantly, in this order (CodeReader does the reading, this class the looking up):
  *  1. the spaces around it and a leading `#` (the wallet pass shows `#LS-001001`) dropped;
- *  2. the member app's JSON naming a member number (v2), as it is or as a keyboard layout bent it;
+ *  2. an explicit HTCARD physical code, only through card lookup (never a personal-token fallback);
+ *  then the member app's JSON naming a member number (v2), as it is or as a keyboard layout bent it;
  *  3. the older app's JSON naming a token (v1);
  *  4. a link carrying a member number or a token;
  *  5. a secure QR token, then the legacy `qr_code_token`;
@@ -88,6 +90,13 @@ final class CardLookup
         $code = CodeReader::clean($code);
         if ($code === '') {
             return new CardRead('manual', CardRead::NONE, null, 'member_not_found');
+        }
+
+        // Explicit physical identity: never fall through to a personal token or member number.
+        if (strncasecmp($code, NfcCards::SCAN_PREFIX, strlen(NfcCards::SCAN_PREFIX)) === 0) {
+            $card = CodeReader::cardUid(substr($code, strlen(NfcCards::SCAN_PREFIX)));
+            return ($card ? $this->byCard([$card['uid'], ...$card['also']], $by) : null)
+                ?? new CardRead('nfc', CardRead::CARD, null, 'member_not_found');
         }
 
         // The member app's QR code (v2 member number, v1 token), however a keyboard layout bent it.

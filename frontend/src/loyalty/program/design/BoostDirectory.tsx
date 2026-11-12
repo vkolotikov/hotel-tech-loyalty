@@ -47,7 +47,7 @@ export function BoostDirectory({ program, manage, theme, locale, timeZone, onEdi
         </li>)}</ul>
         {!rows.length && <div className="l-pg-empty"><p>{say('pgNoResults')}</p><OverviewButton onClick={clear}>{say('pgClearFilters')}</OverviewButton></div>}
       </section>
-      <section className="l-ov-panel l-pg-schedule-note"><h2><img src={programAssets.liveCalendar} alt="" />{say('pgBeforeSchedule')}</h2><p>{say('pgCheckTimes')}</p><p>{say('pgCheckMultipliers')}</p><p>{say('pgCheckOverlap')}</p><Link className="l-ov-link" to="/loyalty/options?tab=rules">{say('pgReviewRules')}</Link></section>
+      <section className="l-ov-panel l-pg-schedule-note"><h2><img src={programAssets.liveCalendar} alt="" />{say('pgBeforeSchedule')}</h2><p>{say('pgCheckTimes')}</p><p>{say('pgCheckMultipliers')}</p><p>{say('pgCheckOverlap')}</p><Link className="l-ov-link" to="/loyalty/program?tab=tiers&settings=qualification">{say('pgReviewRules')}</Link></section>
     </div>
     {selected && <aside className="l-ov-panel l-pg-boost-preview" aria-label={selected.name}>
       <div className="l-pg-preview-state">{statePill(selected)}</div><h2>{selected.name}</h2>

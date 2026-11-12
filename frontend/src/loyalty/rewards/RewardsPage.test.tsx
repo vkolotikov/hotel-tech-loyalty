@@ -91,9 +91,10 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(html).toContain('role="tablist"')
     expect(html).toMatch(/id="rewards-tab-redemptions" aria-selected="true"/)
     const offer = render('?tab=offers', can())
-    expect(text(offer)).toContain('Offer settings')
-    expect(offer).toContain('href="/loyalty/rewards?tab=redemptions"')
-    expect(offer).toContain('href="/loyalty/rewards?tab=referrals"')
+    expect(offer).toContain('data-offer-view="read"')
+    expect(offer).not.toContain('l-rb-offer-editor')
+    expect(offer).not.toContain('href="/loyalty/rewards?tab=redemptions"')
+    expect(offer).not.toContain('href="/loyalty/rewards?tab=referrals"')
     expect(text(render('', can()))).toContain('Points rewards')
   })
 
@@ -145,13 +146,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
   })
 
   it('preserves offer values, unknown types, dates, eligibility, caps and permissions', () => {
-    const html = render('?tab=offers', can({ manage_rewards: true })), words = text(html)
+    const html = render('?tab=offers&edit=1', can({ manage_rewards: true })), words = text(html)
     for (const value of ['15% off', 'AUTUMN', 'Featured', 'Live', 'flash_sale', 'Scheduled', 'Gold', 'Used: 3', '+ Create offer']) expect(words).toContain(value)
     expect(html).toContain('value="2026-10-01"')
     expect(html).toContain('value="2026-10-31"')
     expect(html).toContain('value="100"')
     expect(text(render('?tab=offers', can()))).not.toContain('Create offer')
-    expect(render('?tab=offers', can())).toContain('<fieldset class="l-rb-fields" disabled="">')
+    expect(render('?tab=offers&edit=1', can())).not.toContain('l-rb-offer-editor')
+    expect(render('?tab=offers&edit=1', can())).toContain('data-offer-view="read"')
   })
 
   it('shows the referral numbers and list, read only, with pages', () => {
@@ -164,6 +166,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(words).toContain('Rewarded')
     expect(words).toContain('Page 1 of 3')
     expect(html).toContain('href="/loyalty/members/31"')
+  })
+
+  it('pins the edited offer even when a background refresh puts it outside the current filters', () => {
+    const selected = offers.offers[0]
+    const html = render(`?tab=offers&q=no_match&selected=${selected.id}&edit=1`, can({ manage_rewards: true }))
+    expect(html).toContain('l-editor-dialog l-editor-wide')
+    expect(html).toContain(`value="${selected.title}"`)
+    expect(html).toContain('data-offer-view="read"') // The pinned editor keeps its catalogue behind the modal.
   })
 
   it('shows a reward\'s and an offer\'s picture lazily, named by the reward or the offer', () => {
