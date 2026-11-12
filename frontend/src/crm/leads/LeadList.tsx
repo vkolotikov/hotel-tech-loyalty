@@ -207,26 +207,26 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
         </div>
       </td>
       <td className="px-3 py-3">
-        <StageMenu lead={lead} name={name} stages={stages} actions={actions} wide />
-        {lead.priority && tone && <div className="mt-1.5"><Pill tone={tone}>{lead.priority}</Pill></div>}
+        <span className="flex flex-wrap items-center gap-1.5">
+          <StageMenu lead={lead} name={name} stages={stages} actions={actions} wide />
+          {lead.priority && tone && <Pill tone={tone}>{lead.priority}</Pill>}
+        </span>
       </td>
       {columns.value && (
         <td className="px-3 py-3 text-right tabular-nums">
           {value === null ? <span className="text-a-text-2">—</span> : <span className="font-medium text-a-text">{money(value, boot.venue.currency, lang)}</span>}
         </td>
       )}
-      {columns.ai_signal && <td className="hidden px-3 py-3 lg:table-cell"><AiCell lead={lead} /></td>}
+      {columns.ai_signal && <td className="hidden px-3 py-3 lg:table-cell"><AiCell lead={lead} blank /></td>}
       {columns.next_task && (
         <td className="max-w-48 px-3 py-3"><NextCell lead={lead} today={boot.venue.today} lang={lang} onAdd={() => actions.ask({ kind: 'task', lead })} /></td>
       )}
       {columns.owner && (
         <td className="hidden max-w-44 px-3 py-3 lg:table-cell">
+          {/* Where it came from is the lead's subtitle in its panel; here it is the owner's tooltip. */}
           <span className="flex min-w-0 items-center gap-2" title={sourceLabel(t, lead.source)}>
             <Avatar name={lead.assigned_to} size="sm" />
-            <span className="min-w-0">
-              <span className={`block truncate text-sm ${lead.assigned_to ? 'text-a-text' : 'font-medium text-a-st-pending'}`}>{lead.assigned_to || t('crm.leads.owner_none', 'Nobody yet')}</span>
-              <span className="block truncate text-xs text-a-text-2">{sourceLabel(t, lead.source)}</span>
-            </span>
+            <span className={`min-w-0 truncate text-sm ${lead.assigned_to ? 'text-a-text' : 'font-medium text-a-st-pending'}`}>{lead.assigned_to || t('crm.leads.owner_none', 'Nobody yet')}</span>
           </span>
         </td>
       )}

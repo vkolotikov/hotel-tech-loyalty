@@ -76,15 +76,19 @@ function DealsBody({ data, lang, currency }: { data: DealAnalytics; lang: string
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title={weekly ? t('crm.insights.revenue_by_week', 'Revenue by week') : t('crm.insights.revenue_by_day', 'Revenue by day')} icon={TrendingUp} tone="success"
           description={t('crm.insights.revenue_desc', 'The value of the deals completed each day')}>
-          <Columns caption={t('crm.insights.revenue_by_day', 'Revenue by day')} heading={weekly ? t('crm.insights.week', 'Week') : t('crm.insights.day', 'Day')} format={cash}
-            columns={revenue.map(b => ({ key: b.key, label: bucketLabel({ from: b.from, to: b.from }, lang), long: bucketLabel(b, lang),
-              parts: [{ name: t('crm.insights.deal_revenue', 'Revenue completed'), value: b.value, tone: 'won' as const }] }))} />
+          {totals.revenue === 0 && totals.completed === 0
+            ? <p className="text-sm text-a-text-2">{t('crm.insights.no_revenue', 'No deal was completed in these days.')}</p>
+            : <Columns caption={t('crm.insights.revenue_by_day', 'Revenue by day')} heading={weekly ? t('crm.insights.week', 'Week') : t('crm.insights.day', 'Day')} format={cash}
+                columns={revenue.map(b => ({ key: b.key, label: bucketLabel({ from: b.from, to: b.from }, lang), long: bucketLabel(b, lang),
+                  parts: [{ name: t('crm.insights.deal_revenue', 'Revenue completed'), value: b.value, tone: 'won' as const }] }))} />}
         </Card>
         <Card title={weekly ? t('crm.insights.deals_by_week', 'New deals by week') : t('crm.insights.deals_by_day', 'New deals by day')} icon={Handshake} tone="accent"
           description={t('crm.insights.deals_desc', 'Deals by the day they came in')}>
-          <Columns caption={t('crm.insights.deals_by_day', 'New deals by day')} heading={weekly ? t('crm.insights.week', 'Week') : t('crm.insights.day', 'Day')} format={n}
-            columns={fresh.map(b => ({ key: b.key, label: bucketLabel({ from: b.from, to: b.from }, lang), long: bucketLabel(b, lang),
-              parts: [{ name: t('crm.insights.deal_new', 'New deals'), value: b.value, tone: 'accent' as const }] }))} />
+          {totals.fresh === 0
+            ? <p className="text-sm text-a-text-2">{t('crm.insights.nothing', 'Nothing in these days.')}</p>
+            : <Columns caption={t('crm.insights.deals_by_day', 'New deals by day')} heading={weekly ? t('crm.insights.week', 'Week') : t('crm.insights.day', 'Day')} format={n}
+                columns={fresh.map(b => ({ key: b.key, label: bucketLabel({ from: b.from, to: b.from }, lang), long: bucketLabel(b, lang),
+                  parts: [{ name: t('crm.insights.deal_new', 'New deals'), value: b.value, tone: 'accent' as const }] }))} />}
         </Card>
         <Card title={t('crm.insights.deal_steps', 'Where the deals are')} icon={Layers} tone="progress" description={t('crm.insights.deal_steps_desc', 'Deals at each step now, with their value')}>
           <BarList label={t('crm.insights.deal_steps', 'Where the deals are')}

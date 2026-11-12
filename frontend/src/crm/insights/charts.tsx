@@ -101,15 +101,18 @@ export function Columns({ caption, heading, columns, format, labels }: {
           ))}
         </div>
       </div>
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <thead><tr><th scope="col">{heading}</th>{names.map(n => <th key={n} scope="col">{n}</th>)}</tr></thead>
-        <tbody>
-          {columns.map(column => (
-            <tr key={column.key}><th scope="row">{column.long}</th>{column.parts.map(p => <td key={p.name}>{format(p.value)}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table ignores the 1 px box of sr-only and would stretch the page; its wrapper keeps it in. */}
+      <div className="sr-only">
+        <table>
+          <caption>{caption}</caption>
+          <thead><tr><th scope="col">{heading}</th>{names.map(n => <th key={n} scope="col">{n}</th>)}</tr></thead>
+          <tbody>
+            {columns.map(column => (
+              <tr key={column.key}><th scope="row">{column.long}</th>{column.parts.map(p => <td key={p.name}>{format(p.value)}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

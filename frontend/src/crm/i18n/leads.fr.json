@@ -149,6 +149,7 @@
   "edit": "Modifier le lead",
   "edit_title": "Modifier : {{name}}",
   "emails": "E-mails",
+  "emails_none": "Aucun e-mail à afficher.",
   "empty": "Aucun lead ouvert pour l’instant",
   "empty_line": "Les leads arrivent par le chat du site et vos formulaires, ou ajoutez-en un vous-même.",
   "empty_line_short": "Depuis le chat, vos formulaires ou à la main.",

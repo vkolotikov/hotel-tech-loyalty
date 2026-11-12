@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BedDouble, Copy, ExternalLink, FileText, FileUp, ListChecks, ListPlus, Mail, MessagesSquare, Pencil, Phone, RefreshCw, Sparkles, Trash2, UserRound, Wand2 } from 'lucide-react'
+import { BedDouble, Copy, ExternalLink, FileText, FileUp, ListChecks, ListPlus, Mail, MessagesSquare, Pencil, Phone, RefreshCw, Sparkles, Trash2, UserRound } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -111,10 +111,10 @@ export function ContactCard({ lead }: { lead: LeadDetail }) {
 /**
  * The AI's read of the lead (`POST inquiries/{id}/ai-brief`, kept 15 minutes by the server): a summary, what they
  * want, the chance to win, whether it is going cold and the next step. Shown from what the lead already holds; asked
- * for only when someone presses (here or in the header, one answer: `useAiBrief`). A proposal email is drafted for a
- * person to edit (`draft-proposal`); nothing is sent.
+ * for only when someone presses (here or in the header, one answer: `useAiBrief`). The header's Proposal drafts an email
+ * for a person to edit (`draft-proposal`, ProposalDialog); nothing is sent.
  */
-export function AiCard({ ai, onProposal }: { ai: AiRead; onProposal: () => void }) {
+export function AiCard({ ai }: { ai: AiRead }) {
   const { t, i18n } = useTranslation()
   const shown = ai.shown
   const tone = winTone(shown?.win_probability)
@@ -132,10 +132,6 @@ export function AiCard({ ai, onProposal }: { ai: AiRead; onProposal: () => void 
             className={`${shown?.brief ? 'crm-ai-soft' : 'crm-ai-fill'} inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-a-accent`}>
             {shown?.brief ? <RefreshCw size={13} aria-hidden className={ai.pending ? 'animate-spin' : ''} /> : <Sparkles size={13} aria-hidden />}
             {ai.pending ? t('crm.leads.ai_reading', 'Reading…') : shown?.brief ? t('crm.leads.ai_refresh_short', 'Again') : t('crm.leads.ai_write_short', 'Write it')}
-          </button>
-          <button type="button" onClick={onProposal}
-            className="crm-ai-soft inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-a-accent">
-            <Wand2 size={13} aria-hidden />{t('crm.leads.ai_proposal_short', 'Proposal')}
           </button>
         </span>
       </div>

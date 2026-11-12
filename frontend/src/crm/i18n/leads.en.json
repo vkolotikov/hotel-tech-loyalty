@@ -149,6 +149,7 @@
   "edit": "Edit the lead",
   "edit_title": "Edit: {{name}}",
   "emails": "Emails",
+  "emails_none": "No emails to show.",
   "empty": "No open leads yet",
   "empty_line": "Leads come in from the website chat and your forms, or add one yourself.",
   "empty_line_short": "From the chat, your forms, or by hand.",

@@ -67,7 +67,8 @@ export function useCustomFields(entity: 'guest' | 'corporate_account') {
   return useQuery({
     queryKey: [...CONTACTS, 'custom-fields', entity],
     queryFn: () => get<CustomFieldDef[]>(`custom-fields${params({ entity, active_only: 1 })}`).then(orderedFields),
-    staleTime: 5 * 60_000,
+    // Settings → Fields keeps its own list; a minute keeps a field made there from waiting long to show here.
+    staleTime: 60_000,
   })
 }
 

@@ -171,5 +171,6 @@
     "tentative": "Vorläufig",
     "confirmed": "Bestätigt",
     "other": "Sonstiges"
-  }
+  },
+  "no_revenue": "In diesen Tagen wurde kein Deal abgeschlossen."
 }

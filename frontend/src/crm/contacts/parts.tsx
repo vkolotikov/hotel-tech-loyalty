@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Field } from '../../workspace/ui/Field'
 import { Pill } from '../ui/Pill'
-import { useTranslation } from 'react-i18next'
 import { COMPANY_TONE, companyStatusKey, importanceTone } from './contactsLogic'
 
 /** The icon links' look beside a record's main action (an `<a>` that opens another app keeps IconButton's shape). */
@@ -28,16 +28,6 @@ export function StandingPills({ lifecycle, importance, levels }: { lifecycle: st
       {lifecycle && <Pill>{lifecycle}</Pill>}
       {importance && tone !== 'neutral' && <Pill tone={tone}>{importance}</Pill>}
     </span>
-  )
-}
-
-/** A small definition row: a label and its value, or a dash. */
-export function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-a-text-2">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm text-a-text">{children ?? '—'}</dd>
-    </div>
   )
 }
 

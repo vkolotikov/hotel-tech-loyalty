@@ -108,7 +108,7 @@ describe('Insights, rendered', () => {
     expect(html).toContain('title="25 % more than the 7 days before"')
     expect(html).toContain('5 pts')
     expect(html).toContain('Busiest: 4 Nov · 12')
-    expect(html).toContain('<table class="sr-only">')
+    expect(html).toContain('<div class="sr-only"><table>')
     expect(html).toContain('/rooms?lang=de')
     expect(html).toContain('Latvia')
     expect(html).toContain('Busiest: 10:00')

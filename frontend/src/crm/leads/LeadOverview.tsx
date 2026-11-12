@@ -15,13 +15,12 @@ import type { LeadDetail, Stage } from './leadTypes'
  * move, changed where they stand, what the AI made of it, then who it is, its details, a hotel's stay and the
  * organisation's own fields.
  */
-export function OverviewTab({ lead, stages, onPick, busy, ai, onProposal, onEdit, onDeal }: {
+export function OverviewTab({ lead, stages, onPick, busy, ai, onEdit, onDeal }: {
   lead: LeadDetail
   stages: Stage[]
   onPick: (stage: Stage) => void
   busy: boolean
   ai: AiRead
-  onProposal: () => void
   onEdit: () => void
   /** To the Deal tab (a won lead). */
   onDeal: () => void
@@ -47,7 +46,7 @@ export function OverviewTab({ lead, stages, onPick, busy, ai, onProposal, onEdit
         <StageBar lead={lead} stages={stages} onPick={onPick} busy={busy} />
         <KeyFacts lead={lead} />
       </section>
-      <AiCard ai={ai} onProposal={onProposal} />
+      <AiCard ai={ai} />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <ContactCard lead={lead} />
         <DetailsCard lead={lead} onEdit={onEdit} />

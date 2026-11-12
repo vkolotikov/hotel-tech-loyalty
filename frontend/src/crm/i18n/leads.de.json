@@ -149,6 +149,7 @@
   "edit": "Lead bearbeiten",
   "edit_title": "Bearbeiten: {{name}}",
   "emails": "E-Mails",
+  "emails_none": "Keine E-Mails zum Anzeigen.",
   "empty": "Noch keine offenen Leads",
   "empty_line": "Leads kommen aus dem Website-Chat und Ihren Formularen, oder Sie legen selbst einen an.",
   "empty_line_short": "Aus dem Chat, Ihren Formularen oder von Hand.",

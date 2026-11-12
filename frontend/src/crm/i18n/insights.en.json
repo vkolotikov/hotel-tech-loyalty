@@ -171,5 +171,6 @@
     "tentative": "Tentative",
     "confirmed": "Confirmed",
     "other": "Other"
-  }
+  },
+  "no_revenue": "No deal was completed in these days."
 }

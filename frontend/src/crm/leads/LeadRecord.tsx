@@ -197,12 +197,22 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
         )}>
         {shown === 'overview' && (
           <OverviewTab lead={lead} stages={stages} onPick={pickStage} busy={move.isPending} ai={ai}
-            onProposal={() => setProposing(true)} onEdit={() => setEditing(true)} onDeal={() => onTab('deal')} />
+            onEdit={() => setEditing(true)} onDeal={() => onTab('deal')} />
         )}
         {shown === 'deal' && <DealTab lead={lead} />}
         {shown === 'activity' && <LeadTimeline lead={lead} seed={seed} />}
         {shown === 'tasks' && <LeadTasks lead={lead} name={name} onAdd={() => setAddingTask(true)} />}
-        {shown === 'emails' && <RecordEmails resource="inquiries" id={lead.id} />}
+        {shown === 'emails' && (
+          <div>
+            {/* The shared email history draws nothing without a mailbox for this record: then the tab says so. */}
+            <div className="peer"><RecordEmails resource="inquiries" id={lead.id} /></div>
+            <div className="hidden flex-col items-center gap-3 py-8 text-center peer-empty:flex">
+              <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl bg-a-surface-2 text-a-text-2"><Mail size={18} /></span>
+              <p className="text-sm text-a-text-2">{t('crm.leads.emails_none', 'No emails to show.')}</p>
+              <Button size="sm" variant="secondary" onClick={() => setMailing(true)}><Send size={14} aria-hidden />{t('crm.leads.send_email_short', 'Send email')}</Button>
+            </div>
+          </div>
+        )}
         {shown === 'files' && <FilesTab leadId={lead.id} />}
         {shown === 'chat' && <ChatTab leadId={lead.id} />}
       </RecordFrame>

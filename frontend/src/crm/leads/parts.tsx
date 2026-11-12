@@ -29,10 +29,11 @@ export function FreshChip({ lead, closed = false, now }: { lead: Pick<LeadRow, '
 }
 
 /** The AI's chance to win as a figure with a thin bar, a flame when it is going cold; nothing before the AI read it. */
-export function AiCell({ lead, compact = false }: { lead: Parameters<typeof aiSignal>[0]; compact?: boolean }) {
+export function AiCell({ lead, compact = false, blank = false }: { lead: Parameters<typeof aiSignal>[0]; compact?: boolean; blank?: boolean }) {
   const { t } = useTranslation()
   const ai = aiSignal(lead)
-  if (!ai) return compact ? null : <span className="text-xs text-a-text-2">—</span>
+  // `blank`: a list's cell stays empty before the AI read the lead (round 5: no column of dashes).
+  if (!ai) return compact || blank ? null : <span className="text-xs text-a-text-2">—</span>
   return <AiFigure ai={ai} compact={compact} title={aiTitle(t, ai)} />
 }
 
