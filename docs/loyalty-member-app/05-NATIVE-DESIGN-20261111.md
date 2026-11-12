@@ -1,5 +1,7 @@
 # Native members design implementation — 11 November 2026
 
+**Follow-up — 12 November 2026:** this design is now in signed **iOS 2.1.0 (23)** / **Android 2.1.0 (29)** binaries, verified in TestFlight Internal QA / Play internal testing. [Build delivery and package evidence](../handoff/2026-11-12-member-design-builds.md). The source-only statements below describe the original implementation checkpoint, before those builds. Physical-device acceptance and public release remain separate.
+
 Source: `feature/member-loyalty-refresh-20261111`, `apps/loyalty-member`, package **com.hotelloyalty.app**, version **2.1.0**. This implements the approved luxury Figma design and the owner's subsequent icon-only navigation, contextual popup and confirmed-points feedback refinements.
 
 This is a source implementation. Existing signed testing builds **iOS 22 / Android 28 predate this design**. No new EAS build, OTA update, store submission, production release or Laravel deployment was performed. Staff and the original application checkout remain outside this source change. Never merge this native branch into Laravel main.
