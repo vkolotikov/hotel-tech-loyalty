@@ -146,7 +146,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
   ) : null
 
   return (
-    <WorkspaceShell workspace="crm" look={look} accent={accent} initial={initial}
+    <WorkspaceShell workspace="crm" stickyRail look={look} accent={accent} initial={initial}
       organization={data?.organization.name} product={data?.name ?? APP_NAME} person={data?.staff.name}
       nav={nav} fullAdmin={fullAdmin} moduleLinks={modules.links}
       footer={<FrameFooter {...foot} />}

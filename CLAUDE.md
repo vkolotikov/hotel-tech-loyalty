@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-09-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-12-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -372,6 +372,17 @@ or add the next dated one, at the end of a session.
   (pure, tested), each screen in its own palette and bundle. A task's priority, length and repeat are its own fields
   (`priority`, `duration_minutes`, `recurring_rule`), never `custom_data`, which keeps only the organisation's custom
   fields; the next task of a repeating one is made only by `TaskController::nextOccurrence()` on completion.
+- Round 5 (owner 2026-11-12, "minimize copy, more icons … opening tabs, slides or popups … all features of the main
+  platform"; `docs/crm-workspace.md` "Round 5"): a lead, a contact or a company opens in its panel over the page through
+  `useRecords()` (`?lead=`, `?contact=`, `?company=`, `?rtab=`; rules in `crm/lib/records.ts`), never by leaving the list,
+  and a record's page draws the same `ui/RecordPanel` frame; something new opens through `?create=` (`CreateHost`, the
+  header's New, N), never a page's own form state. A list registers its ids with `useRecordList`. A page's sentence is
+  `Page`'s `line` and a card's `description` (both (i) tooltips), never a visible paragraph; icon-only actions are
+  `IconButton`/menus with a `title`. Lead-intake tokens carry only `crm:lead-intake` and Sanctum accepts them only on
+  `POST integrations/leads` (`CrmIntakeTokensServiceProvider`, registered in `bootstrap/providers.php` —
+  `AppServiceProvider` is not loaded); the sales reports are one service, `Crm\SalesReports`, for both admins; a
+  company's booking revenue is shown only to an organisation that may reach bookings. Alerts (`crm/alerts`) are mounted
+  once in the shell.
 
 ## Time-Planner-workspace code rules
 

@@ -43,7 +43,7 @@ export interface WorkspaceNavItem {
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, variant, railLabel, footer, phoneMenu, crumbs, children }: {
+export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, variant, railLabel, footer, phoneMenu, crumbs, stickyRail = false, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
@@ -76,6 +76,12 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
   phoneMenu?: ReactNode
   /** The top bar's start, before the header (Content's breadcrumb). */
   crumbs?: ReactNode
+  /**
+   * HexaTech CRM round 5 (2026-11-12), passed by the CRM only: the side panel stays in view and, when it is taller than
+   * the screen, scrolls by itself (the slim rail only stays: its tooltips are drawn outside it). Without it the panel
+   * is part of the page, as before.
+   */
+  stickyRail?: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation()
@@ -95,7 +101,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
     <div data-workspace="" {...scope} data-theme={look.resolved} data-accent-edge={accent.edge ? '' : undefined}
       style={accentStyle(accent, card) as CSSProperties} className="min-h-screen flex bg-a-canvas text-a-text">
       <aside data-rail="" data-rail-size={look.rail} data-rail-variant={cards ? 'cards' : undefined} aria-label={t('workspace.shell.menu', 'Menu')}
-        className={`hidden lg:flex ${slim ? 'w-[76px]' : cards ? 'w-60' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out`}>
+        className={`hidden lg:flex ${slim ? 'w-[76px]' : cards ? 'w-60' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out ${stickyRail ? `lg:sticky lg:top-0 lg:h-screen ${slim ? '' : 'lg:overflow-y-auto [scrollbar-width:thin]'}` : ''}`}>
         <div className={`flex min-h-11 items-center gap-3 ${slim ? 'justify-center' : 'px-2'}`}>
           <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-a-accent font-a-display text-lg font-semibold text-a-accent-ink">{initial}</span>
           <div className={slim ? 'sr-only' : 'min-w-0'}>
