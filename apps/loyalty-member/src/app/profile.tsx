@@ -131,9 +131,9 @@ function DeleteAccount() {
     onSuccess: async (_answer, _variables, context) => {
       if (context?.owner !== useSession.getState().token) return
       await useSession.getState().signOut()
-      queryClient.clear()
+      if (useSession.getState().token) return
       await forgetLook()
-      router.replace('/sign-in')
+      if (!useSession.getState().token) router.replace('/sign-in')
     },
     onError: error => setProblem(failureOf(error).message ?? tp('portal.profile.delete_failed')),
   })

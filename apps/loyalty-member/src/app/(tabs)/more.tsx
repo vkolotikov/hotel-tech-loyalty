@@ -44,7 +44,7 @@ export default function More() {
   }).catch(() => {}) }
   const signOut = async () => {
     setBusy(true)
-    try { await useSession.getState().signOut(); queryClient.clear(); await forgetLook() }
+    try { await useSession.getState().signOut(); if (!useSession.getState().token) await forgetLook() }
     finally { setBusy(false) }
   }
   return <Backdrop><ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: TAB_BAR_ROOM, paddingHorizontal: 24, gap: 16 }}>

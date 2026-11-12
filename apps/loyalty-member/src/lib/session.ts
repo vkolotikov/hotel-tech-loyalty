@@ -93,13 +93,17 @@ export const useSession = create<Session>((set, get) => ({
 
   signOut: async () => {
     const token = get().token
-    // While the token still works: this phone stops receiving the member's notifications (a few seconds at most).
-    if (token) await Promise.race([forgetPush(token), new Promise(done => setTimeout(done, 4000))])
-    set({ token: null, user: null, memberRequired: false })
-    queryClient.clear()
-    await removeSavedSession()
+    const withdrawal = token ? forgetPush(token) : Promise.resolve()
+    // Local UI may leave after four seconds; the old credential must still serve queued push cleanup.
+    if (token) await Promise.race([withdrawal, new Promise(done => setTimeout(done, 4000))])
+    if (get().token === token) {
+      set({ token: null, user: null, memberRequired: false })
+      queryClient.clear()
+      await removeSavedSession()
+    }
     if (token) {
       try {
+        await withdrawal
         await api.signOut(token)
       } catch {
         // Offline: the token stays until it is revoked from the web.

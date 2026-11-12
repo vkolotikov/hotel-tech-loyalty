@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const native = vi.hoisted(() => ({
   platform: 'ios',
   delayWrite: null as (() => Promise<void>) | null,
+  writeFails: false,
   token: vi.fn(async () => ({ data: 'fixture-expo-token' })),
   saved: new Map<string, string>(),
 }))
@@ -17,11 +18,11 @@ vi.mock('expo-notifications', () => ({
   requestPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   getExpoPushTokenAsync: native.token,
 }))
-vi.mock('./storage', () => ({ storage: {
-  get: async (key: string) => native.saved.get(key) ?? null,
-  set: async (key: string, value: string) => { await native.delayWrite?.(); native.saved.set(key, value) },
-  remove: async (key: string) => { native.saved.delete(key) },
-} }))
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: async (key: string) => native.saved.get(key) ?? null,
+  setItemAsync: async (key: string, value: string) => { await native.delayWrite?.(); if (native.writeFails) throw new Error('Keystore unavailable'); native.saved.set(key, value) },
+  deleteItemAsync: async (key: string) => { native.saved.delete(key) },
+}))
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -34,15 +35,19 @@ beforeEach(() => {
   vi.resetModules()
   native.saved.clear()
   native.delayWrite = null
+  native.writeFails = false
   native.token.mockReset().mockResolvedValue({ data: 'fixture-expo-token' })
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 async function setup() {
   const server = new Map<string, string>()
+  const validSessions = new Set(['Bearer member-a', 'Bearer member-b'])
   let currentSession = 'member-a'
   const fetcher = vi.fn(async (_url: string, request?: RequestInit) => {
     const owner = (request?.headers as Record<string, string>).Authorization
+    if (!validSessions.has(owner)) return new Response('{"message":"Unauthenticated"}', { status: 401 })
+    if (_url.endsWith('/logout')) { validSessions.delete(owner); return new Response('{}') }
     if (request?.method === 'POST') server.set(owner, JSON.parse(String(request.body)).expo_push_token)
     if (request?.method === 'DELETE' && server.get(owner) === JSON.parse(String(request.body)).expo_push_token) server.delete(owner)
     return new Response('{}')
@@ -50,7 +55,7 @@ async function setup() {
   vi.stubGlobal('fetch', fetcher)
   const { connectSession } = await import('./api')
   connectSession({ token: () => currentSession, language: () => 'en', signedOut: () => {}, memberRequired: async () => {} })
-  return { ...await import('./push'), server, fetcher, changeSession: () => { currentSession = 'member-b' } }
+  return { ...await import('./push'), server, validSessions, fetcher, changeSession: () => { currentSession = 'member-b' } }
 }
 
 describe.each(['ios', 'android'])('device notification reconciliation on %s', platform => {
@@ -154,5 +159,71 @@ describe.each(['ios', 'android'])('device notification reconciliation on %s', pl
     await app.connectPush(options(false))
     expect(app.server.size).toBe(0)
     expect(native.saved.size).toBe(0)
+  })
+
+  it('does not register when the real storage wrapper cannot persist its receipt', async () => {
+    const app = await setup()
+    native.writeFails = true
+    expect(await app.connectPush(options(true))).toBe('unavailable')
+    expect(app.server.size).toBe(0)
+  })
+
+  it('keeps cleanup credentials valid beyond the four-second UI handoff without clearing a new account', async () => {
+    const app = await setup()
+    const { useSession } = await import('./session')
+    const { queryClient } = await import('./queryClient')
+    const member = { id: 7, name: 'Member A', email: 'a@example.test', user_type: 'member' }
+    await useSession.getState().adopt({ token: 'member-a', user: member })
+    const response = deferred<Response>()
+    app.fetcher.mockImplementationOnce(async (_url, request) => {
+      app.server.set((request?.headers as Record<string, string>).Authorization, 'fixture-expo-token')
+      return response.promise
+    })
+    const enabling = app.connectPush(options(true))
+    await vi.waitFor(() => expect(app.server.size).toBe(1))
+    vi.useFakeTimers()
+    const signingOut = useSession.getState().signOut()
+    await vi.advanceTimersByTimeAsync(4001)
+    const localSessionCleared = useSession.getState().token === null
+    const credentialValidAtHandoff = app.validSessions.has('Bearer member-a')
+    await useSession.getState().adopt({ token: 'member-b', user: { ...member, id: 8, name: 'Member B', email: 'b@example.test' } })
+    queryClient.setQueryData(['boot'], { owner: 'Member B' })
+    response.resolve(new Response('{}'))
+    await Promise.all([enabling, signingOut])
+    expect(localSessionCleared).toBe(true)
+    expect(credentialValidAtHandoff).toBe(true)
+    expect(app.server.size).toBe(0)
+    expect(app.validSessions.has('Bearer member-a')).toBe(false)
+    expect(useSession.getState().token).toBe('member-b')
+    expect(native.saved.get('auth_token')).toBe('member-b')
+    expect(queryClient.getQueryData(['boot'])).toEqual({ owner: 'Member B' })
+    queryClient.clear()
+  })
+
+  it('does not discard an account adopted before an older sign-out handoff', async () => {
+    const app = await setup()
+    const { useSession } = await import('./session')
+    const { queryClient } = await import('./queryClient')
+    const member = { id: 7, name: 'Member A', email: 'a@example.test', user_type: 'member' }
+    await useSession.getState().adopt({ token: 'member-a', user: member })
+    const response = deferred<Response>()
+    app.fetcher.mockImplementationOnce(async (_url, request) => {
+      app.server.set((request?.headers as Record<string, string>).Authorization, 'fixture-expo-token')
+      return response.promise
+    })
+    const enabling = app.connectPush(options(true))
+    await vi.waitFor(() => expect(app.server.size).toBe(1))
+    vi.useFakeTimers()
+    const signingOut = useSession.getState().signOut()
+    await useSession.getState().adopt({ token: 'member-b', user: { ...member, id: 8, name: 'Member B', email: 'b@example.test' } })
+    queryClient.setQueryData(['boot'], { owner: 'Member B' })
+    await vi.advanceTimersByTimeAsync(4001)
+    response.resolve(new Response('{}'))
+    await Promise.all([enabling, signingOut])
+    expect(useSession.getState().token).toBe('member-b')
+    expect(native.saved.get('auth_token')).toBe('member-b')
+    expect(queryClient.getQueryData(['boot'])).toEqual({ owner: 'Member B' })
+    expect(app.server.size).toBe(0)
+    queryClient.clear()
   })
 })

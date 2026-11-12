@@ -1,6 +1,6 @@
 # HexaTech Loyalty 2.0 — release runbook
 
-**12 November — calendar/platform correction:** replacement **iOS 2.1.0 (24) / Android 2.1.0 (30)** are building from `1fbf984fe` after 95 tests and 282 browser checks. [Current handoff](../handoff/2026-11-12-member-platform-review.md) records exact IDs and the pending inspection/testing delivery; these replacements are not yet verified available. Public release remains separate.
+**12 November — calendar/platform correction:** final **iOS 2.1.0 (25) / Android 2.1.0 (31)** replacements are being prepared after **101 tests and 284 browser checks**, including slow sign-out/account-switch integration. Earlier24/30 were superseded before delivery. [Current handoff](../handoff/2026-11-12-member-platform-review.md) records the pending frozen-source build/inspection/testing delivery; these replacements are not yet verified available. Public release remains separate.
 
 **12 November 2026 — latest-design testing delivery complete:** Android **2.1.0 (29)** is on Play internal testing and iOS **2.1.0 (23)** is VALID / IN_BETA_TESTING in existing Internal QA, from native-design source `257c5e85f`. Both actual packages, uploaded checksum/group status and testing notes are verified. See [the current build handoff](../handoff/2026-11-12-member-design-builds.md) for exact IDs and evidence. Public review/release remains a separate device/media/privacy checkpoint; no production release was sent by this build continuation.
 

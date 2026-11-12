@@ -86,6 +86,7 @@ export async function connectPush(options: { on: boolean; channelName: string; a
       }
       // Keep a receipt before the request, including when its response is lost after server acceptance.
       await storage.set(KEY, token)
+      if (await storage.get(KEY) !== token) return 'unavailable'
       if (!current()) {
         // A reconnect of the same token still has an existing server registration for queued Off to withdraw.
         if (previous !== token) await storage.remove(KEY)

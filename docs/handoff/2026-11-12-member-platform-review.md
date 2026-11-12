@@ -1,5 +1,13 @@
 # Members calendar and platform review — 12 November 2026
 
+**Final source checkpoint:** the additional sign-out/credential ordering, persisted-receipt and delayed-account cleanup corrections are implemented. TypeScript, **101 tests / 11 files** and **284 browser checks / ten scripts** pass; Android/iOS Hermes/web exports pass and lint adds no diagnostics (15 existing errors / 14 warnings). Independent real-four-second reproductions pass on both mocked native platforms, including a later member signing in before/after the handoff. No remaining concrete Important blocker was found in these exact fixes. Final browser evidence: `C:/wamp64/tmp/member-signout-browser-final-20261112.json`; export/lint evidence uses `member-signout-final-*` under that same temp directory.
+
+**Final replacement delivery is being prepared:** expected **iOS25 / Android31**. The earlier **iOS24 was inspected but never uploaded**; **Android30 is CANCELED**, and neither was delivered to testers. Those builds are superseded because the later integration check confirmed that the old logout timeout could revoke a credential still needed for queued push withdrawal. Do not deliver/restart them or create duplicates of the final source.
+
+Final evidence/helpers use `C:/Users/user6399/HexaTech-release-private/member-platform-final-20261112/`, `C:/wamp64/tmp/member-eas-final-20261112.cjs` and `member-final-archive-audit-20261112.cjs`. The final exact source/build/upload IDs and availability must be added after the frozen-source build/inspection/delivery. Offline/server-failure cleanup remains best effort; the deterministic online ordering race is corrected. Current testing notes also cover slow sign-out and account changes.
+
+## Initial correction checkpoint — superseded before delivery
+
 Source: `C:/wamp64/www/hexatech-apps`, branch `feature/member-loyalty-refresh-20261111`, members app `com.hotelloyalty.app`, version **2.1.0**. The previous design delivery is verified as **TestFlight 23 / Play internal 29** in [the earlier build handoff](2026-11-12-member-design-builds.md). The changes below require replacement signed binaries; they do not change those installed builds automatically.
 
 The reported missing Events/calendar dock button is reproduced and corrected. Also corrected: cold-start/native-popup device lock gaps, push registration/Off and reconnect races, direct-link notification reconciliation, unavailable-toggle recovery and missing input accessibility labels. The approved design, five languages, venue branding and canonical loyalty/event decisions are preserved. See [the detailed review](../loyalty-member-app/06-PLATFORM-REVIEW-20261112.md).
