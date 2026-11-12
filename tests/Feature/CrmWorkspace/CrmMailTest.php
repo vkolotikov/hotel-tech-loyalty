@@ -29,7 +29,7 @@ class CrmMailTest extends TestCase
         }
         Http::preventStrayRequests();
         config(['crm_mail.token' => 'testing-private-crm-mail-bridge-token']);
-        DB::table('brands')->insert(['id' => 23, 'organization_id' => $this->org->id, 'name' => 'FDS Cards']);
+        DB::table('brands')->insert(['id' => 23, 'organization_id' => $this->org->id, 'name' => 'FDS Cards', 'slug' => 'fds-cards', 'widget_token' => 'test-widget-fds-cards']);
     }
 
     public function test_fds_lead_reads_the_server_owned_email_and_has_no_sending_action(): void

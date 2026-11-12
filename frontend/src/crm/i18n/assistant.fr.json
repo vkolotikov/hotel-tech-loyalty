@@ -36,7 +36,8 @@
     "rules_card_line": "Les règles qu’il respecte toujours, quoi que demande un visiteur.",
     "help_line": "Quand une personne prend le relais, et ce qu’il dit s’il ne peut pas aider.",
     "more_title": "Plus d’options",
-    "more_line": "Rarement utile : des instructions au-delà des champs ci-dessus."
+    "more_line": "Rarement utile : des instructions au-delà des champs ci-dessus.",
+    "parts": "Parties du comportement"
   },
   "discard": "Annuler les changements",
   "documents": {
@@ -141,7 +142,9 @@
     "col_used": "Utilisée",
     "col_actions": "Actions",
     "categories_line": "Touchez-en une pour voir ses réponses.",
-    "show_category": "Afficher les réponses de {{name}}"
+    "show_category": "Afficher les réponses de {{name}}",
+    "keywords_count": "Mots-clés :",
+    "parts": "Parties des connaissances"
   },
   "lengths": {
     "concise": "Courte",
@@ -318,7 +321,10 @@
     "starter_hours": "Quels sont vos horaires d’ouverture ?",
     "starter_price": "Combien ça coûte ?",
     "starter_book": "Puis-je réserver pour ce week-end ?",
-    "starter_person": "Puis-je parler à quelqu’un ?"
+    "starter_person": "Puis-je parler à quelqu’un ?",
+    "behind_empty": "Rien demandé pour l’instant.",
+    "empty_short": "Posez une question comme un visiteur.",
+    "subtitle_short": "Chat de test : non conservé, jamais vu des visiteurs"
   },
   "unsaved": "Modifications non enregistrées",
   "caption": {
@@ -330,5 +336,47 @@
   },
   "state_on": "Répond aux visiteurs",
   "state_off": "Désactivé",
-  "try_it": "Essayer l’assistant"
+  "try_it": "Essayer l’assistant",
+  "model": {
+    "blocked": "Votre forfait n’inclut pas {{model}} : l’assistant ne peut pas répondre avec, chaque chat attend votre équipe. Choisissez un modèle inclus dans votre forfait.",
+    "check": "Vérifier que le modèle répond",
+    "check_failed": "La vérification n’a pas obtenu de réponse. Réessayez.",
+    "checking": "Vérification…",
+    "model": "Modèle",
+    "not_in_plan": "Votre forfait n’inclut pas ce modèle. Choisissez-en un autre.",
+    "not_in_plan_short": "hors forfait",
+    "older": "ancien, fonctionne encore",
+    "plan_has": "Votre forfait inclut {{count}} modèles.",
+    "provider": "Fournisseur",
+    "ready": "Il répond sur le compte IA.",
+    "reasoning": "Réflexion avant de répondre",
+    "reasoning_high": "Élevée, plus lente",
+    "reasoning_low": "Faible (idéal pour le chat)",
+    "reasoning_medium": "Moyenne",
+    "reasoning_none": "Aucune, la plus rapide",
+    "reasoning_tip": "Plus de réflexion est plus lent. Au-delà d’« aucune », le modèle fixe lui-même sa créativité.",
+    "reasoning_xhigh": "Maximale, la plus lente",
+    "star": "★ est celui que nous recommandons pour un chat de site web.",
+    "temperature": "Créativité : {{n}}",
+    "temperature_own": "Ce modèle fixe lui-même sa créativité.",
+    "temperature_tip": "Plus bas, les réponses s’en tiennent aux faits ; plus haut, elles varient davantage. 0,7 convient à la plupart des établissements.",
+    "tokens": "Réponse la plus longue : {{n}} jetons",
+    "tokens_tip": "1024 jetons font environ 750 mots.",
+    "tuning": "Réglages fins",
+    "unavailable": "Il ne répond pas encore sur le compte IA. Choisissez-en un autre ou réessayez plus tard.",
+    "verbosity": "Longueur des réponses",
+    "verbosity_high": "Détaillée",
+    "verbosity_low": "Courte (idéal pour le chat)",
+    "verbosity_medium": "Équilibrée"
+  },
+  "part": {
+    "basics": "Essentiel",
+    "handover": "Passage de relais",
+    "identity": "Qui il est",
+    "model": "Modèle d’IA",
+    "more": "Plus",
+    "rules": "Règles",
+    "style": "Sa façon de parler"
+  },
+  "read_only_short": "Lecture seule : un manager fait les modifications ici."
 }

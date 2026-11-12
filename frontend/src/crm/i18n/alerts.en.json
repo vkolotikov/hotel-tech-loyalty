@@ -1,0 +1,13 @@
+{
+  "hot": "{{count}} new hot leads",
+  "hot_one": "A new hot lead",
+  "toggle_blocked": "Desktop alerts are blocked in this browser’s settings",
+  "toggle_off": "Turn on desktop alerts",
+  "toggle_on": "Desktop alerts are on",
+  "toggle_unsupported": "This browser cannot show desktop alerts",
+  "turned_off": "Desktop alerts are off",
+  "turned_on": "Desktop alerts are on",
+  "waiting": "{{count}} more chats are waiting for a reply",
+  "waiting_one": "A chat is waiting for a reply",
+  "open": "Open"
+}

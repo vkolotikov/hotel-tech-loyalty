@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  barShare, bucketLabel, busiestHour, changeTone, countChange, countryName, funnelRows, hourRows, labelled, lostReasonRows, periodOf,
-  pickPipeline, pipelineSummary, rate, rateChange, sectionOf, serverChange, shortDay, shortPath, signalName, stageRows, statusRows, trendBuckets,
-  windows, zoneLabel,
+  barShare, bucketLabel, busiestHour, busiestWeekday, changeTone, countChange, countryName, dayBuckets, dealTotals, forecastColumns, funnelRows, hourRows, intentRows, labelled, lengthRows, lostReasonRows, monthLabel, monthsOf, ownerDays, paymentRows, periodOf, pickPipeline, pipelineSummary, rate, rateChange, refusedForRights, sectionOf, serverChange, shortDay, shortPath, signalName, stageRows, statusRows, trendBuckets, weekdayName, weekdayRows, windows, zoneLabel,
 } from './insightsMath'
 import type { ChatTrendPoint, Pipeline } from './types'
 
@@ -180,5 +178,68 @@ describe('round 2: the sections and the venue’s zone', () => {
     expect(zoneLabel('Europe/Riga')).toBe('Europe/Riga')
     expect(zoneLabel('America/New_York')).toBe('America/New York')
     expect(zoneLabel('  ')).toBe('UTC')
+  })
+})
+
+describe('round 5: the chat’s intents, weekdays and lengths, the deals and the reports', () => {
+  it('knows the four sections and the reports’ months', () => {
+    expect(sectionOf('deals')).toBe('deals')
+    expect(sectionOf('reports', 'pipeline')).toBe('reports')
+    expect(sectionOf('nope', 'pipeline')).toBe('pipeline')
+    expect(monthsOf('12')).toBe(12)
+    expect(monthsOf('5')).toBe(6)
+    expect(monthsOf(null)).toBe(6)
+    expect(ownerDays(3)).toBe(90)
+    expect(ownerDays(12)).toBe(180)
+  })
+
+  it('orders the intents by count, those not yet tagged last, without empty ones', () => {
+    expect(intentRows([{ intent: 'untagged', count: 9 }, { intent: 'complaint', count: 1 }, { intent: 'booking_inquiry', count: 4 }, { intent: 'spam', count: 0 }, { intent: 'weird', count: 2 }]))
+      .toEqual([
+        { key: 'booking_inquiry', count: 4, known: true }, { key: 'weird', count: 2, known: false }, { key: 'complaint', count: 1, known: true }, { key: 'untagged', count: 9, known: true },
+      ])
+    expect(intentRows(undefined)).toEqual([])
+  })
+
+  it('names the weekdays in the person’s language, Monday first, every day present', () => {
+    expect(weekdayName(1, 'en-GB')).toBe('Mon')
+    expect(weekdayName(0, 'en-GB')).toBe('Sun')
+    expect(weekdayName(1, 'de')).toBe('Mo')
+    const rows = weekdayRows([{ dow: 6, label: 'Sat', conversations: 5, visitors: 5, replies: 1 }], 'en-GB')
+    expect(rows.map(r => [r.dow, r.count])).toEqual([[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 5], [0, 0]])
+    expect(busiestWeekday(rows)).toBe(6)
+    expect(busiestWeekday(weekdayRows([], 'en'))).toBeNull()
+    expect(lengthRows([{ bucket: 'none', label: '0 msg', count: '2' as unknown as number }])).toEqual([{ key: 'none', label: '0 msg', count: 2 }])
+  })
+
+  it('sums the deals’ period and groups a long series into weeks', () => {
+    expect(dealTotals({ revenue_trend: [{ date: 'a', count: 1, revenue: 10.25 }, { date: 'b', count: 2, revenue: 5 }], new_deal_trend: [{ date: 'a', count: 3 }] }))
+      .toEqual({ revenue: 15.25, completed: 3, fresh: 3 })
+    const days = Array.from({ length: 30 }, (_, i) => ({ date: `d${i}`, value: 1 }))
+    expect(dayBuckets(days)).toHaveLength(30)
+    const long = Array.from({ length: 90 }, (_, i) => ({ date: `d${i}`, value: 1 }))
+    const weeks = dayBuckets(long)
+    expect(weeks).toHaveLength(13)
+    expect(weeks[weeks.length - 1]).toEqual({ key: 'd83', from: 'd83', to: 'd89', value: 7 })
+    expect(weeks[0].value).toBe(6)
+  })
+
+  it('orders the payments as named, unset last, without empty ones', () => {
+    expect(paymentRows([{ status: 'unset', count: 2 }, { status: 'paid', count: 1 }, { status: 'pending', count: 0 }, { status: 'partial', count: 4 }]))
+      .toEqual([{ key: 'partial', count: 4 }, { key: 'paid', count: 1 }, { key: 'unset', count: 2 }])
+  })
+
+  it('labels the forecast’s months and splits each into what is expected and the rest', () => {
+    expect(monthLabel('2026-12', 'en-GB')).toBe('Dec 26')
+    expect(monthLabel('beyond', 'en-GB')).toBeNull()
+    expect(forecastColumns({ buckets: [{ month: 'x', key: '2026-12', gross_value: 1400, expected_value: 820, deal_count: 2 }] }))
+      .toEqual([{ key: '2026-12', expected: 820, rest: 580, deals: 2 }])
+  })
+
+  it('tells a refusal for want of the right from a failure', () => {
+    expect(refusedForRights('not_allowed')).toBe(true)
+    expect(refusedForRights('no_capability')).toBe(true)
+    expect(refusedForRights('network')).toBe(false)
+    expect(refusedForRights('not_in_plan')).toBe(false)
   })
 })

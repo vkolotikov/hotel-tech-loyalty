@@ -82,6 +82,14 @@ final class AccessMap
         'admin/content'                         => ['staff',              'staff',              'content'],       // HexaTech Content; brand, strategy and whole-calendar AI keep their own manager rule (ContentAccess)
         'admin/crm'                             => ['staff',              'staff',              'crm'],           // HexaTech CRM (2026-11-07): bootstrap, Today, setup steps, the inbox's AI draft; reads only but the draft
         'admin/crm/bot-gaps'                    => ['staff',              'manager',            'chat'],           // HexaTech CRM: answers the chatbot got wrong (read by everyone; answering teaches the bot: manager, as admin/knowledge)
+        // CRM round 5 (Today and Insights, 2026-11-12): the team's activity, and the full admin's sales reports (SalesReports) under the Reports page's rule.
+        'admin/crm/activity'                    => ['staff',              'staff',              'crm'],           // The leads' and contacts' newest timeline lines (reads only; every staff member reads a lead's timeline)
+        'admin/crm/reports'                     => ['can_view_analytics', 'can_view_analytics', 'crm'],           // Funnel, forecast, lost reasons, sources, owners, companies (reads only; as admin/reporting, product crm: CRM data, a company's reservations only for a full customer)
+        // CRM round 5 (Integrations, 2026-11-12): what the full admin keeps under `admin`, limited to what the CRM needs.
+        'admin/crm/intake-tokens'               => ['manager',            'manager',            'crm'],           // Lead-intake API tokens (manager, as admin/api-tokens); each reaches only POST integrations/leads (IntakeTokens)
+        'admin/crm/mail-settings'               => ['staff',              'manager',            'crm'],           // The emails' sender name and reply-to only (read by everyone, as admin/settings; changes: an owner, SenderSettings)
+        'admin/crm/ai-usage'                    => ['manager',            'manager',            'crm'],           // This month's AI spend against the allowance, this organisation's own (manager, as admin/ai-usage)
+        'admin/integrations/messenger'          => ['manager',            'manager',            'chat'],           // Facebook Messenger pages for the inbox (manager; was `admin/integrations`, admin, whose only routes these are — a new integrations route falls back to manager / admin); `chat`: HexaTech CRM connects them too
         'admin/time'                            => ['staff',              'staff',              'time'],          // HexaTech Time Planner (2026-11-09; sold as a module, or the Enterprise plan's time_management): whose day one may plan is PlanningMode
         'admin/time/people/{user}'              => ['staff',              'manager',            'time'],          // A person's planner profile (knowledge, hours, days, break): a manager's, as the team's skills (admin/team)
         'admin/time/settings'                   => ['staff',              'manager',            'time'],          // The planner's settings (types, tasks, preferences, the work day, the planning mode): read by everyone, changed by a manager (2026-11-09)
@@ -148,7 +156,6 @@ final class AccessMap
         'admin/diag'                            => ['manager',            'manager',            'admin'],         // Operator diagnostics (route already needs super_admin)
         'admin/documentation'                   => ['staff',              'staff',              'admin'],         // Help pages
         'admin/industry-presets'                => ['staff',              'manager',            'admin'],         // Industry presets (Pipelines admin)
-        'admin/integrations'                    => ['manager',            'manager',            'admin'],         // Integrations and their secrets (Settings, manager)
         'admin/landing-pages'                   => ['staff',              'manager',            'admin'],         // Landing page (menu: manager)
         'admin/planner'                         => ['staff',              'staff',              'time'],          // Planner (menu: everyone); product `time`: HexaTech Time Planner works on it (2026-11-09). Whose day one may change is PlanningMode
         'admin/planner-presets'                 => ['staff',              'manager',            'time'],          // Planner presets (Settings, manager); the planner's, product `time` (2026-11-09)

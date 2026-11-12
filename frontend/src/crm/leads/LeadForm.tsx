@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, Sparkles, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -9,7 +9,7 @@ import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { failureOf, get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { leadPath } from '../lib/links'
+import { withRecord } from '../lib/records'
 import { CONTROL, Select, TextArea, TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
 import { Tabs } from '../ui/Tabs'
@@ -31,8 +31,11 @@ const SERVER_FIELDS: Record<string, LeadField> = {
 /**
  * Add a lead (the full admin's Add inquiry): a new contact (`POST guests`) or one already known, then the lead
  * (`POST inquiries`) in the default pipeline's first stage unless another is chosen. Stay details only for a hotel;
- * the enquiry type where the organisation has types; its own fields when it has some. Opens on `/crm/leads?new=1`
- * (Today and Find link there), or filled in by the AI from a pasted message (`initial`).
+ * the enquiry type where the organisation has types; its own fields when it has some. Opens from the header's New and
+ * the pages' Add and a contact's "New lead" (`?create=lead|deal`, `&guest=`, CreateHost), on an old link to
+ * `/crm/leads?new=1&guest=`, or filled in
+ * by the AI from a pasted message (`initial`). What was made opens in its record panel over the same page (round 5),
+ * a deal on its Deal tab.
  *
  * From Deals (`deal`, owner 2026-11-08): the same form adds a deal — the lead, then `POST inquiries/{id}/won`, the
  * server's own close as won (the won stage, "Confirmed", the timeline line, a hotel's draft reservation). A lead made
@@ -41,7 +44,7 @@ const SERVER_FIELDS: Record<string, LeadField> = {
 export function LeadForm({ presetGuest, initial, deal = false, onClose }: { presetGuest?: number | null; initial?: LeadDraft | null; deal?: boolean; onClose: () => void }) {
   const { t } = useTranslation()
   const boot = useBoot()
-  const navigate = useNavigate()
+  const [, setSearch] = useSearchParams()
   const toast = useToast()
   const changed = useLeadChanged()
   const formId = useId()
@@ -100,7 +103,14 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
       changed()
       toast(deal ? t('crm.deals.added', 'Deal added') : t('crm.leads.added', 'Lead added'))
       onClose()
-      navigate(leadPath(lead.id))
+      // The new record opens over the page it was made on (the address keeps the page's own keys; `?new=` and
+      // `?guest=`, the old way in, are let go so the form does not open again).
+      setSearch(prev => {
+        const next = withRecord(prev, 'lead', lead.id, deal ? 'deal' : null)
+        next.delete('new')
+        next.delete('guest')
+        return next
+      })
     },
   })
 

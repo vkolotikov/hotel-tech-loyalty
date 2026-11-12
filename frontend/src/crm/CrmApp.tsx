@@ -9,6 +9,9 @@ import { CrmShell } from './CrmShell'
 import { registerCrmLocales } from './i18n'
 import { loginPath } from './lib/links'
 import { ToastProvider } from './ui/Toast'
+import { RecordListProvider } from './lib/useRecords'
+import { RecordHost } from './RecordHost'
+import { CreateHost } from './CreateHost'
 
 // A phone opening Today should not download the inbox, the board or the charts.
 const TodayPage = lazy(() => import('./today/TodayPage').then(m => ({ default: m.TodayPage })))
@@ -26,6 +29,7 @@ const AssistantPage = lazy(() => import('./assistant/AssistantPage').then(m => (
 const WidgetPage = lazy(() => import('./widget/WidgetPage').then(m => ({ default: m.WidgetPage })))
 const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const SettingsPage = lazy(() => import('./settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const IntegrationsPage = lazy(() => import('./integrations/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })))
 
 function PageLoad({ children }: { children: ReactNode }) {
   return (
@@ -52,6 +56,7 @@ export function CrmApp() {
   return (
     <CrmProvider>
       <ToastProvider>
+        <RecordListProvider>
         <CrmShell>
           <PageLoad>
             <Routes>
@@ -69,11 +74,16 @@ export function CrmApp() {
               <Route path="assistant" element={<AssistantPage />} />
               <Route path="widget" element={<WidgetPage />} />
               <Route path="insights" element={<InsightsPage />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/crm" replace />} />
             </Routes>
           </PageLoad>
+          {/* Round 5: a record or a "new" panel over whichever page the address names it on. */}
+          <RecordHost />
+          <CreateHost />
         </CrmShell>
+        </RecordListProvider>
       </ToastProvider>
     </CrmProvider>
   )

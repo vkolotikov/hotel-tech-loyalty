@@ -56,7 +56,13 @@
     "new_lead": "Ajouter un prospect",
     "searching": "Recherche…",
     "theme_dark": "Passer en sombre",
-    "theme_light": "Passer en clair"
+    "theme_light": "Passer en clair",
+    "new_deal": "Ajouter une affaire",
+    "new_task": "Ajouter une tâche",
+    "new_contact": "Ajouter un contact",
+    "new_company": "Ajouter une entreprise",
+    "companies": "Entreprises",
+    "chats": "Chats du site"
   },
   "nav": {
     "today": "Aujourd'hui",
@@ -75,7 +81,8 @@
       "sales": "Ventes",
       "reports": "Rapports",
       "setup": "Configuration"
-    }
+    },
+    "integrations": "Intégrations"
   },
   "shell": {
     "ai_over": "Le crédit IA de ce mois est épuisé : l'assistant transmet chaque chat à votre équipe, et les brouillons s'arrêtent jusqu'au mois prochain.",
@@ -90,7 +97,9 @@
     "brand_label": "Marque : {{name}}. En choisir une autre",
     "brand_line": "Ce que montre le CRM : toutes les marques, ou l’une d’elles.",
     "brand_choose": "Choisir une marque",
-    "brand_default": "Principale"
+    "brand_default": "Principale",
+    "keys_inbox_step": "Boîte de réception : chat suivant ou précédent",
+    "keys_inbox_resolve": "Boîte de réception : clore le chat ouvert"
   },
   "start": {
     "done": "Fait",
@@ -146,67 +155,21 @@
     "won": "Gagné",
     "lost": "Perdu"
   },
-  "today": {
-    "add_lead": "Ajouter un prospect",
-    "all_leads": "Tous les prospects",
-    "all_tasks": "Toutes les tâches",
-    "follow_ups": "Relances dues",
-    "last_24h": "Dans les dernières 24 heures",
-    "line": "Ce qui a besoin de vous maintenant, du chat du site et de votre pipeline.",
-    "new_leads": "Nouveaux prospects",
-    "nobody": "Personne assigné",
-    "open_inbox": "Ouvrir la messagerie",
-    "open_leads": "{{count}} prospects ouverts",
-    "overdue": "{{count}} en retard",
-    "pipeline": "Pipeline ouvert",
-    "setup_line": "{{done}} étapes sur {{total}} faites. Mettez le chat sur votre site, formez l'assistant, et c'est prêt.",
-    "setup_title": "Terminez la configuration de HexaTech CRM",
-    "title": "Aujourd'hui",
-    "waiting": "En attente de réponse",
-    "week_ai": "Clôturés par l'IA",
-    "week_chats": "Conversations",
-    "week_leads": "Prospects issus du chat",
-    "week_title": "Le chat du site cette semaine",
-    "your_tasks": "Vos tâches",
-    "open_leads_one": "1 prospect ouvert",
-    "greeting": {
-      "morning": "Bonjour, {{name}}",
-      "afternoon": "Bon après-midi, {{name}}",
-      "evening": "Bonsoir, {{name}}"
-    },
-    "setup_go": "Continuer",
-    "figures": "La journée en un coup d’œil",
-    "open_unassigned": "{{open}} chats ouverts · {{unassigned}} sans personne",
-    "now_title": "À traiter maintenant",
-    "now_line": "D’abord les chats en attente, puis ce qui est en retard.",
-    "all_clear": "Tout est à jour",
-    "all_clear_line": "Personne n’attend de réponse et rien n’est en retard.",
-    "all_waiting": "Les {{count}} chats en attente",
-    "all_overdue_leads": "Les {{count}} relances en retard",
-    "all_overdue_tasks": "Les {{count}} tâches en retard",
-    "kind_chat": "En attente de réponse",
-    "kind_follow_up": "Relance en retard depuis le {{day}}",
-    "kind_task": "Tâche en retard · prévue {{when}}",
-    "schedule_title": "Le programme du jour",
-    "schedule_line": "Les relances et vos tâches du jour, à l’heure de l’établissement.",
-    "no_schedule": "Rien de prévu aujourd’hui",
-    "no_schedule_line": "Fixez une prochaine étape sur un prospect ou ajoutez une tâche : elle apparaît ici le jour venu.",
-    "at_a_time": "À une heure précise",
-    "during_day": "Dans la journée",
-    "all_leads_due": "Toutes les relances dues",
-    "no_time": "Sans heure fixe",
-    "kind_task_today": "Tâche",
-    "kind_follow_up_today": "Relance",
-    "new_title": "Nouveaux prospects",
-    "no_new": "Pas de nouveau prospect aujourd’hui",
-    "no_new_line": "Les prospects du chat du site, de vos formulaires et de votre équipe apparaissent ici dès leur arrivée.",
-    "all_new": "Les {{count}} nouveaux prospects",
-    "week_line": "Les sept derniers jours",
-    "week_more": "Analyses",
-    "week_hint": "Les chats que l’assistant a clôturés sans que votre équipe intervienne.",
-    "done_follow_up": "Relance marquée comme faite",
-    "done_task": "Tâche marquée comme faite",
-    "mark_done": "Marquer « {{name}} » comme fait",
-    "done": "Fait"
+  "record": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "full_page": "Ouvrir en page",
+    "overview": "Aperçu",
+    "step": "Fiche précédente ou suivante"
+  },
+  "create": {
+    "label": "Nouveau",
+    "lead": "Prospect",
+    "deal": "Affaire",
+    "task": "Tâche",
+    "contact": "Contact",
+    "company": "Entreprise",
+    "capture": "Prospect depuis un message",
+    "lead_new": "Nouveau prospect"
   }
 }

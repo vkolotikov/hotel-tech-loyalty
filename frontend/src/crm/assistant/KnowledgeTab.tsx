@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, FolderOpen, ListFilter, Pencil, Plus, Sparkles, Tag, Trash2 } from 'lucide-react'
+import { BookOpen, FileText, FolderOpen, ListFilter, Pencil, Plus, Sparkles, Tag, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { get, send } from '../lib/api'
 import { count } from '../lib/format'
@@ -17,18 +17,19 @@ import { FilterChip, Toolbar } from '../ui/Toolbar'
 import { DocumentsCard } from './KnowledgeDocuments'
 import { CategoryDialog, ExtractPanel, ItemPanel } from './KnowledgeForms'
 import { activeFilters, categoryFilterOf, filterItems, itemCounts, type CategoryFilter } from './knowledge'
+import { SectionedForm, type FormPart } from '../settings/formKit'
+import type { KnowledgePart } from './lists'
 import { AiButton, IconButton, ReadOnlyNote } from './parts'
 import { KNOWLEDGE_KEY, knowledgeChanged } from './queries'
 import type { KnowledgeCategory, KnowledgeDocument, KnowledgeItem } from './types'
-
-const ANSWERS_ID = 'assistant-answers'
 
 /**
  * What the assistant answers from (knowledge/*): the answers with a toolbar (search, category, add, draft from a text),
  * then the categories and the documents, each in its own card. A manager adds, edits and deletes; the AI drafts
  * answers from pasted text, reviewed before they are added. A category's row shows its answers in the list above.
  */
-export function KnowledgeTab({ canManage }: { canManage: boolean }) {
+export function KnowledgeTab({ canManage, part, onPart }: { canManage: boolean; part: KnowledgePart; onPart: (next: KnowledgePart) => void }) {
+  const { t } = useTranslation()
   const items = useQuery({ queryKey: [...KNOWLEDGE_KEY, 'items'], queryFn: () => get<KnowledgeItem[]>('knowledge/items') })
   const categories = useQuery({ queryKey: [...KNOWLEDGE_KEY, 'categories'], queryFn: () => get<KnowledgeCategory[]>('knowledge/categories') })
   const documents = useQuery({ queryKey: [...KNOWLEDGE_KEY, 'documents'], queryFn: () => get<KnowledgeDocument[]>('knowledge/documents') })
@@ -38,24 +39,35 @@ export function KnowledgeTab({ canManage }: { canManage: boolean }) {
   const showCategory = (id: number) => {
     setCategory(id)
     setSearch('')
-    document.getElementById(ANSWERS_ID)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    onPart('answers')
   }
+  const parts: FormPart<KnowledgePart>[] = [
+    { key: 'answers', icon: BookOpen, tone: 'accent', title: t('crm.assistant.knowledge.answers', 'Answers'), badge: items.data?.length },
+    { key: 'categories', icon: FolderOpen, tone: 'pending', title: t('crm.assistant.knowledge.categories', 'Categories'), badge: categories.data?.length },
+    { key: 'documents', icon: FileText, tone: 'progress', title: t('crm.assistant.knowledge.documents', 'Documents'), badge: documents.data?.length },
+  ]
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {!canManage && <ReadOnlyNote />}
-      <QueryState loading={items.isLoading} error={items.error} onRetry={() => { void items.refetch() }}>
-        <AnswersSection items={items.data ?? []} categories={categories.data ?? []} canManage={canManage}
-          search={search} setSearch={setSearch} category={category} setCategory={setCategory} />
-      </QueryState>
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        <QueryState loading={categories.isLoading} error={categories.error} onRetry={() => { void categories.refetch() }} rows={3}>
-          <CategoriesCard categories={categories.data ?? []} canManage={canManage} onShow={showCategory} />
-        </QueryState>
-        <QueryState loading={documents.isLoading} error={documents.error} onRetry={() => { void documents.refetch() }} rows={3}>
-          <DocumentsCard documents={documents.data ?? []} canManage={canManage} />
-        </QueryState>
-      </div>
+      <SectionedForm label={t('crm.assistant.knowledge.parts', 'Parts of the knowledge')} idPrefix="assistant-knowledge" parts={parts} value={part} onChange={onPart} next={false}>
+        {part === 'answers' && (
+          <QueryState loading={items.isLoading} error={items.error} onRetry={() => { void items.refetch() }}>
+            <AnswersSection items={items.data ?? []} categories={categories.data ?? []} canManage={canManage}
+              search={search} setSearch={setSearch} category={category} setCategory={setCategory} />
+          </QueryState>
+        )}
+        {part === 'categories' && (
+          <QueryState loading={categories.isLoading} error={categories.error} onRetry={() => { void categories.refetch() }} rows={3}>
+            <CategoriesCard categories={categories.data ?? []} canManage={canManage} onShow={showCategory} />
+          </QueryState>
+        )}
+        {part === 'documents' && (
+          <QueryState loading={documents.isLoading} error={documents.error} onRetry={() => { void documents.refetch() }} rows={3}>
+            <DocumentsCard documents={documents.data ?? []} canManage={canManage} />
+          </QueryState>
+        )}
+      </SectionedForm>
     </div>
   )
 }
@@ -91,7 +103,7 @@ function AnswersSection({ items, categories, canManage, search, setSearch, categ
   const clear = () => { setSearch(''); setCategory(null) }
 
   return (
-    <div id={ANSWERS_ID} className="scroll-mt-4 space-y-3">
+    <div className="space-y-3">
       {items.length > 0 && (
         <Toolbar
           actions={canManage ? <>{draftButton}{addButton}</> : undefined}
@@ -148,15 +160,15 @@ function AnswersSection({ items, categories, canManage, search, setSearch, categ
                         {item.question}
                       </button>
                     ) : <p className="text-sm font-medium text-a-text">{item.question}</p>}
-                    <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-sm text-a-text-2">{item.answer}</p>
-                    {((item.keywords ?? []).length > 0 || !item.is_active) && (
-                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-a-text-2">
-                        {!item.is_active && <Pill tone="danger">{t('crm.assistant.knowledge.off', 'Not used')}</Pill>}
-                        {(item.keywords ?? []).length > 0 && (
-                          <span className="inline-flex min-w-0 items-center gap-1"><Tag size={12} aria-hidden className="shrink-0" /><span className="truncate">{(item.keywords ?? []).slice(0, 6).join(' · ')}</span></span>
-                        )}
-                      </p>
-                    )}
+                    <p className="mt-0.5 flex min-w-0 items-center gap-2 text-sm text-a-text-2">
+                      {!item.is_active && <Pill tone="danger">{t('crm.assistant.knowledge.off', 'Not used')}</Pill>}
+                      <span className="min-w-0 flex-1 truncate">{item.answer}</span>
+                      {(item.keywords ?? []).length > 0 && (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-xs" title={(item.keywords ?? []).join(' · ')}>
+                          <Tag size={12} aria-hidden /><span className="sr-only">{t('crm.assistant.knowledge.keywords_count', 'Keywords:')}</span>{(item.keywords ?? []).length}
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <div role="cell" className="flex min-w-0 flex-1 items-center gap-2 md:block">
                     {item.category

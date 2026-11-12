@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, Pencil, Plus, SlidersHorizontal, Trash2 } from 'lucide-react'
+import {
+  ArrowDown, ArrowUp, Briefcase, Dumbbell, GraduationCap, Handshake, Home, Pencil, Plus, Scale, SlidersHorizontal, Sparkles, Stethoscope, Trash2,
+  UtensilsCrossed, type LucideIcon,
+} from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -16,14 +19,21 @@ import { QueryState } from '../ui/QueryState'
 import { Tabs } from '../ui/Tabs'
 import { useToast } from '../ui/Toast'
 import {
-  ENTITIES, FIELD_LIMITS, FIELD_TYPES, countsByEntity, createPayload, fieldForm, fieldProblems, fieldsOf, hasOptions, updatePayload,
-  type CustomField, type CustomFieldType, type Entity, type FieldForm,
+  ENTITIES, FIELD_LIMITS, FIELD_TYPES, countsByEntity, createPayload, fieldForm, fieldProblems, fieldsOf, hasOptions, presetList, presetOutcome,
+  updatePayload, type CustomField, type CustomFieldType, type Entity, type FieldForm, type FieldPreset,
 } from './customFields'
 import { reorderIds } from './lists'
 import { IconButton, ListHead, Problem, ReadOnlyNote, SectionIntro } from './parts'
 
 const KEY = ['crm', 'settings', 'custom-fields'] as const
 const FIELD_COLS = 'md:grid-cols-[minmax(0,1fr)_9rem_12rem_9.5rem]'
+const PRESETS_KEY = ['crm', 'settings', 'custom-field-presets'] as const
+
+/** The server names each preset's icon (CustomFieldController::presets); anything else is a briefcase. */
+const PRESET_ICON: Record<string, LucideIcon> = {
+  sparkles: Sparkles, stethoscope: Stethoscope, scale: Scale, home: Home, 'graduation-cap': GraduationCap, dumbbell: Dumbbell,
+  utensils: UtensilsCrossed, handshake: Handshake, briefcase: Briefcase,
+}
 
 function fieldsChanged(qc: QueryClient): void {
   void qc.invalidateQueries({ queryKey: KEY })
@@ -42,6 +52,7 @@ export function CustomFieldsTab({ canManage }: { canManage: boolean }) {
   const [entity, setEntity] = useState<Entity>('inquiry')
   const [editing, setEditing] = useState<CustomField | 'new' | null>(null)
   const [deleting, setDeleting] = useState<CustomField | null>(null)
+  const [presets, setPresets] = useState(false)
   const query = useQuery({ queryKey: KEY, queryFn: () => get<CustomField[]>('custom-fields') })
   const all = query.data ?? []
   const fields = fieldsOf(all, entity)
@@ -75,15 +86,18 @@ export function CustomFieldsTab({ canManage }: { canManage: boolean }) {
     task: t('crm.settings.fields.card_task', 'Fields on tasks'),
   }
   const addButton = (primary: boolean) => (
-    <Button variant={primary ? 'primary' : 'ghost'} size={primary ? 'md' : 'sm'} onClick={() => setEditing('new')}>
-      <Plus size={primary ? 15 : 14} aria-hidden />{t('crm.settings.fields.add', 'Add a field')}
+    <Button variant={primary ? 'primary' : 'ghost'} size="sm" onClick={() => setEditing('new')}>
+      <Plus size={14} aria-hidden />{t('crm.settings.fields.add', 'Add a field')}
     </Button>
+  )
+  const presetButton = (
+    <Button variant="secondary" size="sm" onClick={() => setPresets(true)}><Sparkles size={14} aria-hidden />{t('crm.settings.presets.open', 'From a preset')}</Button>
   )
 
   return (
     <div className="space-y-4">
       <SectionIntro line={t('crm.settings.fields.line', 'Your own fields on leads, contacts, companies and tasks, e.g. "Allergies" or "Budget".')}
-        action={canManage && fields.length > 0 ? addButton(true) : undefined} />
+        action={canManage ? <>{presetButton}{fields.length > 0 && addButton(true)}</> : undefined} />
       {!canManage && <ReadOnlyNote />}
       <Tabs label={t('crm.settings.fields.on', 'Fields on')} value={entity} onChange={setEntity} items={ENTITIES.map(key => ({ key, label: entityNames[key], count: counts[key] }))} />
       <QueryState loading={query.isLoading} error={query.error} onRetry={() => { void query.refetch() }}>
@@ -134,6 +148,7 @@ export function CustomFieldsTab({ canManage }: { canManage: boolean }) {
           )}
         </Card>
       </QueryState>
+      {presets && <PresetsDialog onClose={() => setPresets(false)} />}
       {editing && <FieldDialog field={editing === 'new' ? null : editing} entity={entity} onClose={() => setEditing(null)} />}
       {deleting && (
         <Confirm title={t('crm.settings.fields.delete_title', 'Delete the field {{name}}?', { name: deleting.label })} confirm={t('crm.common.delete', 'Delete')}
@@ -212,6 +227,64 @@ function FieldDialog({ field, entity, onClose }: { field: CustomField | null; en
           <Button type="submit" loading={save.isPending}>{t('crm.common.save', 'Save')}</Button>
         </div>
       </form>
+    </Dialog>
+  )
+}
+
+/**
+ * Industry starter sets (round 5; the full admin's CustomFieldsAdmin presets): the server's list, each with how many
+ * fields it brings; applying one adds those it does not have yet, on leads and contacts alike (custom-fields/apply-preset).
+ */
+function PresetsDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
+  const qc = useQueryClient()
+  const say = useToast()
+  const [chosen, setChosen] = useState<FieldPreset | null>(null)
+  const query = useQuery({ queryKey: PRESETS_KEY, queryFn: () => get<unknown>('custom-fields/presets').then(presetList), staleTime: 300_000 })
+  const apply = useMutation({
+    mutationFn: (preset: FieldPreset) => send<{ created_count?: number }>('post', 'custom-fields/apply-preset', { preset: preset.key }),
+    onSuccess: answer => {
+      const { added } = presetOutcome(answer)
+      fieldsChanged(qc)
+      say(added > 0
+        ? t('crm.settings.presets.added', '{{count}} fields added.', { count: added })
+        : t('crm.settings.presets.none_added', 'Nothing new: those fields are there already.'))
+      onClose()
+    },
+    onError: error => say(errorText(t, error), 'danger'),
+  })
+  const name = (p: FieldPreset) => t(`crm.settings.presets.${p.key}`, p.label)
+  const line = (p: FieldPreset) => t(`crm.settings.presets.${p.key}_line`, p.description)
+
+  return (
+    <Dialog title={t('crm.settings.presets.title', 'Fields for your kind of business')} onClose={onClose} busy={apply.isPending}>
+      <QueryState loading={query.isLoading} error={query.error} onRetry={() => { void query.refetch() }} rows={4}>
+        <div className="space-y-4">
+          <div role="radiogroup" aria-label={t('crm.settings.presets.title', 'Fields for your kind of business')} className="grid gap-2 sm:grid-cols-2">
+            {(query.data ?? []).map(p => {
+              const Icon = PRESET_ICON[p.icon] ?? Briefcase
+              const on = chosen?.key === p.key
+              return (
+                <button key={p.key} type="button" role="radio" aria-checked={on} onClick={() => setChosen(p)} title={line(p)}
+                  className={`flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${on ? 'border-a-accent bg-a-accent/10' : 'border-a-border bg-a-surface hover:border-a-text-2/40'}`}>
+                  <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-a-accent/12 text-a-accent-text"><Icon size={17} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-a-text">{name(p)}</span>
+                    <span className="block text-xs text-a-text-2">{t('crm.settings.presets.count', '{{count}} fields', { count: p.field_count })}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {chosen && <p className="rounded-xl bg-a-surface-2 px-3 py-2 text-sm text-a-text-2">{line(chosen)}</p>}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose} disabled={apply.isPending}>{t('crm.common.cancel', 'Cancel')}</Button>
+            <Button type="button" disabled={!chosen} loading={apply.isPending} onClick={() => { if (chosen) apply.mutate(chosen) }}>
+              <Plus size={15} aria-hidden />{t('crm.settings.presets.apply', 'Add the fields')}
+            </Button>
+          </div>
+        </div>
+      </QueryState>
     </Dialog>
   )
 }

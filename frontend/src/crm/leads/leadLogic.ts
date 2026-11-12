@@ -187,12 +187,23 @@ export function dueSections(filters: LeadFilters, me: string): { key: 'overdue' 
   }))
 }
 
-/** The CSV export of what the list shows (the same filters, every page). */
-export function exportQuery(filters: LeadFilters, me: string): Query {
+/** A list's file: the full admin's styled Excel workbook (its export's default), or plain CSV for other tools. */
+export type ExportFormat = 'xlsx' | 'csv'
+
+/** The format's query, as the full admin's call writes it: nothing for the workbook, `format=csv` for the CSV. */
+export function formatParam(format: ExportFormat): { format?: 'csv' } {
+  return format === 'csv' ? { format: 'csv' } : {}
+}
+
+/**
+ * The export of what the list shows (`GET inquiries/export`, round 5): the same filters, every page, as a workbook or
+ * CSV. Before, the CSV was asked of `GET inquiries`, which answers JSON, so the file came out empty.
+ */
+export function exportQuery(filters: LeadFilters, me: string, format: ExportFormat = 'xlsx'): Query {
   const { page: _page, per_page: _perPage, task_due, ...rest } = listQuery(filters, me)
   void _page
   void _perPage
-  return { ...rest, task_due: filters.due === 'now' ? '' : task_due, format: 'csv' }
+  return { ...rest, task_due: filters.due === 'now' ? '' : task_due, ...formatParam(format) }
 }
 
 /* ─── Pipelines and stages ───────────────────────────────────────────────── */

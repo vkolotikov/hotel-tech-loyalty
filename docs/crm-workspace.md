@@ -42,6 +42,11 @@ The workspace's own reads live under `/api/v1/admin/crm/`, behind the admin chai
 | `GET start` | the six setup steps, each done by the data (`CrmSetupProgress`) | staff |
 | `GET bot-gaps` | the assistant's answers rated wrong and not yet taught (`BotGaps`) | staff (AccessMap product `chat`) |
 | `POST conversations/{id}/draft` (`instruction?`) | an AI reply for a person to edit and send (`ReplyDrafter`); `feature:chatbot`, 20 a minute in its own bucket (`crm-draft`) | staff |
+| `GET activity` (`type?`, `page`) | round 5: the team's recent CRM activity, who did what to which lead or contact (`Crm\CrmActivityFeed`; a line on a lead follows the lead's brand scope) | staff |
+| `GET reports/{funnel,forecast,lost-reasons,sources,owners,companies}` | round 5: the sales reports (`App\Services\Crm\SalesReports`, which the full admin's `admin/reporting/*` and `analytics/inquiry-funnel` now call too); a company's reservation revenue only for an organisation that may reach bookings | the Analytics right (`can_view_analytics`; a manager always) |
+| `GET/POST intake-tokens`, `DELETE intake-tokens/{id}` | round 5: lead-intake API tokens (`Crm\IntakeTokens`): the single ability `crm:lead-intake`, accepted by Sanctum only on `POST integrations/leads` (`CrmIntakeTokensServiceProvider`); the plain token answered once | manager |
+| `GET/PUT mail-settings` | round 5: the sender name and reply-to template emails use (`Mail\SenderSettings`, the settings `mail_from_name` / `mail_reply_to`) | read staff; change an owner (`SettingRegistry::ownerOnly`, the full admin's rule) |
+| `GET ai-usage` | round 5: this month's AI spend by venue day and by feature against the plan's allowance (`AiUsageService::monthByVenueDay()`) | manager |
 
 Everything else the workspace shows is the **full admin's own chat and CRM endpoints**, under their own rules
 (`AccessMap`: `admin/chat-inbox*`, `admin/visitors`, `admin/engagement`, `admin/chatbot*`, `admin/knowledge`,
@@ -70,27 +75,31 @@ processed document), `reply` (a person answered a chat), `pipeline` (a pipeline 
 
 | Area | Address | What it does (the full admin's endpoints it uses) |
 |---|---|---|
-| Today | `/crm` | `crm/today`: chats waiting, follow-ups, your tasks, new leads, the open pipeline, the week |
+| Today | `/crm` (`?need=chats|followups|tasks`) | `crm/today`, `crm/pulse`, `crm/activity`: the venue's clock (the pulse strip), "Needs you now" in three tabs (chats waiting, follow-ups, your tasks; five rows each, Show all), the team's activity, the figures that are not zero, new leads, the week's chat |
 | Get started | `/crm/start` | `crm/start`: the six setup steps |
-| Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`) | `chat-inbox*`, `engagement/*`: list with the server's counts, the thread (polled), take over / hand back, resolve / archive / reopen, assign, capture as lead, contact, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI** |
-| Visitors | `/crm/visitors` (`?v=<visitor>`) | `visitors*`: on the site now, everyone, away, leads; a visitor's pages and chats; start a chat; delete |
-| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?new=1`, `?due=…`, `?guest=<contact>`), `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches, Show more and a row menu; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; CSV; A lead from a message (every staff member, `RequireAiCapture`). A lead's page: overview with a stage bar, next step, timeline (type filter, call length, voice note), tasks, contact, AI brief and proposal, details, stay, custom fields, files, its chat; Send an email from a template; edit the customer; won / lost; delete with what goes |
+| Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`, `?dtab=`) | `chat-inbox*`, `engagement/*`: a full-height list, thread and details; statuses as icons with counts, Priority and the intents (`engagement/feed`, `filter-counts`, with a range), Nobody assigned (`unassigned=1`); the thread (polled), take over / hand back, resolve (E) / archive / reopen, assign, capture as lead, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI**; details in tabs (Contact, Lead, AI, Website), folded away on request; J / K move through the list |
+| Visitors | `/crm/visitors` (`?v=<visitor>`, `?vtab=`) | `visitors*`, `engagement/feed`: on the site now, everyone, away, leads, hot leads, has contact, missed; a dense list with a live dot; a visitor in a panel (Overview, Chats, Pages); start a chat; delete |
+| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?due=…`; the old `?new=1&guest=` still opens the form), a lead in its panel `?lead=<id>&rtab=` on any page, `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches and a row menu, each opening the lead's panel; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; Excel or CSV (`inquiries/export`); A lead from a message (every staff member, `RequireAiCapture`). A lead (round 5: one frame in the panel and on its page): stage, priority and age; Move to, Won, Lost, Send email, email / call / WhatsApp / SMS, AI brief, Proposal; tabs Overview (stage bar, value / owner / priority / next step edited in place, AI brief, contact, details, stay, custom fields), Deal (a won lead's step and payment), Activity (timeline, type filter, call length, voice note), Tasks, Emails (the mail history), Files, Chat; edit, add a task, open the contact, delete with what goes |
 | Pipeline | `/crm/pipeline` | redirects: to `/crm/leads?view=board` (keeping `?p=`), `?tab=won` to `/crm/deals` |
-| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`), `inquiries`, `inquiries/{id}/won`, `crm-ai/capture-lead`: figures that open their step, search, payment and owner filters, step pills with counts (the step's own `payment_pending` figure), the step and its progress, Next step, payment with Paid in full, columns, CSV; Add a deal by hand or From a message (the lead form in its deal mode: the lead, then the server's own `/won`) |
-| Contacts | `/crm/contacts`, `/crm/contacts/:id` (`?tab=companies|duplicates`) | `guests*`, `corporate-accounts`: people with filters, saved views, bulk changes, CSV; a contact edited in place with tags, leads and timeline; companies; duplicates and merge |
-| Tasks | `/crm/tasks` | `tasks*`: figures; mine / everyone; type; All open (by day), Overdue, Today, Upcoming, Done (by the day done) on the venue's days; add, edit, complete, reopen, delete |
-| AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`) | `chatbot-config/*`, `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps` |
-| Chat widget | `/crm/widget` (`?tab=look|behaviour|install`) | `widget-config*`: the look with a live preview, behaviour, the embed code |
-| Insights | `/crm/insights` (`?days=7|30|90`) | `chatbot/analytics`, `inquiries/*`, `pipelines`, `deals/analytics`: the website chat and the pipeline |
-| Settings | `/crm/settings` (`?tab=canned|pipelines|forms|fields|account`) | `chat-inbox-canned`, `pipelines`, `pipeline-stages`, `inquiry-lost-reasons*`, `lead-forms`, `custom-fields`; Team and Plan & products |
+| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`), `inquiries`, `inquiries/{id}/won`, `crm-ai/capture-lead`: figures that open their step (none that is zero), search, payment and owner filters, step pills with counts (the step's own `payment_pending` figure), the step as one compact menu over a slim bar, Next step, payment with Paid in full, columns, Excel or CSV; a deal opens the lead's panel on its Deal tab; Add a deal by hand or From a message (the lead form in its deal mode: the lead, then the server's own `/won`) |
+| Contacts | `/crm/contacts` (`?tab=companies|duplicates`), a contact `?contact=<id>` / a company `?company=<id>` in its panel on any page, `/crm/contacts/:id` | `guests*`, `corporate-accounts`, `custom-fields`: people with filters (company `co`, created dates on the venue's days, has email / phone, type, nationality, VIP, owner and the round 2 ones), saved views, bulk changes, Excel or CSV (`guests/export`); a contact (tabs Overview edited in place, Leads, Activity, Emails, Fields; tags in place; New lead over the contact `?create=lead&guest=`; merge a look-alike; delete); a company (Overview with the full admin's fields, the hotel-only rate fields for hotels; People, Leads, Fields); the organisation's custom fields on contacts and companies; duplicates and merge |
+| Tasks | `/crm/tasks` | `tasks*`: mine / everyone; type; All open (by day), Overdue, Today, Upcoming, Done (by the day done) on the venue's days, opening where the work is when no tab is named (`openingTab`); a task opens in its form; add (`?create=task`), edit (with the organisation's task custom fields), complete, reopen, delete |
+| AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`, `?part=`) | `chatbot-config/*` (with the model: `model`, `probe-model`; a model outside the plan is marked and cannot be picked), `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps`; long forms in parts (a left list on a wide screen, tabs on a phone) with one save bar |
+| Chat widget | `/crm/widget` (`?tab=look|behaviour|install`, `?part=`) | `widget-config*`: the look in six parts with the preview kept in view, behaviour in four, the embed code |
+| Insights | `/crm/insights` (`?tab=chat|pipeline|deals|reports`, `?days=7|30|90`, `?months=3|6|12`) | `chatbot/analytics` (with intent, weekday and length), `inquiries/*`, `pipelines`, `deals/analytics` (revenue and new deals by day, steps, payments, cycle time, stuck deals, best customers), `crm/reports/*` (funnel, forecast, lost reasons, sources, owners, companies; the tab only with the Analytics right) |
+| Settings | `/crm/settings` (`?tab=canned|pipelines|forms|fields|templates|account`, `?template=<id>|new`) | `chat-inbox-canned`, `pipelines`, `pipeline-stages`, `inquiry-lost-reasons*`, `lead-forms`, `custom-fields` (and `presets`, `apply-preset`), `email-templates*` (the editor: blocks or HTML, merge tags at the cursor, the server's preview; changes a manager's, `staff.can.manage_templates`); Team and Plan & products |
+| Integrations | `/crm/integrations` (`?tab=leads|email|ai|channels`) | `crm/intake-tokens`, `crm/mail-settings`, `crm/ai-usage`, `integrations/messenger*`: lead-intake tokens and the guide; the sender name and reply-to; AI usage against the allowance; Messenger pages (connect, check, reconnect, test, disconnect). Staff see Email only (`staff.can.manage_integrations`) |
 
-Left out on purpose (the full admin keeps them for a full customer): the AI model choice, chatbot fine-tuning
-(Training: no code reads the model it makes), the voice agent, AI capture of a member, a company or a contact
-(`crm-ai/capture-member`, `-corporate`, `-guest`), a contact's room reservations, `.xlsx` exports (CSV is offered),
-bulk tagging (no endpoint), the full admin's field-layout manager and custom-field presets, the Leads property filter
-and the hotel-only rate / room type / MICE fields (Deals still shows a room type or an event a lead has), the stage
-groups (they read hotel status names), Focus mode, the Planner's team buckets (`planner/*`; Leads has its own Team
-view), and an email-template editor (a CRM-only organisation is pointed to the full admin).
+Left out on purpose (round 5 re-checked each against the full admin): chatbot fine-tuning (Training: no code reads the
+model it makes), the voice agent (the widget's realtime session has no plan gate, allowance check or spend record yet —
+an owner's decision first), the staff AI copilot (`crm-ai/chat`, behind `feature:admin_ai`, which no CRM package has —
+a pricing decision), AI capture of a member, a company or a contact (`crm-ai/capture-member`, `-corporate`, `-guest`),
+a contact's room reservations, bulk tagging (no endpoint), the field-layout manager (the CRM reads only the list and deal
+columns, which it already switches; ordering exists in neither admin), the Leads property filter and the hotel-only
+rate / room type / MICE fields on leads (Deals still shows a room type or an event a lead has), the stage groups (they
+read hotel status names), Focus mode, the Planner's team buckets (`planner/*`; Leads has its own Team view), WhatsApp
+as an inbox channel (no webhook or sending path exists), and the full admin's reviews, brands editor and global search
+(product `admin`).
 
 ## New in HexaTech CRM (beyond the full admin)
 
@@ -122,6 +131,44 @@ view), and an email-template editor (a CRM-only organisation is pointed to the f
   phone; every page was checked at 1440, 390 and 360 px, Dark and Light.
 - **Decisions in pure functions with tests** (`*Logic.ts`, `listLogic.ts`, `board.ts`, `dealLogic.ts`, `taskLogic.ts`,
   `insightsMath.ts`), because the frontend tests render to a string.
+
+## Round 5: open, don't leave (2026-11-12)
+
+The owner: "improve design, layout, interactions, user journey … implement all features which we have in our main
+platform … minimize copy, more icons, nice flow, opening tabs, slides or popups … modern and effective".
+
+- **Records in panels.** A lead, a contact or a company opens over the page it was chosen on, from any list, the board,
+  Today, the inbox or Find (`?lead=`, `?contact=`, `?company=`, its tab `?rtab=`; rules `crm/lib/records.ts`, hook
+  `useRecords`, host `RecordHost`). Back closes it; `[` and `]` step through the list the page registered
+  (`useRecordList`). The panel and the record's own page draw one frame (`ui/RecordPanel`: header, actions, tabs).
+- **New, on every page.** The header's New menu and the key N open a lead, a deal, a task, a contact, a company or a
+  lead from a message in a panel over the page (`?create=lead|deal|capture|deal_capture|contact|company|task`, with
+  `&guest=<id>` for a contact's lead; `CreateHost`, `shell/QuickCreate`); what was made opens in its panel.
+- **Less copy, more icons.** A page's header is one row (its icon, the title, an (i) holding its sentence); a card's
+  description is an (i) (`hint` keeps a short fact); figures are compact (`StatTile`, none that is zero first); a
+  page's sections are one strip of icon tabs (`SectionNav`); icon-only actions are `IconButton` with a tooltip; long
+  set-up forms are parts with a left list or tabs (`settings/formKit.tsx`). Visible words per page roughly halved (the
+  tour's counts: Today 506 → 193, Deals 211 → 100, a lead 361 → 123, the widget's behaviour 688 → 45).
+- **Alerts on every page** (`crm/alerts`): a chat starting to wait or a new hot lead gives a toast with Open, "(n)"
+  before the tab's title and a dot on the favicon, and a desktop alert when switched on in the inbox's header. It reads
+  `chat-inbox/stats` (and `engagement/kpis`) every 15 s while the tab is visible; nothing on first load.
+- **Find** searches contacts, leads, companies and website chats.
+- **From the main platform** (see the areas above): the email-template editor, custom-field presets and the AI model
+  choice; the organisation's custom fields on contacts, companies and tasks; the full admin's contact filters and
+  company fields; Excel exports; the Engagement hub's priority and intents in the inbox and Visitors; Deals analytics;
+  the chat by intent, weekday and length; the sales reports; the team's activity; lead-intake tokens, the sender name
+  and reply-to, AI usage and Messenger on the new Integrations page.
+- **Shared with the full admin (changed for both):** the sales reports are one service (`Crm\SalesReports`; portable
+  SQL, `SUM(CASE …)` instead of `FILTER`; `reporting/company-ltv` answers a fixed set of fields, empty sums last); a
+  template's preview without a member renders with the member's tags empty (was a 404); a template sent from a lead or
+  a contact carries the venue's name and reply-to (`MailIdentityService`; before, the platform's noreply address); a
+  switch to a model outside the plan is refused (403 `model_not_allowed`; a model already saved stays savable);
+  `guests` filters on the venue's days, "has email / phone" ignore empty values, `guest_type` is a facet, the company
+  filter is portable; saving a contact or a company keeps the stored values of fields switched off
+  (`CustomFieldService::keepUnlisted()`); AccessMap `admin/integrations` became `admin/integrations/messenger`
+  (product `chat`, a manager's) — Messenger's routes were the only ones under it.
+- **Fixed along the way:** the leads CSV was always empty (it called the JSON list); "Not assigned" on the board and
+  the Team view sent an owner named `_nobody` (now `unassigned=1`).
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -269,6 +316,11 @@ Still open:
 
 ## Known limits
 
+- Round 5: alerts pause while the tab is hidden (they catch up when it is shown again); the hot-lead figure counts
+  every visitor marked as a lead. `deals/analytics` still counts UTC days, and its cycle time is PostgreSQL SQL.
+  Changing the sender name or reply-to is an owner's (the full admin's `SettingRegistry::ownerOnly`). The full
+  admin's own API tokens still carry every ability (`*`); Messenger's `list-pages` hands page tokens to the browser
+  (the full admin's design). A company has no page of its own (its panel only).
 - After a widget key rotation the website's own snippet must be replaced (that is the point). Landing pages on our
   domain read the key per request (browsers may hold a page for `landing.cache_ttl`); every chat request looks the key
   up in the database and is refused at once.

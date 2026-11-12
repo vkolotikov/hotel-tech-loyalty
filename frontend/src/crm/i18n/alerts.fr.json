@@ -1,0 +1,13 @@
+{
+  "hot": "{{count}} nouveaux prospects chauds",
+  "hot_one": "Un nouveau prospect chaud",
+  "toggle_blocked": "Les alertes du bureau sont bloquées dans les réglages de ce navigateur",
+  "toggle_off": "Activer les alertes du bureau",
+  "toggle_on": "Les alertes du bureau sont activées",
+  "toggle_unsupported": "Ce navigateur ne peut pas afficher d’alertes",
+  "turned_off": "Les alertes du bureau sont désactivées",
+  "turned_on": "Les alertes du bureau sont activées",
+  "waiting": "{{count}} chats de plus attendent une réponse",
+  "waiting_one": "Un chat attend une réponse",
+  "open": "Ouvrir"
+}

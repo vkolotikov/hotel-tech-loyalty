@@ -61,7 +61,9 @@ describe('the Deals page (round 2)', () => {
     expect(dealsQuery('ready_to_ship', 1, 'due_date', { q: ' ada ', payment: 'partial', owner: 'Anna' }))
       .toEqual({ page: 1, per_page: 20, sort: 'due_date', stage: 'ready_to_ship', search: 'ada', payment: 'partial', owner: 'Anna' })
     expect(dealsQuery('all', 1, 'due_date', { q: ' ' })).not.toHaveProperty('search')
-    expect(dealsExportQuery({ ...NO_DEAL_VIEW, q: 'ada' })).toEqual({ status: 'Confirmed', format: 'csv', search: 'ada' })
+    // Round 5: the export itself (a workbook by default, CSV on request), the search and the owner kept.
+    expect(dealsExportQuery({ ...NO_DEAL_VIEW, q: 'ada' })).toEqual({ status: 'Confirmed', search: 'ada' })
+    expect(dealsExportQuery({ ...NO_DEAL_VIEW, owner: 'Anna' }, 'csv')).toEqual({ status: 'Confirmed', format: 'csv', assigned_to: 'Anna' })
     expect(dealFilterCount({ ...NO_DEAL_VIEW, q: 'x', owner: 'Anna' })).toBe(2)
   })
 

@@ -1,20 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { AlarmClock, CircleDollarSign, Coins, Crown, Filter, Snowflake, Target, Trophy, UserMinus, UserPlus, XCircle, type LucideIcon } from 'lucide-react'
+import { AlarmClock, CircleDollarSign, Coins, Filter, Snowflake, Target, Trophy, UserMinus, UserPlus, XCircle, type LucideIcon } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
 import { count as countOf, money } from '../lib/format'
-import { contactPath, leadPath } from '../lib/links'
+import { useRecords } from '../lib/useRecords'
 import { Card } from '../ui/Card'
+import { InfoTip } from '../ui/InfoTip'
 import { EmptyState } from '../ui/EmptyState'
 import { Select } from '../ui/inputs'
 import { QueryState } from '../ui/QueryState'
-import { StatTile } from '../ui/StatTile'
+import { StatRow, StatTile } from '../ui/StatTile'
 import { TONE_CHIP, type Tone } from '../ui/tones'
 import { BarList, ChangeLine } from './charts'
 import { arg, countChange, lostReasonRows, pickPipeline, pipelineSummary, signalName, stageRows, windows, type Period } from './insightsMath'
-import type { DealAnalytics, LeadKpis, LeadPage, LeadSignals, LostReasonCount, Pipeline, SignalLead } from './types'
+import type { LeadKpis, LeadPage, LeadSignals, LostReasonCount, Pipeline, SignalLead } from './types'
 
 const INSIGHTS = ['crm', 'insights'] as const
 
@@ -60,20 +61,21 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
   return (
     <section aria-label={t('crm.insights.pipeline_title', 'Your pipeline')} className="space-y-4">
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <StatRow label={t('crm.insights.pipeline_title', 'Your pipeline')} count={4}>
         <StatTile icon={UserPlus} tone="accent" label={t('crm.insights.new_leads', 'New leads')}
           value={fresh.data ? n(fresh.data.total) : '—'}
-          hint={fresh.data && before.data ? <ChangeLine change={countChange(fresh.data.total, before.data.total)} upIsGood days={days} /> : t('crm.insights.in_days', 'In the last {{days}} days', { days })} />
+          hint={fresh.data && before.data ? <ChangeLine change={countChange(fresh.data.total, before.data.total)} upIsGood days={days} /> : undefined} />
         <StatTile icon={Target} tone="progress" label={t('crm.insights.open_leads', 'Open leads')} value={kpis.data ? n(kpis.data.total) : '—'}
-          hint={kpis.data ? t('crm.insights.follow_ups', 'Follow-ups due today: {{today}} · overdue: {{overdue}}', { today: kpis.data.due_today, overdue: kpis.data.overdue }) : undefined} />
+          hint={kpis.data && kpis.data.overdue > 0 ? t('crm.insights.overdue_short', '{{count}} overdue', { count: kpis.data.overdue }) : undefined} />
         <StatTile icon={Coins} tone="success" label={t('crm.insights.open_value', 'Open pipeline')}
-          value={kpis.data ? money(kpis.data.estimated_value, boot.venue.currency, lang) : '—'} hint={t('crm.insights.open_value_hint', 'The value of every open lead')} />
+          value={kpis.data ? money(kpis.data.estimated_value, boot.venue.currency, lang) : '—'} />
         <StatTile icon={Trophy} tone="success" label={t('crm.insights.win_rate', 'Win rate')} value={summary?.winRate === null || !summary ? '—' : `${summary.winRate} %`}
-          hint={summary ? t('crm.insights.win_rate_hint', 'Won {{won}} of {{closed}} closed, all time', { won: n(summary.won), closed: n(summary.won + summary.lost) }) : undefined} />
-      </div>
+          hint={summary ? t('crm.insights.win_rate_short', '{{won}}/{{closed}}', { won: n(summary.won), closed: n(summary.won + summary.lost) }) : undefined} />
+      </StatRow>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title={t('crm.insights.stages', 'Where your leads are')} icon={Filter} tone="progress" description={t('crm.insights.stages_desc', 'Leads in each stage now')}
+          hint={summary ? t('crm.insights.stages_hint', '{{open}} open · {{won}} won · {{lost}} lost', { open: n(summary.open), won: n(summary.won), lost: n(summary.lost) }) : undefined}
           action={list.length > 1 && pipeline ? (
             <label className="flex items-center gap-2 text-xs text-a-text-2">
               <span className="sr-only">{t('crm.insights.pipeline', 'Pipeline')}</span>
@@ -87,15 +89,8 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
               ? <EmptyState icon={Filter} title={t('crm.insights.no_pipeline', 'No pipeline yet')}
                   action={<Link to="/crm/pipeline" className="text-sm font-medium text-a-accent-text hover:underline">{t('crm.insights.to_pipeline', 'Open the pipeline')}</Link>} />
               : (
-                <>
-                  <p className="mb-3 text-sm text-a-text-2">
-                    {t('crm.insights.stages_line', '{{total}} leads in {{name}}: {{open}} open, {{won}} won, {{lost}} lost.', {
-                      total: n(summary?.total ?? 0), name: pipeline.name, open: n(summary?.open ?? 0), won: n(summary?.won ?? 0), lost: n(summary?.lost ?? 0),
-                    })}
-                  </p>
-                  <BarList label={t('crm.insights.stages', 'Where your leads are')}
-                    rows={stageRows(pipeline).map(s => ({ id: String(s.id), label: s.name, value: s.count, text: n(s.count), tone: s.kind === 'won' ? 'won' : s.kind === 'lost' ? 'lost' : 'accent' }))} />
-                </>
+                <BarList label={t('crm.insights.stages', 'Where your leads are')}
+                  rows={stageRows(pipeline).map(s => ({ id: String(s.id), label: s.name, value: s.count, text: n(s.count), tone: s.kind === 'won' ? 'won' : s.kind === 'lost' ? 'lost' : 'accent' }))} />
               )}
           </QueryState>
         </Card>
@@ -120,7 +115,6 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
         </Card>
 
         {boot.staff.can.manage_pipelines && <LostReasons />}
-        <BestCustomers />
       </div>
     </section>
   )
@@ -129,21 +123,22 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
 /** One signal: what it means, its figure, and the first few leads in it. */
 function Signal({ icon: Icon, tone = 'neutral', title, line, figure, sample }: { icon: LucideIcon; tone?: Tone; title: string; line: string; figure: string; sample: SignalLead[] }) {
   const { t } = useTranslation()
+  const records = useRecords()
   return (
-    <li className="px-4 py-3">
-      <div className="flex items-start gap-3">
+    <li className="px-4 py-2.5">
+      <div className="flex items-center gap-3">
         <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP[tone]}`}><Icon size={15} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-a-text">{title}</span>
-          <span className="block text-xs text-a-text-2">{line}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-a-text">{title}</span>
+          <InfoTip text={line} />
         </span>
         <span className="shrink-0 font-a-display text-xl text-a-text">{figure}</span>
       </div>
       {sample.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1.5 pl-11">
+        <ul className="mt-1.5 flex flex-wrap gap-1.5 pl-11">
           {sample.slice(0, 3).map(lead => (
             <li key={lead.id}>
-              <Link to={leadPath(lead.id)} className="inline-flex max-w-[14rem] truncate rounded-full border border-a-border px-2.5 py-1 text-xs text-a-text hover:border-a-accent/50">
+              <Link to={records.href('lead', lead.id)} className="inline-flex max-w-[14rem] truncate rounded-full border border-a-border px-2.5 py-1 text-xs text-a-text hover:border-a-accent/50">
                 {signalName(lead) ?? t('crm.insights.lead_number', 'Lead #{{id}}', { id: lead.id })}
               </Link>
             </li>
@@ -171,43 +166,6 @@ function LostReasons() {
             </>
           )}
       </QueryState>
-    </Card>
-  )
-}
-
-/** The customers whose won deals are worth most (GET deals/analytics' `top_customers`, all time). */
-function BestCustomers() {
-  const { t, i18n } = useTranslation()
-  const lang = i18n.language
-  const boot = useBoot()
-  const deals = useQuery({ queryKey: [...INSIGHTS, 'deals'], queryFn: () => get<DealAnalytics>(`deals/analytics${params({ days: 30 })}`), staleTime: 5 * 60_000 })
-  const rows = deals.data?.top_customers ?? []
-  return (
-    <Card title={t('crm.insights.best_customers', 'Best customers')} icon={Crown} tone="success" description={t('crm.insights.best_desc', 'By the value of their won deals, all time')} padded={false}>
-      <div className={rows.length ? '' : 'p-4'}>
-        <QueryState loading={deals.isLoading} error={deals.error} onRetry={() => { void deals.refetch() }} rows={3}>
-          {rows.length === 0
-            ? <p className="text-sm text-a-text-2">{t('crm.insights.no_customers', 'Once leads are won, the customers worth most show here.')}</p>
-            : (
-              <ol className="divide-y divide-a-border">
-                {rows.slice(0, 8).map((row, i) => (
-                  <li key={row.guest_id}>
-                    <Link to={contactPath(row.guest_id)} className="flex items-center gap-3 px-4 py-2.5 hover:bg-a-surface-2">
-                      <span aria-hidden className="w-5 shrink-0 text-right text-xs tabular-nums text-a-text-2">{i + 1}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-a-text">{row.name}</span>
-                        <span className="block truncate text-xs text-a-text-2">
-                          {[row.company, t('crm.insights.deals_count', 'Deals won: {{count}}', { count: row.deals })].filter(Boolean).join(' · ')}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-sm tabular-nums text-a-text">{money(row.revenue, boot.venue.currency, lang)}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            )}
-        </QueryState>
-      </div>
     </Card>
   )
 }

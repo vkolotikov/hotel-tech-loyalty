@@ -6,7 +6,10 @@ import {
   matchesSearch, mergeMessages, messageBody, needsAttention, pagePath, readConversationId, readStatus, recorderMime,
   rowState, shouldPingTyping, shownConversations, sideOf, sortConversations, statusActions, teachMode, threadRows, translateTarget, feedbackOutcome,
   visitorHasWritten, webHref, withDraft, UPLOAD_MAX_BYTES,
+  activeFilters, feedConversations, inboxSource, readDetailsTab, readFlag, readSort, resolveNext, shownRows, stepConversation,
+  type InboxView,
 } from './inboxLogic'
+import type { FeedRow } from './feedLogic'
 import type { Conversation, InboxStats, Message } from './types'
 import { dictationFailure } from './useDictation'
 
@@ -321,5 +324,110 @@ describe('dictation', () => {
     expect(dictationFailure({ response: { status: 503, data: { error: 'transcription_unavailable' } } })).toBe('off')
     expect(dictationFailure({ response: { status: 502, data: { error: 'ai_failed' } } })).toBe('failed')
     expect(dictationFailure(new Error('offline'))).toBe('failed')
+  })
+})
+
+describe('round 5: the priority and intent feed in the inbox', () => {
+  const view = (over: Partial<InboxView> = {}): InboxView => ({
+    status: 'all', sort: 'newest', intent: null, unassigned: false, range: 'all', search: '', group: true, page: 1, ...over,
+  })
+
+  it('reads ?sort= and ?unassigned= strictly', () => {
+    expect(readSort('priority')).toBe('priority')
+    expect(readSort('recent')).toBe('newest')
+    expect(readSort(null)).toBe('newest')
+    expect(readFlag('1')).toBe(true)
+    expect(readFlag('true')).toBe(false)
+    expect(readFlag(null)).toBe(false)
+  })
+
+  it('asks the inbox for the chats nobody has', () => {
+    expect(listPath('waiting', '', false, 1, true)).toBe('chat-inbox?status=waiting&unassigned=1')
+  })
+
+  it('keeps the inbox’s own list while neither the priority order nor an intent is asked, or without the hub', () => {
+    expect(inboxSource(view(), true)).toEqual({ kind: 'inbox', path: 'chat-inbox?group_by_visitor=1' })
+    expect(inboxSource(view({ sort: 'priority', intent: 'complaint' }), false)).toEqual({ kind: 'inbox', path: 'chat-inbox?group_by_visitor=1' })
+    expect(inboxSource(view({ status: 'waiting', unassigned: true }), true)).toEqual({ kind: 'inbox', path: 'chat-inbox?status=waiting&group_by_visitor=1&unassigned=1' })
+  })
+
+  it('asks the feed for the priority order, its filter beside each status', () => {
+    expect(inboxSource(view({ sort: 'priority' }), true))
+      .toEqual({ kind: 'feed', path: 'engagement/feed?filter=priority&sort=priority&range=all', status: null, unassigned: false })
+    expect(inboxSource(view({ sort: 'priority', status: 'waiting' }), true))
+      .toMatchObject({ kind: 'feed', path: 'engagement/feed?filter=active_chat&sort=priority&range=all', status: 'waiting' })
+    expect(inboxSource(view({ sort: 'priority', status: 'resolved' }), true)).toMatchObject({ path: 'engagement/feed?filter=resolved&sort=priority&range=all', status: 'resolved' })
+    expect(inboxSource(view({ sort: 'priority', status: 'archived' }), true)).toMatchObject({ path: 'engagement/feed?filter=all&sort=priority&range=all', status: 'archived' })
+  })
+
+  it('asks the feed for an intent, the newest first unless the priority order is on, in the window, with the search and page', () => {
+    expect(inboxSource(view({ intent: 'booking_inquiry', range: 'week', search: 'ada', page: 2 }), true))
+      .toEqual({ kind: 'feed', path: 'engagement/feed?filter=booking_inquiry&sort=recent&range=week&search=ada&page=2', status: null, unassigned: false })
+    expect(inboxSource(view({ intent: 'complaint', sort: 'priority', status: 'active', unassigned: true }), true))
+      .toEqual({ kind: 'feed', path: 'engagement/feed?filter=complaint&sort=priority&range=all', status: 'active', unassigned: true })
+  })
+
+  const feedRow = (over: Partial<FeedRow> = {}, chat: Partial<NonNullable<FeedRow['conversation']>> | null = {}): FeedRow => ({
+    id: 5, display_name: 'Marta', email: 'marta@example.com', phone: null, is_lead: true, is_online: true, country: 'LV', city: 'Rīga',
+    visitor_ip: '10.0.0.1', current_page: 'https://hotel.example/rooms', current_page_title: 'Rooms', visit_count: 2, page_views_count: 4,
+    messages_count: 3, last_seen_at: '2026-11-07T12:00:00Z', guest_id: 8, guest: { id: 8, name: 'Marta Ozola' }, is_hot_lead: true, priority_score: 1250,
+    conversation: chat === null ? null : {
+      id: 12, status: 'waiting', last_message_preview: 'A room on Friday?', last_message_sender: 'visitor', last_message_at: '2026-11-07T11:59:00Z',
+      lead_captured: false, ai_enabled: false, assigned_to: null, unread_admin_count: 2, intent_tag: 'booking_inquiry', ...chat,
+    },
+    ...over,
+  })
+
+  it('shows the feed’s visitors as their latest chats, with the hot-lead flag, only those of the status and nobody asked', () => {
+    const rows = feedConversations([feedRow(), feedRow({ id: 6 }, null), feedRow({ id: 7 }, { id: 13, status: 'active', assigned_to: 4 })], { status: null, unassigned: false })
+    expect(rows.map(r => r.id)).toEqual([12, 13])
+    expect(rows[0]).toMatchObject({ id: 12, visitor_id: 5, visitor_name: 'Marta', status: 'waiting', unread_count: 2, last_message: 'A room on Friday?', intent_tag: 'booking_inquiry', hot: true, online: true, ai_enabled: false })
+    expect(feedConversations([feedRow(), feedRow({ id: 7 }, { id: 13, status: 'active' })], { status: 'active', unassigned: false }).map(r => r.id)).toEqual([13])
+    expect(feedConversations([feedRow(), feedRow({ id: 7 }, { id: 13, assigned_to: 4 })], { status: null, unassigned: true }).map(r => r.id)).toEqual([12])
+  })
+
+  it('keeps the feed’s own order, and the inbox’s urgent first', () => {
+    const a = conv({ id: 1, status: 'active', last_message_at: '2026-11-07T12:00:00Z' })
+    const b = conv({ id: 2, status: 'waiting', last_message_at: '2026-11-07T10:00:00Z' })
+    expect(shownRows('feed', [a, b], '').map(r => r.id)).toEqual([1, 2])
+    expect(shownRows('inbox', [a, b], '').map(r => r.id)).toEqual([2, 1])
+    expect(shownRows('feed', [conv({ id: 3, visitor_name: 'Ada' }), conv({ id: 4, visitor_name: 'Bo' })], 'ad').map(r => r.id)).toEqual([3])
+  })
+
+  it('counts the filters on besides the status', () => {
+    expect(activeFilters({ sort: 'newest', intent: null, range: 'week' }, true)).toBe(0)
+    expect(activeFilters({ sort: 'priority', intent: null, range: 'all' }, true)).toBe(1)
+    expect(activeFilters({ sort: 'priority', intent: 'complaint', range: 'today' }, true)).toBe(3)
+    expect(activeFilters({ sort: 'priority', intent: 'complaint', range: 'today' }, false)).toBe(0)
+  })
+})
+
+describe('round 5: the keys and the details', () => {
+  it('J and K step through the list as shown, starting at the first, stopping at the ends', () => {
+    expect(stepConversation([4, 7, 9], null, 1)).toBe(4)
+    expect(stepConversation([4, 7, 9], null, -1)).toBe(4)
+    expect(stepConversation([4, 7, 9], 4, 1)).toBe(7)
+    expect(stepConversation([4, 7, 9], 7, -1)).toBe(4)
+    expect(stepConversation([4, 7, 9], 9, 1)).toBeNull()
+    expect(stepConversation([4, 7, 9], 4, -1)).toBeNull()
+    expect(stepConversation([4, 7, 9], 12, 1)).toBe(4)
+    expect(stepConversation([], null, 1)).toBeNull()
+  })
+
+  it('E resolves an open or waiting chat, nothing else', () => {
+    expect(resolveNext('active')).toBe('resolved')
+    expect(resolveNext('waiting')).toBe('resolved')
+    expect(resolveNext('resolved')).toBeNull()
+    expect(resolveNext('archived')).toBeNull()
+    expect(resolveNext(undefined)).toBeNull()
+  })
+
+  it('reads ?dtab=, Contact first, AI only where it has something to show', () => {
+    expect(readDetailsTab('lead')).toBe('lead')
+    expect(readDetailsTab('website')).toBe('website')
+    expect(readDetailsTab('ai')).toBe('ai')
+    expect(readDetailsTab('ai', false)).toBe('contact')
+    expect(readDetailsTab('nonsense')).toBe('contact')
+    expect(readDetailsTab(null)).toBe('contact')
   })
 })

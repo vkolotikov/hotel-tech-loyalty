@@ -1,6 +1,6 @@
 import type { Tone } from '../ui/StatTile'
 import type { VisitorConversation } from './types'
-import type { Presence, VisitorTab } from './visitorsLogic'
+import type { PanelTab, Presence, VisitorTab } from './visitorsLogic'
 
 /**
  * The English defaults of the words the Visitors page builds at run time (t(`crm.visitors.tab.${key}`) and the like);
@@ -11,6 +11,16 @@ export const TAB_DEFAULTS: Record<VisitorTab, string> = {
   all: 'Everyone',
   offline: 'Away',
   leads: 'Leads',
+  hot_lead: 'Hot leads',
+  has_contact: 'Has contact',
+  missed: 'Missed',
+}
+
+/** Round 5: the panel's tabs (crm.visitors.ptab.<key>). */
+export const PANEL_TAB_DEFAULTS: Record<PanelTab, string> = {
+  overview: 'Overview',
+  chats: 'Chats',
+  pages: 'Pages',
 }
 
 export const PRESENCE_DEFAULTS: Record<Presence, string> = {

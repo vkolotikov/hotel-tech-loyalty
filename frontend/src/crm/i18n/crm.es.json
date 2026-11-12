@@ -56,7 +56,13 @@
     "new_lead": "Añadir un cliente potencial",
     "searching": "Buscando…",
     "theme_dark": "Cambiar a oscuro",
-    "theme_light": "Cambiar a claro"
+    "theme_light": "Cambiar a claro",
+    "new_deal": "Añadir un negocio",
+    "new_task": "Añadir una tarea",
+    "new_contact": "Añadir un contacto",
+    "new_company": "Añadir una empresa",
+    "companies": "Empresas",
+    "chats": "Chats de la web"
   },
   "nav": {
     "today": "Hoy",
@@ -75,7 +81,8 @@
       "sales": "Ventas",
       "reports": "Informes",
       "setup": "Configuración"
-    }
+    },
+    "integrations": "Integraciones"
   },
   "shell": {
     "ai_over": "Se agotó el saldo de IA de este mes: el asistente pasa cada chat a su equipo y los borradores se detienen hasta el próximo mes.",
@@ -90,7 +97,9 @@
     "brand_label": "Marca: {{name}}. Elegir otra",
     "brand_line": "Lo que muestra el CRM: todas las marcas o una de ellas.",
     "brand_choose": "Elegir una marca",
-    "brand_default": "Principal"
+    "brand_default": "Principal",
+    "keys_inbox_step": "Bandeja: chat siguiente o anterior",
+    "keys_inbox_resolve": "Bandeja: resolver el chat abierto"
   },
   "start": {
     "done": "Hecho",
@@ -146,67 +155,21 @@
     "won": "Ganado",
     "lost": "Perdido"
   },
-  "today": {
-    "add_lead": "Añadir un cliente potencial",
-    "all_leads": "Todos los clientes potenciales",
-    "all_tasks": "Todas las tareas",
-    "follow_ups": "Seguimientos pendientes",
-    "last_24h": "En las últimas 24 horas",
-    "line": "Lo que le necesita ahora, del chat web y de su embudo.",
-    "new_leads": "Nuevos clientes potenciales",
-    "nobody": "Sin asignar",
-    "open_inbox": "Abrir la bandeja de entrada",
-    "open_leads": "{{count}} clientes potenciales abiertos",
-    "overdue": "{{count}} vencidos",
-    "pipeline": "Embudo abierto",
-    "setup_line": "{{done}} de {{total}} pasos hechos. Ponga el chat en su sitio, enseñe al asistente y listo.",
-    "setup_title": "Termine de configurar HexaTech CRM",
-    "title": "Hoy",
-    "waiting": "Esperando respuesta",
-    "week_ai": "Cerrados por la IA",
-    "week_chats": "Conversaciones",
-    "week_leads": "Clientes potenciales del chat",
-    "week_title": "El chat web esta semana",
-    "your_tasks": "Sus tareas",
-    "open_leads_one": "1 cliente potencial abierto",
-    "greeting": {
-      "morning": "Buenos días, {{name}}",
-      "afternoon": "Buenas tardes, {{name}}",
-      "evening": "Buenas noches, {{name}}"
-    },
-    "setup_go": "Continuar",
-    "figures": "El día de un vistazo",
-    "open_unassigned": "{{open}} chats abiertos · {{unassigned}} sin asignar",
-    "now_title": "Le necesita ahora",
-    "now_line": "Primero los chats en espera, luego lo que está atrasado.",
-    "all_clear": "Todo al día",
-    "all_clear_line": "Nadie espera una respuesta y no hay nada atrasado.",
-    "all_waiting": "Los {{count}} chats en espera",
-    "all_overdue_leads": "Los {{count}} seguimientos atrasados",
-    "all_overdue_tasks": "Las {{count}} tareas atrasadas",
-    "kind_chat": "Esperando respuesta",
-    "kind_follow_up": "Seguimiento atrasado desde el {{day}}",
-    "kind_task": "Tarea atrasada · vencía {{when}}",
-    "schedule_title": "La agenda de hoy",
-    "schedule_line": "Seguimientos y sus tareas de hoy, en la hora del establecimiento.",
-    "no_schedule": "Nada previsto para hoy",
-    "no_schedule_line": "Fije un próximo paso en un cliente potencial o añada una tarea, y aparecerá aquí en su día.",
-    "at_a_time": "A una hora",
-    "during_day": "Durante el día",
-    "all_leads_due": "Todos los seguimientos pendientes",
-    "no_time": "Sin hora fija",
-    "kind_task_today": "Tarea",
-    "kind_follow_up_today": "Seguimiento",
-    "new_title": "Nuevos clientes potenciales",
-    "no_new": "Hoy no hay clientes potenciales nuevos",
-    "no_new_line": "Los clientes potenciales del chat del sitio, de sus formularios y de su equipo aparecen aquí en cuanto llegan.",
-    "all_new": "Los {{count}} clientes potenciales nuevos",
-    "week_line": "Los últimos siete días",
-    "week_more": "Informes",
-    "week_hint": "Chats que el asistente cerró sin que su equipo tuviera que intervenir.",
-    "done_follow_up": "Seguimiento marcado como hecho",
-    "done_task": "Tarea marcada como hecha",
-    "mark_done": "Marcar «{{name}}» como hecho",
-    "done": "Hecho"
+  "record": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "full_page": "Abrir como página",
+    "overview": "Resumen",
+    "step": "Ficha anterior o siguiente"
+  },
+  "create": {
+    "label": "Nuevo",
+    "lead": "Cliente potencial",
+    "deal": "Negocio",
+    "task": "Tarea",
+    "contact": "Contacto",
+    "company": "Empresa",
+    "capture": "Cliente potencial desde un mensaje",
+    "lead_new": "Nuevo cliente potencial"
   }
 }

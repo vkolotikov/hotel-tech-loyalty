@@ -2,30 +2,31 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, Columns3, CreditCard, Download, PackageCheck, PlayCircle, Plus, Settings2, Sparkles, Trophy } from 'lucide-react'
+import { BriefcaseBusiness, CheckCircle2, Columns3, CreditCard, Filter, PackageCheck, Plus, Sparkles, Trophy } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { Field } from '../../workspace/ui/Field'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { count, money } from '../lib/format'
+import { useRecordList, useRecords } from '../lib/useRecords'
 import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { SearchInput, Select, Toggle } from '../ui/inputs'
+import { Popover } from '../ui/Menu'
 import { Page } from '../ui/Page'
 import { Pager } from '../ui/Pager'
 import { QueryState } from '../ui/QueryState'
-import { StatTile } from '../ui/StatTile'
+import { StatRow, StatTile } from '../ui/StatTile'
 import { Tabs } from '../ui/Tabs'
 import { FilterChip, Toolbar } from '../ui/Toolbar'
 import { useToast } from '../ui/Toast'
 import { useTeam } from '../tasks/taskData'
-import { CaptureDialog } from '../leads/CaptureDialog'
-import { downloadText } from '../leads/download'
-import { InlineSelect } from '../leads/InlineSelect'
+import { downloadBlob, exportName, getFile } from '../leads/download'
 import { useColumnSwitch, useCrmSettings, useLeadSettings } from '../leads/leadData'
-import { LeadForm } from '../leads/LeadForm'
-import { ownerOptions, type LeadDraft } from '../leads/leadLogic'
-import { Popover } from '../leads/Menu'
+import { ownerOptions, type ExportFormat } from '../leads/leadLogic'
+import { dealFigures } from '../leads/recordLogic'
+import { ExportMenu, SortMenu, ToolPopover } from '../leads/toolbarParts'
 import { DealList } from './DealList'
 import { PaymentDialog } from './PaymentDialog'
 import {
@@ -35,21 +36,24 @@ import {
 import { dealColumnLabel, dealFilterLabel, dealSortLabel, fulfilmentLabel, paymentLabel } from './dealWords'
 import type { Paginated } from '../leads/leadTypes'
 
-const BUTTON = 'inline-flex min-h-10 items-center gap-1.5 rounded-full border border-a-border bg-a-surface px-3 text-sm font-medium text-a-text-2 transition-colors hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'
+const BUTTON = 'inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent'
 
 /**
- * Deals (round 2, the main platform's Deals & fulfilment): the won leads, each walked through its steps — awaiting
- * payment, preparation, review, in progress, ready, completed (`PATCH deals/{id}/stage`) — and its payment (`PATCH
- * deals/{id}/payment`, what is still owed); the figures per step (`deals/kpis`, a tile opens its step), quick filters,
- * a search, the payment state and the owner, three sorts, the columns the full admin's switch keeps, and the CSV.
- * A deal is added here by hand or from a pasted message read by the AI (owner 2026-11-08): the lead form in its deal
- * mode, which closes the new lead as won through the server's own `/won`.
+ * Deals (round 2, the main platform's Deals & fulfilment; round 5, owner 2026-11-12: "minimize copy, more icons …
+ * popups"): the won leads, each walked through its steps — awaiting payment, preparation, review, in progress, ready,
+ * completed (`PATCH deals/{id}/stage`) — and its payment (`PATCH deals/{id}/payment`, what is still owed); at most four
+ * figures, only those that hold something (`deals/kpis`); step pills with the server's counts; a search, Filters for
+ * the payment and the owner, three sorts, the columns the full admin's switch keeps, and the export (Excel or CSV). A
+ * deal opens in its lead's panel on the Deal tab (`?lead=&rtab=deal`); one is added by hand or from a pasted message
+ * read by the AI in the header's New panel (`?create=deal|deal_capture`): the lead form in its deal mode, which closes
+ * the new lead as won through the server's own `/won`.
  */
 export function DealsPage() {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const lang = i18n.language
   const toast = useToast()
+  const records = useRecords()
   const [sp, setSp] = useSearchParams()
   const view = readDealView(sp)
   const settings = useCrmSettings()
@@ -58,10 +62,6 @@ export function DealsPage() {
   const columns = dealColumns(settings.data)
   const [paying, setPaying] = useState<DealRow | null>(null)
   const [exporting, setExporting] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [capturing, setCapturing] = useState(false)
-  const [captured, setCaptured] = useState<LeadDraft | null>(null)
-  const closeForm = () => { setAdding(false); setCaptured(null) }
 
   const set = (patch: Partial<DealView>) => setSp(writeDealView(withDealView(view, patch), sp), { replace: true })
   const query = dealsQuery(view.filter, view.page, view.sort, { q: view.q, payment: view.payment, owner: view.owner })
@@ -79,11 +79,11 @@ export function DealsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q])
 
-  const exportCsv = async () => {
+  const exportFile = async (format: ExportFormat) => {
     setExporting(true)
     try {
-      const text = await get<string>(`inquiries${params(dealsExportQuery(view))}`)
-      downloadText(typeof text === 'string' ? text : '', `deals-${boot.venue.today}.csv`, 'text/csv')
+      const file = await getFile(`inquiries/export${params(dealsExportQuery(view, format))}`)
+      downloadBlob(file, exportName('deals', boot.venue.today, format))
     } catch (error) {
       toast(errorText(t, error), 'danger')
     } finally {
@@ -92,34 +92,37 @@ export function DealsPage() {
   }
 
   const rows = deals.data?.data ?? []
+  // The panel's previous and next walk the deals as the list shows them.
+  useRecordList('lead', rows.map(row => row.id))
   const owners = ownerOptions(boot.staff.name, lists.owners, team.data ?? [], view.owner || null)
   const filtered = view.filter !== 'all' || dealFilterCount(view) > 0
+  const panelCount = [view.payment, view.owner].filter(Boolean).length
   const fig = (value: number | undefined) => (value === undefined ? undefined : money(value, boot.venue.currency, lang))
   const k = kpis.data
+  const shown = dealFigures(k)
+  const filtersLabel = t('crm.deals.filters', 'Filters')
 
   return (
-    <Page wide title={t('crm.nav.deals', 'Deals')} line={t('crm.deals.line', 'Won leads, followed through to the work done and the money in.')}
+    <Page wide icon={BriefcaseBusiness} title={t('crm.nav.deals', 'Deals')} line={t('crm.deals.line', 'Won leads, followed through to the work done and the money in.')}
       actions={(
         <>
           {/* The AI capture is every staff member's (the server's `ai_capture`, the same answer its route gives). */}
           {boot.features.ai_capture && (
-            <button type="button" onClick={() => setCapturing(true)}
-              className="crm-ai-soft inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent">
-              <Sparkles size={15} aria-hidden />{t('crm.deals.capture', 'From a message')}
+            <button type="button" onClick={() => records.create('deal_capture')} title={t('crm.deals.capture_long', 'A deal from a message, read by the AI')}
+              className="crm-ai-soft inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent">
+              <Sparkles size={15} aria-hidden /><span className="hidden sm:inline">{t('crm.deals.capture', 'From a message')}</span><span className="sr-only sm:hidden">{t('crm.deals.capture', 'From a message')}</span>
             </button>
           )}
-          <Button onClick={() => setAdding(true)} className="min-h-11"><Plus size={15} aria-hidden />{t('crm.deals.new', 'Add a deal')}</Button>
+          <Button onClick={() => records.create('deal')} className="min-h-10"><Plus size={15} aria-hidden />{t('crm.deals.new_short', 'Add')}</Button>
         </>
       )}>
-      {k && (
-        <section aria-label={t('crm.deals.figures', 'Deals at a glance')} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-          {typeof k.total === 'number' && <StatTile icon={Trophy} tone="accent" label={t('crm.deals.kpi_active', 'Deals in progress')} value={count(k.total, lang)} hint={t('crm.deals.kpi_active_hint', 'Won, not completed yet')} />}
-          <StatTile icon={CreditCard} tone={k.awaiting_payment.count > 0 ? 'pending' : 'neutral'} label={t('crm.deals.kpi_unpaid', 'Not paid in full')} value={count(k.awaiting_payment.count, lang)} hint={fig(k.awaiting_payment.value)} />
-          <StatTile icon={Settings2} tone="progress" label={fulfilmentLabel(t, 'design_needed')} value={count(k.design_needed.count, lang)} hint={fig(k.design_needed.value)} to="/crm/deals?filter=design_needed" />
-          <StatTile icon={PlayCircle} tone="progress" label={fulfilmentLabel(t, 'in_production')} value={count(k.in_production.count, lang)} hint={fig(k.in_production.value)} to="/crm/deals?filter=in_production" />
-          <StatTile icon={PackageCheck} tone="accent" label={fulfilmentLabel(t, 'ready_to_ship')} value={count(k.ready_to_ship.count, lang)} hint={fig(k.ready_to_ship.value)} to="/crm/deals?filter=ready_to_ship" />
-          <StatTile icon={CheckCircle2} tone="success" label={t('crm.deals.kpi_completed', 'Completed this month')} value={count(k.completed_month.count, lang)} hint={fig(k.completed_month.value)} />
-        </section>
+      {k && shown.length > 0 && (
+        <StatRow label={t('crm.deals.figures', 'Deals at a glance')} count={shown.length}>
+          {shown.includes('active') && <StatTile icon={Trophy} tone="accent" label={t('crm.deals.kpi_active', 'Deals in progress')} value={count(k.total ?? 0, lang)} />}
+          {shown.includes('unpaid') && <StatTile icon={CreditCard} tone="pending" label={t('crm.deals.kpi_unpaid', 'Not paid in full')} value={count(k.awaiting_payment.count, lang)} hint={fig(k.awaiting_payment.value)} />}
+          {shown.includes('ready') && <StatTile icon={PackageCheck} tone="accent" label={fulfilmentLabel(t, 'ready_to_ship')} value={count(k.ready_to_ship.count, lang)} hint={fig(k.ready_to_ship.value)} to="/crm/deals?filter=ready_to_ship" active={view.filter === 'ready_to_ship'} />}
+          {shown.includes('completed') && <StatTile icon={CheckCircle2} tone="success" label={t('crm.deals.kpi_completed', 'Completed this month')} value={count(k.completed_month.count, lang)} hint={fig(k.completed_month.value)} />}
+        </StatRow>
       )}
 
       <Toolbar
@@ -131,59 +134,61 @@ export function DealsPage() {
           </>
         ) : undefined}
         actions={(
-          <>
-            <label className="flex items-center gap-2">
-              <span className="sr-only">{t('crm.deals.sort', 'Sort')}</span>
-              <InlineSelect value={view.sort} onChange={e => set({ sort: e.target.value as DealView['sort'] })} aria-label={t('crm.deals.sort', 'Sort')}>
-                {DEAL_SORTS.map(s => <option key={s} value={s}>{dealSortLabel(t, s)}</option>)}
-              </InlineSelect>
-            </label>
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+            <SortMenu value={view.sort} choices={DEAL_SORTS} label={t('crm.deals.sort', 'Sort')} word={s => dealSortLabel(t, s)} onChange={sort => set({ sort })} />
             <span className="hidden md:inline-flex"><DealColumnsMenu columns={columns} /></span>
-            <button type="button" onClick={() => { void exportCsv() }} disabled={exporting} aria-busy={exporting || undefined} className={`${BUTTON} disabled:opacity-50`}>
-              <Download size={15} aria-hidden /><span className="hidden lg:inline">{t('crm.deals.export', 'Export CSV')}</span><span className="sr-only lg:hidden">{t('crm.deals.export', 'Export CSV')}</span>
-            </button>
-          </>
+            <ExportMenu onExport={format => { void exportFile(format) }} busy={exporting} />
+          </div>
         )}>
-        <div className="w-full sm:w-64"><SearchInput label={t('crm.deals.search', 'Search a name or company')} value={q} onChange={setQ} /></div>
-        <label className="block sm:w-44">
-          <span className="sr-only">{t('crm.deals.payment', 'Payment')}</span>
-          <Select value={view.payment} onChange={e => set({ payment: e.target.value })} aria-label={t('crm.deals.payment', 'Payment')}>
-            <option value="">{t('crm.deals.any_payment', 'Any payment')}</option>
-            {PAYMENTS.map(p => <option key={p} value={p}>{paymentLabel(t, p)}</option>)}
-          </Select>
-        </label>
-        <label className="block sm:w-44">
-          <span className="sr-only">{t('crm.deals.owner', 'Owner')}</span>
-          <Select value={view.owner} onChange={e => set({ owner: e.target.value })} aria-label={t('crm.deals.owner', 'Owner')}>
-            <option value="">{t('crm.deals.any_owner', 'Anyone')}</option>
-            {owners.map(o => <option key={o} value={o}>{o}</option>)}
-          </Select>
-        </label>
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <div className="min-w-0 flex-1 sm:w-64 sm:flex-none"><SearchInput label={t('crm.deals.search', 'Search a name or company')} value={q} onChange={setQ} /></div>
+          <Popover label={panelCount > 0 ? `${filtersLabel} · ${panelCount}` : filtersLabel} align="left" width="w-72"
+            className={`${BUTTON} shrink-0 ${panelCount > 0 ? 'border-a-accent/40 bg-a-accent/12 text-a-accent-text' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}
+            button={<><Filter size={15} aria-hidden /><span className="hidden sm:inline">{filtersLabel}</span>{panelCount > 0 && <span className="rounded-full bg-a-accent px-1.5 text-xs font-semibold leading-5 text-a-accent-ink">{panelCount}</span>}</>}>
+            <div className="space-y-3 p-2">
+              <Field label={t('crm.deals.payment', 'Payment')}>
+                <Select value={view.payment} onChange={e => set({ payment: e.target.value })}>
+                  <option value="">{t('crm.deals.any_payment', 'Any payment')}</option>
+                  {PAYMENTS.map(p => <option key={p} value={p}>{paymentLabel(t, p)}</option>)}
+                </Select>
+              </Field>
+              <Field label={t('crm.deals.owner', 'Owner')}>
+                <Select value={view.owner} onChange={e => set({ owner: e.target.value })}>
+                  <option value="">{t('crm.deals.any_owner', 'Anyone')}</option>
+                  {owners.map(o => <option key={o} value={o}>{o}</option>)}
+                </Select>
+              </Field>
+            </div>
+          </Popover>
+        </div>
       </Toolbar>
 
-      <Tabs label={t('crm.deals.which', 'Which deals')} value={view.filter} onChange={filter => set({ filter })}
-        items={DEAL_FILTERS.map(key => ({ key, label: dealFilterLabel(t, key), count: filterCount(key, k) }))} />
+      <div className="flex items-center gap-2">
+        {/* The step pills scroll sideways on a phone rather than wrap onto more rows. */}
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+          <div className="w-max">
+            <Tabs label={t('crm.deals.which', 'Which deals')} value={view.filter} onChange={filter => set({ filter })}
+              items={DEAL_FILTERS.map(key => ({ key, label: dealFilterLabel(t, key), count: filterCount(key, k) }))} />
+          </div>
+        </div>
+        {deals.data && rows.length > 0 && (
+          <span className="shrink-0 text-xs text-a-text-2" aria-live="polite">
+            {deals.isFetching && !deals.isLoading ? t('crm.common.loading', 'Loading…') : t('crm.common.total', '{{count}} in all', { count: deals.data.total })}
+          </span>
+        )}
+      </div>
 
       <Card padded={false}>
         <QueryState loading={deals.isLoading} error={deals.error} onRetry={() => { void deals.refetch() }}>
           {rows.length === 0 ? (
             <EmptyState icon={Trophy} title={filtered ? t('crm.deals.none', 'No deal here') : t('crm.deals.empty', 'No won deals yet')}
-              line={filtered ? t('crm.deals.none_line', 'Try another filter, or show every deal.') : t('crm.deals.empty_line', 'A lead marked won shows here, to follow through to payment.')}
+              line={filtered ? undefined : t('crm.deals.empty_line_short', 'A lead marked won shows here.')}
               action={filtered ? <Button variant="secondary" onClick={() => { setQ(''); setSp(writeDealView({ ...view, filter: 'all', q: '', payment: '', owner: '', page: 1 }, sp), { replace: true }) }}>{t('crm.deals.show_all', 'Show every deal')}</Button> : undefined} />
-          ) : (
-            <>
-              <div className="flex items-center justify-end border-b border-a-border px-4 py-2 text-xs text-a-text-2">
-                {deals.isFetching && !deals.isLoading ? t('crm.common.loading', 'Loading…') : deals.data ? t('crm.common.total', '{{count}} in all', { count: deals.data.total }) : null}
-              </div>
-              <DealList deals={rows} columns={columns} onPay={setPaying} />
-            </>
-          )}
+          ) : <DealList deals={rows} columns={columns} onPay={setPaying} />}
         </QueryState>
       </Card>
       {deals.data && <Pager page={deals.data.current_page} last={deals.data.last_page} total={deals.data.total} onPage={page => set({ page })} />}
       {paying && <PaymentDialog deal={paying} onClose={() => setPaying(null)} />}
-      {adding && <LeadForm deal initial={captured} onClose={closeForm} />}
-      {capturing && <CaptureDialog deal onClose={() => setCapturing(false)} onRead={draft => { setCapturing(false); setCaptured(draft); setAdding(true) }} />}
     </Page>
   )
 }
@@ -194,8 +199,7 @@ function DealColumnsMenu({ columns }: { columns: ReturnType<typeof dealColumns> 
   const toast = useToast()
   const save = useColumnSwitch('deal_fields', e => toast(errorText(t, e), 'danger'))
   return (
-    <Popover label={t('crm.deals.columns', 'Columns')} className={BUTTON}
-      button={<><Columns3 size={15} aria-hidden /><span className="hidden lg:inline">{t('crm.deals.columns', 'Columns')}</span></>}>
+    <ToolPopover label={t('crm.deals.columns', 'Columns')} icon={Columns3}>
       {(
         <div className="space-y-3 p-2">
           <p className="text-xs text-a-text-2">{t('crm.deals.columns_line', 'What the list shows, for everyone in your team.')}</p>
@@ -204,6 +208,6 @@ function DealColumnsMenu({ columns }: { columns: ReturnType<typeof dealColumns> 
           ))}
         </div>
       )}
-    </Popover>
+    </ToolPopover>
   )
 }

@@ -39,6 +39,12 @@ export interface ChatAnalytics {
   top_countries: { country: string; count: number }[]
   hourly_distribution: ChatHourPoint[]
   funnel: { stage: string; count: number }[]
+  /** Round 5: Mon–Sun on the venue's clock (`dow` 0 = Sunday), each with conversations, visitors and their messages. */
+  weekday_distribution?: { dow: number; label: string; conversations: number; visitors: number; replies: number }[]
+  /** Round 5: the conversations by the intent the engagement AI tagged (`untagged` before it has). */
+  intent_breakdown?: { intent: string; count: number }[]
+  /** Round 5: the conversations by their number of messages. */
+  length_distribution?: { bucket: string; label: string; count: number }[]
 }
 
 /** `GET inquiries/kpis` (InquiryController::kpis). */
@@ -92,9 +98,70 @@ export interface LostReasonCount {
   inquiries_count: number
 }
 
-/** `GET deals/analytics?days=`: only what Insights shows, the best customers by their deals' value. */
+/** `GET deals/analytics?days=` (DealController::analytics): the deals' days are the server's (UTC) days. */
 export interface DealAnalytics {
+  period_days: number
+  revenue_trend: { date: string; count: number; revenue: number }[]
+  new_deal_trend: { date: string; count: number }[]
+  stage_distribution: { stage: string; count: number; revenue: number }[]
+  payment_distribution: { status: string; count: number }[]
+  cycle_time_days: number
   top_customers: { guest_id: number; name: string; company: string | null; deals: number; revenue: number }[]
+  stuck_deals: number
+}
+
+/** `GET crm/reports/funnel?months=` (SalesReports::funnel, the full admin's analytics/inquiry-funnel). */
+export interface FunnelReport {
+  months: number
+  stages: { stage: string; count: number; value: number; rate_from_prev: number; rate_from_start: number }[]
+  won: number
+  lost: number
+  win_rate_pct: number
+  avg_days_to_close: number | null
+}
+
+/** `GET crm/reports/forecast?months=`: open value weighted by its chance, by expected month (`key` YYYY-MM, or `beyond`). */
+export interface ForecastReport {
+  buckets: { month: string; key: string; gross_value: number; expected_value: number; deal_count: number }[]
+  total_gross: number
+  total_expected: number
+  months: number
+}
+
+/** `GET crm/reports/lost-reasons?months=`. */
+export interface LostReport {
+  reasons: { label: string; count: number; lost_value: number }[]
+  total_count: number
+  total_value: number
+  months: number
+}
+
+/** `GET crm/reports/sources?months=`. */
+export interface SourcesReport {
+  sources: { source: string; count: number; won: number; lost: number; won_value: number; win_rate_pct: number | null }[]
+  months: number
+}
+
+/** `GET crm/reports/owners?days=`: per person, the timeline lines they logged and their leads. */
+export interface OwnersReport {
+  owners: { name: string; activities: number; tasks_done: number; inquiries: number; open: number; won: number; lost: number }[]
+  days: number
+}
+
+/** `GET crm/reports/companies?limit=`: `confirmed_revenue` only where bookings are the organisation's (`with_bookings`). */
+export interface CompaniesReport {
+  companies: {
+    id: number
+    company_name: string
+    industry: string | null
+    inquiries_count: number
+    won_value: number
+    open_pipeline_value: number
+    confirmed_revenue?: number
+    reservations_count?: number
+  }[]
+  limit: number
+  with_bookings: boolean
 }
 
 /** A paginator, read for its `total` only (the server's count of leads in a window). */

@@ -1,14 +1,23 @@
+import { api } from '../../lib/api'
+import { crmUrl } from '../lib/api'
+import type { ExportFormat } from './leadLogic'
+
 /**
- * Hand the person a text file the server sent as the answer to a call (the leads CSV, `inquiries/export?format=csv`).
- * The byte-order mark the server writes is lost when the answer is read as text; it is put back so a spreadsheet
- * opens the file as UTF-8.
+ * Hand the person a file the server made: the leads (and the deals) as the full admin's export gives them
+ * (`GET inquiries/export`, a styled Excel workbook by default, `format=csv` for the plain CSV). Round 5: the CSV was read
+ * from `GET inquiries`, which answers JSON, so the file came out empty; both now come from the export itself, as a file.
+ * The file's name: what it holds, the venue's day, its kind.
  */
-export function csvText(text: string): string {
-  return text.startsWith('\uFEFF') ? text : `\uFEFF${text}`
+export function exportName(what: 'leads' | 'deals', today: string, format: ExportFormat): string {
+  return `${what}-${today}.${format}`
 }
 
-export function downloadText(text: string, filename: string, type: string): void {
-  const blob = new Blob([type === 'text/csv' ? csvText(text) : text], { type: `${type};charset=utf-8` })
+/** GET a file (through `crmUrl`, which names the area and the brand), as it comes. */
+export function getFile(path: string): Promise<Blob> {
+  return api.get<Blob>(crmUrl(path), { responseType: 'blob' }).then(r => r.data)
+}
+
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

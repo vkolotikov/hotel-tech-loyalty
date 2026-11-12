@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bucketOf, completeBody, draftOf, dueParts, dueState, groupByDay, groupDone, groupOpen, ofType, readView, searchTasks,
+  bucketOf, completeBody, draftOf, dueParts, dueState, groupByDay, groupDone, groupOpen, ofType, openingTab, readView, searchTasks, storedCustom,
   splitBuckets, taskBody, tasksQuery, validateTask, venueClock, venueDay, wallToInstant, writeView, type Task,
 } from './taskLogic'
 
@@ -17,6 +17,24 @@ describe('the tab and scope in the address', () => {
     expect(readView(new URLSearchParams('tab=later&who=x')).tab).toBe('today')
     const sp = writeView({ tab: 'overdue', who: 'all', page: 1 }, new URLSearchParams('page=4&keep=1'))
     expect(sp.toString()).toBe('keep=1&tab=overdue&who=all')
+    // A chosen Today is written too, so it is kept even when empty (round 5).
+    expect(writeView({ tab: 'today', who: 'mine', page: 1 }).toString()).toBe('tab=today')
+  })
+
+  it('opens where the work is when the address names no tab (round 5)', () => {
+    expect(openingTab('done', { today: 0, overdue: 6 })).toBe('done')
+    expect(openingTab('today', { today: 0, overdue: 6 })).toBe('today')
+    expect(openingTab(null, null)).toBe('today')
+    expect(openingTab(null, { today: 2, overdue: 6 })).toBe('today')
+    expect(openingTab(null, { today: 0, overdue: 6, upcoming: 1 })).toBe('overdue')
+    expect(openingTab('', { today: 0, overdue: 0, upcoming: 1 })).toBe('upcoming')
+    expect(openingTab('later', { today: 0, overdue: 0, upcoming: 0 })).toBe('today')
+  })
+
+  it('keeps a stored task\'s own fields, without what older drawers put there by mistake', () => {
+    expect(storedCustom({ custom_data: { room: 'Suite 4', priority: 'high', duration_minutes: 30, recurring: 'weekly' } })).toEqual({ room: 'Suite 4' })
+    expect(storedCustom({ custom_data: null })).toEqual({})
+    expect(storedCustom(null)).toEqual({})
   })
 
   it('reads the open ones at once (mine by account id) and the done ones a page at a time', () => {

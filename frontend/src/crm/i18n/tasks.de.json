@@ -135,5 +135,10 @@
   "unlink_lead": "Lead entfernen",
   "when": "Wann",
   "whose": "Wessen Aufgaben",
-  "zone_hint": "Nach der Uhr des Hauses ({{zone}})"
+  "zone_hint": "Nach der Uhr des Hauses ({{zone}})",
+  "step_more": "Weiteres",
+  "open_named": "Öffnen: {{title}}",
+  "add_short": "Hinzufügen",
+  "filters": "Filter",
+  "gone": "Diese Aufgabe ist nicht mehr offen."
 }

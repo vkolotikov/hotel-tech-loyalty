@@ -238,6 +238,43 @@ class AiUsageService
     }
 
     /**
+     * This month's spend by the venue's day (HexaTech CRM's AI usage, 2026-11-12): what the allowance counts (from the
+     * start of the calendar month, as monthlyUsageCents) on the days of the venue's clock, from the day the month's
+     * first call fell on to today, a day with nothing spent included. Read row by row and summed here, so it is the
+     * same on PostgreSQL and SQLite and right in every zone (no SQL date arithmetic).
+     *
+     * @return list<array{day: string, cost_cents: int, calls: int}>
+     */
+    public function monthByVenueDay(int $orgId, string $zone): array
+    {
+        $start = now()->startOfMonth();
+        $days = [];
+        $rows = AiUsageLog::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('created_at', '>=', $start)
+            ->toBase()
+            ->select(['created_at', 'cost_cents'])
+            ->orderBy('id')
+            ->cursor();
+        foreach ($rows as $row) {
+            $day = \Carbon\CarbonImmutable::parse((string) $row->created_at, 'UTC')->setTimezone($zone)->toDateString();
+            $days[$day] ??= ['cost_cents' => 0, 'calls' => 0];
+            $days[$day]['cost_cents'] += (int) $row->cost_cents;
+            $days[$day]['calls']++;
+        }
+
+        $first = \Carbon\CarbonImmutable::instance($start)->setTimezone($zone)->startOfDay();
+        $today = \Carbon\CarbonImmutable::now($zone)->startOfDay();
+        $out = [];
+        for ($day = $first; $day <= $today; $day = $day->addDay()) {
+            $key = $day->toDateString();
+            $out[] = ['day' => $key] + ($days[$key] ?? ['cost_cents' => 0, 'calls' => 0]);
+        }
+
+        return $out;
+    }
+
+    /**
      * Per-model + per-feature cost breakdown for the current month. Used by
      * the admin AI Usage page. Returns two parallel arrays so the UI can
      * render two charts side-by-side without re-aggregating.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Bookmark, BookmarkPlus, Columns3, Download, Filter, Kanban, List, Star, StarOff, Trash2, Users, X } from 'lucide-react'
+import { Bookmark, BookmarkPlus, Columns3, Filter, Kanban, List, Star, StarOff, Trash2, Users, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { useBoot } from '../CrmProvider'
@@ -13,22 +13,22 @@ import { FilterChip, Toolbar } from '../ui/Toolbar'
 import { useToast } from '../ui/Toast'
 import { useTeam } from '../tasks/taskData'
 import { VIEWS, type View } from './board'
-import { InlineSelect } from './InlineSelect'
 import { useColumnSwitch, useGuestFacets, useLeadSettings, useSavedViews } from './leadData'
-import { activeFilterCount, NOBODY, ownerOptions, PANEL_CLEARED, sortChoices, sourceOptions, type LeadFilters, type PhoneFilter } from './leadLogic'
+import { activeFilterCount, NOBODY, ownerOptions, PANEL_CLEARED, sortChoices, sourceOptions, type ExportFormat, type LeadFilters, type PhoneFilter } from './leadLogic'
 import { activeChips, filtersFromView, hasViewState, leadColumnChoices, orderedViews, viewBody, type LeadColumn } from './listLogic'
-import { Popover } from './Menu'
+import { ExportMenu, SortMenu, ToolPopover } from './toolbarParts'
 import type { SavedView, Stage } from './leadTypes'
 import { columnLabel, dueLabel, phoneLabel, sortLabel, sourceLabel, viewLabel } from './leadWords'
 
-const BUTTON = 'inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent'
+const BUTTON = 'inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent'
 const QUIET = 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'
 const ON = 'border-a-accent/40 bg-a-accent/12 text-a-accent-text'
 
 /**
- * The Leads toolbar (round 2): the search and the filters (with the saved views) on the left; the view switch, the
- * sort and the columns (the list's), and the CSV on the right; the filters in force as chips under it, each removable.
- * The filter panel opens under it.
+ * The Leads toolbar (round 2; round 5, owner 2026-11-12: "minimize copy, more icons"): the search and Filters on the
+ * left; on the right the view switch, then the list's tools as icons — the order, the saved views, the columns and the
+ * export (Excel or CSV, as the full admin's). The filters in force show as chips under it, each removable; the filter
+ * panel opens under it. On a phone: the search and Filters, the tools in one row under them.
  */
 export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply, onView, onExport, exporting }: {
   filters: LeadFilters
@@ -38,7 +38,7 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
   onChange: (patch: Partial<LeadFilters>) => void
   onApply: (next: LeadFilters) => void
   onView: (view: View) => void
-  onExport: () => void
+  onExport: (format: ExportFormat) => void
   exporting: boolean
 }) {
   const { t, i18n } = useTranslation()
@@ -74,6 +74,7 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
     }
   }
   const chips = activeChips(filters, onList)
+  const filtersLabel = t('crm.leads.filters', 'Filters')
 
   return (
     <div className="space-y-2">
@@ -91,30 +92,24 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
           </>
         ) : undefined}
         actions={(
-          <>
+          /* On a phone the tools keep to the right edge, so the panels they open stay on the screen. */
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <ViewSwitch view={view} onView={onView} />
-            {onList && (
-              <label className="flex items-center gap-2 text-sm text-a-text-2">
-                <span className="sr-only">{t('crm.leads.sort', 'Sort')}</span>
-                <InlineSelect value={filters.sort} onChange={e => onChange({ sort: e.target.value as LeadFilters['sort'] })} aria-label={t('crm.leads.sort', 'Sort')}>
-                  {sortChoices(hotel).map(s => <option key={s} value={s}>{sortLabel(t, s)}</option>)}
-                </InlineSelect>
-              </label>
-            )}
-            {/* A phone shows each lead as a card: the columns are a wide screen's. */}
-            {onList && <span className="hidden md:inline-flex"><ColumnsMenu columns={columns} hotel={hotel} /></span>}
-            <button type="button" onClick={onExport} disabled={exporting} aria-busy={exporting || undefined} className={`${BUTTON} ${QUIET} disabled:opacity-50`}
-              title={t('crm.leads.export_line', 'The leads the list shows, every page, as a spreadsheet file')}>
-              <Download size={15} aria-hidden /><span className="hidden lg:inline">{t('crm.leads.export', 'Export CSV')}</span><span className="sr-only lg:hidden">{t('crm.leads.export', 'Export CSV')}</span>
-            </button>
-          </>
+            <div className="ml-auto flex items-center gap-2">
+              {onList && <SortMenu value={filters.sort} choices={sortChoices(hotel)} label={t('crm.leads.sort', 'Sort')} word={s => sortLabel(t, s)} onChange={sort => onChange({ sort })} />}
+              <ViewsMenu filters={filters} onApply={next => { setQ(next.q); onApply(next) }} />
+              {/* A phone shows each lead as a card: the columns are a wide screen's. */}
+              {onList && <span className="hidden md:inline-flex"><ColumnsMenu columns={columns} hotel={hotel} /></span>}
+              <ExportMenu onExport={onExport} busy={exporting} />
+            </div>
+          </div>
         )}>
-        <div data-leads-search className="w-full sm:w-72"><SearchInput label={t('crm.leads.search', 'Search name, email, phone or company')} value={q} onChange={setQ} /></div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" aria-expanded={panel} onClick={() => setPanel(p => !p)} className={`${BUTTON} ${count > 0 ? ON : QUIET}`}>
-            <Filter size={14} aria-hidden />{t('crm.leads.filters', 'Filters')}{count > 0 ? ` · ${count}` : ''}
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <div data-leads-search className="min-w-0 flex-1 sm:w-72 sm:flex-none"><SearchInput label={t('crm.leads.search', 'Search name, email, phone or company')} value={q} onChange={setQ} /></div>
+          <button type="button" aria-expanded={panel} aria-label={count > 0 ? `${filtersLabel} · ${count}` : filtersLabel} title={filtersLabel}
+            onClick={() => setPanel(p => !p)} className={`${BUTTON} ${count > 0 ? ON : QUIET} shrink-0`}>
+            <Filter size={15} aria-hidden /><span className="hidden sm:inline">{filtersLabel}</span>{count > 0 && <span className="rounded-full bg-a-accent px-1.5 text-xs font-semibold leading-5 text-a-accent-ink">{count}</span>}
           </button>
-          <ViewsMenu filters={filters} onApply={next => { setQ(next.q); onApply(next) }} />
         </div>
       </Toolbar>
       {panel && <FilterPanel filters={filters} stages={stages} onChange={onChange} onClear={() => onApply({ ...filters, ...PANEL_CLEARED, page: 1 })} />}
@@ -127,14 +122,14 @@ function ViewSwitch({ view, onView }: { view: View; onView: (view: View) => void
   const { t } = useTranslation()
   const icons = { list: List, board: Kanban, team: Users } as const
   return (
-    <div role="group" aria-label={t('crm.leads.view', 'View')} className="inline-flex rounded-full border border-a-border bg-a-surface-2 p-0.5">
+    <div role="group" aria-label={t('crm.leads.view', 'View')} className="inline-flex rounded-xl border border-a-border bg-a-surface-2 p-0.5">
       {VIEWS.map(v => {
         const Icon = icons[v]
         const on = v === view
         return (
-          <button key={v} type="button" aria-pressed={on} onClick={() => onView(v)}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${on ? 'bg-a-surface text-a-text shadow-a-sm' : 'text-a-text-2 hover:text-a-text'}`}>
-            <Icon size={15} aria-hidden /><span className="hidden sm:inline">{viewLabel(t, v)}</span><span className="sr-only sm:hidden">{viewLabel(t, v)}</span>
+          <button key={v} type="button" aria-pressed={on} onClick={() => onView(v)} title={viewLabel(t, v)}
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${on ? 'bg-a-surface text-a-text shadow-a-sm' : 'text-a-text-2 hover:text-a-text'}`}>
+            <Icon size={15} aria-hidden /><span className="hidden xl:inline">{viewLabel(t, v)}</span><span className="sr-only xl:hidden">{viewLabel(t, v)}</span>
           </button>
         )
       })}
@@ -148,8 +143,7 @@ function ColumnsMenu({ columns, hotel }: { columns: Record<LeadColumn, boolean>;
   const toast = useToast()
   const save = useColumnSwitch('inquiry_fields', e => toast(errorText(t, e), 'danger'))
   return (
-    <Popover label={t('crm.leads.columns', 'Columns')} className={`${BUTTON} ${QUIET}`}
-      button={<><Columns3 size={15} aria-hidden /><span className="hidden lg:inline">{t('crm.leads.columns', 'Columns')}</span></>}>
+    <ToolPopover label={t('crm.leads.columns', 'Columns')} icon={Columns3}>
       {(
         <div className="space-y-3 p-2">
           <p className="text-xs text-a-text-2">{t('crm.leads.columns_line', 'What the list shows, for everyone in your team.')}</p>
@@ -158,7 +152,7 @@ function ColumnsMenu({ columns, hotel }: { columns: Record<LeadColumn, boolean>;
           ))}
         </div>
       )}
-    </Popover>
+    </ToolPopover>
   )
 }
 
@@ -196,8 +190,7 @@ function ViewsMenu({ filters, onApply }: { filters: LeadFilters; onApply: (next:
   const list = orderedViews(views.data)
   const canSave = hasViewState(filters)
   return (
-    <Popover label={t('crm.leads.views', 'Saved views')} align="left" width="w-72" className={`${BUTTON} ${QUIET}`}
-      button={<><Bookmark size={14} aria-hidden />{t('crm.leads.views_short', 'Views')}{list.length > 0 ? ` · ${list.length}` : ''}</>}>
+    <ToolPopover label={t('crm.leads.views', 'Saved views')} icon={Bookmark} count={list.length} width="w-72">
       {(
         <div className="space-y-2 p-1">
           {list.length === 0 && <p className="px-1.5 py-1 text-sm text-a-text-2">{t('crm.leads.views_none', 'No saved views yet. Filter the list, then save it here.')}</p>}
@@ -233,7 +226,7 @@ function ViewsMenu({ filters, onApply }: { filters: LeadFilters; onApply: (next:
           </form>
         </div>
       )}
-    </Popover>
+    </ToolPopover>
   )
 }
 

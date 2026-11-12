@@ -56,7 +56,13 @@
     "new_lead": "Add a lead",
     "searching": "Searching…",
     "theme_dark": "Switch to dark",
-    "theme_light": "Switch to light"
+    "theme_light": "Switch to light",
+    "new_deal": "Add a deal",
+    "new_task": "Add a task",
+    "new_contact": "Add a contact",
+    "new_company": "Add a company",
+    "companies": "Companies",
+    "chats": "Website chats"
   },
   "nav": {
     "assistant": "AI assistant",
@@ -75,7 +81,8 @@
       "sales": "Sales",
       "reports": "Reports",
       "setup": "Set up"
-    }
+    },
+    "integrations": "Integrations"
   },
   "shell": {
     "ai_over": "This month's AI allowance is used up: the chat assistant hands every chat to your team, and drafts stop until next month.",
@@ -90,7 +97,9 @@
     "brand_label": "Brand: {{name}}. Choose another",
     "brand_line": "What the CRM shows: every brand, or one of them.",
     "brand_choose": "Choose a brand",
-    "brand_default": "Main"
+    "brand_default": "Main",
+    "keys_inbox_step": "Inbox: next or previous chat",
+    "keys_inbox_resolve": "Inbox: resolve the open chat"
   },
   "start": {
     "done": "Done",
@@ -146,67 +155,21 @@
     "won": "Won",
     "lost": "Lost"
   },
-  "today": {
-    "add_lead": "Add a lead",
-    "all_leads": "All leads",
-    "all_tasks": "All tasks",
-    "follow_ups": "Follow-ups due",
-    "last_24h": "In the last 24 hours",
-    "line": "What needs you now, from the website chat and your pipeline.",
-    "new_leads": "New leads",
-    "nobody": "Nobody assigned",
-    "open_inbox": "Open the inbox",
-    "open_leads": "{{count}} open leads",
-    "overdue": "{{count}} overdue",
-    "pipeline": "Open pipeline",
-    "setup_line": "{{done}} of {{total}} steps done. Put the chat on your website, teach the assistant and you are ready.",
-    "setup_title": "Finish setting up HexaTech CRM",
-    "title": "Today",
-    "waiting": "Waiting for a reply",
-    "week_ai": "Closed by the AI",
-    "week_chats": "Conversations",
-    "week_leads": "Leads from chat",
-    "week_title": "The website chat this week",
-    "your_tasks": "Your tasks",
-    "open_leads_one": "1 open lead",
-    "greeting": {
-      "morning": "Good morning, {{name}}",
-      "afternoon": "Good afternoon, {{name}}",
-      "evening": "Good evening, {{name}}"
-    },
-    "setup_go": "Continue",
-    "figures": "The day at a glance",
-    "open_unassigned": "{{open}} open chats · {{unassigned}} with nobody",
-    "now_title": "Needs you now",
-    "now_line": "Waiting chats first, then what is overdue.",
-    "all_clear": "All clear",
-    "all_clear_line": "Nobody is waiting for a reply and nothing is overdue.",
-    "all_waiting": "All {{count}} waiting chats",
-    "all_overdue_leads": "All {{count}} overdue follow-ups",
-    "all_overdue_tasks": "All {{count}} overdue tasks",
-    "kind_chat": "Waiting for a reply",
-    "kind_follow_up": "Follow-up overdue since {{day}}",
-    "kind_task": "Task overdue · was due {{when}}",
-    "schedule_title": "Today’s schedule",
-    "schedule_line": "Follow-ups and your tasks due today, in the venue’s time.",
-    "no_schedule": "Nothing scheduled for today",
-    "no_schedule_line": "Set a next step on a lead or add a task, and it shows here on its day.",
-    "at_a_time": "At a time",
-    "during_day": "During the day",
-    "all_leads_due": "All follow-ups due",
-    "no_time": "No set time",
-    "kind_task_today": "Task",
-    "kind_follow_up_today": "Follow-up",
-    "new_title": "New leads",
-    "no_new": "No new leads today",
-    "no_new_line": "Leads from the website chat, your forms and your team show here as they come in.",
-    "all_new": "All {{count}} new leads",
-    "week_line": "The last seven days",
-    "week_more": "Insights",
-    "week_hint": "Chats the assistant closed with nobody from your team stepping in.",
-    "done_follow_up": "Follow-up marked done",
-    "done_task": "Task marked done",
-    "mark_done": "Mark “{{name}}” done",
-    "done": "Done"
+  "record": {
+    "previous": "Previous",
+    "next": "Next",
+    "full_page": "Open as a page",
+    "overview": "Overview",
+    "step": "Previous or next record"
+  },
+  "create": {
+    "label": "New",
+    "lead": "Lead",
+    "deal": "Deal",
+    "task": "Task",
+    "contact": "Contact",
+    "company": "Company",
+    "capture": "Lead from a message",
+    "lead_new": "New lead"
   }
 }

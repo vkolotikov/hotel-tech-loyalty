@@ -24,7 +24,14 @@
     "this": "this reply",
     "count": "{{count}} of {{max}}",
     "up": "Move {{name}} up",
-    "down": "Move {{name}} down"
+    "down": "Move {{name}} down",
+    "done": "Done",
+    "edit": "Edit {{name}}",
+    "menu": "More for {{name}}",
+    "move_down": "Move down",
+    "move_up": "Move up",
+    "remove_short": "Remove",
+    "untitled": "No name"
   },
   "deleted": "Deleted",
   "discard": "Discard",
@@ -228,7 +235,8 @@
     "canned": "Canned replies",
     "fields": "Custom fields",
     "forms": "Lead forms",
-    "pipelines": "Pipelines"
+    "pipelines": "Pipelines",
+    "templates": "Templates"
   },
   "types": {
     "checkbox": "Yes or no",
@@ -249,6 +257,36 @@
     "pipelines": "The stages of a lead, and why leads are lost.",
     "forms": "Forms on your website that send you leads.",
     "fields": "Your own fields on leads, contacts and tasks.",
-    "account": "Your team, and your plan."
-  }
+    "account": "Your team, and your plan.",
+    "templates": "Email templates your team sends from a lead."
+  },
+  "form": {
+    "flagged": "needs a fix",
+    "next": "Next: {{part}}"
+  },
+  "presets": {
+    "added": "{{count}} fields added.",
+    "apply": "Add the fields",
+    "count": "{{count}} fields",
+    "none_added": "Nothing new: those fields are there already.",
+    "open": "From a preset",
+    "title": "Fields for your kind of business",
+    "beauty": "Beauty / Spa",
+    "beauty_line": "Skin type, allergies, preferred therapist, service preferences. Adds fields to contacts and leads.",
+    "medical": "Medical / Healthcare",
+    "medical_line": "Date of birth, blood type, allergies, medications, insurance, emergency contact. Adds fields to contacts and leads.",
+    "legal": "Legal / Law firm",
+    "legal_line": "Matter type, conflict check, case type, deadlines, retainer, fee arrangement.",
+    "real_estate": "Real estate",
+    "real_estate_line": "Buyer or seller, mortgage status, property type, budget range, must-haves, decision timeline.",
+    "education": "Education / Tutoring",
+    "education_line": "Date of birth, parent contact, prior education, programme interest, start term, study format.",
+    "fitness": "Fitness / Wellness",
+    "fitness_line": "Fitness goal, experience level, injuries, preferred trainer, membership tier, service interest.",
+    "restaurant": "Restaurant",
+    "restaurant_line": "Dietary preferences, allergies, favourite table, occasion, party size, seating preference.",
+    "services": "Services / Agency",
+    "services_line": "Job title, decision maker, project type, budget range, deadline, quantity, brief link."
+  },
+  "read_only_short": "Read only: a manager makes changes here."
 }

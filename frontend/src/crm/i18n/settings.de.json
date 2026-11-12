@@ -24,7 +24,14 @@
     "this": "diese Antwort",
     "count": "{{count}} von {{max}}",
     "up": "{{name}} nach oben",
-    "down": "{{name}} nach unten"
+    "down": "{{name}} nach unten",
+    "done": "Fertig",
+    "edit": "{{name}} bearbeiten",
+    "menu": "Mehr zu {{name}}",
+    "move_down": "Nach unten",
+    "move_up": "Nach oben",
+    "remove_short": "Entfernen",
+    "untitled": "Ohne Namen"
   },
   "deleted": "Gelöscht",
   "discard": "Verwerfen",
@@ -228,7 +235,8 @@
     "canned": "Textbausteine",
     "fields": "Eigene Felder",
     "forms": "Lead-Formulare",
-    "pipelines": "Pipelines"
+    "pipelines": "Pipelines",
+    "templates": "Vorlagen"
   },
   "types": {
     "checkbox": "Ja oder nein",
@@ -249,6 +257,36 @@
     "pipelines": "Die Phasen eines Leads und warum Leads verloren gehen.",
     "forms": "Formulare auf Ihrer Website, die Ihnen Leads senden.",
     "fields": "Eigene Felder für Leads, Kontakte und Aufgaben.",
-    "account": "Ihr Team und Ihr Tarif."
-  }
+    "account": "Ihr Team und Ihr Tarif.",
+    "templates": "E-Mail-Vorlagen, die Ihr Team aus einem Lead sendet."
+  },
+  "form": {
+    "flagged": "muss korrigiert werden",
+    "next": "Weiter: {{part}}"
+  },
+  "presets": {
+    "added": "{{count}} Felder hinzugefügt.",
+    "apply": "Felder hinzufügen",
+    "count": "{{count}} Felder",
+    "none_added": "Nichts Neues: Diese Felder gibt es schon.",
+    "open": "Aus einer Vorlage",
+    "title": "Felder für Ihre Branche",
+    "beauty": "Beauty / Spa",
+    "beauty_line": "Hauttyp, Allergien, bevorzugte Therapeutin, Behandlungswünsche. Fügt Felder zu Kontakten und Leads hinzu.",
+    "medical": "Medizin / Gesundheit",
+    "medical_line": "Geburtsdatum, Blutgruppe, Allergien, Medikamente, Versicherung, Notfallkontakt. Fügt Felder zu Kontakten und Leads hinzu.",
+    "legal": "Recht / Kanzlei",
+    "legal_line": "Mandatsart, Konfliktprüfung, Fallart, Fristen, Vorschuss, Honorarvereinbarung.",
+    "real_estate": "Immobilien",
+    "real_estate_line": "Käufer oder Verkäufer, Finanzierungsstand, Objektart, Budget, Muss-Kriterien, Zeitrahmen.",
+    "education": "Bildung / Nachhilfe",
+    "education_line": "Geburtsdatum, Kontakt der Eltern, Vorbildung, gewünschtes Programm, Starttermin, Lernform.",
+    "fitness": "Fitness / Wellness",
+    "fitness_line": "Fitnessziel, Erfahrung, Verletzungen, bevorzugter Trainer, Mitgliedschaft, gewünschte Leistungen.",
+    "restaurant": "Restaurant",
+    "restaurant_line": "Ernährungswünsche, Allergien, Lieblingstisch, Anlass, Personenzahl, Platzwunsch.",
+    "services": "Dienstleistung / Agentur",
+    "services_line": "Position, Entscheider, Projektart, Budget, Frist, Menge, Link zum Briefing."
+  },
+  "read_only_short": "Nur lesen: Änderungen macht ein Manager."
 }

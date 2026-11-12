@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BrandSwitcher } from './shell/BrandSwitcher'
+import { QuickCreate } from './shell/QuickCreate'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  BarChart3, Bot, BriefcaseBusiness, CheckSquare, Contact, Eye, Home, MessageSquareText, MessagesSquare, Search, Settings2, Target,
+  BarChart3, Bot, BriefcaseBusiness, CheckSquare, Contact, Eye, Home, MessageSquareText, MessagesSquare, Plug, Search, Settings2, Target,
   type LucideIcon,
 } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
@@ -18,11 +19,13 @@ import { Notice } from '../workspace/ui/Notice'
 import { PageBoundary } from '../workspace/ui/PageBoundary'
 import { ShortcutsSheet } from '../workspace/ui/ShortcutsSheet'
 import { useCrm } from './CrmProvider'
+import { useCrmAlerts } from './alerts/useCrmAlerts'
 import { CrmFind } from './find/CrmFind'
 import { failureOf } from './lib/api'
 import { APP_NAME, FULL_ADMIN } from './lib/links'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
 import { AREAS, areaOf, countOf, type AreaGroup, type AreaKey } from './shell/nav'
+import { withCreate } from './lib/records'
 
 const ICONS: Record<AreaKey, LucideIcon> = {
   today: Home,
@@ -35,13 +38,14 @@ const ICONS: Record<AreaKey, LucideIcon> = {
   assistant: Bot,
   widget: MessageSquareText,
   insights: BarChart3,
+  integrations: Plug,
   settings: Settings2,
 }
 
 /** The default (English) name of each area, beside its key crm.nav.<area>. */
 const NAV_DEFAULTS: Record<AreaKey, string> = {
   today: 'Today', inbox: 'Inbox', visitors: 'Visitors', leads: 'Leads', deals: 'Deals', contacts: 'Contacts',
-  tasks: 'Tasks', assistant: 'AI assistant', widget: 'Chat widget', insights: 'Insights', settings: 'Settings',
+  tasks: 'Tasks', assistant: 'AI assistant', widget: 'Chat widget', insights: 'Insights', integrations: 'Integrations', settings: 'Settings',
 }
 
 /** The groups' default (English) names, beside their keys crm.nav.groups.<group>. */
@@ -58,6 +62,8 @@ export function CrmShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { data, isLoading, isError, error, refetch } = useCrm()
+  // Round 5: chats waiting and new hot leads raise a toast, the tab's title, the favicon's dot and, if allowed, a desktop alert.
+  useCrmAlerts()
   const [findOpen, setFindOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const main = useRef<HTMLElement>(null)
@@ -92,8 +98,9 @@ export function CrmShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
-    return onShortcuts(window, document, { letters: { i: 'inbox', l: 'leads', t: 'tasks' } }, (hit, e) => {
+    return onShortcuts(window, document, { letters: { i: 'inbox', l: 'leads', t: 'tasks', n: 'new' } }, (hit, e) => {
       if (hit === 'find') setFindOpen(true)
+      else if (hit === 'new') navigate({ search: withCreate(new URLSearchParams(window.location.search), 'lead').toString() })
       else if (hit === 'help') setHelpOpen(true)
       else if (hit === 'inbox') navigate('/crm/inbox')
       else if (hit === 'leads') navigate('/crm/leads')
@@ -139,7 +146,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
   ) : null
 
   return (
-    <WorkspaceShell workspace="crm" look={look} accent={accent} initial={initial}
+    <WorkspaceShell workspace="crm" stickyRail look={look} accent={accent} initial={initial}
       organization={data?.organization.name} product={data?.name ?? APP_NAME} person={data?.staff.name}
       nav={nav} fullAdmin={fullAdmin} moduleLinks={modules.links}
       footer={<FrameFooter {...foot} />}
@@ -154,6 +161,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
           <kbd aria-hidden="true" className="ml-auto hidden shrink-0 rounded-md border border-a-border px-1.5 font-a-mono text-xs sm:inline">{modKey} K</kbd>
         </button>
         <div className="ml-auto sm:hidden" />
+        {ready && <div className="ml-2 shrink-0"><QuickCreate /></div>}
       </>}
       overlays={ready ? <>
         <CrmFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} nav={nav} dark={look.resolved === 'dark'} slim={slim}
@@ -165,6 +173,10 @@ export function CrmShell({ children }: { children: ReactNode }) {
               { name: t('crm.nav.inbox', 'Inbox'), keys: [['I']] },
               { name: t('crm.nav.leads', 'Leads'), keys: [['L']] },
               { name: t('crm.nav.tasks', 'Tasks'), keys: [['T']] },
+              { name: t('crm.create.lead_new', 'New lead'), keys: [['N']] },
+              { name: t('crm.record.step', 'Previous or next record'), keys: [['['], [']']] },
+              { name: t('crm.shell.keys_inbox_step', 'Inbox: next or previous chat'), keys: [['J'], ['K']] },
+              { name: t('crm.shell.keys_inbox_resolve', 'Inbox: resolve the open chat'), keys: [['E']] },
               { name: t('workspace.shortcuts.title', 'Keyboard shortcuts'), keys: [['?']] },
             ],
           }]} />

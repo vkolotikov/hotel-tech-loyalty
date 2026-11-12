@@ -79,6 +79,8 @@ class GuestController extends Controller
             'lead_source'  => $extract('lead_source'),
             'owner_name'   => $extract('owner_name'),
             'loyalty_tier' => $extract('loyalty_tier'),
+            // CRM round 5 (2026-11-12): the guest types the contacts hold, for the CRM's Type filter.
+            'guest_type'   => $extract('guest_type'),
         ]);
     }
 
@@ -282,7 +284,10 @@ class GuestController extends Controller
         // so an explicit empty/null custom_data still goes through the
         // validator (allows the user to clear all custom values).
         $hasCustom = array_key_exists('custom_data', $v);
-        $custom = $hasCustom ? $this->customFields->validate('guest', $v['custom_data']) : null;
+        // A value of a field the organisation switched off or deleted is kept (2026-11-12): it comes back with the field.
+        $custom = $hasCustom
+            ? $this->customFields->keepUnlisted('guest', $guest->getAttribute('custom_data'), $this->customFields->validate('guest', $v['custom_data']))
+            : null;
 
         // Strip nulls so DB column defaults (guest_type, vip_level,
         // lifecycle_status, importance, etc.) aren't violated and existing
@@ -695,6 +700,31 @@ class GuestController extends Controller
         ])->deleteFileAfterSend(true);
     }
 
+    /**
+     * `date_from` / `date_to` are the venue's calendar days (2026-11-12, as the leads' since 2026-11-08; before, UTC's): a
+     * contact added at 00:30 in Riga on the 8th is the 8th's, and `date_to` takes the whole of its day. A value that is
+     * not a `Y-m-d` day is ignored.
+     */
+    private function addedOnVenueDays($query, Request $request): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : (int) $request->user()?->organization_id;
+        $zone = \App\Services\Appointments\VenueClock::zone($orgId);
+        $day = function ($value) use ($zone): ?\Carbon\CarbonImmutable {
+            if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                return null;
+            }
+            $at = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $value, $zone);
+
+            return $at && $at->format('Y-m-d') === $value ? $at : null;
+        };
+        if ($from = $day($request->get('date_from'))) {
+            $query->where('created_at', '>=', $from->utc());
+        }
+        if ($to = $day($request->get('date_to'))) {
+            $query->where('created_at', '<', $to->addDay()->utc());
+        }
+    }
+
     private function applyFilters($query, Request $request): void
     {
         if ($s = $request->get('search')) {
@@ -715,11 +745,15 @@ class GuestController extends Controller
         if ($v = $request->get('lead_source'))        $query->where('lead_source', $v);
         if ($v = $request->get('owner_name'))         $query->where('owner_name', $v);
         if ($v = $request->get('loyalty_tier'))       $query->where('loyalty_tier', $v);
-        if ($request->get('has_email'))               $query->whereNotNull('email');
-        if ($request->get('has_phone'))               $query->whereNotNull('phone');
+        // An email or a phone that is there (2026-11-12): an empty one is none, and a mobile is a phone too, as the leads'
+        // `has_phone` reads it.
+        if ($request->get('has_email'))               $query->whereNotNull('email')->where('email', '!=', '');
+        if ($request->get('has_phone')) {
+            $query->where(fn ($q) => $q->where(fn ($p) => $p->whereNotNull('phone')->where('phone', '!=', ''))
+                ->orWhere(fn ($m) => $m->whereNotNull('mobile')->where('mobile', '!=', '')));
+        }
         if ($v = $request->get('min_stays'))          $query->where('total_stays', '>=', $v);
-        if ($v = $request->get('date_from'))          $query->where('created_at', '>=', $v);
-        if ($v = $request->get('date_to'))            $query->where('created_at', '<=', $v . ' 23:59:59');
+        $this->addedOnVenueDays($query, $request);
         if ($v = $request->get('tag_ids')) {
             $ids = is_array($v) ? $v : explode(',', $v);
             $query->whereHas('tags', fn($q) => $q->whereIn('guest_tags.id', $ids));
@@ -728,8 +762,11 @@ class GuestController extends Controller
         // Companies cross-link banner on /customers?company=Acme%20Ltd
         // so admins can pivot from a company row into "all customers
         // who work there".
+        // 2026-11-12 (the CRM's company People): a lower-case LIKE, the same on PostgreSQL and SQLite, its own % and _ taken
+        // as written.
         if ($v = $request->get('company')) {
-            $query->where('company', 'ilike', "%{$v}%");
+            $needle = '%' . addcslashes(mb_strtolower((string) $v), '%_\\') . '%';
+            $query->whereRaw("LOWER(company) LIKE ? ESCAPE '\\'", [$needle]);
         }
         // `ids` filter — used by bulk export to write only the selected
         // rows to CSV. Accepts either an array or a comma-separated list.

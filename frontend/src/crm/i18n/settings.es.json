@@ -24,7 +24,14 @@
     "this": "esta respuesta",
     "count": "{{count}} de {{max}}",
     "up": "Subir {{name}}",
-    "down": "Bajar {{name}}"
+    "down": "Bajar {{name}}",
+    "done": "Listo",
+    "edit": "Editar {{name}}",
+    "menu": "Más para {{name}}",
+    "move_down": "Bajar",
+    "move_up": "Subir",
+    "remove_short": "Quitar",
+    "untitled": "Sin nombre"
   },
   "deleted": "Eliminado",
   "discard": "Descartar",
@@ -228,7 +235,8 @@
     "canned": "Respuestas rápidas",
     "fields": "Campos propios",
     "forms": "Formularios de leads",
-    "pipelines": "Pipelines"
+    "pipelines": "Pipelines",
+    "templates": "Plantillas"
   },
   "types": {
     "checkbox": "Sí o no",
@@ -249,6 +257,36 @@
     "pipelines": "Las etapas de un lead y por qué se pierden leads.",
     "forms": "Formularios en su sitio web que le envían leads.",
     "fields": "Sus propios campos en leads, contactos y tareas.",
-    "account": "Su equipo y su plan."
-  }
+    "account": "Su equipo y su plan.",
+    "templates": "Plantillas de correo que su equipo envía desde un cliente potencial."
+  },
+  "form": {
+    "flagged": "hay que corregir",
+    "next": "Siguiente: {{part}}"
+  },
+  "presets": {
+    "added": "{{count}} campos añadidos.",
+    "apply": "Añadir los campos",
+    "count": "{{count}} campos",
+    "none_added": "Nada nuevo: esos campos ya existen.",
+    "open": "Desde una plantilla",
+    "title": "Campos para su tipo de negocio",
+    "beauty": "Belleza / Spa",
+    "beauty_line": "Tipo de piel, alergias, terapeuta preferido, preferencias de servicio. Añade campos a contactos y clientes potenciales.",
+    "medical": "Médico / Salud",
+    "medical_line": "Fecha de nacimiento, grupo sanguíneo, alergias, medicación, seguro, contacto de emergencia. Añade campos a contactos y clientes potenciales.",
+    "legal": "Legal / Despacho de abogados",
+    "legal_line": "Tipo de asunto, comprobación de conflictos, tipo de caso, plazos, anticipo, acuerdo de honorarios.",
+    "real_estate": "Inmobiliaria",
+    "real_estate_line": "Comprador o vendedor, estado de la hipoteca, tipo de inmueble, presupuesto, imprescindibles, plazo de decisión.",
+    "education": "Educación / Clases particulares",
+    "education_line": "Fecha de nacimiento, contacto de los padres, formación previa, programa de interés, inicio, modalidad de estudio.",
+    "fitness": "Fitness / Bienestar",
+    "fitness_line": "Objetivo, nivel de experiencia, lesiones, entrenador preferido, tipo de membresía, servicios de interés.",
+    "restaurant": "Restaurante",
+    "restaurant_line": "Preferencias alimentarias, alergias, mesa favorita, ocasión, número de comensales, preferencia de asiento.",
+    "services": "Servicios / Agencia",
+    "services_line": "Cargo, persona que decide, tipo de proyecto, presupuesto, plazo, cantidad, enlace al briefing."
+  },
+  "read_only_short": "Solo lectura: los cambios los hace un responsable."
 }

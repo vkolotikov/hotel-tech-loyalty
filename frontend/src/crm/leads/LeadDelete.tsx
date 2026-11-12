@@ -13,9 +13,9 @@ import { impactLabel } from './leadWords'
 
 /**
  * Delete a lead after saying what goes with it (`GET inquiries/{id}/delete-impact`, then `DELETE inquiries/{id}`); from
- * its own page the person lands on the list again.
+ * its own page the person lands on the list again, from its panel the panel closes (`onDeleted`).
  */
-export function DeleteLead({ leadId, name, onClose, back = false }: { leadId: number; name: string; onClose: () => void; back?: boolean }) {
+export function DeleteLead({ leadId, name, onClose, back = false, onDeleted }: { leadId: number; name: string; onClose: () => void; back?: boolean; onDeleted?: () => void }) {
   const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
@@ -27,7 +27,7 @@ export function DeleteLead({ leadId, name, onClose, back = false }: { leadId: nu
   })
   const remove = useMutation({
     mutationFn: () => send('delete', `inquiries/${leadId}`),
-    onSuccess: () => { changed(); toast(t('crm.leads.deleted', 'Lead deleted')); onClose(); if (back) navigate('/crm/leads') },
+    onSuccess: () => { changed(); toast(t('crm.leads.deleted', 'Lead deleted')); onClose(); onDeleted?.(); if (back) navigate('/crm/leads') },
   })
   const goes = impactOf(impact.data).filter(row => row.key !== 'reservations')
   const kept = impactOf(impact.data).find(row => row.key === 'reservations')

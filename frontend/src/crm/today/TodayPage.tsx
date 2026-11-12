@@ -1,70 +1,82 @@
-import type { ReactNode } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { LucideIcon } from 'lucide-react'
 import {
-  AlarmClock, ArrowRight, BarChart3, Bot, CalendarClock, CalendarDays, Check, CheckSquare, ChevronRight, Clock, Coins, Inbox, Loader2, MessageCircle,
-  PartyPopper, Rocket, Sparkles, Sun, Target, UserPlus,
+  Activity, AlarmClock, ArrowRight, BarChart3, CalendarClock, CalendarPlus, Check, CheckSquare, Coins, Inbox, Loader2, MessageCircle,
+  PartyPopper, Rocket, Sun, UserPlus, UserX,
 } from 'lucide-react'
+import { Button } from '../../workspace/ui/Button'
+import { useMedia } from '../../workspace/lib/useMedia'
 import { useBoot } from '../CrmProvider'
 import { PulseCard } from '../../workspace/pulse/PulseCard'
-import { crmApi, send } from '../lib/api'
+import { crmApi, get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { count, dateTime, dayLabel, money, percent, timeAgo } from '../lib/format'
-import { conversationPath, leadPath } from '../lib/links'
+import { count, dayLabel, money, percent, timeAgo } from '../lib/format'
+import { conversationPath } from '../lib/links'
 import type { Today } from '../lib/types'
+import { useRecords } from '../lib/useRecords'
 import { Avatar } from '../ui/Avatar'
 import { Card } from '../ui/Card'
-import { EmptyState } from '../ui/EmptyState'
+import { IconButton } from '../ui/IconButton'
 import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
+import { sectionAfter } from '../ui/SectionNav'
 import { StatTile } from '../ui/StatTile'
 import { useToast } from '../ui/Toast'
 import { TONE_CHIP, type Tone } from '../ui/tones'
-import { firstName, greetingOf, hasMore, longDay, needsNow, scheduleOf, taskTarget, venueClock, type NowItem, type ScheduleItem } from './todayLogic'
-import { nextStepWord } from '../tasks/taskWords'
+import { nextStepWord, TASK_ICONS } from '../tasks/taskWords'
+import { TaskOpen } from '../tasks/TaskOpen'
 import { sourceLabel } from '../leads/leadWords'
+import {
+  ACTIVITY_PER_PAGE, activityTarget, chatRows, figuresOf, firstName, followUpRows, greetingOf, hasMore, needCounts, NEED_PARAM, NEED_TABS,
+  needTabOf, nextActivityPage, NOW_ROWS, taskRows, venueClock, type ActivityPage, type ActivityRow, type NeedTab,
+} from './todayLogic'
+import { activityIcon, activityLabel } from './todayWords'
 
-const PRIMARY_LINK = 'inline-flex min-h-11 items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent'
 const TEXT_LINK = 'inline-flex items-center gap-1 rounded-sm text-sm font-medium text-a-accent-text hover:underline focus-visible:outline-2 focus-visible:outline-a-accent'
-const ROW_LINK = 'flex items-start gap-3 px-4 py-3 transition-colors hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent'
+const ROW = 'flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent sm:px-4'
 
 /**
- * Today (2026-11-07; round 2, "a calmer, clearer cockpit"): a greeting with the venue's date, the few figures that
- * decide the day, then what needs a person now (waiting chats, overdue follow-ups and tasks, in that order), today's
- * schedule, the new leads and the week's website chat. Every figure is the server's (CrmToday); the page only orders,
- * groups, places and words them. The setup banner shows only while setup is incomplete.
+ * Today (2026-11-07; round 5, owner 2026-11-12: "minimize copy, more icons … opening tabs, slides or popups"): the venue's
+ * clock and weather in one line, the few figures that are not zero, then what needs a person now as three tabs with their
+ * counts — chats waiting, follow-ups, your tasks — five rows each, every row opening what it names (a chat in the inbox,
+ * a lead in its panel, a task in the task form), then the team's activity; the new leads and the website chat's week
+ * beside them. Every figure is the server's (CrmToday, CrmActivityFeed); the page only orders, picks and words them.
  */
 export function TodayPage() {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
+  const records = useRecords()
   const lang = i18n.language
   const zone = boot.venue.timezone
   const today = useQuery({ queryKey: ['crm', 'today'], queryFn: crmApi.today, staleTime: 20_000, refetchInterval: 60_000 })
-  // The venue's clock and weather for the card at the top (2026-11-09); the page stands without it.
+  // The venue's clock and weather (2026-11-09); the page stands without it.
   const pulse = useQuery({ queryKey: ['crm', 'pulse'], queryFn: crmApi.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
-  const clock = venueClock(new Date(), zone)
-  const name = firstName(boot.staff.name)
-  const greeting = greetingOf(clock.hour)
-  const hello = greeting === 'morning' ? t('crm.today.greeting.morning', 'Good morning, {{name}}', { name })
+  // A phone greets without the name and leaves adding to the frame's New button, so the title is never cut.
+  const phone = useMedia('(max-width: 639px)')
+  const fullName = firstName(boot.staff.name)
+  const name = phone ? '' : fullName
+  const greeting = greetingOf(venueClock(new Date(), zone).hour)
+  const hello = !name
+    ? (greeting === 'morning' ? t('crm.today.hello.morning', 'Good morning') : greeting === 'afternoon' ? t('crm.today.hello.afternoon', 'Good afternoon') : t('crm.today.hello.evening', 'Good evening'))
+    : greeting === 'morning' ? t('crm.today.greeting.morning', 'Good morning, {{name}}', { name })
     : greeting === 'afternoon' ? t('crm.today.greeting.afternoon', 'Good afternoon, {{name}}', { name })
     : t('crm.today.greeting.evening', 'Good evening, {{name}}', { name })
-  const day = today.data?.today ?? boot.venue.today
 
   return (
-    <Page title={name ? hello : t('crm.today.title', 'Today')}
+    <Page icon={Sun} title={fullName ? hello : t('crm.today.title', 'Today')}
       line={t('crm.today.line', 'What needs you now, from the website chat and your pipeline.')}
-      below={(
-        <p className="inline-flex items-center gap-2 text-sm text-a-text-2">
-          <CalendarDays size={15} aria-hidden className="shrink-0" />
-          <span><span className="font-medium text-a-text">{t('crm.today.title', 'Today')}</span> · {longDay(day, lang)}</span>
-        </p>
-      )}
-      actions={<Link to="/crm/leads?new=1" className={PRIMARY_LINK}><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Link>}>
+      actions={phone ? undefined : (
+        <>
+          <IconButton icon={CalendarPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
+          <Button onClick={() => records.create('lead')} className="min-h-10 rounded-full"><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Button>
+        </>
+      )}>
       {!boot.setup.complete && <SetupBanner done={boot.setup.done} total={boot.setup.total} />}
-      <PulseCard pulse={pulse.data} greet={false} />
+      <PulseCard pulse={pulse.data} greet={false} variant="strip" />
       <QueryState loading={today.isLoading} error={today.error} onRetry={() => { void today.refetch() }} rows={5}>
         {today.data && <TodayBody data={today.data} lang={lang} zone={zone} currency={boot.venue.currency} />}
       </QueryState>
@@ -72,81 +84,54 @@ export function TodayPage() {
   )
 }
 
-/** While setup is not done: how far it is, and the way to the next step. */
+/** While setup is not done: how far it is, in one line, and the way on. */
 function SetupBanner({ done, total }: { done: number; total: number }) {
   const { t } = useTranslation()
   const share = total > 0 ? Math.round((done / total) * 100) : 0
   return (
-    <Link to="/crm/start" className="group flex items-center gap-3 rounded-2xl border border-a-accent/30 bg-a-accent/8 px-4 py-3 text-sm text-a-text transition-colors hover:border-a-accent/60 focus-visible:outline-2 focus-visible:outline-a-accent">
-      <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-a-accent text-a-accent-ink"><Rocket size={18} /></span>
-      <span className="min-w-0 flex-1 space-y-1.5">
-        <span className="block font-semibold">{t('crm.today.setup_title', 'Finish setting up HexaTech CRM')}</span>
-        <span className="block text-a-text-2">{t('crm.today.setup_line', '{{done}} of {{total}} steps done. Put the chat on your website, teach the assistant and you are ready.', { done, total })}</span>
-        <span aria-hidden className="block h-1.5 max-w-sm overflow-hidden rounded-full bg-a-surface-2">
-          <span className="block h-full rounded-full bg-a-accent" style={{ width: `${share}%` }} />
-        </span>
+    <Link to="/crm/start" className="flex items-center gap-3 rounded-2xl border border-a-accent/30 bg-a-accent/8 px-3 py-2 text-sm text-a-text transition-colors hover:border-a-accent/60 focus-visible:outline-2 focus-visible:outline-a-accent">
+      <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-a-accent text-a-accent-ink"><Rocket size={16} /></span>
+      <span className="min-w-0 truncate font-semibold">{t('crm.today.setup_title', 'Finish setting up HexaTech CRM')}</span>
+      <span className="shrink-0 text-xs tabular-nums text-a-text-2">{t('crm.today.setup_count', '{{done}}/{{total}}', { done, total })}</span>
+      <span aria-hidden className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-a-surface-2 sm:block">
+        <span className="block h-full rounded-full bg-a-accent" style={{ width: `${share}%` }} />
       </span>
-      <span className="hidden shrink-0 items-center gap-1 font-medium text-a-accent-text sm:inline-flex">{t('crm.today.setup_go', 'Continue')}<ArrowRight size={15} aria-hidden /></span>
-      <ArrowRight size={16} aria-hidden className="shrink-0 text-a-text-2 sm:hidden" />
+      <ArrowRight size={16} aria-hidden className="ml-auto shrink-0 text-a-accent-text" />
     </Link>
   )
 }
 
 function TodayBody({ data, lang, zone, currency }: { data: Today; lang: string; zone: string; currency: string }) {
   const { t } = useTranslation()
-  const followUpsDue = data.leads.due_today + data.leads.overdue
-  const tasksDue = data.tasks.due_today + data.tasks.overdue
+  const figures = figuresOf(data)
 
   return (
-    <div className="space-y-5">
-      <section aria-label={t('crm.today.figures', 'The day at a glance')} className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <StatTile icon={Inbox} tone={data.chats.waiting > 0 ? 'pending' : 'neutral'} label={t('crm.today.waiting', 'Waiting for a reply')} value={count(data.chats.waiting, lang)}
-          hint={t('crm.today.open_unassigned', '{{open}} open chats · {{unassigned}} with nobody', { open: count(data.chats.open, lang), unassigned: count(data.chats.unassigned, lang) })}
-          to="/crm/inbox?status=waiting" />
-        <StatTile icon={CalendarClock} tone={data.leads.overdue > 0 ? 'danger' : 'neutral'} label={t('crm.today.follow_ups', 'Follow-ups due')} value={count(followUpsDue, lang)}
-          hint={t('crm.today.overdue', '{{count}} overdue', { count: data.leads.overdue })} to="/crm/leads?due=1" />
-        <StatTile icon={CheckSquare} tone={data.tasks.overdue > 0 ? 'danger' : 'neutral'} label={t('crm.today.your_tasks', 'Your tasks')} value={count(tasksDue, lang)}
-          hint={t('crm.today.overdue', '{{count}} overdue', { count: data.tasks.overdue })} to="/crm/tasks" />
-        <StatTile icon={UserPlus} tone="accent" label={t('crm.today.new_leads', 'New leads')} value={count(data.leads.new, lang)}
-          hint={t('crm.today.last_24h', 'In the last 24 hours')} to="/crm/leads" />
-        <div className="col-span-2 md:col-span-1">
-          <StatTile icon={Coins} tone="success" label={t('crm.today.pipeline', 'Open pipeline')} value={money(data.pipeline.open_value, currency, lang)}
-            hint={t('crm.today.open_leads', '{{count}} open leads', { count: data.pipeline.open_count })} to="/crm/pipeline" />
-        </div>
-      </section>
-
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="min-w-0 space-y-5 lg:col-span-2">
-          <NeedsNow data={data} lang={lang} zone={zone} currency={currency} />
-          <Schedule data={data} lang={lang} zone={zone} currency={currency} />
-        </div>
-        <div className="min-w-0 space-y-5">
-          <NewLeads data={data} lang={lang} currency={currency} />
-          <Week data={data} lang={lang} />
-        </div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="min-w-0 space-y-4 lg:col-span-2">
+        <NeedsNow data={data} lang={lang} zone={zone} currency={currency} />
+        <TeamActivity lang={lang} />
+      </div>
+      <div className="min-w-0 space-y-4">
+        {/* The figures that are not nought, beside the work rather than above it (a phone shows the work first). */}
+        {figures.length > 0 && (
+          <div role="group" aria-label={t('crm.today.figures', 'The day at a glance')} className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1">
+            {figures.map((key, i) => {
+              const last = i === figures.length - 1 && figures.length % 2 === 1
+              const tile = key === 'open_chats'
+                ? <StatTile icon={Inbox} tone="progress" label={t('crm.today.open_chats', 'Open chats')} value={count(data.chats.open, lang)}
+                    hint={data.chats.unassigned > 0 ? t('crm.today.with_nobody', '{{count}} with nobody', { count: data.chats.unassigned }) : undefined} to="/crm/inbox" />
+                : key === 'new_leads'
+                  ? <StatTile icon={UserPlus} tone="accent" label={t('crm.today.new_leads', 'New leads')} value={count(data.leads.new, lang)} hint={t('crm.today.last_24h_short', '24 h')} to="/crm/leads" />
+                  : <StatTile icon={Coins} tone="success" label={t('crm.today.pipeline', 'Open pipeline')} value={money(data.pipeline.open_value, currency, lang)}
+                      hint={t('crm.today.open_short', '{{count}} open', { count: data.pipeline.open_count })} to="/crm/pipeline" />
+              return <div key={key} className={last ? 'col-span-2 lg:col-span-1' : undefined}>{tile}</div>
+            })}
+          </div>
+        )}
+        <NewLeads data={data} lang={lang} currency={currency} />
+        <Week data={data} lang={lang} />
       </div>
     </div>
-  )
-}
-
-/** One row of a list: its kind in a tone's chip, a title and a line, when, and what state it is in; its quick action beside it. */
-function Row({ to, icon: Icon, tone, title, line, when, pills, action }: { to: string; icon: LucideIcon; tone: Tone; title: string; line?: string | null; when?: string; pills?: ReactNode; action?: ReactNode }) {
-  return (
-    <li className="flex items-stretch">
-      <Link to={to} className={`${ROW_LINK} min-w-0 flex-1`}>
-        <span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONE_CHIP[tone]}`}><Icon size={16} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-2">
-            <span className="min-w-0 truncate text-sm font-medium text-a-text">{title}</span>
-            {when && <span className="ml-auto shrink-0 text-xs text-a-text-2">{when}</span>}
-          </span>
-          {line && <span className="mt-0.5 line-clamp-2 block text-sm text-a-text-2">{line}</span>}
-          {pills && <span className="mt-1.5 flex flex-wrap items-center gap-1.5">{pills}</span>}
-        </span>
-        {!action && <ChevronRight size={16} aria-hidden className="mt-2.5 hidden shrink-0 text-a-text-2 sm:block" />}
-      </Link>
-      {action && <span className="flex shrink-0 items-center pr-3">{action}</span>}
-    </li>
   )
 }
 
@@ -166,6 +151,7 @@ function useDone(): { done: (item: Done) => void; busy: string | null } {
       toast(item.kind === 'follow_up' ? t('crm.today.done_follow_up', 'Follow-up marked done') : t('crm.today.done_task', 'Task marked done'))
       void qc.invalidateQueries({ queryKey: ['crm', 'today'] })
       void qc.invalidateQueries({ queryKey: ['crm', 'bootstrap'] })
+      void qc.invalidateQueries({ queryKey: ['crm', 'activity'] })
       void qc.invalidateQueries({ queryKey: ['crm', item.kind === 'follow_up' ? 'leads' : 'tasks'] })
     },
     onError: error => toast(errorText(t, error), 'danger'),
@@ -174,222 +160,304 @@ function useDone(): { done: (item: Done) => void; busy: string | null } {
   return { done: item => mutation.mutate(item), busy }
 }
 
-/** The quick "Done" beside a follow-up or a task (a 40 px target, named for what it completes). */
+/** "Done" as an icon with its tooltip, named for what it completes. */
 function DoneButton({ item, label, state }: { item: Done; label: string; state: ReturnType<typeof useDone> }) {
   const { t } = useTranslation()
   const working = state.busy === `${item.kind}-${item.id}`
   return (
-    <button type="button" onClick={() => state.done(item)} disabled={state.busy !== null}
-      aria-label={t('crm.today.mark_done', 'Mark “{{name}}” done', { name: label })} title={t('crm.today.done', 'Done')}
-      className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-a-border bg-a-surface px-3 text-sm font-medium text-a-text-2 transition-colors hover:border-a-st-confirmed/50 hover:text-a-st-confirmed focus-visible:outline-2 focus-visible:outline-a-accent disabled:opacity-60">
-      {working ? <Loader2 size={14} aria-hidden className="animate-spin" /> : <Check size={14} aria-hidden />}
-      <span className="hidden sm:inline">{t('crm.today.done', 'Done')}</span>
-    </button>
+    <IconButton icon={working ? Loader2 : Check} label={t('crm.today.mark_done', 'Mark “{{name}}” done', { name: label })}
+      onClick={() => state.done(item)} disabled={state.busy !== null} className={`hover:text-a-st-confirmed ${working ? '[&>svg]:animate-spin' : ''}`} />
   )
 }
 
-/** "See all": where the rest is, when the server holds more than its short list. */
-function SeeAll({ links }: { links: { to: string; label: string; show: boolean }[] }) {
-  const shown = links.filter(l => l.show)
-  if (shown.length === 0) return null
+/** A row's icon in its tone's chip. */
+function Chip({ icon: Icon, tone }: { icon: LucideIcon; tone: Tone }) {
+  return <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP[tone]}`}><Icon size={15} /></span>
+}
+
+/** A row's two lines: the name, then one fact, each cut to the width. */
+function Lines({ title, line }: { title: string; line?: string | null }) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-a-border px-4 py-2.5">
-      {shown.map(l => <Link key={l.to} to={l.to} className={TEXT_LINK}>{l.label}<ArrowRight size={14} aria-hidden /></Link>)}
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-sm font-medium text-a-text">{title}</span>
+      {line && <span className="block truncate text-xs text-a-text-2">{line}</span>}
+    </span>
+  )
+}
+
+/** What needs a person now: three tabs with their counts, the first with work open unless the address names one. */
+function NeedsNow({ data, lang, zone, currency }: { data: Today; lang: string; zone: string; currency: string }) {
+  const { t } = useTranslation()
+  const [search, setSearch] = useSearchParams()
+  const counts = needCounts(data)
+  const tab = needTabOf(search.get(NEED_PARAM), counts)
+  const state = useDone()
+  const [openTask, setOpenTask] = useState<number | null>(null)
+  const choose = (next: NeedTab) => setSearch(prev => {
+    const out = new URLSearchParams(prev)
+    out.set(NEED_PARAM, next)
+    return out
+  }, { replace: true })
+  const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const next = sectionAfter(NEED_TABS, tab, e.key)
+    if (!next) return
+    e.preventDefault()
+    choose(next)
+    document.getElementById(`crm-need-${next}`)?.focus()
+  }
+  const meta: Record<NeedTab, { icon: LucideIcon; label: string; tone: Tone }> = {
+    chats: { icon: MessageCircle, label: t('crm.today.tab_chats', 'Chats waiting'), tone: 'pending' },
+    follow_ups: { icon: CalendarClock, label: t('crm.today.tab_follow_ups', 'Follow-ups'), tone: data.leads.overdue > 0 ? 'danger' : 'pending' },
+    tasks: { icon: CheckSquare, label: t('crm.today.tab_tasks', 'Your tasks'), tone: data.tasks.overdue > 0 ? 'danger' : 'pending' },
+  }
+
+  return (
+    <Card title={t('crm.today.now_title', 'Needs you now')} icon={AlarmClock} tone={counts.chats + counts.follow_ups + counts.tasks > 0 ? 'pending' : 'success'} padded={false}>
+      <div role="tablist" aria-label={t('crm.today.now_title', 'Needs you now')} className="flex gap-1 overflow-x-auto border-b border-a-border px-2 py-1.5 [scrollbar-width:none]">
+        {NEED_TABS.map(key => {
+          const on = key === tab
+          const { icon: Icon, label, tone } = meta[key]
+          return (
+            <button key={key} type="button" role="tab" id={`crm-need-${key}`} aria-selected={on} aria-controls="crm-need-panel" tabIndex={on ? 0 : -1}
+              onClick={() => choose(key)} onKeyDown={onKey} title={label}
+              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${on ? 'bg-a-accent/15 text-a-text' : 'text-a-text-2 hover:bg-a-surface-2 hover:text-a-text'}`}>
+              <Icon size={15} aria-hidden />
+              {/* On a phone only the chosen tab spells its name; the others are their icon and count (name as tooltip). */}
+              <span className={on ? 'whitespace-nowrap' : 'sr-only sm:not-sr-only sm:whitespace-nowrap'}>{label}</span>
+              <span className={`min-w-6 rounded-full px-1.5 text-center text-xs font-semibold leading-5 ${counts[key] > 0 ? TONE_CHIP[tone] : 'bg-a-surface-2 text-a-text-2'}`}>{count(counts[key], lang)}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div id="crm-need-panel" role="tabpanel" aria-labelledby={`crm-need-${tab}`}>
+        {tab === 'chats' && <ChatList data={data} lang={lang} />}
+        {tab === 'follow_ups' && <FollowUpList data={data} lang={lang} currency={currency} state={state} />}
+        {tab === 'tasks' && <TaskRows data={data} lang={lang} zone={zone} state={state} onOpen={setOpenTask} />}
+      </div>
+      {openTask !== null && <TaskOpen id={openTask} onClose={() => setOpenTask(null)} />}
+    </Card>
+  )
+}
+
+/** Nothing in a tab: a short word, and none of the other tabs' figures. */
+function AllClear({ title }: { title: string }) {
+  return (
+    <p className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-a-text-2">
+      <PartyPopper size={16} aria-hidden className="text-a-st-confirmed" />{title}
+    </p>
+  )
+}
+
+/** "Show all" under a tab whose server count is more than its rows. */
+function ShowAll({ to, total, shown }: { to: string; total: number; shown: number }) {
+  const { t } = useTranslation()
+  if (!hasMore(total, shown)) return null
+  return (
+    <div className="border-t border-a-border px-4 py-2">
+      <Link to={to} className={TEXT_LINK}>{t('crm.today.show_all', 'Show all {{count}}', { count: total })}<ArrowRight size={14} aria-hidden /></Link>
     </div>
   )
 }
 
-/** What needs a person now: chats waiting for a reply, then overdue follow-ups, then overdue tasks. */
-function NeedsNow({ data, lang, zone, currency }: { data: Today; lang: string; zone: string; currency: string }) {
+function ChatList({ data, lang }: { data: Today; lang: string }) {
   const { t } = useTranslation()
-  const items = needsNow(data)
-  const state = useDone()
-  const overdueLeads = items.filter(i => i.kind === 'follow_up').length
-  const overdueTasks = items.filter(i => i.kind === 'task').length
+  const rows = chatRows(data).slice(0, NOW_ROWS)
+  if (rows.length === 0) return <AllClear title={t('crm.today.clear_chats', 'Nobody is waiting')} />
+  return (
+    <>
+      <ul className="divide-y divide-a-border">
+        {rows.map(chat => (
+          <li key={chat.id} className="flex">
+            <Link to={conversationPath(chat.id)} className={ROW}>
+              <Chip icon={MessageCircle} tone="pending" />
+              <Lines title={chat.name ?? chat.email ?? t('crm.common.visitor', 'Visitor')} line={chat.excerpt} />
+              {!chat.assigned_to && <span title={t('crm.today.nobody', 'Nobody assigned')} className="shrink-0 text-a-danger"><UserX size={15} aria-hidden /><span className="sr-only">{t('crm.today.nobody', 'Nobody assigned')}</span></span>}
+              <span className="shrink-0 text-xs tabular-nums text-a-text-2">{timeAgo(chat.last_at, lang)}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <ShowAll to="/crm/inbox?status=waiting" total={data.chats.waiting} shown={rows.length} />
+    </>
+  )
+}
+
+function FollowUpList({ data, lang, currency, state }: { data: Today; lang: string; currency: string; state: ReturnType<typeof useDone> }) {
+  const { t } = useTranslation()
+  const records = useRecords()
+  const rows = followUpRows(data).slice(0, NOW_ROWS)
+  if (rows.length === 0) return <AllClear title={t('crm.today.clear_follow_ups', 'No follow-up due')} />
+  return (
+    <>
+      <ul className="divide-y divide-a-border">
+        {rows.map(lead => {
+          const title = `${lead.name ?? t('crm.common.no_name', 'No name')}${lead.company ? ` · ${lead.company}` : ''}`
+          return (
+            <li key={lead.id} className="flex items-center pr-2">
+              <Link to={records.href('lead', lead.id)} className={ROW}>
+                <Chip icon={CalendarClock} tone={lead.overdue ? 'danger' : 'pending'} />
+                <Lines title={title} line={lead.task_note ?? nextStepWord(t, lead.task_type) ?? lead.status} />
+                {lead.value !== null && <span className="hidden shrink-0 text-xs tabular-nums text-a-text-2 sm:inline">{money(lead.value, currency, lang)}</span>}
+                <Pill tone={lead.overdue ? 'danger' : 'pending'}>{lead.overdue ? dayLabel(lead.due, lang) : t('crm.today.due_today', 'Today')}</Pill>
+              </Link>
+              <DoneButton item={{ kind: 'follow_up', id: lead.id }} label={title} state={state} />
+            </li>
+          )
+        })}
+      </ul>
+      <ShowAll to="/crm/leads?due=1" total={data.leads.due_today + data.leads.overdue} shown={rows.length} />
+    </>
+  )
+}
+
+function TaskRows({ data, lang, zone, state, onOpen }: { data: Today; lang: string; zone: string; state: ReturnType<typeof useDone>; onOpen: (id: number) => void }) {
+  const { t } = useTranslation()
+  const rows = taskRows(data, zone).slice(0, NOW_ROWS)
+  if (rows.length === 0) return <AllClear title={t('crm.today.clear_tasks', 'No task due')} />
+  return (
+    <>
+      <ul className="divide-y divide-a-border">
+        {rows.map(({ task, time }) => {
+          const Icon = (task.type ? TASK_ICONS[task.type as keyof typeof TASK_ICONS] : null) ?? CheckSquare
+          const day = task.due_at ? venueClock(new Date(task.due_at), zone).date : null
+          const when = task.overdue ? [dayLabel(day, lang), time].filter(Boolean).join(', ') : (time ?? t('crm.today.due_today', 'Today'))
+          return (
+            <li key={task.id} className="flex items-center pr-2">
+              <button type="button" onClick={() => onOpen(task.id)} data-task-open={task.id} className={ROW}
+                aria-label={t('crm.today.open_task', 'Open the task “{{name}}”', { name: task.title })}>
+                <Chip icon={Icon} tone={task.overdue ? 'danger' : 'progress'} />
+                <Lines title={task.title} line={task.contact} />
+                <Pill tone={task.overdue ? 'danger' : time ? 'progress' : 'pending'}>{when}</Pill>
+              </button>
+              <DoneButton item={{ kind: 'task', id: task.id }} label={task.title} state={state} />
+            </li>
+          )
+        })}
+      </ul>
+      <ShowAll to="/crm/tasks" total={data.tasks.due_today + data.tasks.overdue} shown={rows.length} />
+    </>
+  )
+}
+
+/** The team's activity (`GET crm/activity`): who did what, on which lead, a page at a time. */
+function TeamActivity({ lang }: { lang: string }) {
+  const { t } = useTranslation()
+  const records = useRecords()
+  const feed = useInfiniteQuery({
+    queryKey: ['crm', 'activity'],
+    queryFn: ({ pageParam }) => get<ActivityPage>(`crm/activity${params({ page: pageParam, per_page: ACTIVITY_PER_PAGE })}`),
+    initialPageParam: 1,
+    getNextPageParam: last => nextActivityPage(last),
+    staleTime: 30_000,
+    refetchInterval: 120_000,
+  })
+  const rows = feed.data?.pages.flatMap(p => p.data) ?? []
+  const total = feed.data?.pages[0]?.meta.total ?? 0
+  const where = (row: ActivityRow): string | null => {
+    const target = activityTarget(row)
+    if (!target) return null
+    return target.kind === 'chat' ? conversationPath(target.id) : records.href(target.kind, target.id)
+  }
 
   return (
-    <Card title={t('crm.today.now_title', 'Needs you now')} description={t('crm.today.now_line', 'Waiting chats first, then what is overdue.')}
-      icon={AlarmClock} tone={items.length > 0 ? 'pending' : 'success'} padded={false}
-      action={data.chats.list.length > 0 ? <Link to="/crm/inbox?status=waiting" className={TEXT_LINK}>{t('crm.today.open_inbox', 'Open the inbox')}</Link> : undefined}>
-      {items.length === 0
-        ? <EmptyState icon={PartyPopper} title={t('crm.today.all_clear', 'All clear')} line={t('crm.today.all_clear_line', 'Nobody is waiting for a reply and nothing is overdue.')} />
-        : (
-          <ul className="divide-y divide-a-border">
-            {items.map(item => <NowRow key={item.key} item={item} lang={lang} zone={zone} currency={currency} state={state} />)}
-          </ul>
-        )}
-      <SeeAll links={[
-        { to: '/crm/inbox?status=waiting', label: t('crm.today.all_waiting', 'All {{count}} waiting chats', { count: data.chats.waiting }), show: hasMore(data.chats.waiting, data.chats.list.length) },
-        { to: '/crm/leads?due=1', label: t('crm.today.all_overdue_leads', 'All {{count}} overdue follow-ups', { count: data.leads.overdue }), show: hasMore(data.leads.overdue, overdueLeads) },
-        { to: '/crm/tasks', label: t('crm.today.all_overdue_tasks', 'All {{count}} overdue tasks', { count: data.tasks.overdue }), show: hasMore(data.tasks.overdue, overdueTasks) },
-      ]} />
+    <Card title={t('crm.today.activity_title', 'Team activity')} icon={Activity} tone="accent" padded={false}
+      hint={total > 0 ? count(total, lang) : undefined}>
+      <div className={feed.data ? '' : 'p-4'}>
+        <QueryState loading={feed.isLoading} error={feed.error} onRetry={() => { void feed.refetch() }} rows={3}>
+          {rows.length === 0
+            ? <AllClear title={t('crm.today.no_activity', 'Nothing logged yet')} />
+            : (
+              <ul className="divide-y divide-a-border">
+                {rows.map(row => {
+                  const to = where(row)
+                  const what = row.subject ?? row.excerpt ?? activityLabel(t, row.type)
+                  const about = row.lead?.name ?? row.contact?.name ?? null
+                  const body: ReactNode = (
+                    <>
+                      <Chip icon={activityIcon(row.type)} tone="neutral" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-a-text">
+                          <span className="font-medium">{row.by?.name ?? t('crm.today.by_system', 'System')}</span>
+                          <span className="text-a-text-2"> · {activityLabel(t, row.type)}</span>
+                        </span>
+                        <span className="block truncate text-xs text-a-text-2">{[about, what].filter(Boolean).join(' — ')}</span>
+                      </span>
+                      <span className="shrink-0 text-xs tabular-nums text-a-text-2">{timeAgo(row.occurred_at, lang)}</span>
+                    </>
+                  )
+                  return (
+                    <li key={row.id} className="flex">
+                      {to ? <Link to={to} className={ROW}>{body}</Link> : <div className={ROW.replace('hover:bg-a-surface-2', '')}>{body}</div>}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+        </QueryState>
+      </div>
+      {feed.hasNextPage && (
+        <div className="border-t border-a-border px-4 py-2">
+          <button type="button" onClick={() => { void feed.fetchNextPage() }} disabled={feed.isFetchingNextPage} className={TEXT_LINK}>
+            {feed.isFetchingNextPage ? <Loader2 size={14} aria-hidden className="animate-spin" /> : null}{t('crm.today.more', 'Show more')}
+          </button>
+        </div>
+      )}
     </Card>
   )
 }
 
-function NowRow({ item, lang, zone, currency, state }: { item: NowItem; lang: string; zone: string; currency: string; state: ReturnType<typeof useDone> }) {
-  const { t } = useTranslation()
-  if (item.kind === 'chat') {
-    const chat = item.chat
-    return (
-      <Row to={conversationPath(chat.id)} icon={MessageCircle} tone="pending"
-        title={chat.name ?? chat.email ?? t('crm.common.visitor', 'Visitor')} line={chat.excerpt} when={timeAgo(chat.last_at, lang)}
-        pills={<>
-          <Pill tone="pending">{t('crm.today.kind_chat', 'Waiting for a reply')}</Pill>
-          {chat.assigned_to ? <Pill>{chat.assigned_to.name}</Pill> : <Pill tone="danger">{t('crm.today.nobody', 'Nobody assigned')}</Pill>}
-        </>} />
-    )
-  }
-  if (item.kind === 'follow_up') {
-    const lead = item.lead
-    const title = `${lead.name ?? t('crm.common.no_name', 'No name')}${lead.company ? ` · ${lead.company}` : ''}`
-    return (
-      <Row to={leadPath(lead.id)} icon={CalendarClock} tone="danger" title={title}
-        line={lead.task_note ?? nextStepWord(t, lead.task_type) ?? lead.status} when={lead.value !== null ? money(lead.value, currency, lang) : undefined}
-        pills={<Pill tone="danger">{t('crm.today.kind_follow_up', 'Follow-up overdue since {{day}}', { day: dayLabel(lead.due, lang) })}</Pill>}
-        action={<DoneButton item={{ kind: 'follow_up', id: lead.id }} label={title} state={state} />} />
-    )
-  }
-  const task = item.task
-  return (
-    <Row to={taskTarget(task)} icon={CheckSquare} tone="danger" title={task.title} line={task.contact}
-      pills={<Pill tone="danger">{t('crm.today.kind_task', 'Task overdue · was due {{when}}', { when: dateTime(task.due_at, lang, zone) })}</Pill>}
-      action={<DoneButton item={{ kind: 'task', id: task.id }} label={task.title} state={state} />} />
-  )
-}
-
-/** Today's schedule: your tasks at a time, then what is due during the day (follow-ups, tasks without a time). */
-function Schedule({ data, lang, zone, currency }: { data: Today; lang: string; zone: string; currency: string }) {
-  const { t } = useTranslation()
-  const { timed, allDay } = scheduleOf(data, zone)
-  const state = useDone()
-  const empty = timed.length === 0 && allDay.length === 0
-
-  return (
-    <Card title={t('crm.today.schedule_title', 'Today’s schedule')} description={t('crm.today.schedule_line', 'Follow-ups and your tasks due today, in the venue’s time.')}
-      icon={CalendarDays} tone="progress" padded={false}
-      action={<Link to="/crm/tasks" className={TEXT_LINK}>{t('crm.today.all_tasks', 'All tasks')}</Link>}>
-      {empty
-        ? <EmptyState icon={Sun} title={t('crm.today.no_schedule', 'Nothing scheduled for today')} line={t('crm.today.no_schedule_line', 'Set a next step on a lead or add a task, and it shows here on its day.')} />
-        : (
-          <div className="divide-y divide-a-border">
-            {timed.length > 0 && (
-              <ol aria-label={t('crm.today.at_a_time', 'At a time')} className="divide-y divide-a-border">
-                {timed.map(item => <ScheduleRow key={item.key} item={item} lang={lang} currency={currency} state={state} />)}
-              </ol>
-            )}
-            {allDay.length > 0 && (
-              <div>
-                <p className="bg-a-surface-2/60 px-4 py-1.5 text-xs font-semibold text-a-text-2">{t('crm.today.during_day', 'During the day')}</p>
-                <ul className="divide-y divide-a-border">
-                  {allDay.map(item => <ScheduleRow key={item.key} item={item} lang={lang} currency={currency} state={state} />)}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      <SeeAll links={[{ to: '/crm/leads?due=1', label: t('crm.today.all_leads_due', 'All follow-ups due'), show: hasMore(data.leads.due_today + data.leads.overdue, data.leads.follow_ups.length) }]} />
-    </Card>
-  )
-}
-
-function ScheduleRow({ item, lang, currency, state }: { item: ScheduleItem; lang: string; currency: string; state: ReturnType<typeof useDone> }) {
-  const { t } = useTranslation()
-  if (item.kind === 'task') {
-    const task = item.task
-    return (
-      <li className="flex items-stretch">
-        <Link to={taskTarget(task)} className={`${ROW_LINK} min-w-0 flex-1 items-center`}>
-          <span className={`w-12 shrink-0 text-sm font-semibold tabular-nums ${item.time ? 'text-a-text' : 'text-a-text-2'}`}>
-            {item.time ?? <><Clock size={15} aria-hidden /><span className="sr-only">{t('crm.today.no_time', 'No set time')}</span></>}
-          </span>
-          <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP.progress}`}><CheckSquare size={15} /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-a-text">{task.title}</span>
-            <span className="block truncate text-xs text-a-text-2">{[t('crm.today.kind_task_today', 'Task'), task.contact].filter(Boolean).join(' · ')}</span>
-          </span>
-        </Link>
-        <span className="flex shrink-0 items-center pr-3"><DoneButton item={{ kind: 'task', id: task.id }} label={task.title} state={state} /></span>
-      </li>
-    )
-  }
-  const lead = item.lead
-  const title = `${lead.name ?? t('crm.common.no_name', 'No name')}${lead.company ? ` · ${lead.company}` : ''}`
-  return (
-    <li className="flex items-stretch">
-      <Link to={leadPath(lead.id)} className={`${ROW_LINK} min-w-0 flex-1 items-center`}>
-        <span className="w-12 shrink-0 text-a-text-2"><Clock size={15} aria-hidden /><span className="sr-only">{t('crm.today.no_time', 'No set time')}</span></span>
-        <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP.accent}`}><Target size={15} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-a-text">{title}</span>
-          <span className="block truncate text-xs text-a-text-2">{[t('crm.today.kind_follow_up_today', 'Follow-up'), lead.task_note ?? nextStepWord(t, lead.task_type) ?? lead.status].filter(Boolean).join(' · ')}</span>
-        </span>
-        {lead.value !== null && <span className="shrink-0 text-xs tabular-nums text-a-text-2">{money(lead.value, currency, lang)}</span>}
-      </Link>
-      <span className="flex shrink-0 items-center pr-3"><DoneButton item={{ kind: 'follow_up', id: lead.id }} label={title} state={state} /></span>
-    </li>
-  )
-}
-
-/** The leads that came in during the last 24 hours. */
+/** The leads that came in during the last 24 hours, each opening in its panel. */
 function NewLeads({ data, lang, currency }: { data: Today; lang: string; currency: string }) {
   const { t } = useTranslation()
-  const rows = data.leads.new_list
+  const records = useRecords()
+  const rows = data.leads.new_list.slice(0, NOW_ROWS)
   return (
-    <Card title={t('crm.today.new_title', 'New leads')} description={t('crm.today.last_24h', 'In the last 24 hours')} icon={UserPlus} tone="accent" padded={false}
-      action={<Link to="/crm/leads" className={TEXT_LINK}>{t('crm.today.all_leads', 'All leads')}</Link>}>
+    <Card title={t('crm.today.new_title', 'New leads')} icon={UserPlus} tone="accent" padded={false} hint={t('crm.today.last_24h_short', '24 h')}
+      action={<IconButton icon={ArrowRight} size="sm" label={t('crm.today.all_leads', 'All leads')} to="/crm/leads" />}>
       {rows.length === 0
-        ? <EmptyState icon={Target} title={t('crm.today.no_new', 'No new leads today')} line={t('crm.today.no_new_line', 'Leads from the website chat, your forms and your team show here as they come in.')} />
+        ? <AllClear title={t('crm.today.no_new', 'No new leads today')} />
         : (
           <ul className="divide-y divide-a-border">
             {rows.map(lead => (
-              <li key={lead.id}>
-                <Link to={leadPath(lead.id)} className={`${ROW_LINK} items-center`}>
+              <li key={lead.id} className="flex">
+                <Link to={records.href('lead', lead.id)} className={ROW}>
                   <Avatar name={lead.name} size="sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-a-text">{lead.name ?? t('crm.common.no_name', 'No name')}</span>
-                    <span className="block truncate text-xs text-a-text-2">{[lead.company, timeAgo(lead.created_at, lang)].filter(Boolean).join(' · ')}</span>
-                  </span>
-                  <span className="flex shrink-0 flex-col items-end gap-1">
-                    {lead.source && <Pill>{sourceLabel(t, lead.source)}</Pill>}
-                    {lead.value !== null && <span className="text-xs tabular-nums text-a-text-2">{money(lead.value, currency, lang)}</span>}
-                  </span>
+                  <Lines title={lead.name ?? t('crm.common.no_name', 'No name')} line={[lead.company, timeAgo(lead.created_at, lang)].filter(Boolean).join(' · ')} />
+                  {lead.value !== null
+                    ? <span className="shrink-0 text-xs tabular-nums text-a-text-2">{money(lead.value, currency, lang)}</span>
+                    : lead.source && <Pill>{sourceLabel(t, lead.source)}</Pill>}
                 </Link>
               </li>
             ))}
           </ul>
         )}
-      <SeeAll links={[{ to: '/crm/leads', label: t('crm.today.all_new', 'All {{count}} new leads', { count: data.leads.new }), show: hasMore(data.leads.new, rows.length) }]} />
+      <ShowAll to="/crm/leads" total={data.leads.new} shown={rows.length} />
     </Card>
   )
 }
 
-/** The website chat over the last seven days (the server's counts). */
+/** The website chat over the last seven days (the server's counts), in one row. */
 function Week({ data, lang }: { data: Today; lang: string }) {
   const { t } = useTranslation()
   const aiShare = percent(data.week.ai_resolved, data.week.conversations)
-  const figure = 'mt-1 font-a-display text-2xl leading-none'
+  const cell = 'flex min-w-0 flex-col justify-between rounded-xl px-2.5 py-2'
   return (
-    <Card title={t('crm.today.week_title', 'The website chat this week')} description={t('crm.today.week_line', 'The last seven days')} icon={Bot} tone="ai"
-      action={<Link to="/crm/insights?days=7" className={TEXT_LINK}><BarChart3 size={14} aria-hidden />{t('crm.today.week_more', 'Insights')}</Link>}>
+    <Card title={t('crm.today.week_title', 'The website chat this week')} icon={MessageCircle} tone="ai"
+      action={<IconButton icon={BarChart3} size="sm" label={t('crm.today.week_more', 'Insights')} to="/crm/insights?days=7" />}>
       <dl className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl bg-a-surface-2 px-2.5 py-2.5">
-          <dt className="text-xs text-a-text-2">{t('crm.today.week_chats', 'Conversations')}</dt>
-          <dd className={`${figure} text-a-text`}>{count(data.week.conversations, lang)}</dd>
+        <div className={`${cell} bg-a-surface-2`}>
+          <dt className="text-xs leading-tight text-a-text-2" title={t('crm.today.week_chats', 'Conversations')}>{t('crm.today.week_chats', 'Conversations')}</dt>
+          <dd className="font-a-display text-xl leading-tight text-a-text">{count(data.week.conversations, lang)}</dd>
         </div>
-        <div className="rounded-xl crm-ai-soft px-2.5 py-2.5">
-          <dt className="text-xs">{t('crm.today.week_ai', 'Closed by the AI')}</dt>
-          <dd className={figure}>{aiShare === null ? '—' : `${aiShare} %`}</dd>
+        <div className={`${cell} crm-ai-soft`}>
+          <dt className="text-xs leading-tight" title={t('crm.today.week_hint', 'Chats the assistant closed with nobody from your team stepping in.')}>{t('crm.today.week_ai', 'Closed by the AI')}</dt>
+          <dd className="font-a-display text-xl leading-tight">{aiShare === null ? '—' : `${aiShare} %`}</dd>
         </div>
-        <div className="rounded-xl bg-a-surface-2 px-2.5 py-2.5">
-          <dt className="text-xs text-a-text-2">{t('crm.today.week_leads', 'Leads from chat')}</dt>
-          <dd className={`${figure} text-a-text`}>{count(data.week.leads_from_chat, lang)}</dd>
+        <div className={`${cell} bg-a-surface-2`}>
+          <dt className="text-xs leading-tight text-a-text-2" title={t('crm.today.week_leads', 'Leads from chat')}>{t('crm.today.week_leads', 'Leads from chat')}</dt>
+          <dd className="font-a-display text-xl leading-tight text-a-text">{count(data.week.leads_from_chat, lang)}</dd>
         </div>
       </dl>
-      <p className="mt-3 flex items-start gap-2 text-xs text-a-text-2">
-        <Sparkles size={13} aria-hidden className="mt-0.5 shrink-0 crm-ai-text" />
-        {t('crm.today.week_hint', 'Chats the assistant closed with nobody from your team stepping in.')}
-      </p>
     </Card>
   )
 }

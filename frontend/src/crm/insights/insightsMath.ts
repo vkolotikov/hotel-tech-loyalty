@@ -1,6 +1,6 @@
 import { addDays, venueNow } from '../../workspace/lib/wallClock'
 import { percent } from '../lib/format'
-import type { ChatHourPoint, ChatTrendPoint, LostReasonCount, Pipeline, SignalLead } from './types'
+import type { ChatAnalytics, ChatHourPoint, ChatTrendPoint, DealAnalytics, ForecastReport, LostReasonCount, Pipeline, SignalLead } from './types'
 
 /**
  * Insights' shaping, kept pure because the tests render to a string (2026-11-07). Every figure is the server's
@@ -23,8 +23,12 @@ export function periodOf(value: string | null): Period {
   return (PERIODS as readonly number[]).includes(n) ? (n as Period) : 30
 }
 
-/** Insights' two sections, kept in the address (`?tab=`); the given default when it names none we have. */
-export const SECTIONS = ['chat', 'pipeline'] as const
+/**
+ * Insights' sections, kept in the address (`?tab=`); the given default when it names none we have. Round 5 (owner
+ * 2026-11-12, "implement all features we have in our main platform"): the deals' analytics and the sales reports of the
+ * full admin's Analytics and Reports pages.
+ */
+export const SECTIONS = ['chat', 'pipeline', 'deals', 'reports'] as const
 export type InsightsSection = (typeof SECTIONS)[number]
 
 export function sectionOf(value: string | null, fallback: InsightsSection = 'chat'): InsightsSection {
@@ -219,4 +223,119 @@ export function signalName(lead: SignalLead): string | null {
 export function rate(value: number | null | undefined, lang: string): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—'
   return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(value)} %`
+}
+
+/* ─── Round 5: the chat's intents, weekdays and lengths ──────────────────── */
+
+/** The engagement AI's intents (App\Enums\ConversationIntent), in this order; `untagged` before it has tagged one. */
+export const INTENTS = ['booking_inquiry', 'info_request', 'complaint', 'cancellation', 'support', 'spam', 'other', 'untagged'] as const
+
+/** The intents with conversations, the most first, those not yet tagged last; an unknown one as the server names it. */
+export function intentRows(breakdown: ChatAnalytics['intent_breakdown']): { key: string; count: number; known: boolean }[] {
+  return (breakdown ?? [])
+    .map(r => ({ key: r.intent || 'untagged', count: Number(r.count) || 0, known: (INTENTS as readonly string[]).includes(r.intent || 'untagged') }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => Number(a.key === 'untagged') - Number(b.key === 'untagged') || b.count - a.count || a.key.localeCompare(b.key))
+}
+
+/** A weekday's short name in the person's language (`dow` 0 = Sunday, as the server counts). */
+export function weekdayName(dow: number, lang: string): string {
+  // 1 November 2026 was a Sunday: the day `dow` after it carries that weekday.
+  return new Intl.DateTimeFormat(lang, { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 10, 1 + (((dow % 7) + 7) % 7))))
+}
+
+/** Monday to Sunday with the conversations of each, as the server ordered them (every day present). */
+export function weekdayRows(dist: ChatAnalytics['weekday_distribution'], lang: string): { dow: number; label: string; count: number }[] {
+  const byDow = new Map((dist ?? []).map(d => [d.dow, Number(d.conversations) || 0]))
+  return [1, 2, 3, 4, 5, 6, 0].map(dow => ({ dow, label: weekdayName(dow, lang), count: byDow.get(dow) ?? 0 }))
+}
+
+/** The busiest weekday, or null with none. */
+export function busiestWeekday(rows: { dow: number; count: number }[]): number | null {
+  let best: { dow: number; count: number } | null = null
+  for (const row of rows) if (row.count > 0 && (!best || row.count > best.count)) best = row
+  return best ? best.dow : null
+}
+
+/** The conversations by length in the server's buckets; `none` (no message) is worded by the page. */
+export function lengthRows(dist: ChatAnalytics['length_distribution']): { key: string; label: string; count: number }[] {
+  return (dist ?? []).map(d => ({ key: d.bucket, label: d.label, count: Number(d.count) || 0 }))
+}
+
+/* ─── Round 5: the deals ─────────────────────────────────────────────────── */
+
+/** The period's totals from the server's daily series: the value and number of deals completed, the deals that came in. */
+export function dealTotals(data: Pick<DealAnalytics, 'revenue_trend' | 'new_deal_trend'>): { revenue: number; completed: number; fresh: number } {
+  const sum = <T>(rows: T[], pick: (row: T) => number) => rows.reduce((n, row) => n + (Number(pick(row)) || 0), 0)
+  return {
+    revenue: Math.round(sum(data.revenue_trend, r => r.revenue) * 100) / 100,
+    completed: sum(data.revenue_trend, r => r.count),
+    fresh: sum(data.new_deal_trend, r => r.count),
+  }
+}
+
+/** A daily series as columns: each day up to a month, weeks for longer (the latest week whole, counted back). */
+export function dayBuckets(points: { date: string; value: number }[]): { key: string; from: string; to: string; value: number }[] {
+  if (points.length <= 31) return points.map(p => ({ key: p.date, from: p.date, to: p.date, value: Number(p.value) || 0 }))
+  const out: { key: string; from: string; to: string; value: number }[] = []
+  for (let end = points.length - 1; end >= 0; end -= 7) {
+    const week = points.slice(Math.max(0, end - 6), end + 1)
+    out.unshift({ key: week[0].date, from: week[0].date, to: week[week.length - 1].date, value: week.reduce((n, p) => n + (Number(p.value) || 0), 0) })
+  }
+  return out
+}
+
+/** The payment states we name (DealController::PAYMENT_STATUSES), in this order; `unset` (none chosen) last. */
+export const PAYMENT_ORDER = ['pending', 'invoice_sent', 'partial', 'paid', 'refunded', 'unset'] as const
+
+/** The open deals by payment state, those with any, in the order above; an unknown one after, as the server names it. */
+export function paymentRows(dist: DealAnalytics['payment_distribution']): { key: string; count: number }[] {
+  const rank = (key: string) => {
+    const at = (PAYMENT_ORDER as readonly string[]).indexOf(key)
+    return at === -1 ? PAYMENT_ORDER.length : at
+  }
+  return (dist ?? []).map(d => ({ key: d.status || 'unset', count: Number(d.count) || 0 })).filter(d => d.count > 0)
+    .sort((a, b) => rank(a.key) - rank(b.key) || b.count - a.count)
+}
+
+/* ─── Round 5: the sales reports ─────────────────────────────────────────── */
+
+/** The reports' windows, in months (the full admin's 3m / 6m / 12m); 6 when the address names none we have. */
+export const REPORT_MONTHS = [3, 6, 12] as const
+export type ReportMonths = (typeof REPORT_MONTHS)[number]
+
+export function monthsOf(value: string | null): ReportMonths {
+  const n = Number(value)
+  return (REPORT_MONTHS as readonly number[]).includes(n) ? (n as ReportMonths) : 6
+}
+
+/** The owners' board's window for a report window: the same span in days, at most the server's 180. */
+export function ownerDays(months: ReportMonths): number {
+  return Math.min(180, months * 30)
+}
+
+/** A forecast month (`YYYY-MM`) as "Dec 26"; null for the "later" bucket, which the page words. */
+export function monthLabel(key: string, lang: string): string | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(key)
+  if (!m) return null
+  return new Intl.DateTimeFormat(lang, { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(Date.UTC(+m[1], +m[2] - 1, 1)))
+}
+
+/** The forecast as columns: what is expected at the bottom, the rest of the open value above it. */
+export function forecastColumns(report: Pick<ForecastReport, 'buckets'>): { key: string; expected: number; rest: number; deals: number }[] {
+  return report.buckets.map(b => {
+    const expected = Math.max(0, Number(b.expected_value) || 0)
+    return { key: b.key, expected, rest: Math.max(0, (Number(b.gross_value) || 0) - expected), deals: Number(b.deal_count) || 0 }
+  })
+}
+
+/** The funnel's stage names the server uses (SalesReports::FUNNEL_STAGES), as keys for their words. */
+export const FUNNEL_STAGE_KEYS: Record<string, string> = {
+  'New': 'new', 'Responded': 'responded', 'Site Visit': 'site_visit', 'Proposal Sent': 'proposal_sent',
+  'Negotiating': 'negotiating', 'Tentative': 'tentative', 'Confirmed': 'confirmed',
+}
+
+/** Whether a report was refused for want of the Reports page's right (`can_view_analytics`), not broken. */
+export function refusedForRights(code: string): boolean {
+  return code === 'not_allowed' || code === 'no_capability' || code === 'permission_denied'
 }

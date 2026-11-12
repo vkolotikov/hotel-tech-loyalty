@@ -46,7 +46,9 @@
     "person_line": "Wege, Ihr Team aus dem Chat zu erreichen.",
     "privacy_line": "Vor einem Chat, danach und in Ihrem Posteingang.",
     "hours_card_line": "Wann Ihr Team antwortet und was der Chat in der übrigen Zeit sagt.",
-    "same_weekdays": "Montagszeiten für Dienstag bis Freitag übernehmen"
+    "same_weekdays": "Montagszeiten für Dienstag bis Freitag übernehmen",
+    "parts": "Teile des Verhaltens",
+    "same_weekdays_short": "Montag für alle Werktage"
   },
   "discard": "Verwerfen",
   "fix_first": "Korrigieren Sie die markierten Felder, um zu speichern.",
@@ -97,7 +99,8 @@
     "builders": "Website-Baukasten",
     "rotate_confirm_title": "Widget-Schlüssel ersetzen?",
     "rotate_confirm_warn": "Der Chat verschwindet sofort von Ihrer Website.",
-    "rotate_confirm_line": "Der Code auf Ihrer Website funktioniert nicht mehr, sobald der Schlüssel ersetzt ist. Der Chat erscheint wieder, wenn Sie dort den neuen Code einfügen. Tun Sie das nur, wenn der Schlüssel missbraucht wurde."
+    "rotate_confirm_line": "Der Code auf Ihrer Website funktioniert nicht mehr, sobald der Schlüssel ersetzt ist. Der Chat erscheint wieder, wenn Sie dort den neuen Code einfügen. Tun Sie das nur, wenn der Schlüssel missbraucht wurde.",
+    "code_short": "Einmal einfügen, direkt vor </body>."
   },
   "line": "Der Chat auf Ihrer Website: wie er aussieht, wie er Besucher begrüßt und wie Sie ihn einbauen.",
   "look": {
@@ -166,7 +169,9 @@
     "box_title": "Das Nachrichtenfeld",
     "box_line": "Weitere Optionen: der Text darin und der Hinweis darunter.",
     "suggestions_line": "Schaltflächen, die ein Besucher antippt, statt zu tippen.",
-    "avatar_line": "Das Bild des Assistenten und die Zeile unter dem Chat."
+    "avatar_line": "Das Bild des Assistenten und die Zeile unter dem Chat.",
+    "avatar_short": "Quadratisches PNG oder JPG, höchstens 2 MB",
+    "parts": "Teile des Aussehens"
   },
   "preview": {
     "branding": "Bereitgestellt von Ihrem Unternehmen",
@@ -224,5 +229,18 @@
   "state_on": "Auf Ihrer Website sichtbar",
   "state_off": "Ausgeschaltet",
   "get_code": "Code holen",
-  "unsaved_line": "Ihre Website zeigt sie nach dem Speichern"
+  "unsaved_line": "Ihre Website zeigt sie nach dem Speichern",
+  "part": {
+    "contact": "Kontaktdaten",
+    "hours": "Öffnungszeiten",
+    "launcher": "Startknopf",
+    "person": "Mit einem Menschen sprechen",
+    "picture": "Bild",
+    "privacy": "Einwilligung und Bewertungen",
+    "questions": "Fragen",
+    "site": "Auf der Website",
+    "style": "Stil",
+    "words": "Texte"
+  },
+  "read_only_short": "Nur lesen: Änderungen macht ein Manager."
 }

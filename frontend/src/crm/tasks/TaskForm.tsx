@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Clock, Flag, Repeat as RepeatIcon, Search, Timer, X } from 'lucide-react'
+import { CalendarDays, Clock, Flag, ListPlus, Repeat as RepeatIcon, Search, Timer, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
@@ -20,8 +20,10 @@ import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
 import { TONE_CHIP, type Tone } from '../ui/tones'
 import type { LeadRow, Paginated } from '../leads/leadTypes'
-import { draftOf, taskBody, validateTask, type Task, type TaskDraft } from './taskLogic'
-import { useTaskChanged, useTeam } from './taskData'
+import { CustomFieldInputs } from '../leads/CustomFields'
+import { activeFields, customBody, customErrors, missingCustom } from '../leads/leadLogic'
+import { draftOf, storedCustom, taskBody, validateTask, type Task, type TaskDraft } from './taskLogic'
+import { useTaskChanged, useTaskFields, useTeam } from './taskData'
 import {
   groupLabel, lengthLabel, partLabel, priorityLabel, quickDayLabel, repeatLabel, TASK_ICONS, taskProblem, taskTypeLabel,
 } from './taskWords'
@@ -64,13 +66,19 @@ export function TaskForm({ task, inquiryId, leadName, onClose }: {
   const [picked, setPicked] = useState<string | null>(leadName ?? null)
   const [part, setPart] = useState<DayPart>(() => partOf(draft.time))
   const [tried, setTried] = useState(false)
+  // Round 5: the organisation's own task fields (entity `task`), as the full admin's drawer keeps them in `custom_data`.
+  const fields = activeFields(useTaskFields().data)
+  const [custom, setCustom] = useState<Record<string, unknown>>(() => storedCustom(task))
   const suggestion = suggestedTitle(taskTypeLabel(t, draft.type), picked)
   const errors = validateTask(draft, suggestion)
+  const missing = missingCustom(fields, custom)
   const set = (patch: Partial<TaskDraft>) => setDraft(d => ({ ...d, ...patch }))
 
   const save = useMutation({
     mutationFn: () => {
       const body = taskBody(draft, zone, !task, suggestion)
+      // Only when the organisation has task fields: without any, the server keeps nothing there anyway.
+      if (fields.length > 0) body.custom_data = customBody(fields, custom)
       return task ? send<Task>('put', `tasks/${task.id}`, body) : send<Task>('post', 'tasks', body)
     },
     onSuccess: () => {
@@ -83,7 +91,7 @@ export function TaskForm({ task, inquiryId, leadName, onClose }: {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setTried(true)
-    if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0 || missing.length > 0) return
     save.mutate()
   }
 
@@ -113,7 +121,7 @@ export function TaskForm({ task, inquiryId, leadName, onClose }: {
       <form id={formId} onSubmit={submit} noValidate className="space-y-6">
         {save.isError && <Notice tone="danger">{errorText(t, save.error)}</Notice>}
 
-        <Step n={1} title={t('crm.tasks.step_what', 'What')} line={t('crm.tasks.step_what_line', 'The kind of task, its title and how urgent it is.')}>
+        <Step n={1} title={t('crm.tasks.step_what', 'What')}>
           <div className="space-y-3" role="radiogroup" aria-label={t('crm.tasks.field_type', 'Type')}>
             {TYPE_GROUPS.map(group => (
               <div key={group.key}>
@@ -277,17 +285,24 @@ export function TaskForm({ task, inquiryId, leadName, onClose }: {
               placeholder={t('crm.tasks.notes_placeholder', 'What whoever picks this up should know.')} />
           </Field>
         </Step>
+
+        {fields.length > 0 && (
+          <Step n={5} title={t('crm.tasks.step_more', 'More')} icon={ListPlus}>
+            <CustomFieldInputs fields={fields} values={custom} onChange={setCustom}
+              invalid={[...(tried ? missing : []), ...customErrors(fieldErrors)]} />
+          </Step>
+        )}
       </form>
     </SidePanel>
   )
 }
 
-/** One step of the form: its number, its title and what it is for. */
-function Step({ n, title, line, children }: { n: number; title: string; line?: string; children: ReactNode }) {
+/** One step of the form: its number (or its icon), its title and, where it prevents a mistake, one line. */
+function Step({ n, title, line, icon: Icon, children }: { n: number; title: string; line?: string; icon?: typeof ListPlus; children: ReactNode }) {
   return (
     <section className="space-y-3 border-t border-a-border pt-5 first-of-type:border-t-0 first-of-type:pt-0">
       <header className="flex items-start gap-2.5">
-        <span aria-hidden className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-a-accent/12 text-xs font-semibold text-a-accent-text">{n}</span>
+        <span aria-hidden className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-a-accent/12 text-xs font-semibold text-a-accent-text">{Icon ? <Icon size={13} /> : n}</span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-a-text">{title}</h3>
           {line && <p className="text-xs text-a-text-2">{line}</p>}

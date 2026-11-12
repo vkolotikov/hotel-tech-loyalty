@@ -96,3 +96,34 @@ export function countsByEntity(fields: readonly CustomField[]): Record<Entity, n
   for (const f of fields) if (f.entity in out) out[f.entity]++
   return out
 }
+
+/* ─── Presets (custom-fields/presets, custom-fields/apply-preset; round 5) ────── */
+
+/** One industry's starter set, as GET custom-fields/presets answers it (CustomFieldController::presets). */
+export interface FieldPreset {
+  key: string
+  label: string
+  icon: string
+  description: string
+  field_count: number
+}
+
+/** The presets the server offers, read safely. */
+export function presetList(data: unknown): FieldPreset[] {
+  if (!Array.isArray(data)) return []
+  return data
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === 'object' && typeof (p as { key?: unknown }).key === 'string')
+    .map(p => ({
+      key: String(p.key),
+      label: typeof p.label === 'string' ? p.label : String(p.key),
+      icon: typeof p.icon === 'string' ? p.icon : 'briefcase',
+      description: typeof p.description === 'string' ? p.description : '',
+      field_count: typeof p.field_count === 'number' ? p.field_count : 0,
+    }))
+}
+
+/** What applying a preset did, for the toast: how many fields it added, or that they were all there already. */
+export function presetOutcome(answer: { created_count?: unknown } | null | undefined): { added: number } {
+  const n = typeof answer?.created_count === 'number' ? answer.created_count : 0
+  return { added: Math.max(0, n) }
+}

@@ -24,8 +24,10 @@
   "messages": "Messages",
   "messages_count": "{{n}} messages",
   "no_chats": "No chat yet. Start one and it opens in the inbox.",
+  "no_chats_short": "No chat yet.",
   "no_pages": "No pages recorded yet.",
   "no_reach": "They have not left an email or phone yet. Start a chat and ask.",
+  "no_reach_short": "No email or phone yet.",
   "none": "No visitors here yet",
   "none_found": "Nobody matches",
   "none_line": "Visitors show here once the chat is on your website, whether they write or not.",
@@ -41,17 +43,26 @@
     "online": "On the site now",
     "recent": "Here recently"
   },
+  "ptab": {
+    "chats": "Chats",
+    "overview": "Overview",
+    "pages": "Pages"
+  },
   "reach_title": "How to reach them",
   "reachable": "Left a contact",
   "refresh": "Refresh",
   "remove_filter": "Remove the filter",
   "search": "Search by name, email, address or page",
   "seen": "Seen {{when}}",
+  "show_all": "Show everyone",
   "site_title": "On the website",
   "start_chat": "Start a chat",
   "tab": {
     "all": "Everyone",
+    "has_contact": "Has contact",
+    "hot_lead": "Hot leads",
     "leads": "Leads",
+    "missed": "Missed",
     "offline": "Away",
     "online": "On the site now"
   },

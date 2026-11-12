@@ -12,3 +12,6 @@ export function knowledgeChanged(qc: QueryClient): void {
   void qc.invalidateQueries({ queryKey: ['crm', 'start'] })
   void qc.invalidateQueries({ queryKey: ['crm', 'bootstrap'] })
 }
+
+/** Round 5: the AI model the assistant answers with (chatbot-config/model, with the plan's model list). */
+export const MODEL_KEY = ['crm', 'assistant', 'model'] as const

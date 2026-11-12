@@ -36,7 +36,8 @@
     "rules_card_line": "Reglas que siempre cumple, pregunte lo que pregunte un visitante.",
     "help_line": "Cuándo toma el relevo una persona y qué dice si no puede ayudar.",
     "more_title": "Más opciones",
-    "more_line": "Rara vez necesario: instrucciones además de los campos de arriba."
+    "more_line": "Rara vez necesario: instrucciones además de los campos de arriba.",
+    "parts": "Partes del comportamiento"
   },
   "discard": "Descartar",
   "documents": {
@@ -141,7 +142,9 @@
     "col_used": "Usada",
     "col_actions": "Acciones",
     "categories_line": "Toque una para ver sus respuestas.",
-    "show_category": "Mostrar las respuestas de {{name}}"
+    "show_category": "Mostrar las respuestas de {{name}}",
+    "keywords_count": "Palabras clave:",
+    "parts": "Partes del conocimiento"
   },
   "lengths": {
     "concise": "Corta",
@@ -318,7 +321,10 @@
     "starter_hours": "¿Cuál es su horario?",
     "starter_price": "¿Cuánto cuesta?",
     "starter_book": "¿Puedo reservar para este fin de semana?",
-    "starter_person": "¿Puedo hablar con una persona?"
+    "starter_person": "¿Puedo hablar con una persona?",
+    "behind_empty": "Aún no se ha preguntado nada.",
+    "empty_short": "Pregunte como lo haría un visitante.",
+    "subtitle_short": "Chat de prueba: no se guarda, los visitantes no lo ven"
   },
   "unsaved": "Cambios sin guardar",
   "caption": {
@@ -330,5 +336,47 @@
   },
   "state_on": "Responde a los visitantes",
   "state_off": "Desactivado",
-  "try_it": "Probar el asistente"
+  "try_it": "Probar el asistente",
+  "model": {
+    "blocked": "Su plan no incluye {{model}}, así que el asistente no puede responder con él: cada chat espera a su equipo. Elija un modelo que su plan incluya.",
+    "check": "Comprobar que el modelo responde",
+    "check_failed": "La comprobación no obtuvo respuesta. Inténtelo de nuevo.",
+    "checking": "Comprobando…",
+    "model": "Modelo",
+    "not_in_plan": "Su plan no incluye este modelo. Elija otro.",
+    "not_in_plan_short": "no incluido en su plan",
+    "older": "anterior, sigue funcionando",
+    "plan_has": "Su plan incluye {{count}} modelos.",
+    "provider": "Proveedor",
+    "ready": "Responde en la cuenta de IA.",
+    "reasoning": "Reflexión antes de responder",
+    "reasoning_high": "Alta, más lenta",
+    "reasoning_low": "Baja (lo mejor para el chat)",
+    "reasoning_medium": "Media",
+    "reasoning_none": "Ninguna, la más rápida",
+    "reasoning_tip": "Más reflexión es más lento. Por encima de «ninguna», el modelo fija su propia creatividad.",
+    "reasoning_xhigh": "Máxima, la más lenta",
+    "star": "★ es el que recomendamos para el chat de un sitio web.",
+    "temperature": "Creatividad: {{n}}",
+    "temperature_own": "Este modelo fija su propia creatividad.",
+    "temperature_tip": "Más bajo, las respuestas se ciñen a los hechos; más alto, varían más. 0,7 sirve a la mayoría de los negocios.",
+    "tokens": "Respuesta más larga: {{n}} tokens",
+    "tokens_tip": "1024 tokens son unas 750 palabras.",
+    "tuning": "Ajuste fino",
+    "unavailable": "Todavía no responde en la cuenta de IA. Elija otro o inténtelo más tarde.",
+    "verbosity": "Cuánto dice",
+    "verbosity_high": "Detallada",
+    "verbosity_low": "Breve (lo mejor para el chat)",
+    "verbosity_medium": "Equilibrada"
+  },
+  "part": {
+    "basics": "Lo básico",
+    "handover": "Traspaso",
+    "identity": "Quién es",
+    "model": "Modelo de IA",
+    "more": "Más",
+    "rules": "Reglas",
+    "style": "Cómo habla"
+  },
+  "read_only_short": "Solo lectura: los cambios los hace un responsable."
 }

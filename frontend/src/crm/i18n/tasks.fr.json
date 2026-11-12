@@ -135,5 +135,10 @@
   "unlink_lead": "Retirer le lead",
   "when": "Quand",
   "whose": "Tâches de qui",
-  "zone_hint": "À l’heure de l’établissement ({{zone}})"
+  "zone_hint": "À l’heure de l’établissement ({{zone}})",
+  "step_more": "Plus",
+  "open_named": "Ouvrir : {{title}}",
+  "add_short": "Ajouter",
+  "filters": "Filtres",
+  "gone": "Cette tâche n’est plus ouverte."
 }

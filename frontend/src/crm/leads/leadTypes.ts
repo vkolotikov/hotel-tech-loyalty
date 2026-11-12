@@ -98,6 +98,14 @@ export interface LeadDetail extends LeadRow {
   last_contact_comment?: string | null
   ai_brief_at?: string | null
   reservations?: Reservation[]
+  /** A won lead's fulfilment and payment (the Deal tab; `GET inquiries/{id}` carries the columns). */
+  fulfillment_stage?: string | null
+  payment_status?: string | null
+  paid_amount?: string | number | null
+  fulfillment_started_at?: string | null
+  fulfillment_completed_at?: string | null
+  /** The lead's open tasks (the show endpoint loads them; the Tasks tab's count). */
+  open_tasks?: { id: number }[]
 }
 
 /** Laravel's paginator as `GET inquiries` answers it. */

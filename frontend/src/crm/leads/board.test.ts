@@ -32,6 +32,10 @@ describe('which pipeline and which leads', () => {
       active_only: true, sort: 'updated_at', dir: 'desc', per_page: BOARD_LIMIT,
       search: 'ada', assigned_to: 'Anna', priority: 'High', has_phone: 'yes', date_from: '2026-11-01', date_to: '2026-11-07',
     })
+    // Round 5: "Not assigned" is the server's `unassigned=1` on the board and the team too, never an owner called `_nobody`.
+    const nobody = boardQuery({ ...NO_FILTERS, owner: '_nobody' }, 'Anna')
+    expect(nobody).toMatchObject({ unassigned: 1 })
+    expect(nobody).not.toHaveProperty('assigned_to')
   })
 
   it('reads the view from the address and drops what belongs to another view', () => {

@@ -1,40 +1,54 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArrowLeft, Bot, CheckCircle2, Download, Hand, MoreHorizontal, PanelRight, Pencil, RotateCcw, UserPlus } from 'lucide-react'
+import {
+  Archive, ArrowLeft, Bot, CheckCircle2, Download, Hand, PanelRight, PanelRightOpen, Pencil, RotateCcw, UserCheck, UserPlus, UserX,
+} from 'lucide-react'
+import { onShortcuts } from '../../workspace/lib/shortcuts'
 import { Button } from '../../workspace/ui/Button'
-import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
+import { noteOwnAction } from '../alerts/own'
 import { get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { dayLabel } from '../lib/format'
 import { Avatar } from '../ui/Avatar'
+import { IconButton } from '../ui/IconButton'
+import { ActionMenu, type MenuItem } from '../ui/Menu'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
 import { Composer } from './Composer'
+import { IntentMark } from './ConversationList'
 import { Details } from './Details'
 import { FeedbackDialog } from './FeedbackDialog'
 import { ContactPanel, LeadPanel } from './forms'
 import {
-  STATUS_TONE, aiToggle, canReply, channelKey, displayName, statusActions, threadRows, transcriptFileName, translateTarget,
-  type StatusAction,
+  STATUS_TONE, aiToggle, canReply, channelKey, displayName, resolveNext, statusActions, threadRows, transcriptFileName, translateTarget,
+  type DetailsTab, type StatusAction,
 } from './inboxLogic'
 import { inboxKeys, pollOnce, useInboxRefresh } from './inboxQueries'
 import { MessageBubble, type Translation } from './MessageBubble'
-import type { ConversationDetail, ConvStatus, Message } from './types'
+import type { Agent, ConversationDetail, ConvStatus, Message } from './types'
 import { ACTION_DEFAULTS, ACTION_DONE_DEFAULTS, CHANNEL_DEFAULTS, STATUS_DEFAULTS } from './words'
 
 const ACTION_ICON = { resolve: CheckCircle2, archive: Archive, reopen: RotateCcw } as const
 
 /**
- * One conversation: its header (sticky over the thread) with the main actions grouped — the assistant's switch, the
- * status's next step, and the rest in "More" —, the thread (polled every few seconds, as the full admin does, through
- * `chat-inbox/{id}/poll`), the reply box, and the details column beside it on a wide screen (a panel otherwise). On a
- * phone it takes the whole screen, with a way back to the list.
+ * One conversation (round 5: compact): its header with the actions as icons — the assistant's switch, the status's next
+ * step (E resolves), who has it, the rest in "More", the details —, the thread (polled every few seconds through
+ * `chat-inbox/{id}/poll`, as the full admin does), the reply box, and the details in tabs beside it on a wide screen
+ * (folded away at a press, remembered on the device; a panel on a narrower one). On a phone it takes the whole screen,
+ * with a way back to the list.
  */
-export function ConversationView({ id, onBack }: { id: number; onBack: () => void }) {
+export function ConversationView({ id, onBack, detailsOpen, onDetailsOpen, detailsTab, onDetailsTab }: {
+  id: number
+  onBack: () => void
+  detailsOpen: boolean
+  onDetailsOpen: (open: boolean) => void
+  detailsTab: DetailsTab
+  onDetailsTab: (tab: DetailsTab) => void
+}) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const toast = useToast()
@@ -56,25 +70,12 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
     refetchIntervalInBackground: false,
     gcTime: 0,
   })
+  const agents = useQuery({ queryKey: inboxKeys.agents, queryFn: () => get<Agent[]>('chat-inbox-agents'), staleTime: 60_000 })
 
   const [panel, setPanel] = useState<null | 'details' | 'contact' | 'lead'>(null)
   const [rating, setRating] = useState<{ message: Message; rating: 'good' | 'bad' } | null>(null)
   const [translations, setTranslations] = useState<Record<string, Translation>>({})
-  const more = useRef<HTMLDetailsElement>(null)
   const back = useRef<HTMLButtonElement>(null)
-  const closeMore = () => { if (more.current) more.current.open = false }
-
-  // The "More" menu closes on a click elsewhere and on Escape, giving the focus back to its button.
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => { const el = more.current; if (el?.open && !el.contains(e.target as Node)) el.open = false }
-    const onKey = (e: KeyboardEvent) => {
-      const el = more.current
-      if (e.key === 'Escape' && el?.open) { el.open = false; el.querySelector('summary')?.focus() }
-    }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
-  }, [])
 
   // On a phone the list gives way to the thread: the focus moves to the way back instead of being lost with the list.
   useEffect(() => {
@@ -97,6 +98,11 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
       toast(enabled ? t('crm.inbox.handed_back', 'The assistant answers this chat again') : t('crm.inbox.taken_over', 'You have the chat. The assistant waits.'))
       refresh(id)
     },
+    onError: error => toast(errorText(t, error), 'danger'),
+  })
+  const assign = useMutation({
+    mutationFn: (userId: number) => send('put', `chat-inbox/${id}/assign`, { user_id: userId }),
+    onSuccess: () => { toast(t('crm.inbox.assigned_saved', 'Assigned')); refresh(id) },
     onError: error => toast(errorText(t, error), 'danger'),
   })
   const transcript = useMutation({
@@ -138,6 +144,21 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
 
   const data = detail.data
   const c = data?.conversation
+
+  // E resolves the open chat (when its status allows), as the header's button does.
+  const resolve = useRef<() => void>(() => {})
+  useEffect(() => {
+    resolve.current = () => {
+      const next = resolveNext(c?.status)
+      if (next && !status.isPending) status.mutate(next)
+    }
+  })
+  useEffect(() => onShortcuts(window, document, { letters: { e: 'resolve' } }, (hit, e) => {
+    if (hit !== 'resolve') return
+    e.preventDefault()
+    resolve.current()
+  }), [])
+
   const name = c ? (displayName(c) ?? t('crm.common.visitor', 'Visitor')) : ''
   const toggle = c ? aiToggle(c) : null
   const actions = c ? statusActions(c.status) : []
@@ -145,103 +166,92 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
   const rows = data ? threadRows(data.messages, zone) : []
   const today = boot.venue.today
   const canLead = Boolean(c && !c.inquiry_id && !c.lead_captured)
+  const agentName = c?.assigned_agent?.name ?? (c?.assigned_to ? agents.data?.find(a => a.id === c.assigned_to)?.name : undefined)
 
-  const details = data && (
-    <Details detail={data} onEditContact={() => setPanel('contact')} onCaptureLead={() => setPanel('lead')}
-      onTranscript={() => transcript.mutate()} transcriptBusy={transcript.isPending} />
+  const details = (onCollapse?: () => void, prefix?: string) => data && (
+    <Details detail={data} tab={detailsTab} onTab={onDetailsTab} onCollapse={onCollapse} idPrefix={prefix}
+      onEditContact={() => setPanel('contact')} onCaptureLead={() => setPanel('lead')} />
   )
-  const menuItem = 'flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent disabled:opacity-50'
-  const iconButton = 'grid h-10 w-10 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'
+
+  const first = actions[0]
+  const FirstIcon = first ? ACTION_ICON[first.action] : null
+  const firstLabel = first ? t(`crm.inbox.action.${first.action}`, ACTION_DEFAULTS[first.action]) : ''
+  const assignItems: (MenuItem | 'divider')[] = [
+    ...(c?.assigned_to !== boot.staff.id ? [{ key: 'me', label: t('crm.inbox.assign_me', 'Assign to me'), icon: UserCheck, onSelect: () => assign.mutate(boot.staff.id) }, 'divider' as const] : []),
+    ...(agents.data ?? []).map(a => ({
+      key: `a${a.id}`,
+      label: a.id === boot.staff.id ? t('crm.inbox.me_named', '{{name}} (me)', { name: a.name }) : a.name,
+      checked: a.id === c?.assigned_to,
+      onSelect: () => { if (a.id !== c?.assigned_to) assign.mutate(a.id) },
+    })),
+  ]
+  const moreItems: (MenuItem | 'divider')[] = [
+    ...(toggle && boot.features.chatbot ? [{
+      key: 'ai', icon: toggle.aiOn ? Hand : Bot,
+      label: toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI'),
+      onSelect: () => ai.mutate(toggle.next), disabled: ai.isPending,
+    }] : []),
+    ...actions.slice(1).map(a => ({ key: a.action, icon: ACTION_ICON[a.action], label: t(`crm.inbox.action.${a.action}`, ACTION_DEFAULTS[a.action]), onSelect: () => status.mutate(a.next), disabled: status.isPending })),
+    'divider' as const,
+    { key: 'contact', icon: Pencil, label: t('crm.inbox.contact_title', 'Contact details'), onSelect: () => setPanel('contact') },
+    ...(canLead ? [{ key: 'lead', icon: UserPlus, label: t('crm.inbox.capture_lead', 'Capture as lead'), onSelect: () => setPanel('lead') }] : []),
+    { key: 'transcript', icon: Download, label: t('crm.inbox.download', 'Download as text'), onSelect: () => transcript.mutate(), disabled: transcript.isPending },
+  ]
 
   return (
     <>
       <section aria-label={name || t('crm.inbox.conversation', 'Conversation')}
         className="fixed inset-0 z-40 flex min-h-0 min-w-0 flex-col bg-a-surface md:static md:z-auto">
-        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-a-border bg-a-surface px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:pt-2.5">
-          <button ref={back} type="button" onClick={onBack} aria-label={t('crm.inbox.back', 'Back to the conversations')} className={`${iconButton} md:hidden`}>
+        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-a-border bg-a-surface px-2.5 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-3 md:pt-2">
+          <button ref={back} type="button" onClick={onBack} aria-label={t('crm.inbox.back', 'Back to the conversations')}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent md:hidden">
             <ArrowLeft size={18} aria-hidden />
           </button>
           {c && <Avatar name={name} tone={toggle?.aiOn ? 'ai' : 'accent'} />}
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-semibold text-a-text">{name}</h2>
             {c && (
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-a-text-2">
-                <Pill tone={STATUS_TONE[c.status]}>{t(`crm.status.${c.status}`, STATUS_DEFAULTS[c.status])}</Pill>
-                {channel ? <span>{t(`crm.inbox.channel.${channel}`, CHANNEL_DEFAULTS[channel])}</span> : c.channel && <span>{c.channel}</span>}
-                {c.assigned_agent && <span className="truncate">{t('crm.inbox.assigned_short', 'With {{name}}', { name: c.assigned_agent.name })}</span>}
+              <p className="flex min-w-0 items-center gap-x-2 text-xs text-a-text-2">
+                <span className="shrink-0"><Pill tone={STATUS_TONE[c.status]}>{t(`crm.status.${c.status}`, STATUS_DEFAULTS[c.status])}</Pill></span>
+                <span className="hidden min-w-0 sm:inline-flex"><IntentMark tag={c.intent_tag} withLabel /></span>
+                {channel ? <span className="hidden shrink-0 2xl:inline">{t(`crm.inbox.channel.${channel}`, CHANNEL_DEFAULTS[channel])}</span> : c.channel && <span className="hidden shrink-0 2xl:inline">{c.channel}</span>}
               </p>
             )}
           </div>
 
           {c && (
-            <div role="group" aria-label={t('crm.inbox.actions', 'What to do with this chat')} className="flex shrink-0 items-center gap-1.5">
+            <div role="group" aria-label={t('crm.inbox.actions', 'What to do with this chat')} className="flex shrink-0 items-center gap-0.5">
               {toggle && boot.features.chatbot && (
                 <button type="button" onClick={() => ai.mutate(toggle.next)} disabled={ai.isPending}
-                  className={`hidden min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent disabled:opacity-60 sm:inline-flex ${toggle.aiOn ? 'crm-ai-fill' : 'crm-ai-soft'}`}>
+                  title={toggle.aiOn ? t('crm.inbox.ai_on_line', 'The assistant answers this chat. Take it over so it stops while you reply.') : undefined}
+                  className={`mr-1 hidden min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent disabled:opacity-60 sm:inline-flex ${toggle.aiOn ? 'crm-ai-fill' : 'crm-ai-soft'}`}>
                   {toggle.aiOn ? <Hand size={15} aria-hidden /> : <Bot size={15} aria-hidden />}
                   {toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI')}
                 </button>
               )}
-              {actions[0] && (() => {
-                const first = actions[0]
-                const Icon = ACTION_ICON[first.action]
-                return (
-                  <Button variant="secondary" size="sm" className="hidden min-h-10 shrink-0 sm:inline-flex" loading={status.isPending} onClick={() => status.mutate(first.next)}>
-                    {!status.isPending && <Icon size={15} aria-hidden />}{t(`crm.inbox.action.${first.action}`, ACTION_DEFAULTS[first.action])}
-                  </Button>
-                )
-              })()}
-              <details ref={more} className="relative shrink-0">
-                <summary aria-label={t('crm.common.more', 'More')} title={t('crm.common.more', 'More')}
-                  className={`${iconButton} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
-                  <MoreHorizontal size={18} aria-hidden />
-                </summary>
-                <div className="absolute right-0 top-full z-30 mt-1 w-64 space-y-0.5 rounded-2xl border border-a-border bg-a-surface p-1.5 shadow-a-lg animate-a-pop">
-                  {toggle && boot.features.chatbot && (
-                    <button type="button" className={`${menuItem} sm:hidden`} disabled={ai.isPending} onClick={() => { closeMore(); ai.mutate(toggle.next) }}>
-                      {toggle.aiOn ? <Hand size={15} aria-hidden /> : <Bot size={15} aria-hidden />}
-                      {toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI')}
-                    </button>
-                  )}
-                  {actions.map((a, i) => {
-                    const Icon = ACTION_ICON[a.action]
-                    return (
-                      <button key={a.action} type="button" className={`${menuItem} ${i === 0 ? 'sm:hidden' : ''}`} disabled={status.isPending} onClick={() => { closeMore(); status.mutate(a.next) }}>
-                        <Icon size={15} aria-hidden />{t(`crm.inbox.action.${a.action}`, ACTION_DEFAULTS[a.action])}
-                      </button>
-                    )
-                  })}
-                  <div role="separator" className="my-1 h-px bg-a-border" />
-                  <button type="button" className={menuItem} onClick={() => { closeMore(); setPanel('contact') }}>
-                    <Pencil size={15} aria-hidden />{t('crm.inbox.contact_title', 'Contact details')}
-                  </button>
-                  {canLead && (
-                    <button type="button" className={menuItem} onClick={() => { closeMore(); setPanel('lead') }}>
-                      <UserPlus size={15} aria-hidden />{t('crm.inbox.capture_lead', 'Capture as lead')}
-                    </button>
-                  )}
-                  <button type="button" className={menuItem} disabled={transcript.isPending} onClick={() => { closeMore(); transcript.mutate() }}>
-                    <Download size={15} aria-hidden />{t('crm.inbox.download', 'Download as text')}
-                  </button>
-                  <button type="button" className={`${menuItem} xl:hidden`} onClick={() => { closeMore(); setPanel('details') }}>
-                    <PanelRight size={15} aria-hidden />{t('crm.inbox.details', 'Details')}
-                  </button>
-                </div>
-              </details>
-              <button type="button" onClick={() => setPanel('details')} aria-label={t('crm.inbox.details', 'Details')} title={t('crm.inbox.details', 'Details')}
-                className={`${iconButton} hidden md:grid xl:hidden`}><PanelRight size={18} aria-hidden /></button>
+              {first && FirstIcon && (
+                <IconButton icon={FirstIcon} tone={first.action === 'resolve' ? 'accent' : 'neutral'} disabled={status.isPending}
+                  label={first.action === 'resolve' ? `${firstLabel} (E)` : firstLabel} onClick={() => status.mutate(first.next)} />
+              )}
+              <ActionMenu label={agentName ? t('crm.inbox.assigned_to', 'Assigned to {{name}}', { name: agentName }) : t('crm.inbox.nobody_short', 'Nobody assigned')}
+                icon={agentName ? UserCheck : UserX} items={assignItems}
+                className={`grid h-9 w-9 place-items-center rounded-xl hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:outline-a-accent ${agentName ? 'text-a-text-2 hover:text-a-text' : 'text-a-st-pending'}`} />
+              <ActionMenu label={t('crm.common.more', 'More')} items={moreItems}
+                className="grid h-9 w-9 place-items-center rounded-xl text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent" />
+              <span className="contents xl:hidden"><IconButton icon={PanelRight} label={t('crm.inbox.details', 'Details')} onClick={() => setPanel('details')} /></span>
+              {!detailsOpen && <span className="hidden xl:contents"><IconButton icon={PanelRightOpen} label={t('crm.inbox.details_show', 'Show the details')} onClick={() => onDetailsOpen(true)} /></span>}
             </div>
           )}
         </header>
 
         <div ref={scroller} onScroll={e => { const el = e.currentTarget; nearEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120 }}
           className="min-h-0 flex-1 overflow-y-auto bg-a-canvas/40 px-3 pb-4 pt-1 sm:px-5" aria-live="polite" aria-relevant="additions">
-          <div className="mx-auto max-w-3xl pt-3">
+          <div className="mx-auto max-w-3xl pt-2">
             <QueryState loading={detail.isLoading} error={detail.error} onRetry={() => { void detail.refetch() }} rows={5}>
               {rows.length === 0 && <p className="py-10 text-center text-sm text-a-text-2">{t('crm.inbox.no_messages', 'No messages yet.')}</p>}
               {rows.map(row => row.kind === 'day'
                 ? (
-                  <div key={row.key} className="my-4 flex items-center gap-3 text-xs text-a-text-2" role="separator">
+                  <div key={row.key} className="my-3 flex items-center gap-3 text-xs text-a-text-2" role="separator">
                     <span className="h-px flex-1 bg-a-border" />
                     <span className="rounded-full border border-a-border bg-a-surface px-2.5 py-0.5">{row.day === today ? t('crm.inbox.today', 'Today') : dayLabel(row.day, i18n.language)}</span>
                     <span className="h-px flex-1 bg-a-border" />
@@ -269,28 +279,29 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
         {c && (canReply(c.status)
           ? <Composer key={id} conversationId={id} status={c.status} messages={data?.messages ?? []} aiOn={Boolean(toggle?.aiOn)} onTakeOver={() => ai.mutate(false)} takingOver={ai.isPending} />
           : (
-            <div className="border-t border-a-border px-3 py-3">
-              <Notice tone="info">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="min-w-0 flex-1">{t('crm.inbox.archived_line', 'This chat is archived. Reopen it to reply.')}</span>
-                  <Button size="sm" variant="secondary" onClick={() => status.mutate('active')} loading={status.isPending}>{t('crm.inbox.action.reopen', ACTION_DEFAULTS.reopen)}</Button>
-                </span>
-              </Notice>
+            <div className="flex flex-wrap items-center gap-2 border-t border-a-border px-3 py-2.5 text-sm text-a-text-2">
+              <Archive size={15} aria-hidden className="shrink-0" />
+              <span className="min-w-0 flex-1">{t('crm.inbox.archived_line', 'This chat is archived. Reopen it to reply.')}</span>
+              <Button size="sm" variant="secondary" onClick={() => status.mutate('active')} loading={status.isPending}>
+                {!status.isPending && <RotateCcw size={14} aria-hidden />}{t('crm.inbox.action.reopen', ACTION_DEFAULTS.reopen)}
+              </Button>
             </div>
           ))}
       </section>
 
-      <aside aria-label={t('crm.inbox.details', 'Details')} className="hidden min-h-0 overflow-y-auto border-l border-a-border bg-a-surface xl:block">
-        {details}
-      </aside>
+      {detailsOpen && (
+        <aside aria-label={t('crm.inbox.details', 'Details')} className="hidden min-h-0 min-w-0 border-l border-a-border bg-a-surface xl:block">
+          {details(() => onDetailsOpen(false), 'crm-details')}
+        </aside>
+      )}
 
-      {panel === 'details' && details && (
+      {panel === 'details' && data && (
         <SidePanel title={t('crm.inbox.details', 'Details')} onClose={() => setPanel(null)}>
-          <div className="-mx-5 -my-4">{details}</div>
+          <div className="-mx-5 -my-4 h-full">{details(undefined, 'crm-details-panel')}</div>
         </SidePanel>
       )}
       {panel === 'contact' && c && <ContactPanel conversation={c} onClose={() => setPanel(null)} onSaved={() => refresh(id)} />}
-      {panel === 'lead' && c && <LeadPanel conversation={c} onClose={() => setPanel(null)} onSaved={() => refresh(id)} />}
+      {panel === 'lead' && c && <LeadPanel conversation={c} onClose={() => setPanel(null)} onSaved={() => refresh(id)} onOwnAction={() => noteOwnAction('hot')} />}
       {rating && <FeedbackDialog message={rating.message} rating={rating.rating} onClose={() => setRating(null)} onSaved={() => refresh(id)} />}
     </>
   )

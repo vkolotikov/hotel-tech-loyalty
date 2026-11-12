@@ -31,9 +31,10 @@ const boot: Bootstrap = {
   setup: { done: 6, total: 6, complete: true },
 }
 
-function render(task: Task | null, extra: { leadName?: string; inquiryId?: number } = {}) {
+function render(task: Task | null, extra: { leadName?: string; inquiryId?: number } = {}, fields: unknown[] = []) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   qc.setQueryData(['crm', 'tasks', 'team'], [{ id: 3, name: 'Anna' }, { id: 4, name: 'Ben' }])
+  qc.setQueryData(['crm', 'tasks', 'custom-fields'], fields)
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
@@ -79,5 +80,24 @@ describe('the task form (owner 2026-11-09: in steps, with the type grid)', () =>
     expect(html).toMatch(/Every week<\/span>/)
     expect(html).toContain('font-medium text-a-danger">High')
     expect(html.match(/<fieldset disabled=""/g)).toBeNull()
+  })
+
+  it('shows the organisation\'s own task fields with a stored task\'s values, and none when it has none (round 5)', () => {
+    const fields = [
+      { id: 1, entity: 'task', key: 'room', label: 'Room', type: 'text', config: null, help_text: null, required: true, is_active: true, sort_order: 1 },
+      { id: 2, entity: 'task', key: 'channel', label: 'Channel', type: 'select', config: { options: ['Phone', 'Visit'] }, help_text: null, required: false, is_active: true, sort_order: 2 },
+      { id: 3, entity: 'task', key: 'old', label: 'Old field', type: 'text', config: null, help_text: null, required: false, is_active: false, sort_order: 3 },
+    ]
+    const task: Task = {
+      id: 9, type: 'call', title: 'Call Ada', description: null, due_at: null, completed_at: null, outcome: null,
+      inquiry_id: null, guest_id: null, assigned_to: 3, custom_data: { room: 'Suite 4', priority: 'high' },
+    }
+    const html = render(task, {}, fields)
+    expect(html).toContain('More')
+    expect(html).toContain('Room (needed)')
+    expect(html).toContain('value="Suite 4"')
+    expect(html).toContain('<option value="Visit">Visit</option>')
+    expect(html).not.toContain('Old field')
+    expect(render(task)).not.toContain('Room (needed)')
   })
 })

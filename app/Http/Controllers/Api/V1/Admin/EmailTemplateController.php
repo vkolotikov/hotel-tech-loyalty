@@ -91,8 +91,12 @@ class EmailTemplateController extends Controller
             ? LoyaltyMember::findOrFail($memberId)
             : LoyaltyMember::where('is_active', true)->first();
 
+        // No member to fill the tags (a venue on HexaTech CRM alone has none; 2026-11-12): the template as a lead or a
+        // contact receives it, the member's tags left empty — never a 404 that leaves the editor with no preview.
         if (!$member) {
-            return response()->json(['message' => 'No member found for preview'], 404);
+            $rendered = $template->renderWithoutMember();
+
+            return response()->json(['subject' => $rendered['subject'], 'html' => $rendered['html'], 'member' => null]);
         }
 
         $rendered = $template->render($member);
@@ -150,6 +154,10 @@ class EmailTemplateController extends Controller
                 $message->to($data['to'])
                     ->subject($rendered['subject'])
                     ->html($rendered['html']);
+                // The venue's name on the envelope and its reply-to (2026-11-12): before, a template went out as the
+                // platform's MAIL_FROM with no reply-to, so a lead's answer reached an unread noreply mailbox. The
+                // address stays the platform's (MailIdentityService); the CRM's Integrations shows the same identity.
+                app(\App\Services\MailIdentityService::class)->apply($message);
             });
         } catch (\Throwable $e) {
             \Log::error('EmailTemplate quick-send failed', [

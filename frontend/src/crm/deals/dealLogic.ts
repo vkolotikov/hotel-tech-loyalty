@@ -1,4 +1,4 @@
-import { amount } from '../leads/leadLogic'
+import { amount, formatParam, type ExportFormat } from '../leads/leadLogic'
 import { columnsOf } from '../leads/listLogic'
 import type { LeadRow } from '../leads/leadTypes'
 
@@ -112,9 +112,18 @@ export function dealsQuery(filter: DealFilter, page: number, sort: DealSort = 'd
   return q
 }
 
-/** The CSV of the won leads (the full admin exports `status=Confirmed`), with the search when one is typed. */
-export function dealsExportQuery(view: DealView): Record<string, string> {
-  return { status: 'Confirmed', format: 'csv', ...(view.q.trim() ? { search: view.q.trim() } : {}) }
+/**
+ * The won leads as a file (`GET inquiries/export`, the full admin exports `status=Confirmed`): its Excel workbook, or
+ * CSV; with the search and the owner when set. Round 5: asked of the export itself (it was asked of `GET inquiries`,
+ * which answers JSON, so the CSV came out empty).
+ */
+export function dealsExportQuery(view: DealView, format: ExportFormat = 'xlsx'): Record<string, string> {
+  return {
+    status: 'Confirmed',
+    ...formatParam(format),
+    ...(view.q.trim() ? { search: view.q.trim() } : {}),
+    ...(view.owner ? { assigned_to: view.owner } : {}),
+  }
 }
 
 /** How many of the toolbar's filters are set (search, payment, owner). */

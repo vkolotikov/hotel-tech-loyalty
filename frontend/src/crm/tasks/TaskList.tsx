@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, ExternalLink, Flag, ListChecks, Pencil, Repeat as RepeatIcon, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, ExternalLink, Flag, ListChecks, Pencil, Repeat as RepeatIcon, RotateCcw, Target, Trash2 } from 'lucide-react'
 import { endsAt, planOf } from '../../lib/taskForm'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
@@ -12,17 +12,22 @@ import { useBoot } from '../CrmProvider'
 import { send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { dateTime, dayLabel } from '../lib/format'
-import { leadPath } from '../lib/links'
+import { useRecords } from '../lib/useRecords'
 import { Confirm } from '../ui/Confirm'
-import { Pill } from '../ui/Pill'
+import { IconButton } from '../ui/IconButton'
 import { TONE_CHIP } from '../ui/tones'
-import { ActionMenu, type MenuItem } from '../leads/Menu'
+import { ActionMenu, type MenuItem } from '../ui/Menu'
 import { TextInput } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
 import { completeBody, dueParts, dueState, type Task, type TaskType } from './taskLogic'
 import { useTaskChanged } from './taskData'
 import { TaskForm } from './TaskForm'
 import { dueTone, priorityLabel, repeatLabel, TASK_ICONS, taskTypeLabel } from './taskWords'
+
+/** A due state's words in its tone's ink. */
+const DUE_INK: Record<ReturnType<typeof dueTone>, string> = {
+  danger: 'text-a-danger', pending: 'text-a-st-pending', progress: 'text-a-st-progress', success: 'text-a-st-confirmed', neutral: 'text-a-text-2',
+}
 
 /**
  * Tasks as rows (round 2: a clear due state on each), each with what can be done to it: mark it done with an outcome
@@ -63,6 +68,7 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
   const toast = useToast()
   const navigate = useNavigate()
   const changed = useTaskChanged()
+  const records = useRecords()
   const done = Boolean(task.completed_at)
   const state = dueState(task, boot.venue.today, zone)
   const due = dueParts(task.due_at, zone)
@@ -89,49 +95,49 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
       ? [{ key: 'reopen', label: t('crm.tasks.reopen', 'Open again'), icon: RotateCcw, onSelect: () => reopen.mutate() }]
       : [{ key: 'done', label: t('crm.tasks.complete', 'Mark done'), icon: Check, onSelect: onComplete }]),
     { key: 'edit', label: t('crm.common.edit', 'Edit'), icon: Pencil, onSelect: onEdit },
-    ...(task.inquiry_id ? [{ key: 'lead', label: t('crm.tasks.open_lead', 'Open the lead'), icon: ExternalLink, onSelect: () => navigate(leadPath(task.inquiry_id as number)) }] : []),
+    ...(task.inquiry_id ? [{ key: 'lead', label: t('crm.tasks.open_lead', 'Open the lead'), icon: ExternalLink, onSelect: () => navigate(records.href('lead', task.inquiry_id as number)) }] : []),
     'divider' as const,
     { key: 'delete', label: t('crm.common.delete', 'Delete'), icon: Trash2, danger: true, onSelect: onDelete },
   ]
 
   return (
-    <li className={`group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-a-surface-2/50 ${state === 'overdue' ? 'border-l-2 border-a-danger' : ''}`}>
+    <li className={`group flex items-center gap-2 py-1.5 pl-2 pr-2 transition-colors hover:bg-a-surface-2/50 sm:gap-3 sm:pl-3 border-l-2 ${state === 'overdue' ? 'border-l-a-danger' : 'border-l-transparent'}`}>
       {done ? (
         <button type="button" onClick={() => reopen.mutate()} disabled={reopen.isPending}
-          aria-label={t('crm.tasks.reopen_named', 'Open again: {{title}}', { title: task.title })}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-a-st-confirmed/12 text-a-st-confirmed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent">
-          <Check size={15} aria-hidden />
+          aria-label={t('crm.tasks.reopen_named', 'Open again: {{title}}', { title: task.title })} title={t('crm.tasks.reopen', 'Open again')}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-a-st-confirmed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent">
+          <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-a-st-confirmed/15"><Check size={14} /></span>
         </button>
       ) : (
-        <button type="button" onClick={onComplete} aria-label={t('crm.tasks.complete_named', 'Mark done: {{title}}', { title: task.title })}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-a-text-2 hover:text-a-st-confirmed focus-visible:outline-2 focus-visible:outline-a-accent">
+        <button type="button" onClick={onComplete} aria-label={t('crm.tasks.complete_named', 'Mark done: {{title}}', { title: task.title })} title={t('crm.tasks.complete', 'Mark done')}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-a-text-2 hover:text-a-st-confirmed focus-visible:outline-2 focus-visible:outline-a-accent">
           <span aria-hidden className="block h-5 w-5 rounded-full border-2 border-a-border group-hover:border-a-st-confirmed/60" />
         </button>
       )}
-      <span aria-hidden className={`mt-0.5 hidden h-8 w-8 shrink-0 place-items-center rounded-lg sm:grid ${TONE_CHIP[tone === 'neutral' ? 'neutral' : tone]}`}>
-        <Icon size={15} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <button type="button" onClick={onEdit} className={`block max-w-full truncate text-left text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-a-accent ${done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>
-          {task.title}
-        </button>
-        {task.description && <p className="mt-0.5 line-clamp-2 text-sm text-a-text-2">{task.description}</p>}
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-a-text-2">
-          <Pill tone={tone}>{dueText}</Pill>
-          {plan.priority === 'high' && !done && <span className="inline-flex items-center gap-1 font-medium text-a-danger"><Flag size={12} aria-hidden />{priorityLabel(t, 'high')}</span>}
-          {plan.repeat !== 'none' && <span className="inline-flex items-center gap-1"><RepeatIcon size={12} aria-hidden />{repeatLabel(t, plan.repeat)}</span>}
-          <span>{taskTypeLabel(t, task.type)}</span>
-          {task.assignee && <span aria-hidden>·</span>}
-          {task.assignee && <span>{task.assignee.id === boot.staff.id ? t('crm.common.me', 'Me') : task.assignee.name}</span>}
-          {showLead && task.inquiry_id && (
-            <>
-              <span aria-hidden>·</span>
-              <Link to={leadPath(task.inquiry_id)} className="font-medium text-a-accent-text hover:underline">{t('crm.tasks.lead_number', 'Lead #{{id}}', { id: task.inquiry_id })}</Link>
-            </>
-          )}
-        </p>
-        {done && task.outcome && <p className="mt-1 text-xs text-a-st-confirmed">{t('crm.tasks.outcome_was', 'Outcome: {{outcome}}', { outcome: task.outcome })}</p>}
-      </div>
+      <button type="button" onClick={onEdit} data-task-open={task.id} aria-label={t('crm.tasks.open_named', 'Open: {{title}}', { title: task.title })}
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-1 text-left focus-visible:outline-2 focus-visible:outline-a-accent">
+        <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP[tone === 'neutral' ? 'neutral' : tone]}`} title={taskTypeLabel(t, task.type)}>
+          <Icon size={15} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate text-sm font-medium ${done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>{task.title}</span>
+          <span className="flex min-w-0 items-center gap-x-2 gap-y-0.5 overflow-hidden text-xs text-a-text-2">
+            <span className={`min-w-0 truncate font-medium ${DUE_INK[tone]}`}>{dueText}</span>
+            {plan.priority === 'high' && !done && <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-a-danger" title={priorityLabel(t, 'high')}><Flag size={12} aria-hidden /><span className="sr-only">{priorityLabel(t, 'high')}</span></span>}
+            {plan.repeat !== 'none' && <span className="inline-flex shrink-0 items-center gap-0.5" title={repeatLabel(t, plan.repeat)}><RepeatIcon size={12} aria-hidden /><span className="sr-only">{repeatLabel(t, plan.repeat)}</span></span>}
+            {task.assignee && <span className="hidden shrink-0 sm:inline">· {task.assignee.id === boot.staff.id ? t('crm.common.me', 'Me') : task.assignee.name}</span>}
+            {done && task.outcome
+              ? <span className="min-w-0 truncate text-a-st-confirmed">· {task.outcome}</span>
+              : task.description && <span className="hidden min-w-0 truncate md:inline">· {task.description}</span>}
+          </span>
+        </span>
+      </button>
+      {/* On a phone the lead is in the row's menu, so the title keeps its width. */}
+      {showLead && task.inquiry_id && (
+        <span className="hidden sm:contents">
+          <IconButton icon={Target} size="sm" label={t('crm.tasks.open_lead', 'Open the lead')} to={records.href('lead', task.inquiry_id)} />
+        </span>
+      )}
       <ActionMenu label={t('crm.tasks.menu_named', 'More for: {{title}}', { title: task.title })} items={items} />
     </li>
   )

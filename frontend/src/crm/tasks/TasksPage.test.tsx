@@ -61,13 +61,27 @@ describe('Tasks', () => {
   it('opens on today\'s tasks, shown on the venue\'s clock, with each tab\'s count', () => {
     const html = render('/crm/tasks', TASKS)
     expect(html).toContain('Call Ada about May')
-    // Round 2: a due time today reads "Today, 14:00" (the venue's clock), in today's amber.
     expect(html).toContain('Today, 14:00')
-    expect(html).toContain('href="/crm/leads/41"')
+    // The lead opens in its panel over the list.
+    expect(html).toContain('href="/crm/tasks?lead=41"')
     expect(html).not.toContain('Send the offer')
     expect(html).toContain('aria-pressed="true"')
     expect(html).toMatch(/Overdue<span[^>]*>1<\/span>/)
     expect(html).toContain('Mark done: Call Ada about May')
+    // Pressing a task opens it in the form; adding is the frame's panel.
+    expect(html).toContain('data-task-open="1"')
+    expect(html).toContain('aria-label="Open: Call Ada about May"')
+    expect(html).toContain('>Add</button>')
+  })
+
+  it('opens where the work is when today is empty and no tab is named', () => {
+    const html = render('/crm/tasks', TASKS.filter(t => t.id !== 1))
+    expect(html).toContain('Send the offer')
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Overdue/)
+    // A tab the address names is kept, empty or not.
+    const named = render('/crm/tasks?tab=today', TASKS.filter(t => t.id !== 1))
+    expect(named).toContain('Nothing due today')
+    expect(named).not.toContain('Send the offer')
   })
 
   it('groups the upcoming ones by the venue\'s day', () => {
@@ -84,12 +98,12 @@ describe('Tasks', () => {
     expect(html).toMatch(/Today, Sat,? (7 Nov|Nov 7)/)
     expect(html).toMatch(/Overdue since Thu,? (5 Nov|Nov 5), 10:00/)
     expect(html).toContain('More for: Send the offer')
-    expect(html).toContain('href="/crm/tasks?tab=overdue"')
   })
 
-  it('narrows the list to one type and keeps whose tasks in the tiles\' links', () => {
+  it('narrows the list to one type, with the filters behind one button on a phone', () => {
     const html = render('/crm/tasks?who=all&type=email', TASKS)
     expect(html).toContain('No task matches')
-    expect(html).toContain('href="/crm/tasks?who=all&amp;type=email&amp;tab=overdue"')
+    expect(html).toContain('aria-label="Filters"')
+    expect(html).toMatch(/Filters<span[^>]*>2<\/span>/)
   })
 })

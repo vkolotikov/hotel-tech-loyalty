@@ -3,6 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarClock, Coins, Plus, Sparkles, Target, TrendingUp, UserPlus } from 'lucide-react'
+import { useRecordList, useRecords } from '../lib/useRecords'
 import { Button } from '../../workspace/ui/Button'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
@@ -13,20 +14,19 @@ import { EmptyState } from '../ui/EmptyState'
 import { Page } from '../ui/Page'
 import { Pager } from '../ui/Pager'
 import { QueryState } from '../ui/QueryState'
-import { StatTile } from '../ui/StatTile'
+import { StatRow, StatTile } from '../ui/StatTile'
 import { Tabs } from '../ui/Tabs'
 import { useToast } from '../ui/Toast'
 import { TaskForm } from '../tasks/TaskForm'
 import { readView, withView, type View } from './board'
 import { BulkBar } from './BulkBar'
-import { CaptureDialog } from './CaptureDialog'
-import { downloadText } from './download'
+import { downloadBlob, exportName, getFile } from './download'
 import { LostDialog, WonDialog } from './LeadClose'
 import { useLeadFields, useLeadKpis, useCrmSettings, usePipelines } from './leadData'
 import { DeleteLead } from './LeadDelete'
 import {
   activeFields, activeFilterCount, defaultPipeline, DUE_FILTERS, dueSections, exportQuery, listQuery, readFilters, sortedStages,
-  toggled, toggledAll, withFilter, writeFilters, type LeadDraft, type LeadFilters,
+  toggled, toggledAll, withFilter, writeFilters, type ExportFormat, type LeadFilters,
 } from './leadLogic'
 import { LeadForm } from './LeadForm'
 import { LeadList, type RowAsk } from './LeadList'
@@ -35,6 +35,7 @@ import { LeadsToolbar } from './LeadsToolbar'
 import { leadColumns, type LeadColumn } from './listLogic'
 import type { LeadKpis, LeadRow, Paginated, Stage } from './leadTypes'
 import { dueLabel } from './leadWords'
+import { leadFigures } from './recordLogic'
 
 const key = (sp: URLSearchParams, name: string): string => sp.get(name) ?? ''
 
@@ -45,39 +46,41 @@ const typing = (target: EventTarget | null): boolean => {
 }
 
 /**
- * Leads (round 2, "similar functionality … like we have in main platform leads"): every open enquiry — from the website
- * chat, forms and by hand — as a list, a board by stage (`?view=board`, the pipeline `?p=`) or by owner
- * (`?view=team`); the open pipeline's figures; one toolbar for the search, the filters, the saved views, the columns
- * and the CSV; bulk changes; adding a lead by hand (`?new=1`, `?guest=`) or from a pasted message read by the AI.
- * The rows are the full admin's (`GET inquiries`, open ones only: a won lead is a deal, a lost one stays a contact).
- * "/" goes to the search, Escape clears the choice.
+ * Leads (round 2, "similar functionality … like we have in main platform leads"; round 5, owner 2026-11-12: "minimize
+ * copy, more icons … opening tabs, slides"): every open enquiry — from the website chat, forms and by hand — as a list,
+ * a board by stage (`?view=board`, the pipeline `?p=`) or by owner (`?view=team`); the open pipeline's figures (only
+ * those worth showing); one toolbar for the search, the filters, the saved views, the columns and the export (Excel or
+ * CSV); bulk changes. A lead opens in its panel over the page (`?lead=`); adding one, by hand or from a pasted message
+ * read by the AI, is the header's New panel (`?create=lead|capture`, with a contact `&guest=`), and an old link to a
+ * contact's "New lead" (`?new=1&guest=`) still opens the form with that contact. The rows are the full admin's (`GET inquiries`, open ones only: a won lead
+ * is a deal, a lost one stays a contact). "/" goes to the search, Escape clears the choice.
  */
 export function LeadsPage() {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const lang = i18n.language
   const toast = useToast()
+  const records = useRecords()
   const [sp, setSp] = useSearchParams()
   const filters = readFilters(sp)
   const view = readView(sp)
   const me = boot.staff.name
   const hotel = boot.organization.industry === 'hotel'
   const [exporting, setExporting] = useState(false)
-  const [capturing, setCapturing] = useState(false)
-  const [captured, setCaptured] = useState<LeadDraft | null>(null)
   const [now] = useState(() => new Date())
   const pipelines = usePipelines()
   const settings = useCrmSettings()
   const columns = leadColumns(settings.data, hotel)
   const stages = sortedStages(defaultPipeline(pipelines.data)?.stages)
   const kpis = useLeadKpis()
+  // Old links to a contact's "New lead" (`?new=1&guest=`, before round 5) still open the form with that contact here;
+  // a contact's "New lead" now opens the header's New panel (`?create=lead&guest=`, CreateHost), as New does.
   const creating = key(sp, 'new') === '1'
   const presetGuest = Number(key(sp, 'guest')) || null
 
   const apply = (next: LeadFilters) => setSp(writeFilters(next, sp), { replace: true })
   const change = (patch: Partial<LeadFilters>) => apply(withFilter(filters, patch))
-  const openForm = () => { const next = new URLSearchParams(sp); next.set('new', '1'); setSp(next) }
-  const closeForm = () => { const next = new URLSearchParams(sp); next.delete('new'); next.delete('guest'); setSp(next, { replace: true }); setCaptured(null) }
+  const closeForm = () => { const next = new URLSearchParams(sp); next.delete('new'); next.delete('guest'); setSp(next, { replace: true }) }
 
   // "/" puts the cursor in the search box (not while typing somewhere else).
   useEffect(() => {
@@ -90,11 +93,11 @@ export function LeadsPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const exportCsv = async () => {
+  const exportFile = async (format: ExportFormat) => {
     setExporting(true)
     try {
-      const text = await get<string>(`inquiries${params(exportQuery(filters, me))}`)
-      downloadText(typeof text === 'string' ? text : '', `leads-${boot.venue.today}.csv`, 'text/csv')
+      const file = await getFile(`inquiries/export${params(exportQuery(filters, me, format))}`)
+      downloadBlob(file, exportName('leads', boot.venue.today, format))
     } catch (error) {
       toast(errorText(t, error), 'danger')
     } finally {
@@ -103,48 +106,57 @@ export function LeadsPage() {
   }
 
   return (
-    <Page wide title={t('crm.nav.leads', 'Leads')} line={t('crm.leads.line', 'Every open enquiry, from the website chat and everywhere else.')}
+    <Page wide icon={Target} title={t('crm.nav.leads', 'Leads')} line={t('crm.leads.line', 'Every open enquiry, from the website chat and everywhere else.')}
       actions={(
         <>
           {/* The AI capture is every staff member's (the server's `ai_capture`, the same answer its route gives). */}
           {boot.features.ai_capture && (
-            <button type="button" onClick={() => setCapturing(true)}
-              className="crm-ai-soft inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent">
-              <Sparkles size={15} aria-hidden />{t('crm.leads.capture', 'From a message')}
+            <button type="button" onClick={() => records.create('capture')} title={t('crm.leads.capture_long', 'A lead from a message, read by the AI')}
+              className="crm-ai-soft inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent">
+              <Sparkles size={15} aria-hidden /><span className="hidden sm:inline">{t('crm.leads.capture', 'From a message')}</span><span className="sr-only sm:hidden">{t('crm.leads.capture', 'From a message')}</span>
             </button>
           )}
-          <Button onClick={openForm} className="min-h-11"><UserPlus size={15} aria-hidden />{t('crm.leads.new', 'Add a lead')}</Button>
+          <Button onClick={() => records.create('lead')} className="min-h-10"><UserPlus size={15} aria-hidden />{t('crm.leads.new_short', 'Add')}</Button>
         </>
       )}>
       <Figures kpis={kpis.data} lang={lang} currency={boot.venue.currency} />
 
       <LeadsToolbar filters={filters} view={view} stages={stages} columns={columns} onChange={change} onApply={apply}
-        onView={(next: View) => setSp(withView(sp, next), { replace: true })} onExport={() => { void exportCsv() }} exporting={exporting} />
+        onView={(next: View) => setSp(withView(sp, next), { replace: true })} onExport={format => { void exportFile(format) }} exporting={exporting} />
 
       {view === 'board' ? <LeadsBoard filters={filters} now={now} />
         : view === 'team' ? <LeadsTeam filters={filters} now={now} />
-        : <ListView filters={filters} apply={apply} change={change} stages={stages} columns={columns} kpis={kpis.data} now={now} onAdd={openForm} />}
+        : <ListView filters={filters} apply={apply} change={change} stages={stages} columns={columns} kpis={kpis.data} now={now} onAdd={() => records.create('lead')} />}
 
-      {creating && <LeadForm presetGuest={presetGuest} initial={captured} onClose={closeForm} />}
-      {capturing && <CaptureDialog onClose={() => setCapturing(false)} onRead={draft => { setCapturing(false); setCaptured(draft); openForm() }} />}
+      {creating && <LeadForm presetGuest={presetGuest} onClose={closeForm} />}
     </Page>
   )
 }
 
-/** The open pipeline at a glance (`inquiries/kpis`): open leads, their value, the follow-ups due, new this week. */
+/** The open pipeline at a glance (`inquiries/kpis`): only the figures that hold something (`leadFigures`). */
 function Figures({ kpis, lang, currency }: { kpis: LeadKpis | undefined; lang: string; currency: string }) {
   const { t } = useTranslation()
-  if (!kpis) return null
+  const shown = leadFigures(kpis)
+  if (!kpis || shown.length === 0) return null
   const delta = typeof kpis.new_delta_pct === 'number' ? kpis.new_delta_pct : null
   return (
-    <section aria-label={t('crm.leads.figures', 'The open pipeline')} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatTile icon={Target} tone="accent" label={t('crm.leads.kpi_open', 'Open leads')} value={count(kpis.total, lang)} />
-      <StatTile icon={Coins} tone="success" label={t('crm.leads.kpi_value', 'Open value')} value={money(kpis.estimated_value, currency, lang)} />
-      <StatTile icon={CalendarClock} tone={kpis.overdue > 0 ? 'danger' : 'pending'} label={t('crm.leads.kpi_due', 'Follow-ups due')}
-        value={count(kpis.due_today + kpis.overdue, lang)} hint={t('crm.leads.kpi_overdue', '{{count}} overdue', { count: kpis.overdue })} to="/crm/leads?due=1" />
-      <StatTile icon={TrendingUp} tone="progress" label={t('crm.leads.kpi_new', 'New this week')} value={count(kpis.new_this_week, lang)}
-        hint={delta === null ? undefined : t('crm.leads.kpi_new_delta', '{{percent}} % on the week before', { percent: delta > 0 ? `+${delta}` : String(delta) })} />
-    </section>
+    <StatRow label={t('crm.leads.figures', 'The open pipeline')} count={shown.length}>
+      {shown.includes('open') && <StatTile icon={Target} tone="accent" label={t('crm.leads.kpi_open', 'Open leads')} value={count(kpis.total, lang)} />}
+      {shown.includes('value') && <StatTile icon={Coins} tone="success" label={t('crm.leads.kpi_value', 'Open value')} value={money(kpis.estimated_value, currency, lang)} />}
+      {/* A phone keeps two figures, so the list starts on its first screen; the follow-up pills carry the due counts. */}
+      {shown.includes('due') && (
+        <div className="hidden min-w-0 sm:block">
+          <StatTile icon={CalendarClock} tone={kpis.overdue > 0 ? 'danger' : 'pending'} label={t('crm.leads.kpi_due', 'Follow-ups due')}
+            value={count(kpis.due_today + kpis.overdue, lang)} hint={kpis.overdue > 0 ? t('crm.leads.kpi_overdue', '{{count}} overdue', { count: kpis.overdue }) : undefined} to="/crm/leads?due=1" />
+        </div>
+      )}
+      {shown.includes('new') && (
+        <div className="hidden min-w-0 sm:block">
+          <StatTile icon={TrendingUp} tone="progress" label={t('crm.leads.kpi_new', 'New this week')} value={count(kpis.new_this_week, lang)}
+            hint={delta === null || delta === 0 ? undefined : t('crm.leads.kpi_new_delta_short', '{{percent}} %', { percent: delta > 0 ? `+${delta}` : String(delta) })} />
+        </div>
+      )}
+    </StatRow>
   )
 }
 
@@ -159,7 +171,7 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
   now: Date
   onAdd: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const boot = useBoot()
   const me = boot.staff.name
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -200,15 +212,29 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
   const rows = list.data?.data ?? []
   const shown = sections.length ? due.flatMap(d => d.data?.data ?? []) : rows
   const shownIds = shown.map(r => r.id)
+  // The panel's previous and next walk the leads as the list shows them.
+  useRecordList('lead', shownIds)
   const filtered = Boolean(filters.q || filters.due || activeFilterCount(filters) > 0)
   const counts: Partial<Record<LeadFilters['due'], number>> = kpis ? { now: kpis.overdue + kpis.due_today, overdue: kpis.overdue, today: kpis.due_today } : {}
   const name = (lead: LeadRow) => lead.guest?.full_name || lead.guest?.email || t('crm.common.no_name', 'No name')
   const listProps = { stages, selected, onSelect: (id: number) => setSelected(s => toggled(s, id)), columns, fields: listFields, onAsk: setAsk, now }
 
   return (
-    <div className="space-y-4">
-      <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value })}
-        items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {/* The pills scroll sideways on a phone rather than wrap onto a second row. */}
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+          <div className="w-max">
+            <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value })}
+              items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
+          </div>
+        </div>
+        {sections.length === 0 && list.data && (
+          <span className="shrink-0 text-xs text-a-text-2" aria-live="polite">
+            {list.isFetching && !list.isLoading ? t('crm.common.loading', 'Loading…') : t('crm.common.total', '{{count}} in all', { count: list.data.total })}
+          </span>
+        )}
+      </div>
 
       {selected.size > 0 && <BulkBar selected={selected} stages={stages} onDone={() => setSelected(new Set())} />}
 
@@ -220,8 +246,7 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
             return (
               <Card key={section.key} padded={false} icon={CalendarClock} tone={section.key === 'overdue' ? 'danger' : 'pending'}
                 title={section.key === 'overdue' ? t('crm.leads.section_overdue', 'Overdue') : t('crm.leads.section_today', 'Due today')}
-                description={section.key === 'overdue' ? t('crm.leads.section_overdue_line', 'The next step was due before today.') : t('crm.leads.section_today_line', 'The next step is due today.')}
-                action={result?.data ? <span className="text-xs text-a-text-2">{t('crm.common.total', '{{count}} in all', { count: result.data.total })}</span> : undefined}>
+                hint={result?.data ? count(result.data.total, i18n.language) : undefined}>
                 <QueryState loading={result?.isLoading ?? true} error={result?.error} onRetry={() => { void result?.refetch() }} rows={2}>
                   {leads.length === 0
                     ? <p className="px-4 py-6 text-center text-sm text-a-text-2">{section.key === 'overdue' ? t('crm.leads.none_overdue', 'Nothing overdue.') : t('crm.leads.none_today', 'Nothing due today.')}</p>
@@ -238,21 +263,17 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
               filtered
                 ? <EmptyState icon={Target} title={t('crm.leads.none_found', 'No lead matches')} line={t('crm.leads.none_found_line', 'Try another search or clear the filters.')}
                     action={<Button variant="secondary" onClick={() => apply({ ...filters, q: '', due: '', status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '', page: 1 })}>{t('crm.leads.clear', 'Clear filters')}</Button>} />
-                : <EmptyState icon={Target} title={t('crm.leads.empty', 'No open leads yet')} line={t('crm.leads.empty_line', 'Leads come in from the website chat and your forms, or add one yourself.')}
+                : <EmptyState icon={Target} title={t('crm.leads.empty', 'No open leads yet')} line={t('crm.leads.empty_line_short', 'From the chat, your forms, or by hand.')}
                     action={<Button onClick={onAdd}><Plus size={15} aria-hidden />{t('crm.leads.new', 'Add a lead')}</Button>} />
             ) : (
               <>
-                <div className="flex items-center gap-3 border-b border-a-border px-4 py-2">
-                  <label className="flex min-h-9 items-center gap-2 text-xs text-a-text-2">
-                    <input type="checkbox" className="h-4 w-4 accent-a-accent" checked={shownIds.length > 0 && shownIds.every(id => selected.has(id))}
-                      onChange={() => setSelected(s => toggledAll(s, shownIds))} />
-                    {t('crm.leads.select_page', 'Select this page')}
-                  </label>
-                  <span className="ml-auto text-xs text-a-text-2">
-                    {list.isFetching && !list.isLoading ? t('crm.common.loading', 'Loading…') : list.data ? t('crm.common.total', '{{count}} in all', { count: list.data.total }) : null}
-                  </span>
-                </div>
-                <LeadList leads={rows} {...listProps} />
+                {/* A phone has no header row: the page's box sits over the cards. */}
+                <label className="flex min-h-10 items-center gap-2 border-b border-a-border px-4 text-xs text-a-text-2 md:hidden">
+                  <input type="checkbox" className="h-4 w-4 accent-a-accent" checked={shownIds.length > 0 && shownIds.every(id => selected.has(id))}
+                    onChange={() => setSelected(s => toggledAll(s, shownIds))} />
+                  {t('crm.leads.select_page', 'Select this page')}
+                </label>
+                <LeadList leads={rows} onSelectAll={() => setSelected(s => toggledAll(s, shownIds))} {...listProps} />
               </>
             )}
           </QueryState>
