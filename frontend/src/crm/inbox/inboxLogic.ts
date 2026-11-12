@@ -1,5 +1,6 @@
 import { params } from '../lib/api'
 import type { Tone } from '../ui/StatTile'
+import { feedName, feedPath, type FeedFilter, type FeedIntent, type FeedRange, type FeedRow } from './feedLogic'
 import type { CannedReply, Conversation, ConvStatus, Feedback, InboxStats, Message, SenderType } from './types'
 
 /**
@@ -8,8 +9,14 @@ import type { CannedReply, Conversation, ConvStatus, Feedback, InboxStats, Messa
  * AI button says, and the bodies the chat endpoints take. The server decides everything else.
  */
 
-/** The inbox's address parameters: `?status=` the filter, `?c=` the open conversation (lib/links conversationPath). */
-export const INBOX_PARAM = { status: 'status', conversation: 'c' } as const
+/**
+ * The inbox's address parameters: `?status=` the filter, `?c=` the open conversation (lib/links conversationPath);
+ * round 5: `?sort=priority` the feed's priority order, `?intent=` one of the feed's intents, `?unassigned=1` the open
+ * chats nobody has, `?range=` the feed's window, `?dtab=` the details column's tab.
+ */
+export const INBOX_PARAM = {
+  status: 'status', conversation: 'c', sort: 'sort', intent: 'intent', unassigned: 'unassigned', range: 'range', detailsTab: 'dtab',
+} as const
 
 export const STATUS_FILTERS = ['all', 'active', 'waiting', 'resolved', 'archived'] as const
 export type StatusFilter = (typeof STATUS_FILTERS)[number]
@@ -26,14 +33,153 @@ export function readConversationId(value: string | null | undefined): number | n
   return id > 0 ? id : null
 }
 
-/** The list's address: `chat-inbox?status=&search=&group_by_visitor=1&page=` (empty parts left out). */
-export function listPath(status: StatusFilter, search: string, groupByVisitor: boolean, page = 1): string {
+/** The list's address: `chat-inbox?status=&search=&group_by_visitor=1&unassigned=1&page=` (empty parts left out). */
+export function listPath(status: StatusFilter, search: string, groupByVisitor: boolean, page = 1, unassigned = false): string {
   return `chat-inbox${params({
     status: status === 'all' ? undefined : status,
     search: search.trim(),
     group_by_visitor: groupByVisitor,
+    unassigned,
     page: page > 1 ? page : undefined,
   })}`
+}
+
+// ─── Round 5: the priority and intent feed in the inbox ─────────────────────
+
+export type InboxSort = 'newest' | 'priority'
+
+/** `?sort=priority` asks for the feed's priority order; the newest first otherwise. */
+export function readSort(value: string | null | undefined): InboxSort {
+  return value === 'priority' ? 'priority' : 'newest'
+}
+
+/** `?unassigned=1`. */
+export function readFlag(value: string | null | undefined): boolean {
+  return value === '1'
+}
+
+export interface InboxView {
+  status: StatusFilter
+  sort: InboxSort
+  intent: FeedIntent | null
+  unassigned: boolean
+  range: FeedRange
+  search: string
+  group: boolean
+  page: number
+}
+
+/** What the inbox asks the feed for, beside each status: it has no "archived", so that one is kept from every row. */
+const FEED_FOR_STATUS: Record<StatusFilter, FeedFilter> = {
+  all: 'priority',
+  active: 'active_chat',
+  waiting: 'active_chat',
+  resolved: 'resolved',
+  archived: 'all',
+}
+
+export type InboxSource =
+  | { kind: 'inbox'; path: string }
+  /** The feed: its rows, of which only those whose latest chat has `status` (and nobody, with `unassigned`) are shown. */
+  | { kind: 'feed'; path: string; status: ConvStatus | null; unassigned: boolean }
+
+/**
+ * Where the list comes from. The inbox's own `chat-inbox` (the newest first, the server's status and nobody-assigned
+ * filters); or, on a plan with the Engagement hub, when the priority order or an intent is asked for, the full admin's
+ * feed — one row per visitor and their latest chat, in the server's priority order (or the newest first with an
+ * intent). The feed has no status of its own, so the status picked is kept from its rows.
+ */
+export function inboxSource(view: InboxView, feedOn: boolean): InboxSource {
+  if (!feedOn || (view.sort !== 'priority' && !view.intent)) {
+    return { kind: 'inbox', path: listPath(view.status, view.search, view.group, view.page, view.unassigned) }
+  }
+  const filter: FeedFilter = view.intent ?? FEED_FOR_STATUS[view.status]
+  return {
+    kind: 'feed',
+    path: feedPath({ filter, sort: view.sort === 'priority' ? 'priority' : 'recent', range: view.range, search: view.search, page: view.page }),
+    status: view.status === 'all' ? null : view.status,
+    unassigned: view.unassigned,
+  }
+}
+
+/** A row of the list: a conversation, with the feed's hot-lead flag and whether the visitor is on the site. */
+export interface InboxRow extends Conversation {
+  hot?: boolean
+  online?: boolean
+}
+
+/** The feed's rows as conversations: only visitors with a chat, of the status asked for, in the server's order. */
+export function feedConversations(rows: readonly FeedRow[], keep: { status: ConvStatus | null; unassigned: boolean }): InboxRow[] {
+  return rows.flatMap(row => {
+    const c = row.conversation
+    if (!c) return []
+    if (keep.status && c.status !== keep.status) return []
+    if (keep.unassigned && c.assigned_to) return []
+    return [{
+      id: c.id,
+      visitor_id: row.id,
+      visitor_name: feedName(row),
+      visitor_email: row.email,
+      visitor_phone: row.phone,
+      visitor_country: row.country,
+      visitor_city: row.city,
+      page_url: row.current_page,
+      channel: null,
+      status: c.status,
+      ai_enabled: c.ai_enabled,
+      assigned_to: c.assigned_to,
+      assigned_agent: null,
+      member: null,
+      unread_count: Math.max(0, c.unread_admin_count ?? 0),
+      last_message: c.last_message_preview,
+      last_message_at: c.last_message_at,
+      lead_captured: c.lead_captured,
+      inquiry_id: null,
+      intent_tag: c.intent_tag,
+      agent_notes: null,
+      created_at: null,
+      hot: row.is_hot_lead,
+      online: row.is_online,
+    }]
+  })
+}
+
+/** The list as shown: the inbox's rows urgent first (as before), the feed's in the server's order; both as typed. */
+export function shownRows(source: InboxSource['kind'], rows: readonly InboxRow[], term: string): InboxRow[] {
+  return source === 'feed' ? rows.filter(c => matchesSearch(c, term)) : shownConversations(rows, term)
+}
+
+/**
+ * J and K (round 5): the conversation after or before the open one in the list as shown; the first when none is open
+ * (or the open one is not in the list); none past either end.
+ */
+export function stepConversation(ids: readonly number[], current: number | null, dir: 1 | -1): number | null {
+  if (ids.length === 0) return null
+  const i = current === null ? -1 : ids.indexOf(current)
+  if (i < 0) return ids[0]
+  return ids[i + dir] ?? null
+}
+
+/** What E does to the open conversation: resolve it when its status allows; nothing otherwise. */
+export function resolveNext(status: ConvStatus | undefined): ConvStatus | null {
+  return status && statusActions(status).some(a => a.action === 'resolve') ? 'resolved' : null
+}
+
+/** The details column's tabs (round 5). */
+export const DETAILS_TABS = ['contact', 'lead', 'ai', 'website'] as const
+export type DetailsTab = (typeof DETAILS_TABS)[number]
+
+/** `?dtab=` keeps the details tab; Contact first, and AI only where there is something for it to show. */
+export function readDetailsTab(value: string | null | undefined, aiShown = true): DetailsTab {
+  const tab = (DETAILS_TABS as readonly string[]).includes(value ?? '') ? (value as DetailsTab) : 'contact'
+  return tab === 'ai' && !aiShown ? 'contact' : tab
+}
+
+/** The filters on besides the status (the badge on the Filters button): the priority order, an intent, a window. */
+export function activeFilters(view: Pick<InboxView, 'sort' | 'intent' | 'range'>, feedOn: boolean): number {
+  if (!feedOn) return 0
+  const feed = view.sort === 'priority' || view.intent !== null
+  return Number(view.sort === 'priority') + Number(view.intent !== null) + Number(feed && view.range !== 'all')
 }
 
 /** The count beside each filter, from `chat-inbox/stats`. */

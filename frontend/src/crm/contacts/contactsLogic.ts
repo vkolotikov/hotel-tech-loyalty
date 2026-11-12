@@ -19,38 +19,66 @@ export const SORTS = {
 export type SortKey = keyof typeof SORTS
 export const SORT_KEYS = Object.keys(SORTS) as SortKey[]
 
-/** The list's filters, as the address keeps them (`?q=&lifecycle=…`). `tag` is a tag's id. */
+/**
+ * The list's filters, as the address keeps them (`?q=&lifecycle=…`). `tag` is a tag's id; `co` the company (not
+ * `company`, which names an open company record, records.ts); `from`/`to` the venue's days it was added on; `email`,
+ * `phone`, `vip` are on when `1`. Round 5 (owner 2026-11-12, "implement all features we have in our main platform"):
+ * nationality, guest type, owner, the days added, has an email or a phone and VIP, as the full admin's Customers.
+ */
 export interface PeopleFilters {
   q: string
   lifecycle: string
   importance: string
   source: string
   country: string
+  nationality: string
+  gtype: string
+  owner: string
   tag: string
-  company: string
+  co: string
+  from: string
+  to: string
+  email: string
+  phone: string
+  vip: string
   sort: SortKey
 }
 
-/** The filters that narrow the list (the sort only orders it). */
-export const FILTER_KEYS = ['q', 'lifecycle', 'importance', 'source', 'country', 'tag', 'company'] as const
+/** The filters that narrow the list (the sort only orders it), in the order their chips show. */
+export const FILTER_KEYS = ['q', 'lifecycle', 'importance', 'vip', 'gtype', 'source', 'owner', 'country', 'nationality', 'tag', 'co', 'from', 'to', 'email', 'phone'] as const
 export type FilterKey = (typeof FILTER_KEYS)[number]
+
+/** The filters that are a switch (on = `1`). */
+export const SWITCH_KEYS = ['vip', 'email', 'phone'] as const satisfies readonly FilterKey[]
 
 /** One value of the address, or '' (a variable key keeps the API sweep from reading it as a call). */
 export function arg(search: URLSearchParams, key: string): string {
   return search.get(key) ?? ''
 }
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
 export function filtersFrom(search: URLSearchParams): PeopleFilters {
   const sort = arg(search, 'sort')
   const tag = arg(search, 'tag')
+  const day = (key: string) => (DAY.test(arg(search, key)) ? arg(search, key) : '')
+  const on = (key: string) => (arg(search, key) === '1' ? '1' : '')
   return {
     q: arg(search, 'q'),
     lifecycle: arg(search, 'lifecycle'),
     importance: arg(search, 'importance'),
     source: arg(search, 'source'),
     country: arg(search, 'country'),
+    nationality: arg(search, 'nationality'),
+    gtype: arg(search, 'gtype'),
+    owner: arg(search, 'owner'),
     tag: /^\d+$/.test(tag) ? tag : '',
-    company: arg(search, 'company'),
+    co: arg(search, 'co'),
+    from: day('from'),
+    to: day('to'),
+    email: on('email'),
+    phone: on('phone'),
+    vip: on('vip'),
     sort: (SORT_KEYS as string[]).includes(sort) ? (sort as SortKey) : 'newest',
   }
 }
@@ -67,26 +95,36 @@ export function listParams(f: PeopleFilters, page: number): Record<string, strin
   return out
 }
 
+/** VIP, as the full admin's Customers asks for it: the contacts whose VIP level is "VIP" (its bulk "Mark VIP" sets it). */
+export const VIP_LEVEL = 'VIP'
+
 function filterParams(f: PeopleFilters): Record<string, string> {
   const pairs: [string, string][] = [
     ['search', f.q.trim()], ['lifecycle_status', f.lifecycle], ['importance', f.importance], ['lead_source', f.source],
-    ['country', f.country], ['tag_ids', f.tag], ['company', f.company],
+    ['country', f.country], ['nationality', f.nationality], ['guest_type', f.gtype], ['owner_name', f.owner], ['tag_ids', f.tag],
+    ['company', f.co.trim()], ['date_from', f.from], ['date_to', f.to],
+    ['has_email', f.email], ['has_phone', f.phone], ['vip_level', f.vip ? VIP_LEVEL : ''],
   ]
   return Object.fromEntries(pairs.filter(([, v]) => v !== ''))
 }
 
-/** What GET guests/export is asked: the chosen rows when there are any, else everything the filters show; as CSV. */
-export function exportParams(f: PeopleFilters, ids: number[]): Record<string, string> {
-  if (ids.length > 0) return { ids: ids.join(','), format: 'csv' }
-  return { ...filterParams(f), format: 'csv' }
+export type ExportFormat = 'xlsx' | 'csv'
+
+/**
+ * What GET guests/export is asked: the chosen rows when there are any, else everything the filters show; as the
+ * styled workbook (the server's default, as the full admin's Export) or as CSV.
+ */
+export function exportParams(f: PeopleFilters, ids: number[], format: ExportFormat = 'csv'): Record<string, string> {
+  const base: Record<string, string> = ids.length > 0 ? { ids: ids.join(',') } : filterParams(f)
+  return format === 'csv' ? { ...base, format: 'csv' } : base
 }
 
-/** How many filters narrow the list now. */
-export function activeFilterCount(f: PeopleFilters): number {
-  return FILTER_KEYS.filter(k => f[k].trim() !== '').length
+/** How many filters narrow the list now (the search is not one of the Filters panel's). */
+export function activeFilterCount(f: PeopleFilters, { withSearch = true }: { withSearch?: boolean } = {}): number {
+  return FILTER_KEYS.filter(k => (withSearch || k !== 'q') && f[k].trim() !== '').length
 }
 
-/** The filters narrowing the list now, in the toolbar's order, each shown as a chip that removes it. */
+/** The filters narrowing the list now, in the chips' order, each shown as a chip that removes it. */
 export function activeFilters(f: PeopleFilters): { key: FilterKey; value: string }[] {
   return FILTER_KEYS.filter(k => f[k].trim() !== '').map(k => ({ key: k, value: f[k].trim() }))
 }
@@ -121,13 +159,17 @@ export function withSegment(search: URLSearchParams, saved: unknown): URLSearchP
   const next = withoutFilters(search)
   next.delete('sort')
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return next
-  const values = saved as Record<string, unknown>
+  // A view saved before round 5 named the company `company`; it is `co` now.
+  const values: Record<string, unknown> = { ...(saved as Record<string, unknown>) }
+  if (typeof values.co !== 'string' && typeof values.company === 'string') values.co = values.company
   for (const key of [...FILTER_KEYS, 'sort'] as const) {
     const value = values[key]
     if (typeof value === 'string' && value.trim() !== '') next.set(key, value.trim())
   }
   if (next.has('sort') && !(SORT_KEYS as string[]).includes(arg(next, 'sort'))) next.delete('sort')
   if (next.has('tag') && !/^\d+$/.test(arg(next, 'tag'))) next.delete('tag')
+  for (const key of ['from', 'to'] as const) if (next.has(key) && !DAY.test(arg(next, key))) next.delete(key)
+  for (const key of SWITCH_KEYS) if (next.has(key) && arg(next, key) !== '1') next.delete(key)
   return next
 }
 
@@ -151,6 +193,10 @@ export function settingList(settings: Record<string, unknown> | undefined, key: 
  */
 export const DEFAULT_LIFECYCLE = ['Prospect', 'First-Time Guest', 'Returning Guest', 'VIP', 'Corporate', 'Inactive']
 export const DEFAULT_IMPORTANCE = ['Standard', 'Important', 'VIP', 'VVIP']
+export const DEFAULT_GUEST_TYPES = ['Individual', 'Corporate', 'Travel Agent', 'Group Leader', 'VIP', 'Returning']
+export const DEFAULT_VIP_LEVELS = ['Standard', 'Silver', 'Gold', 'Platinum', 'Diamond']
+export const DEFAULT_INDUSTRIES = ['Technology', 'Finance', 'Consulting', 'Pharmaceutical', 'Automotive', 'Energy', 'Government', 'Airlines', 'Media', 'Other']
+export const DEFAULT_RATE_TYPES = ['Fixed Rate', 'Percentage Discount', 'Best Available Rate Minus']
 
 /** The venue's list, or the default when it has none. */
 export function listOr(settings: Record<string, unknown> | undefined, key: string, fallback: string[]): string[] {
@@ -171,6 +217,7 @@ export function optionsWith(list: string[], current?: string | null): string[] {
 export const FIELD_MAX = {
   full_name: 200, email: 150, phone: 50, mobile: 50, company: 200, position_title: 100, country: 100, city: 100,
   address: 0, lead_source: 100, owner_name: 150, lifecycle_status: 50, importance: 30, notes: 0,
+  guest_type: 30, vip_level: 30, nationality: 100, preferred_language: 30,
 } as const
 export type FieldKey = keyof typeof FIELD_MAX
 
@@ -189,10 +236,10 @@ export type FieldOutcome =
   | { kind: 'patch'; body: Partial<Record<FieldKey, string | null>> }
 
 /**
- * The fields a contact always has: the name, and the lifecycle and importance (columns with a default, never empty).
- * Every other field can be emptied.
+ * The fields a contact always has: the name, and the lifecycle, importance, guest type and VIP level (columns with a
+ * default, never empty). Every other field can be emptied.
  */
-export const KEPT_FIELDS: readonly FieldKey[] = ['full_name', 'lifecycle_status', 'importance']
+export const KEPT_FIELDS: readonly FieldKey[] = ['full_name', 'lifecycle_status', 'importance', 'guest_type', 'vip_level']
 
 /**
  * What saving one field does. An emptied field is sent as null, which clears it (round 2: PUT guests/{id} clears a field
@@ -207,6 +254,148 @@ export function fieldPatch(key: FieldKey, draft: string, current: string | null 
   if (max > 0 && next.length > max) return { kind: 'too_long', max }
   if (key === 'email' && !isEmail(next)) return { kind: 'bad_email' }
   return { kind: 'patch', body: { [key]: next } }
+}
+
+/** How a field is edited in place: a line, an address, a list to choose from, a number or a day. */
+export type FieldKind = 'text' | 'email' | 'tel' | 'textarea' | 'select' | 'number' | 'date'
+
+/** The lists a contact's fields choose from (the venue's CRM settings, else their defaults). */
+export type ContactList = 'lifecycle' | 'importance' | 'guestTypes' | 'vipLevels'
+
+export interface ContactFieldDef { key: FieldKey; kind: FieldKind; list?: ContactList; suggest?: 'sources' | 'countries' | 'nationalities' | 'owners' }
+
+/**
+ * A contact's fields in groups of what belongs together, in the order they are read (round 5: the guest type,
+ * VIP level, nationality and language the full admin's guest page has, beside round 2's fields).
+ */
+export const CONTACT_GROUPS: { key: 'reach' | 'work' | 'standing' | 'place' | 'notes'; fields: ContactFieldDef[] }[] = [
+  { key: 'reach', fields: [{ key: 'full_name', kind: 'text' }, { key: 'email', kind: 'email' }, { key: 'phone', kind: 'tel' }, { key: 'mobile', kind: 'tel' }] },
+  { key: 'work', fields: [{ key: 'company', kind: 'text' }, { key: 'position_title', kind: 'text' }, { key: 'owner_name', kind: 'text', suggest: 'owners' }] },
+  {
+    key: 'standing', fields: [
+      { key: 'lifecycle_status', kind: 'select', list: 'lifecycle' }, { key: 'importance', kind: 'select', list: 'importance' },
+      { key: 'guest_type', kind: 'select', list: 'guestTypes' }, { key: 'vip_level', kind: 'select', list: 'vipLevels' },
+      { key: 'lead_source', kind: 'text', suggest: 'sources' },
+    ],
+  },
+  {
+    key: 'place', fields: [
+      { key: 'country', kind: 'text', suggest: 'countries' }, { key: 'city', kind: 'text' }, { key: 'nationality', kind: 'text', suggest: 'nationalities' },
+      { key: 'preferred_language', kind: 'text' }, { key: 'address', kind: 'textarea' },
+    ],
+  },
+  { key: 'notes', fields: [{ key: 'notes', kind: 'textarea' }] },
+]
+
+/* ─── A company's fields, edited one at a time ─────────────────────────────────────────────────── */
+
+/** The company fields HexaTech CRM edits in place (CorporateAccountController::update's rules for them). */
+export const COMPANY_FIELD_KEYS = [
+  'company_name', 'industry', 'status', 'account_manager', 'contact_person', 'contact_email', 'contact_phone', 'payment_terms',
+  'credit_limit', 'discount_percentage', 'contract_start', 'contract_end', 'negotiated_rate', 'rate_type', 'annual_room_nights_target',
+  'billing_email', 'tax_id', 'billing_address', 'notes',
+] as const
+export type CompanyFieldKey = (typeof COMPANY_FIELD_KEYS)[number]
+
+export interface CompanyFieldDef {
+  key: CompanyFieldKey
+  kind: FieldKind
+  list?: 'statuses' | 'rateTypes'
+  suggest?: 'industries' | 'managers'
+  /** A hotel's word (a room rate, room nights): shown to a hotel only, as Leads shows a stay only to a hotel. */
+  hotel?: boolean
+  /** A number's range and whether it takes a fraction. */
+  min?: number
+  max?: number
+  whole?: boolean
+}
+
+export const COMPANY_GROUPS: { key: 'main' | 'reach' | 'terms' | 'billing' | 'notes'; fields: CompanyFieldDef[] }[] = [
+  {
+    key: 'main', fields: [
+      { key: 'company_name', kind: 'text' }, { key: 'industry', kind: 'text', suggest: 'industries' },
+      { key: 'status', kind: 'select', list: 'statuses' }, { key: 'account_manager', kind: 'text', suggest: 'managers' },
+    ],
+  },
+  { key: 'reach', fields: [{ key: 'contact_person', kind: 'text' }, { key: 'contact_email', kind: 'email' }, { key: 'contact_phone', kind: 'tel' }] },
+  {
+    key: 'terms', fields: [
+      { key: 'payment_terms', kind: 'text' }, { key: 'credit_limit', kind: 'number', min: 0 },
+      { key: 'discount_percentage', kind: 'number', min: 0, max: 100 },
+      { key: 'contract_start', kind: 'date' }, { key: 'contract_end', kind: 'date' },
+      { key: 'negotiated_rate', kind: 'number', min: 0, hotel: true }, { key: 'rate_type', kind: 'select', list: 'rateTypes', hotel: true },
+      { key: 'annual_room_nights_target', kind: 'number', min: 0, whole: true, hotel: true },
+    ],
+  },
+  { key: 'billing', fields: [{ key: 'billing_email', kind: 'email' }, { key: 'tax_id', kind: 'text' }, { key: 'billing_address', kind: 'textarea' }] },
+  { key: 'notes', fields: [{ key: 'notes', kind: 'textarea' }] },
+]
+
+/** A company's groups for this venue: the hotel's room-rate fields only for a hotel. */
+export function companyGroupsFor(hotel: boolean): typeof COMPANY_GROUPS {
+  return COMPANY_GROUPS.map(group => ({ ...group, fields: group.fields.filter(field => hotel || !field.hotel) })).filter(group => group.fields.length > 0)
+}
+
+const COMPANY_FIELD_MAX: Partial<Record<CompanyFieldKey, number>> = {
+  company_name: 200, industry: 100, contact_person: 150, contact_email: 150, contact_phone: 50, account_manager: 150,
+  billing_email: 150, tax_id: 50, payment_terms: 50, status: 30, rate_type: 30,
+}
+
+export type CompanyFieldOutcome =
+  | { kind: 'same' }
+  | { kind: 'required' }
+  | { kind: 'too_long'; max: number }
+  | { kind: 'bad_email' }
+  | { kind: 'bad_number'; min: number; max: number | null; whole: boolean }
+  | { kind: 'bad_day' }
+  | { kind: 'patch'; body: Partial<Record<CompanyFieldKey, string | number | null>> }
+
+/** A company field as the form shows it: a day stays `YYYY-MM-DD`, a number as written by the server. */
+export function companyValue(company: Partial<Record<CompanyFieldKey, unknown>>, key: CompanyFieldKey): string {
+  const v = company[key]
+  if (v === null || v === undefined) return ''
+  if (key === 'contract_start' || key === 'contract_end') return String(v).slice(0, 10)
+  const def = COMPANY_GROUPS.flatMap(g => g.fields).find(f => f.key === key)
+  if (def?.kind === 'number') {
+    const n = Number(v)
+    return Number.isFinite(n) ? String(n) : String(v)
+  }
+  return String(v)
+}
+
+/**
+ * What saving one company field does (PUT corporate-accounts/{id}): an emptied field is sent as null, which clears it,
+ * except the name (required) and the status (always one); a number in its range, a day as `YYYY-MM-DD`.
+ */
+export function companyFieldPatch(key: CompanyFieldKey, draft: string, current: string | null | undefined): CompanyFieldOutcome {
+  const next = draft.trim()
+  const was = (current ?? '').trim()
+  if (next === was) return { kind: 'same' }
+  if (next === '') return key === 'company_name' || key === 'status' ? { kind: 'required' } : { kind: 'patch', body: { [key]: null } }
+  const def = COMPANY_GROUPS.flatMap(g => g.fields).find(f => f.key === key)
+  const max = COMPANY_FIELD_MAX[key]
+  if (max && next.length > max) return { kind: 'too_long', max }
+  if ((key === 'contact_email' || key === 'billing_email') && !isEmail(next)) return { kind: 'bad_email' }
+  if (def?.kind === 'number') {
+    const n = Number(next)
+    const min = def.min ?? 0
+    const top = def.max ?? null
+    if (!Number.isFinite(n) || n < min || (top !== null && n > top) || (def.whole && !Number.isInteger(n))) {
+      return { kind: 'bad_number', min, max: top, whole: def.whole ?? false }
+    }
+    if (Number(was) === n && was !== '') return { kind: 'same' }
+    return { kind: 'patch', body: { [key]: n } }
+  }
+  if (def?.kind === 'date' && !isDay(next)) return { kind: 'bad_day' }
+  return { kind: 'patch', body: { [key]: next } }
+}
+
+/** A calendar day as a date input writes it, and one that exists. */
+export function isDay(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!m) return false
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return d.getUTCFullYear() === Number(m[1]) && d.getUTCMonth() === Number(m[2]) - 1 && d.getUTCDate() === Number(m[3])
 }
 
 /* ─── A new contact ────────────────────────────────────────────────────────────────────────────── */
@@ -330,8 +519,8 @@ export function togglePage(selected: number[], pageIds: number[]): number[] {
   return [...selected, ...pageIds.filter(id => !selected.includes(id))]
 }
 
-/** The fields a bulk change may set here (both are in GuestController::bulkUpdate's allowed list). */
-export const BULK_FIELDS = ['lifecycle_status', 'importance'] as const
+/** The fields a bulk change may set here (each is in GuestController::bulkUpdate's allowed list). */
+export const BULK_FIELDS = ['lifecycle_status', 'importance', 'guest_type', 'vip_level'] as const
 export type BulkField = (typeof BULK_FIELDS)[number]
 
 /** POST guests/bulk-update's body, or null when there is nothing to send. */
@@ -369,6 +558,11 @@ export function newLeadFor(id: number): string {
   return `/crm/leads?new=1&guest=${id}`
 }
 
+/** The VIP levels to choose from: the venue's, with "VIP" (what the full admin's "Mark VIP" and the VIP filter use). */
+export function withVip(levels: string[]): string[] {
+  return optionsWith(levels, VIP_LEVEL)
+}
+
 /** `mailto:` and `tel:` links, or null. A phone keeps its digits and a leading +. */
 export function mailLink(email: string | null | undefined): string | null {
   return email && isEmail(email) ? `mailto:${email.trim()}` : null
@@ -377,6 +571,17 @@ export function mailLink(email: string | null | undefined): string | null {
 export function phoneLink(phone: string | null | undefined): string | null {
   const clean = (phone ?? '').trim().replace(/(?!^\+)[^\d]/g, '')
   return clean.replace('+', '').length >= 4 ? `tel:${clean}` : null
+}
+
+/** A WhatsApp chat with the number (wa.me takes the digits with the country code, no +), or null. */
+export function whatsappLink(phone: string | null | undefined): string | null {
+  const digits = (phone ?? '').replace(/\D/g, '')
+  return digits.length >= 7 ? `https://wa.me/${digits}` : null
+}
+
+/** Under a contact's name: their company, email and phone, those they have. */
+export function contactSubtitle(g: { company?: string | null; email?: string | null; phone?: string | null; mobile?: string | null }): string {
+  return [g.company, g.email, g.phone || g.mobile].map(v => (v ?? '').trim()).filter(Boolean).join(' · ')
 }
 
 /* ─── The timeline ─────────────────────────────────────────────────────────────────────────────── */
@@ -420,6 +625,14 @@ export function mergeBody(pair: DuplicatePair, swapped: boolean, reason: string)
   return why ? { winner_id: keep.id, loser_id: remove.id, reason: why } : { winner_id: keep.id, loser_id: remove.id }
 }
 
+/** The suggested pairs this contact is in, each with the other contact (at most `max`). */
+export function pairsWith(pairs: DuplicatePair[], id: number, max = 3): { pair: DuplicatePair; other: DuplicateGuest }[] {
+  return pairs
+    .filter(pair => pair.winner?.id === id || pair.loser?.id === id)
+    .slice(0, max)
+    .map(pair => ({ pair, other: pair.winner.id === id ? pair.loser : pair.winner }))
+}
+
 /**
  * The sentence for a merge the server refused (GuestMergeController's codes): two contacts of different member
  * accounts, a contact with itself, a merge that failed and changed nothing; anything else is a plain refusal.
@@ -444,7 +657,7 @@ export function companyStatusKey(status: string | null | undefined): string | nu
 
 export const COMPANY_TONE: Record<string, Tone> = { Active: 'success', Pending: 'pending', Expired: 'neutral', Suspended: 'danger' }
 
-/** The company fields HexaTech CRM edits (the hotel's room-rate and room-night fields stay in the full admin). */
+/** A new company's fields (round 5: the discount, and for a hotel the rate and room nights, as the full admin's form). */
 export interface CompanyForm {
   company_name: string
   industry: string
@@ -457,6 +670,10 @@ export interface CompanyForm {
   tax_id: string
   payment_terms: string
   credit_limit: string
+  discount_percentage: string
+  negotiated_rate: string
+  rate_type: string
+  annual_room_nights_target: string
   contract_start: string
   contract_end: string
   status: string
@@ -465,24 +682,32 @@ export interface CompanyForm {
 
 export const EMPTY_COMPANY: CompanyForm = {
   company_name: '', industry: '', contact_person: '', contact_email: '', contact_phone: '', account_manager: '',
-  billing_email: '', billing_address: '', tax_id: '', payment_terms: '', credit_limit: '', contract_start: '',
-  contract_end: '', status: '', notes: '',
+  billing_email: '', billing_address: '', tax_id: '', payment_terms: '', credit_limit: '', discount_percentage: '',
+  negotiated_rate: '', rate_type: '', annual_room_nights_target: '', contract_start: '', contract_end: '', status: '', notes: '',
 }
 
 const COMPANY_MAX: Partial<Record<keyof CompanyForm, number>> = {
   company_name: 200, industry: 100, contact_person: 150, contact_email: 150, contact_phone: 50, account_manager: 150,
-  billing_email: 150, tax_id: 50, payment_terms: 50, status: 30,
+  billing_email: 150, tax_id: 50, payment_terms: 50, status: 30, rate_type: 30,
+}
+
+/** The form's number fields: their range, and whether they take a fraction. */
+const COMPANY_NUMBERS: Partial<Record<keyof CompanyForm, { max: number | null; whole: boolean }>> = {
+  credit_limit: { max: null, whole: false }, discount_percentage: { max: 100, whole: false },
+  negotiated_rate: { max: null, whole: false }, annual_room_nights_target: { max: null, whole: true },
 }
 
 /** A company as the form holds it. A day stays `YYYY-MM-DD`. */
 export function companyFormOf(c: Company): CompanyForm {
   const text = (v: unknown) => (v === null || v === undefined ? '' : String(v))
   const day = (v: string | null) => (v ? v.slice(0, 10) : '')
+  const num = (v: unknown) => (v === null || v === undefined || v === '' ? '' : String(Number(v)))
   return {
     company_name: text(c.company_name), industry: text(c.industry), contact_person: text(c.contact_person),
     contact_email: text(c.contact_email), contact_phone: text(c.contact_phone), account_manager: text(c.account_manager),
     billing_email: text(c.billing_email), billing_address: text(c.billing_address), tax_id: text(c.tax_id),
-    payment_terms: text(c.payment_terms), credit_limit: c.credit_limit === null || c.credit_limit === undefined ? '' : String(Number(c.credit_limit)),
+    payment_terms: text(c.payment_terms), credit_limit: num(c.credit_limit), discount_percentage: num(c.discount_percentage),
+    negotiated_rate: num(c.negotiated_rate), rate_type: text(c.rate_type), annual_room_nights_target: num(c.annual_room_nights_target),
     contract_start: day(c.contract_start), contract_end: day(c.contract_end), status: text(c.status), notes: text(c.notes),
   }
 }
@@ -497,8 +722,12 @@ export function companyErrors(form: CompanyForm): Partial<Record<keyof CompanyFo
   for (const key of ['contact_email', 'billing_email'] as const) {
     if (!errors[key] && form[key].trim() !== '' && !isEmail(form[key])) errors[key] = 'bad_email'
   }
-  const limit = form.credit_limit.trim()
-  if (limit !== '' && (!Number.isFinite(Number(limit)) || Number(limit) < 0)) errors.credit_limit = 'bad_number'
+  for (const [key, rule] of Object.entries(COMPANY_NUMBERS) as [keyof CompanyForm, { max: number | null; whole: boolean }][]) {
+    const raw = form[key].trim()
+    if (raw === '') continue
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n < 0 || (rule.max !== null && n > rule.max) || (rule.whole && !Number.isInteger(n))) errors[key] = 'bad_number'
+  }
   return errors
 }
 
@@ -512,7 +741,7 @@ export function companyBody(form: CompanyForm, mode: 'create' | 'edit'): Record<
     if (mode === 'create' && key === 'status') continue
     const value = raw.trim()
     if (mode === 'create' && value === '') continue
-    out[key] = value === '' ? null : key === 'credit_limit' ? Number(value) : value
+    out[key] = value === '' ? null : key in COMPANY_NUMBERS ? Number(value) : value
   }
   if (mode === 'edit' && out.status === null) delete out.status
   return out
@@ -527,6 +756,6 @@ export function csvWithBom(text: string): string {
   return text.startsWith(BOM) ? text : `${BOM}${text}`
 }
 
-export function exportName(today: string): string {
-  return `contacts-${today}.csv`
+export function exportName(today: string, format: ExportFormat = 'csv'): string {
+  return `contacts-${today}.${format}`
 }

@@ -1,4 +1,4 @@
-import { amount, dateRange, defaultPipeline, moveTo, resolveStage, sortedStages, type LeadFilters, type StageMove } from './leadLogic'
+import { amount, dateRange, defaultPipeline, moveTo, NOBODY, resolveStage, sortedStages, type LeadFilters, type StageMove } from './leadLogic'
 import type { LeadRow, Pipeline, Stage } from './leadTypes'
 
 /**
@@ -40,7 +40,9 @@ export function boardQuery(filters?: LeadFilters, me = ''): Record<string, strin
   put('search', filters.q.trim())
   put('status', filters.status)
   put('source', filters.source)
-  put('assigned_to', filters.owner === 'me' ? me : filters.owner)
+  // "Not assigned" is the server's `unassigned=1` (round 5: it was sent as an owner called `_nobody`, so it showed none).
+  if (filters.owner === NOBODY) q.unassigned = 1
+  else put('assigned_to', filters.owner === 'me' ? me : filters.owner)
   put('priority', filters.priority)
   put('inquiry_type', filters.type)
   put('country', filters.country)
