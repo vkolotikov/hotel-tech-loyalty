@@ -21,14 +21,14 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('../../lib/api', () => ({ api: {} }))
 
-const boot = (manager: boolean): Bootstrap => ({
+const boot = (manager: boolean, analytics?: boolean): Bootstrap => ({
   name: 'HexaTech CRM',
   organization: { id: 7, name: 'Villa Riga', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
   features: { chatbot: true, engagement: true, ai_capture: true },
   ai: { status: 'under', percent: 10 },
-  staff: { id: 3, name: 'Anna', role: manager ? 'manager' : 'staff', can: { manage_bot: manager, manage_widget: manager, manage_pipelines: manager, manage_canned: manager, manage_team: manager, delete_records: true } },
+  staff: { id: 3, name: 'Anna', role: manager ? 'manager' : 'staff', can: { manage_bot: manager, manage_widget: manager, manage_pipelines: manager, manage_canned: manager, manage_team: manager, delete_records: true, ...(analytics === undefined ? {} : { view_analytics: analytics }) } },
   widget: null,
   counts: { chats_waiting: 0, leads_new: 0, tasks_due: 0 },
   setup: { done: 6, total: 6, complete: true },
@@ -68,7 +68,7 @@ const pipeline: Pipeline = {
   ],
 }
 
-function render(manager: boolean, tab: 'chat' | 'pipeline' | 'deals' | 'reports' = 'chat', seed?: (qc: QueryClient) => void) {
+function render(manager: boolean, tab: 'chat' | 'pipeline' | 'deals' | 'reports' = 'chat', seed?: (qc: QueryClient) => void, analytics?: boolean) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   const span = windows(7, new Date(), 'Europe/Riga')
   qc.setQueryData(['crm', 'insights', 'chat', 7], chat)
@@ -86,7 +86,7 @@ function render(manager: boolean, tab: 'chat' | 'pipeline' | 'deals' | 'reports'
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[tab === 'chat' ? '/crm/insights?days=7' : `/crm/insights?days=7&tab=${tab}`]}>
-        <CrmContext.Provider value={{ data: boot(manager), isLoading: false, isError: false, error: null, refetch: () => {} }}>
+        <CrmContext.Provider value={{ data: boot(manager, analytics), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <Routes><Route path="/crm/insights" element={<InsightsPage />} /></Routes>
         </CrmContext.Provider>
       </MemoryRouter>
@@ -101,6 +101,13 @@ describe('Insights, rendered', () => {
     expect(html).toMatch(/id="crm-insights-section-chat"[^>]*aria-selected="true"|aria-selected="true"[^>]*id="crm-insights-section-chat"/)
     expect(html).toContain('role="tabpanel"')
     expect(html).toMatch(/aria-pressed="true"[^>]*>7 d/)
+  })
+
+  it('offers Reports only with the Analytics right; asked for without it, the chat shows', () => {
+    const without = render(false, 'reports', undefined, false)
+    expect(without).not.toContain('id="crm-insights-section-reports"')
+    expect(without).toMatch(/id="crm-insights-section-chat"[^>]*aria-selected="true"|aria-selected="true"[^>]*id="crm-insights-section-chat"/)
+    expect(render(false, 'chat', undefined, true)).toContain('id="crm-insights-section-reports"')
   })
 
   it('shows the chat’s figures against the period before, short, the sentence as the tooltip', () => {

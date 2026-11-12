@@ -15,7 +15,8 @@ import {
   replyLengthOptions, salesStyleOptions, sameBehaviour, toneOptions, type BehaviourForm,
 } from './behaviour'
 import { addText, behaviourPartOf, removeAt, type BehaviourField, type BehaviourPart } from './lists'
-import { ModelPart, useModelForm } from './ModelPart'
+import { ModelPart } from './ModelPart'
+import { useModelForm } from './useModelForm'
 import { CharCount, Choice, Problem, ReadOnlyNote, SaveBar } from './parts'
 import { BEHAVIOUR_KEY } from './queries'
 import { QuickSetupCard } from './QuickSetup'

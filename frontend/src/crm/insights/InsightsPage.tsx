@@ -27,7 +27,11 @@ export function InsightsPage() {
   const days = periodOf(arg(search, 'days'))
   const months = monthsOf(arg(search, 'months'))
   const fallback: InsightsSection = boot.features.chatbot ? 'chat' : 'pipeline'
-  const tab = sectionOf(arg(search, 'tab'), fallback)
+  // Reports are the Analytics right's (admin/crm/reports); without it the tab is not offered. A bootstrap that does not
+  // say (older servers) shows it, and the server's refusal decides, as before.
+  const reports = boot.staff.can.view_analytics !== false
+  const asked = sectionOf(arg(search, 'tab'), fallback)
+  const tab: InsightsSection = asked === 'reports' && !reports ? fallback : asked
   const set = (key: string, value: string | null) => setSearch(prev => {
     const out = new URLSearchParams(prev)
     if (value === null) out.delete(key)
@@ -35,12 +39,13 @@ export function InsightsPage() {
     return out
   }, { replace: true })
 
-  const sections: Section<InsightsSection>[] = [
+  const offered: Section<InsightsSection>[] = [
     { key: 'chat', icon: MessagesSquare, tone: 'ai', title: t('crm.insights.chat_tab', 'Chat'), caption: t('crm.insights.chat_caption', 'Conversations, the assistant’s share and the leads it brought') },
     { key: 'pipeline', icon: Target, tone: 'progress', title: t('crm.insights.pipeline_tab', 'Pipeline'), caption: t('crm.insights.pipeline_caption', 'New leads, where they stand, and what needs attention') },
     { key: 'deals', icon: Handshake, tone: 'success', title: t('crm.insights.deals_tab', 'Deals'), caption: t('crm.insights.deals_caption', 'Revenue, new deals, steps, payments and the best customers') },
     { key: 'reports', icon: FileBarChart, tone: 'pending', title: t('crm.insights.reports_tab', 'Reports'), caption: t('crm.insights.reports_caption', 'Funnel, forecast, lost reasons, sources, the team and companies') },
   ]
+  const sections = offered.filter(section => section.key !== 'reports' || reports)
 
   const period = tab === 'reports'
     ? <Tabs label={t('crm.insights.period', 'Period')} value={String(months)} onChange={next => set('months', next === '6' ? null : next)}

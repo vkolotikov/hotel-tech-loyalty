@@ -24,6 +24,7 @@ export function RecordListProvider({ children }: { children: ReactNode }) {
 }
 
 /** Says which records the page shows, in its order, for the panel's previous and next. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRecordList(kind: RecordKind, ids: readonly number[]): void {
   const ctx = useContext(ListContext)
   const key = ids.join(',')
@@ -34,6 +35,7 @@ export function useRecordList(kind: RecordKind, ids: readonly number[]): void {
 }
 
 /** The records the current page listed (for the panel). */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useListedRecords(kind: RecordKind): readonly number[] {
   return useContext(ListContext)?.lists[kind] ?? []
 }
@@ -53,6 +55,7 @@ export interface Records {
   createHref: (kind: CreateKind, preset?: CreatePreset) => string
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRecords(): Records {
   const [search, setSearch] = useSearchParams()
   const { pathname } = useLocation()

@@ -53,6 +53,7 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('staff.can.delete_records', true)
             ->assertJsonPath('staff.can.manage_templates', false)
             ->assertJsonPath('staff.can.manage_integrations', false)
+            ->assertJsonPath('staff.can.view_analytics', false)
             ->assertJsonPath('widget', null)
             ->assertJsonPath('counts.tasks_due', 0);
     }
@@ -76,5 +77,13 @@ class BootstrapTest extends TestCase
         $this->asManager()->getJson($this->crmApi('bootstrap'))->assertOk()
             ->assertJsonPath('ai.status', 'warn')
             ->assertJsonPath('ai.percent', 90);
+    }
+
+    public function test_the_analytics_right_is_a_managers_or_a_staff_members_with_the_flag(): void
+    {
+        $this->asManager()->getJson($this->crmApi('bootstrap'))->assertOk()->assertJsonPath('staff.can.view_analytics', true);
+
+        \App\Models\Staff::where('user_id', $this->staffMember->id)->update(['can_view_analytics' => true]);
+        $this->asStaffMember()->getJson($this->crmApi('bootstrap'))->assertOk()->assertJsonPath('staff.can.view_analytics', true);
     }
 }

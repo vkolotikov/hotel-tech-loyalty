@@ -21,7 +21,8 @@ export function Page({ title, line, icon: Icon, actions, below, wide = false, fl
   return (
     <div className={`mx-auto w-full ${flush ? 'flex h-full min-h-0 flex-col gap-3 px-3 py-3 lg:px-4' : 'space-y-4 px-4 py-4 lg:px-6 lg:py-5'} ${wide || flush ? 'max-w-none' : 'max-w-6xl'}`}>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        {/* The title keeps at least 12rem: on a phone the actions wrap under it rather than squeeze it to nothing. */}
+        <div className="flex min-w-[12rem] flex-1 items-center gap-2.5">
           {Icon && <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-a-surface-2 text-a-text"><Icon size={18} /></span>}
           <h1 className="min-w-0 truncate font-a-display text-[28px] font-normal leading-tight text-a-text lg:text-[30px]">{title}</h1>
           {line && <InfoTip text={line} />}

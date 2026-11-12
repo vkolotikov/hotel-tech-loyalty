@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { useToast } from '../ui/Toast'
+import { useNow } from '../../hooks/useNow'
 import { ago } from './integrationsLogic'
 
 /** Copy a text to the clipboard and say so; the icon turns into a tick for a moment. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCopy(): [(text: string, key?: string) => void, string | null] {
   const { t } = useTranslation()
   const say = useToast()
@@ -55,7 +57,9 @@ export function CodeBlock({ children, label, tall = false }: { children: ReactNo
 /** "5 min ago", "yesterday", in the person's language; `never` when there is no instant. */
 export function Ago({ iso, never }: { iso: string | null; never: string }) {
   const { t, i18n } = useTranslation()
-  const when = ago(iso, Date.now())
+  // "5 min ago" moves on by itself, once a minute (and render stays pure).
+  const now = useNow(60_000)
+  const when = ago(iso, now.getTime())
   if (when === null) return <>{never}</>
   if (when === 'now') return <>{t('crm.integrations.just_now', 'just now')}</>
   let text: string
@@ -68,6 +72,7 @@ export function Ago({ iso, never }: { iso: string | null; never: string }) {
 }
 
 /** A day as the venue's calendar shows it ("4 Nov 2026"). */
+// eslint-disable-next-line react-refresh/only-export-components
 export function dayText(iso: string | null, zone: string, lang: string): string {
   if (!iso) return '—'
   try {
