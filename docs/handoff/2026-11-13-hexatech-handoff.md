@@ -21,13 +21,14 @@ Linux cloud workspace. PHP 8.5.12 ran in the `booking-promotion-php` Docker cont
 
 ## Checks and release
 
-- Source regressions: Booking, Unit/Booking, Smoobu, Unit/Support, Settings and AdminAccess: 1,160 passed, 6 skipped. Member/Portal: 307 passed. The expanded zero-total confirmation case also passed on SQLite and PostgreSQL.
-- New feature/admin/Smoobu signed-request cases on a fully migrated PostgreSQL database: 16 passed. Unit promotion rules: 6 passed (included in Unit/Booking above).
-- Frontend: all 7,179 tests in 481 files passed; typecheck and production build passed. Lint baseline reports no new diagnostics. Larastan reports no errors.
+- The complete release-artifact PHP run finished across all 82 scoped runs: **7,765 passed, 25 skipped, 0 failed**. Every scope exited successfully.
+- Regressions: Booking, Unit/Booking, Smoobu, Unit/Support, Settings and AdminAccess: 1,161 passed, 6 skipped. Member/Portal: 307 passed. The expanded zero-total confirmation and brand-isolation cases also passed on SQLite and PostgreSQL.
+- New feature/admin/Smoobu signed-request cases on a fully migrated PostgreSQL database: 17 passed. Unit promotion rules: 6 passed (included in Unit/Booking above).
+- Frontend: all 7,180 tests in 481 files passed; typecheck and production build passed. Lint baseline reports no new diagnostics. Larastan reports no errors. Selected codes remain removable when a fresh quote finds the venue has disabled promotions.
 - Browser on the compiled SPA and actual rendered Blade widget: admin creation, date/exclusion/room controls, duplication, enable switch, invalid-code correction, full-price extras, displayed total, desktop and mobile layouts passed.
 - Earlier broad verification covered every PHP test scope on SQLite; its Settings encrypted-key assertion was updated for the new secret, and the affected Settings, CRM and CRM workspace suites then passed. A frontend navigation icon collision was corrected to a unique icon. Neither failure is accepted as a baseline.
 
-Release must follow the source-patch worktree recipe and verify the served bundle by content. Feature-branch generated assets must not be committed. No campaign activation is part of this release.
+The release artifact was built in a separate worktree from `origin/main`, with an explicit source list and parity checks, a fresh production build and repeated frontend/browser checks. Feature-branch generated assets were restored and not committed. Publishing must verify the served bundle by content. No campaign activation is part of this release.
 
 ## Activation still requires venue details
 
