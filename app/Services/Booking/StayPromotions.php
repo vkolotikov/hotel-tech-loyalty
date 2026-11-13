@@ -32,7 +32,7 @@ final class StayPromotions
             $local = BookingRoom::where('organization_id', $org)->where('is_active', true)
                 ->where(fn ($q) => $q->where('pms_id', $unit)->orWhere(fn ($q) => $q->where('id', ctype_digit($unit) ? (int) $unit : 0)->where(fn ($q) => $q->whereNull('pms_id')->orWhere('pms_id', ''))))->first();
             $eligible[$i] = $local
-                && (!$promotion->brand_id || (int) $local->brand_id === (int) $promotion->brand_id)
+                && (!$promotion->brand_id || (int) $local->getAttribute('brand_id') === (int) $promotion->brand_id)
                 && (!$promotion->room_ids || in_array((int) $local->id, array_map('intval', $promotion->room_ids), true));
         }
         $nightly = [];

@@ -120,7 +120,7 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
       </Field>
 
       <CouponField value={state.coupon} onChange={handleCouponChange} quote={quote.data ?? null} quoteErrorMessage={couponErrorMessage} />
-      {catalogue.promotions_enabled && <Card className="p-4 space-y-3">
+      {(catalogue.promotions_enabled || state.promoCode) && <Card className="p-4 space-y-3">
         <Field label={t('portal.stay.promo_code', 'Promo code')} hint={t('portal.stay.promo_hint', 'Accommodation only. Additional services stay at full price.')}>
           <input className={INPUT_CLASS} maxLength={32} value={promoCode} onChange={e => setPromoCode(e.target.value)} />
         </Field>
