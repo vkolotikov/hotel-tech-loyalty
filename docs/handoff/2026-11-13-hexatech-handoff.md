@@ -36,7 +36,7 @@ Source and the fresh build were pushed to `main` as `a487b2f9e3fad5aea1785fe2184
 
 The live manager page is `https://app.hexa-tech.uk/booking-promotions`. The checkout flag remains off by default and no venue campaign was created or enabled. Production release source matches the 49-file source manifest; this documentation follow-up records the rollout on the feature branch.
 
-CI: `https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43440928707`. By approximately 14:23 UTC dependency audit, Larastan, both frontend builds (Node 24 and 26), and all three SQLite shards passed. The full PostgreSQL 18 job was still running (the previous successful run took about 21 minutes). New PostgreSQL integration cases and every local release check above were green before the push; the final user report distinguishes the pending full CI job.
+CI: `https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43440928707`. Rechecked at approximately 17:07 UTC: all eight jobs completed successfully, including dependency audit, Larastan, both frontend builds (Node 24 and 26), all three SQLite shards, and the full PostgreSQL 18 suite with its recorded known-failure allowance. Live promotion bundle content and the protected API route were verified again. Campaign setup and the controlled venue booking check remain outstanding; no campaign has been activated by this work.
 
 ## Activation still requires venue details
 
