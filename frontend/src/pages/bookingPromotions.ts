@@ -34,3 +34,8 @@ export function promotionBody(p: BookingPromotion): BookingPromotion {
     min_nights: Math.max(p.type === 'second_night_free' ? 2 : 1, Number(p.min_nights)), room_ids: p.room_ids, excluded_dates: p.excluded_dates,
     ...(p.revision ? { revision: p.revision } : {}) }
 }
+
+export function filterPromotions(promotions: BookingPromotion[], search: string, state: string): BookingPromotion[] {
+  const needle = search.trim().toLocaleLowerCase()
+  return promotions.filter(p => (!needle || `${p.code} ${p.name}`.toLocaleLowerCase().includes(needle)) && (state === 'all' || (p.state || p.status) === state))
+}

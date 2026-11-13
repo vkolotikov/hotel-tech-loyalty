@@ -61,4 +61,14 @@ class BookingPromotionAdminTest extends TestCase
         $otherStaff = $this->staffUser($other);
         $this->actingAs($otherStaff, 'sanctum')->putJson('/api/v1/admin/booking-promotions/' . $r->json('id'), $this->body(['revision' => 1]))->assertNotFound();
     }
+
+    public function test_a_campaign_can_be_paused_after_one_of_its_rooms_is_deactivated(): void
+    {
+        $room = \App\Models\BookingRoom::forceCreate(['organization_id' => $this->org->id, 'name' => 'Old lodge', 'slug' => 'old-lodge', 'is_active' => true, 'max_guests' => 2, 'currency' => 'EUR']);
+        $r = $this->asStaff()->postJson('/api/v1/admin/booking-promotions', $this->body(['room_ids' => [$room->id]]))->assertCreated();
+        $room->update(['is_active' => false]);
+        $this->asStaff()->putJson('/api/v1/admin/booking-promotions/' . $r->json('id'), $this->body(['revision' => 1, 'status' => 'paused', 'room_ids' => [$room->id]]))->assertOk();
+        $this->asStaff()->putJson('/api/v1/admin/booking-promotions/' . $r->json('id'), $this->body(['revision' => 2, 'status' => 'published', 'room_ids' => [$room->id]]))->assertStatus(422);
+        $this->asStaff()->getJson('/api/v1/admin/booking-promotions')->assertOk()->assertJsonPath('rooms.0.is_active', false);
+    }
 }
