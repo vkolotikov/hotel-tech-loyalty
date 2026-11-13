@@ -78,6 +78,20 @@ class StayPromotionsTest extends MemberEndpointTestCase
         $this->postJson('/api/v1/booking/quote?org=' . $this->org->widget_token, $this->quoteBody())->assertStatus(422)->assertJsonPath('code', 'promotion_invalid');
     }
 
+    public function test_brand_limited_code_cannot_discount_another_brands_room_in_the_org_widget(): void
+    {
+        app()->instance('current_organization_id', $this->org->id);
+        $a = \App\Models\Brand::create(['name' => 'Forest', 'slug' => 'forest-promo', 'widget_token' => \Illuminate\Support\Str::random(64)]);
+        $b = \App\Models\Brand::create(['name' => 'Garden', 'slug' => 'garden-promo', 'widget_token' => \Illuminate\Support\Str::random(64)]);
+        BookingPromotion::where('code', 'EARLYFOR20')->firstOrFail()->update(['brand_id' => $a->id]);
+        BookingRoom::where('pms_id', '101')->firstOrFail()->update(['brand_id' => $b->id]);
+        app()->forgetInstance('current_organization_id');
+        $this->postJson('/api/v1/booking/quote?org=' . $this->org->widget_token, $this->quoteBody())->assertStatus(422)->assertJsonPath('code', 'promotion_room');
+        $this->assertSame(0, BookingHold::withoutGlobalScopes()->count());
+        BookingRoom::withoutGlobalScopes()->where('organization_id', $this->org->id)->where('pms_id', '101')->update(['brand_id' => $a->id]);
+        $this->postJson('/api/v1/booking/quote?org=' . $this->org->widget_token, $this->quoteBody())->assertOk()->assertJsonPath('discount', 40);
+    }
+
     public function test_stripe_receives_the_same_discounted_total_with_full_price_extras(): void
     {
         app()->instance('current_organization_id', $this->org->id);
