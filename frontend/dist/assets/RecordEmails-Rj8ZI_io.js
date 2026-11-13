@@ -1,1 +1,0 @@
-import{t as e}from"./vendor-react-B90Q-QDl.js";import{c as t,i as n,s as r}from"./api-wg1n1uoh.js";import{t as i}from"./CrmEmailHistory-CwsVc28y.js";var a=e(),o=`post`,s={read:n,refresh:(e,t)=>r(o,e,t)};function c({resource:e,id:n}){return(0,a.jsx)(i,{resource:e,id:n,transport:s,scope:`crm:${t()}`},`${e}:${n}:${t()}`)}export{c as t};
