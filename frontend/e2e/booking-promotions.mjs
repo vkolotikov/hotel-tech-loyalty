@@ -36,7 +36,11 @@ await page.route('**/api/**', async route => {
       const data = request.postDataJSON(); writes.push({ p, data })
       if (p.endsWith('/settings')) { fixture.enabled = data.enabled; body = { enabled: data.enabled } }
       else if (request.method() === 'POST') { body = { ...data, id: fixture.promotions.length + 1, revision: 1, state: data.status === 'published' ? 'scheduled' : 'draft' }; fixture.promotions.push(body) }
-      else { const id = Number(p.split('/').pop()); body = { ...data, id, revision: data.revision + 1, state: data.status === 'published' ? 'scheduled' : data.status }; fixture.promotions = fixture.promotions.map(x => x.id === id ? body : x) }
+      else {
+        const id = Number(p.split('/').pop()), current = fixture.promotions.find(x => x.id === id)
+        if (current && current.revision !== data.revision) return route.fulfill({ status: 409, json: { message: 'This promotion changed. Refresh before saving.', code: 'stale' } })
+        body = { ...data, id, revision: data.revision + 1, state: data.status === 'published' ? 'scheduled' : data.status }; fixture.promotions = fixture.promotions.map(x => x.id === id ? body : x)
+      }
     }
   }
   else if (p.endsWith('/settings')) body = {}
@@ -81,9 +85,31 @@ try {
   await fs.writeFile(path.join(out, 'mobile-layout.json'), JSON.stringify(await dialog.evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth, elements: [...el.querySelectorAll('*')].filter(n => n.scrollWidth > n.clientWidth + 1).map(n => ({ tag: n.tagName, class: n.className, width: n.clientWidth, scroll: n.scrollWidth, text: n.textContent?.slice(0, 80) })) })), null, 2))
   check(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), 'no mobile dialog overflow')
   await page.keyboard.press('Escape')
+  await page.getByLabel('Find a campaign', { exact: true }).fill('missing')
+  await page.getByText('No campaigns match your search.', { exact: true }).waitFor()
+  await page.getByLabel('Find a campaign', { exact: true }).fill('VIPFORREST')
+  await page.getByLabel('Filter campaign status', { exact: true }).selectOption('draft')
+  await page.getByText('No campaigns match your search.', { exact: true }).waitFor()
+  await page.getByLabel('Filter campaign status', { exact: true }).selectOption('all')
+  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  await page.locator('article').getByText('paused', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Campaign name', { exact: true }).fill('Unsaved local name')
+  fixture.promotions[0].revision += 1
+  fixture.promotions[0].name = 'Saved by another manager'
+  await dialog.getByRole('button', { name: 'Save promotion', exact: true }).click()
+  await dialog.getByRole('alert').waitFor()
+  check((await dialog.getByRole('alert').innerText()).includes('This promotion changed. Refresh before saving.'), 'stale save explains the recovery')
+  await dialog.getByRole('button', { name: 'Reload saved version', exact: true }).click()
+  await page.waitForFunction(() => [...document.querySelectorAll('input')].some(e => e.value === 'Saved by another manager'))
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.getByRole('button', { name: 'Archive', exact: true }).click()
+  await page.locator('article').getByText('archived', { exact: true }).waitFor()
+  await page.screenshot({ path: path.join(out, 'admin-campaign-list-mobile.png') })
   check(errors.length === 0, 'no JavaScript errors: ' + errors.join('; '))
   await fs.writeFile(path.join(out, 'admin-result.json'), JSON.stringify({ passed: true, writes, errors }, null, 2))
-  console.log('Admin campaign creation, dates, exclusions, room scope, duplication, enable switch and mobile layout passed.')
+  console.log('Admin creation, dates, exclusions, room scope, duplication, enable switch, search/filter, pause/archive, stale-editor recovery and mobile layout passed.')
 } catch (error) {
   await page.screenshot({ path: path.join(out, 'failure.png'), fullPage: true })
   await fs.writeFile(path.join(out, 'failure.html'), await page.content())

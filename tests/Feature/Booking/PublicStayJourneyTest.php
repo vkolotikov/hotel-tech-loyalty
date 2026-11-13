@@ -172,4 +172,23 @@ class PublicStayJourneyTest extends MemberEndpointTestCase
         $this->assertSame([2, 2], $parties);
         $this->assertEquals(4, \App\Models\BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->sum('adults'));
     }
+
+    public function test_new_public_checkout_webhook_recovers_through_the_booking_writer_with_saved_contact(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('stripe_webhook_events')) {
+            \Illuminate\Support\Facades\Schema::create('stripe_webhook_events', function ($t) {
+                $t->id(); $t->unsignedBigInteger('organization_id'); $t->string('event_id'); $t->string('event_type');
+                $t->string('payment_intent_id')->nullable(); $t->string('charge_id')->nullable(); $t->timestamp('received_at'); $t->timestamps();
+                $t->unique(['organization_id', 'event_id']);
+            });
+        }
+        $h = $this->cachedHold();
+        $h->update(['payload_json' => $h->payload_json + ['widget_checkout_version' => 2, 'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test', 'special_requests' => 'Late arrival']]]);
+        $event = ['id' => 'evt_journey_recovery', 'type' => 'payment_intent.succeeded', 'data' => ['object' => ['id' => 'pi_journey', 'object' => 'payment_intent', 'amount' => 20000, 'currency' => 'eur', 'metadata' => ['org_id' => (string) $this->org->id, 'hold_token' => $h->hold_token]]]];
+        $this->stripe()->shouldReceive('constructWebhookEvent')->andReturn(\Stripe\Event::constructFrom($event));
+        $engine = \Mockery::mock(\App\Services\BookingEngineService::class);
+        $engine->shouldReceive('confirm')->once()->with(\Mockery::on(fn ($data) => $data['hold_token'] === $h->hold_token && $data['guest']['email'] === 'guest@example.test' && $data['guest']['special_requests'] === 'Late arrival' && $data['payment_intent_id'] === 'pi_journey'), \Mockery::type('string'))->andReturn(['success' => true]);
+        $this->app->instance(\App\Services\BookingEngineService::class, $engine);
+        $this->postJson('/api/v1/booking/webhooks/stripe', $event)->assertOk()->assertJsonPath('received', true);
+    }
 }
