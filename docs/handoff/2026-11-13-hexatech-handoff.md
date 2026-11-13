@@ -30,6 +30,14 @@ Linux cloud workspace. PHP 8.5.12 ran in the `booking-promotion-php` Docker cont
 
 The release artifact was built in a separate worktree from `origin/main`, with an explicit source list and parity checks, a fresh production build and repeated frontend/browser checks. Feature-branch generated assets were restored and not committed. Publishing must verify the served bundle by content. No campaign activation is part of this release.
 
+## Production release
+
+Source and the fresh build were pushed to `main` as `a487b2f9e3fad5aea1785fe2184b4704914e253f` on 13 November. Live content verification passed at approximately 14:19 UTC: the served entry was `/spa/assets/index-7rAvsBbh.js`, it referenced `/spa/assets/BookingPromotions-VsEdCl2A.js`, that chunk contained the new stay-only campaign page, and `GET /api/v1/admin/booking-promotions` correctly returned 401 without authentication. These Cloud bundle hashes differ from the local build, as expected.
+
+The live manager page is `https://app.hexa-tech.uk/booking-promotions`. The checkout flag remains off by default and no venue campaign was created or enabled. Production release source matches the 49-file source manifest; this documentation follow-up records the rollout on the feature branch.
+
+CI: `https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43440928707`. At 14:20 UTC dependency audit, Larastan, both frontend builds (Node 24 and 26), and SQLite shards 1 and 2 passed; shard 3 and PostgreSQL 18 were still running. Local release checks above were all green before the push.
+
 ## Activation still requires venue details
 
 Confirm the exact booking-open and booking-close times, excluded stay-night years, room eligibility and the agreed minimum nights for the percentage offers. Enter and test any required Smoobu signing secret securely through settings, verify nightly rates and make a controlled Stripe/Smoobu booking with the venue before publishing the campaigns. No live customer booking, payment, email or campaign activation was performed during development.
