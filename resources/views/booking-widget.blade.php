@@ -1989,7 +1989,8 @@ function nights() {
 function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '';
   var loc = ({ en: 'en-US', de: 'de-DE', fr: 'fr-FR', lv: 'lv-LV', ru: 'ru-RU', es: 'es-ES' })[LANG] || 'en-US';
-  return new Intl.NumberFormat(loc, { style: 'currency', currency: CURRENCY }).format(amount);
+  var currency = (state.confirmation && state.confirmation.currency) || (state.quote && state.quote.currency) || CURRENCY;
+  return new Intl.NumberFormat(loc, { style: 'currency', currency: currency }).format(amount);
 }
 function formatDate(d) {
   if (!d) return '';

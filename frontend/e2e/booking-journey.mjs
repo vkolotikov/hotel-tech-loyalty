@@ -40,7 +40,7 @@ async function scenario(name, run, options = {}) {
     const endpoint = u.pathname.split('/').pop(), body = req.method() === 'POST' ? req.postDataJSON() : null
     calls.push({ endpoint, body })
     let data = {}, status = 200
-    if (endpoint === 'config') data = { units: [room], extras: [extra], promotions_enabled: true, today: '2026-11-13', currency: 'EUR', min_nights: 1, max_nights: 30, payment_enabled: fixture.payment, stripe_publishable_key: 'pk_test_fixture', policies: {}, style: { property_name: 'Forrest booking fixture', show_name: true } }
+    if (endpoint === 'config') data = { units: [room], extras: [extra], promotions_enabled: true, today: '2026-11-13', currency: fixture.currency || 'EUR', min_nights: 1, max_nights: 30, payment_enabled: fixture.payment, stripe_publishable_key: 'pk_test_fixture', policies: {}, style: { property_name: 'Forrest booking fixture', show_name: true } }
     if (endpoint === 'availability') {
       if (fixture.availabilityError) { status = 503; data = { error: 'Availability is temporarily unavailable. Please retry.' } }
       else data = fixture.combo ? { available: [], combinations: [{ rooms: [{ ...room, total_price: 300 }, { ...room, id: '102', name: 'Garden lodge', total_price: 300 }], total_price: 600, currency: 'EUR', total_capacity: 4 }] } : { available: [room], combinations: [] }
@@ -136,11 +136,13 @@ try {
     await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
     await page.locator('#w-pay').waitFor()
     fixture.paid = true
+    fixture.currency = 'USD'
     await page.goto(base + '/fixture-journey?payment_intent=pi_journey_fixture&redirect_status=succeeded')
     await page.getByText('Booking Confirmed!', { exact: true }).waitFor()
     check(calls.filter(c => c.endpoint === 'payment-intent').length === 2, 'Return checks server payment')
     check(calls.find(c => c.endpoint === 'confirm').body.guest.email === 'guest@example.test', 'Contact survives bank return')
     check(await page.evaluate(() => window.__stripeCalls) === 0, 'No second card authorisation after redirect')
+    check((await page.locator('.summary-total').innerText()).includes('€280'), 'Confirmed booking keeps its original currency after a venue currency change')
   })
   await scenario('bounded-card-load-retry', async ({ page, calls, enter, details }) => {
     await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
