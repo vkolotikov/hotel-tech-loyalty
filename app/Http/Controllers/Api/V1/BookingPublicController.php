@@ -136,6 +136,7 @@ class BookingPublicController extends Controller
             'max_nights' => $maxNights,
             'style'      => $style,
             'payment_enabled'      => $paymentEnabled,
+            'promotions_enabled'   => \App\Services\Booking\StayPromotions::enabled(),
             'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
             'mock_mode'            => $mockMode,
             'currency_mismatch'    => $currencyMismatch,
@@ -189,6 +190,7 @@ class BookingPublicController extends Controller
 
         $validated = $request->validate([
             'unit_id'    => 'required_without:unit_ids|string',
+            'promo_code' => 'nullable|string|max:32',
             'unit_ids'   => 'required_without:unit_id|array|min:2|max:3',
             'unit_ids.*' => 'string',
             'check_in'   => 'required|date|after_or_equal:today',
@@ -204,7 +206,10 @@ class BookingPublicController extends Controller
             $quote = !empty($validated['unit_ids'])
                 ? $booking->quoteCombo($validated)
                 : $booking->quote($validated);
+            $quote = app(\App\Services\Booking\StayPromotions::class)->applyToQuote($quote, $validated['promo_code'] ?? null);
             return response()->json($quote);
+        } catch (\App\Services\Booking\PromotionException $e) {
+            return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode], 422);
         } catch (\App\Services\Booking\CurrencyMismatch $e) {
             return response()->json(['error' => $e->getMessage(), 'code' => 'currency_mismatch'], 422);
         } catch (\InvalidArgumentException $e) {
@@ -306,10 +311,13 @@ class BookingPublicController extends Controller
 
         // Extend the hold so a guest sitting on the Stripe Elements payment
         // screen doesn't lose their cart at the 10-min mark.
-        $hold->update(['expires_at' => now()->addMinutes(15)]);
+        $hold->update(['expires_at' => $hold->paymentExpiry(now()->addMinutes(15))]);
 
         $payload = $hold->payload_json;
         $amount = (float) ($payload['gross_total'] ?? 0);
+        if ($amount <= 0 && ($payload['discount_source'] ?? null) === 'booking_promotion') {
+            return response()->json(['nothing_to_pay' => true]);
+        }
         $unitName = $payload['unit_name'] ?? 'Room';
         $checkIn = $payload['check_in'] ?? '';
         $checkOut = $payload['check_out'] ?? '';
@@ -1778,6 +1786,22 @@ class BookingPublicController extends Controller
                         app()->instance('current_organization_id', (int) $orgId);
 
                         $payload = $hold->payload_json ?? [];
+
+                        // A promotion keeps its room allocations and accepted price through the booking writer.
+                        // A portal hold is never recovered through the public widget.
+                        if (!empty($payload['promotion']) && empty($payload['member_id'])) {
+                            try {
+                                app(BookingEngineService::class)->confirm([
+                                    'hold_token' => $holdToken, 'guest' => $payload['guest'] ?? [],
+                                    'payment_intent_id' => $intent->id, 'payment_status' => 'paid', 'payment_method' => 'stripe',
+                                ], 'promotion-recovery:' . $intent->id);
+                                return response()->json(['received' => true]);
+                            } catch (\Throwable $recoveryError) {
+                                \App\Models\StripeWebhookEvent::withoutGlobalScopes()->where('organization_id', (int) $orgId)->where('event_id', (string) $event->id)->delete();
+                                \Illuminate\Support\Facades\Log::error('Promotion booking recovery requires attention', ['org_id' => $orgId, 'pi_id' => $intent->id, 'error' => $recoveryError->getMessage()]);
+                                return response()->json(['error' => 'Booking recovery could not be completed.'], 500);
+                            }
+                        }
 
                         // Race protection: confirm() may finish the
                         // BookingMirror create on the user-facing

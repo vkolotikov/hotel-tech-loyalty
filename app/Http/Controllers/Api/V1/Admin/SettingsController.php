@@ -614,8 +614,9 @@ class SettingsController extends Controller
         // would just say "Connected" while sync silently returned only
         // the first 25 units.
         try {
-            $response = \Illuminate\Support\Facades\Http::withoutRedirecting()->timeout(10)
-                ->withHeaders(['Api-Key' => $key])->get("{$base}/apartments", ['page' => 1, 'page_size' => 50]);
+            $secret = $this->resolveKey('booking_smoobu_api_secret', '');
+            $response = \App\Support\SmoobuAuthentication::apply(\Illuminate\Support\Facades\Http::withoutRedirecting()->timeout(10), $key, $secret ?: '')
+                ->get("{$base}/apartments", ['page' => 1, 'page_size' => 50]);
             $code = $response->status();
             if ($code < 200 || $code >= 300) return response()->json(['success' => false, 'message' => "HTTP {$code}"]);
 

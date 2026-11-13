@@ -19,6 +19,7 @@ export interface StayState {
   /** Extra ids; one of each. */
   extras: string[]
   coupon: CouponRef | null
+  promoCode?: string
   requests: string
   /** The error CODE to show on the step a bounce landed on; cleared by the member's next choice. */
   notice: { step: StayStep; code: string } | null
@@ -32,7 +33,7 @@ export const initialStayState: StayState = {
   notice: null, quote: null, visit: null,
 }
 
-export type StayReviewPatch = Partial<Pick<StayState, 'extras' | 'coupon' | 'requests'>>
+export type StayReviewPatch = Partial<Pick<StayState, 'extras' | 'coupon' | 'requests' | 'promoCode'>>
 
 export type StayAction =
   | { type: 'setDates'; checkIn: string | null; checkOut: string | null }
@@ -143,6 +144,7 @@ export function stayQuoteBody(state: StayState): StayQuoteBody {
     children: state.children,
     extras: state.extras.map(id => ({ id, quantity: 1 })),
     coupon: state.coupon,
+    ...(state.promoCode?.trim() ? { promo_code: state.promoCode.trim() } : {}),
   }
 }
 

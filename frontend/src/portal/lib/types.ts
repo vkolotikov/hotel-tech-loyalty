@@ -270,7 +270,7 @@ export interface Quote {
   duration_minutes: number
   lines: { service_price: number; extras: QuoteLine[]; extras_total: number }
   list_amount: number
-  discount: { amount: number; label: string; source: 'tier_benefit' | 'offer' | 'reward' } | null
+  discount: { amount: number; label: string; source: 'tier_benefit' | 'offer' | 'reward' | 'booking_promotion' } | null
   coupon: { source: 'offer' | 'reward'; source_id: number; label: string; status: 'applied' | 'outbid' | 'wrong_scope'; discount: number } | null
   total_amount: number
   currency: string
@@ -309,6 +309,7 @@ export interface StayPolicies { check_in_time: string; check_out_time: string; c
 export interface StayRules { currency: string; min_nights: number; max_nights: number }
 
 export interface StayCatalogue {
+  promotions_enabled?: boolean
   rooms: StayRoom[]
   extras: StayExtra[]
   policies: StayPolicies
@@ -340,6 +341,7 @@ export interface StayAvailability { rooms: AvailableRoom[]; nights: number; part
 
 /** One room (`unit_id`) or a combination of two or three (`unit_ids`, release 5) — never both. */
 export interface StayQuoteBody {
+  promo_code?: string
   unit_id?: string; unit_ids?: string[]; check_in: string; check_out: string; adults: number; children: number
   extras?: { id: string; quantity?: number }[]; coupon?: CouponRef | null
 }

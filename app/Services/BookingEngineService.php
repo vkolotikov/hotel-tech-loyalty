@@ -347,6 +347,10 @@ class BookingEngineService
 
         $payload = $hold->payload_json;
         $guest   = $data['guest'] ?? [];
+        if (($payload['discount_source'] ?? null) === 'booking_promotion' && (float) $payload['gross_total'] === 0.0 && empty($data['payment_intent_id'])) {
+            $data['payment_status'] = PaymentStatus::Paid->value;
+            $data['payment_method'] = 'promotion';
+        }
 
         // Stamp guest info onto the hold before the main flow runs.
         // If the /confirm endpoint crashes after Stripe charged the
@@ -1907,6 +1911,7 @@ class BookingEngineService
                 foreach ($rooms as $idx => $room) {
                     $apartmentId = $room['unit_id'];
                     $roomTotal   = $room['room_total'];
+                    $roomDiscount = (float) ($payload['stay_discount_allocations'][$idx] ?? 0);
                     $unitName    = $room['unit_name'] ?? 'Room';
                     $isFirstRoom = ($idx === 0);
 
@@ -1930,7 +1935,7 @@ class BookingEngineService
                             $extrasTotalThisRoom += (float) $ex['line_total'];
                         }
                     }
-                    $smoobuRoomPrice = round($roomTotal + $extrasTotalThisRoom, 2);
+                    $smoobuRoomPrice = round($roomTotal - $roomDiscount + $extrasTotalThisRoom, 2);
                     $roomPaid = $paymentStatus === PaymentStatus::Paid->value ? $smoobuRoomPrice : 0;
 
                     // Build priceElements (basePrice + addons on first room).
@@ -1943,7 +1948,7 @@ class BookingEngineService
                             (int) $nights,
                             $nights === 1 ? '' : 's',
                         ),
-                        'amount'       => round((float) $roomTotal, 2),
+                        'amount'       => round((float) $roomTotal - $roomDiscount, 2),
                         'quantity'     => (int) $nights,
                         'currencyCode' => $comboCurrency,
                         'sortOrder'    => 1,
@@ -1987,6 +1992,7 @@ class BookingEngineService
                             );
                         }
                     }
+                    if ($roomDiscount > 0) $assistantLines[] = ($payload['discount_label'] ?? 'Stay discount') . ': -' . self::receiptMoney($roomDiscount, $comboCurrency);
                     $assistantLines[] = 'Room total: ' . self::receiptMoney($smoobuRoomPrice, $comboCurrency);
 
                     $smoobuPayload = [
@@ -2103,6 +2109,7 @@ class BookingEngineService
                     ];
                     $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
 
+                    $roomPayload = $this->comboRoomPayload($payload, $room, ['list' => round($roomTotal + $extrasTotalThisRoom, 2), 'discount' => $roomDiscount, 'total' => $smoobuRoomPrice], $isFirstRoom);
                     $mirror = BookingMirror::create([
                         'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
@@ -2135,7 +2142,8 @@ class BookingEngineService
                         // sibling rooms get an empty array so admin code
                         // can distinguish "no extras" from "missing data".
                         'extras_json'              => $isFirstRoom ? $comboExtrasSnapshot : [],
-                    ]);
+                    ] + $this->memberColumns($roomPayload, $data));
+                    if (!empty($payload['promotion'])) $this->persistPriceElements($mirror, $roomPayload, $orgId);
                     $mirrors[] = $mirror;
                 }
             });
@@ -2315,7 +2323,9 @@ class BookingEngineService
         // What the PMS is told was paid: confirm()'s own rule.
         $isPaid = $paymentStatus === PaymentStatus::Paid->value || !empty($paymentIntentId);
 
-        $shares = \App\Services\Booking\StayCombination::shares(
+        $shares = isset($payload['stay_discount_allocations'])
+            ? \App\Services\Booking\StayCombination::stayShares(array_column($rooms, 'room_total'), (float) ($payload['extras_total'] ?? 0), $payload['stay_discount_allocations'])
+            : \App\Services\Booking\StayCombination::shares(
             array_map(fn (array $r) => (float) ($r['room_total'] ?? 0), $rooms),
             (float) ($payload['extras_total'] ?? 0),
             (float) $payload['gross_total'],
@@ -3261,12 +3271,12 @@ class BookingEngineService
      */
     private function memberColumns(array $payload, array $data): array
     {
-        if (empty($payload['member_id'])) {
+        if (empty($payload['member_id']) && ($payload['discount_source'] ?? null) !== 'booking_promotion') {
             return [];
         }
 
         return [
-            'member_id'          => (int) $payload['member_id'],
+            'member_id'          => empty($payload['member_id']) ? null : (int) $payload['member_id'],
             'list_total'         => $payload['list_total'] ?? $payload['gross_total'],
             'discount_amount'    => round((float) ($payload['discount'] ?? 0), 2),
             'discount_source'    => $payload['discount_source'] ?? null,
@@ -3282,6 +3292,7 @@ class BookingEngineService
      */
     private function persistPriceElements(BookingMirror $mirror, array $payload, ?int $orgId): void
     {
+        app(\App\Services\Booking\StayPromotions::class)->record($payload, $mirror);
         $reservationId = (string) ($mirror->reservation_id ?? '');
         $currency      = $payload['currency'] ?? 'EUR';
         $nights        = max(1, (int) ($payload['nights'] ?? 1));
@@ -3714,7 +3725,7 @@ class BookingEngineService
         // line. For a member booking the rows we wrote ourselves are the
         // truth — never call Smoobu here. Covers both the post-commit call
         // in confirm() and the periodic call from upsertBookingFromData().
-        if (!empty($mirror->member_id)) {
+        if (!empty($mirror->member_id) || $mirror->getAttribute('discount_source') === 'booking_promotion') {
             return;
         }
         if (!$mirror->reservation_id || str_starts_with($mirror->reservation_id, 'LOCAL-')) {

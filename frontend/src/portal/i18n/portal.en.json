@@ -142,6 +142,15 @@
     "claim_failed": "That code did not work. Check it and try again.", "already_set_up": "Already set up?"
   },
   "book": {
+    "promotion_unavailable": "Promo codes are not available at this venue.",
+    "promotion_invalid": "We do not recognise that promo code.",
+    "promotion_inactive": "This promo code is not active.",
+    "promotion_expired": "This promo code is outside its booking period.",
+    "promotion_currency": "This promo code is not available in the booking currency.",
+    "promotion_min_nights": "This stay is shorter than the promo code allows.",
+    "promotion_dates": "These stay dates are excluded from the promotion.",
+    "promotion_room": "This code does not apply to the selected accommodation.",
+    "promotion_rate_unavailable": "We could not verify the free night price. Please try again.",
     "coupon_membership_inactive": "This code needs a membership that is active today at its required level.",
     "title": "Book", "step_service": "Service", "step_staff": "Who", "step_when": "When", "step_review": "Review", "step_pay": "Pay",
     "your_price": "Your price", "list_price": "List price", "member_price_note": "{{label}} applied", "duration": "{{count}} min",
@@ -179,6 +188,10 @@
     "error": { "payment_check_failed": "We could not check your payment just now. No new payment was made. Please try to confirm once more." }
   },
   "stay": {
+    "promo_code": "Promo code",
+    "promo_hint": "Accommodation only. Additional services stay at full price.",
+    "promo_apply": "Apply code",
+    "promo_remove": "Remove code",
     "title": "Book a stay", "step_dates": "Dates", "step_room": "Room", "step_review": "Review", "step_pay": "Pay",
     "heading_dates": "When would you like to stay?", "heading_room": "Choose a room", "heading_review": "Check the details", "heading_pay": "Confirm your stay",
     "check_in": "Arrival", "check_out": "Departure", "adults": "Adults", "children": "Children", "nights_count": "Nights: {{count}}",

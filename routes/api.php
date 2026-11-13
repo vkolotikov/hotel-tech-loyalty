@@ -1258,6 +1258,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('booking-rooms/{id}/remove-gallery', [BookingRoomController::class, 'removeGallery']);
             Route::apiResource('booking-rooms',           BookingRoomController::class);
             Route::apiResource('booking-extras',          BookingExtraController::class);
+            Route::get('booking-promotions', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'index']);
+            Route::put('booking-promotions/settings', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'settings']);
+            Route::post('booking-promotions', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'store']);
+            Route::put('booking-promotions/{id}', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'update'])->whereNumber('id');
 
             // ─── Services Reservation (Admin) ───────────────────────────────
             Route::post('service-categories/reorder',     [ServiceCategoryController::class, 'reorder']);

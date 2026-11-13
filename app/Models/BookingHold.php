@@ -20,7 +20,15 @@ class BookingHold extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'active' && $this->expires_at->isFuture();
+        $promotionExpiry = $this->payload_json['promotion_expires_at'] ?? null;
+        return $this->status === 'active' && $this->expires_at->isFuture()
+            && (!$promotionExpiry || \Carbon\CarbonImmutable::parse($promotionExpiry)->isFuture());
+    }
+
+    public function paymentExpiry(\Carbon\CarbonInterface $candidate): \Carbon\CarbonInterface
+    {
+        $deadline = $this->payload_json['promotion_expires_at'] ?? null;
+        return $deadline ? $candidate->min(\Carbon\CarbonImmutable::parse($deadline)) : $candidate;
     }
 
     public function scopeActive($query)

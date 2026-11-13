@@ -12,7 +12,7 @@ import {
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors, CalendarDays,
   Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award, MessagesSquare, CalendarClock,
-  Tags, Receipt, Search
+  Tags, Receipt, Search, TicketPercent
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -194,6 +194,7 @@ export const navGroups: NavGroup[] = [
       { path: '/service-masters',   labelKey: 'nav.items.masters',         defaultLabel: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
       { path: '/booking-extras',    labelKey: 'nav.items.extras',          defaultLabel: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
       { path: '/bookings/payments', labelKey: 'nav.items.payments',        defaultLabel: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },
+      { path: '/booking-promotions', labelKey: 'nav.items.stay_promotions', defaultLabel: 'Stay promotions', icon: TicketPercent, gate: 'admin', product: 'booking' },
     ],
   },
   {
