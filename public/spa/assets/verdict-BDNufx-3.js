@@ -1,0 +1,1 @@
+import{dr as e}from"./index-D8pe-LiL.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
