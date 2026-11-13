@@ -124,17 +124,7 @@ final class StayCombination
         return $adultsLeft === 0 && $childrenLeft === 0 ? $out : null;
     }
 
-    /**
-     * The one price shared between the rows. Each room's list price is its own
-     * accommodation (the extras belong to the first room, as the engine bills
-     * them); the discount is shared in proportion to those list prices; the
-     * first room takes whatever the rounding leaves, so the rows' totals add up
-     * to $grossTotal exactly and no row's discount exceeds its list price.
-     * Worked in cents.
-     *
-     * @param list<float> $roomTotals  each room's accommodation total, in the combination's order
-     * @return list<array{list: float, discount: float, total: float}>
-     */
+    /** Keep accepted room-only discounts separate from the first room's full-price extras. */
     public static function stayShares(array $roomTotals, float $extrasTotal, array $discounts): array
     {
         $out = [];
@@ -146,6 +136,17 @@ final class StayCombination
         return $out;
     }
 
+    /**
+     * The one price shared between the rows. Each room's list price is its own
+     * accommodation (the extras belong to the first room, as the engine bills
+     * them); the discount is shared in proportion to those list prices; the
+     * first room takes whatever the rounding leaves, so the rows' totals add up
+     * to $grossTotal exactly and no row's discount exceeds its list price.
+     * Worked in cents.
+     *
+     * @param list<float> $roomTotals  each room's accommodation total, in the combination's order
+     * @return list<array{list: float, discount: float, total: float}>
+     */
     public static function shares(array $roomTotals, float $extrasTotal, float $grossTotal): array
     {
         $lists = [];
