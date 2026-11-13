@@ -40,11 +40,13 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
   const { t, i18n } = useTranslation()
   // Local: the requests do not affect the price, so typing must not touch the quote's inputs.
   const [requests, setRequests] = useState(state.requests)
+  const [promoCode, setPromoCode] = useState(state.promoCode || '')
   const body = useMemo(() => stayQuoteBody(state), [state])
   const quote = useQuery(stayQuoteQueryOptions(body))
   const code = quote.isError ? apiErrorCode(quote.error) : null
   const decision = afterStayQuoteError(code)
-  const otherError = quote.isError && decision === null && code !== 'extra_lead_time'
+  const promotionError = code?.startsWith('promotion_') ?? false
+  const otherError = quote.isError && decision === null && code !== 'extra_lead_time' && !promotionError
 
   // The error CODE, kept in state: clearing the coupon changes the query key, the query moves on, and a
   // value derived from `code` would vanish with it before the member could read why the coupon was dropped.
@@ -118,6 +120,14 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
       </Field>
 
       <CouponField value={state.coupon} onChange={handleCouponChange} quote={quote.data ?? null} quoteErrorMessage={couponErrorMessage} />
+      {catalogue.promotions_enabled && <Card className="p-4 space-y-3">
+        <Field label={t('portal.stay.promo_code', 'Promo code')} hint={t('portal.stay.promo_hint', 'Accommodation only. Additional services stay at full price.')}>
+          <input className={INPUT_CLASS} maxLength={32} value={promoCode} onChange={e => setPromoCode(e.target.value)} />
+        </Field>
+        <div className="flex gap-2"><Button variant="secondary" size="sm" onClick={() => onChange({ promoCode: promoCode.trim().toUpperCase() })}>{t('portal.stay.promo_apply', 'Apply code')}</Button>
+          {state.promoCode && <Button variant="secondary" size="sm" onClick={() => { setPromoCode(''); onChange({ promoCode: '' }) }}>{t('portal.stay.promo_remove', 'Remove code')}</Button>}</div>
+        {promotionError && <Notice tone="warning">{t(bookErrorKey(code), bookErrorFallback(code))}</Notice>}
+      </Card>}
 
       {quote.isPending && <Skeleton className="h-28" />}
 

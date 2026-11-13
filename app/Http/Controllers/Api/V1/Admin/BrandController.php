@@ -120,6 +120,7 @@ class BrandController extends Controller
             // Per-brand PMS (Phase 3). Optional — when blank, falls back to
             // org-level hotel_settings inside SmoobuClient.
             'pms_smoobu_api_key'    => 'nullable|string|max:200',
+            'pms_smoobu_api_secret' => 'nullable|string|max:500',
             'pms_smoobu_channel_id' => 'nullable|string|max:100',
         ]);
 
@@ -267,6 +268,7 @@ class BrandController extends Controller
             'logo'          => 'sometimes|image|mimes:jpeg,png,jpg,webp,svg|max:5120',
             'sort_order'    => 'sometimes|integer|min:0|max:9999',
             'pms_smoobu_api_key'    => 'sometimes|nullable|string|max:200',
+            'pms_smoobu_api_secret' => 'sometimes|nullable|string|max:500',
             'pms_smoobu_channel_id' => 'sometimes|nullable|string|max:100',
         ]);
 

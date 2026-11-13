@@ -714,7 +714,7 @@ function renderSearch() {
   h += field(esc(VOCAB.adults), selectHtml('w-adults', range(1, 10), state.adults));
   h += field(esc(VOCAB.children), selectHtml('w-children', range(0, 6), state.children));
   h += '</div>';
-  h += field('Promo Code <span style="font-weight:400;opacity:.7">(optional)</span>', '<input type="text" id="w-promo" value="' + esc(state.promo) + '" placeholder="Enter code">');
+  if ((state.config || {}).promotions_enabled) h += field('Promo code (accommodation only)', '<input type="text" id="w-promo" maxlength="32" value="' + esc(state.promo) + '" placeholder="Enter code">');
   h += '<button class="btn btn-primary" id="w-search"' + (state.searching ? ' disabled' : '') + '>';
   h += state.searching ? spinner() + ' ' + esc(VOCAB.searching) : svgSearch() + ' ' + esc(VOCAB.search_button);
   h += '</button>';
@@ -1050,6 +1050,7 @@ function renderSummary() {
   }
 
   var quoted = typeof q.gross_total === 'number';
+  if (quoted && q.discount > 0) h += '<div class="summary-line"><span>' + esc(q.discount_label || 'Stay discount') + '</span><span>−' + formatCurrency(q.discount) + '</span></div>';
   var total = quoted ? q.gross_total : (state.selectedCombo ? state.selectedCombo.total_price : (state.selectedUnit ? state.selectedUnit.price_per_night * n : 0));
   if (!quoted && state.config && state.config.extras) {
     state.config.extras.forEach(function(ex) { if (state.selectedExtras[ex.id]) total += extraEstimate(ex, n); });
@@ -1121,6 +1122,8 @@ function renderExtras() {
      beauty/restaurant; "Additional Services" for medical). */
   h += '<div class="card-title">' + esc(VOCAB.extras_title) + '</div>';
   h += '<div class="card-sub">Add optional extras to make your visit even better</div>';
+  if (state.error) h += errorHtml(state.error);
+  if ((state.config || {}).promotions_enabled) h += field('Promo code (accommodation only)', '<input type="text" id="w-promo" maxlength="32" value="' + esc(state.promo) + '" placeholder="Enter or remove code">');
 
   if (extras.length === 0) {
     var note = allExtras.length > 0
@@ -1442,7 +1445,7 @@ function bindEvents() {
   // Sync inputs
   onInput('w-adults', function(v) { state.adults = parseInt(v) || 2; });
   onInput('w-children', function(v) { state.children = parseInt(v) || 0; });
-  onInput('w-promo', function(v) { state.promo = v; });
+  onInput('w-promo', function(v) { state.promo = v; state.quote = null; });
   onInput('w-fname', function(v) { state.firstName = v; });
   onInput('w-lname', function(v) { state.lastName = v; });
   onInput('w-email', function(v) { state.email = v; });
@@ -1499,6 +1502,7 @@ function doQuote() {
     children: state.children,
     extras: extras.length ? extras : undefined
   };
+  if (state.promo.trim()) quoteBody.promo_code = state.promo.trim();
   if (state.selectedCombo) {
     quoteBody.unit_ids = state.selectedCombo.rooms.map(function(r) { return String(r.id); });
   } else {
@@ -1509,6 +1513,8 @@ function doQuote() {
     state.quoteLoading = false;
     if (data.error) { state.error = data.error; render(); return; }
     state.quote = data;
+    // A fully discounted stay needs no card; extras, when selected, keep payment enabled.
+    state.paymentEnabled = !!(state.config && state.config.payment_enabled) && Number(data.gross_total) > 0;
     state.step = 4;
     render();
   }).catch(function() {

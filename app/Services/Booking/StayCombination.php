@@ -135,6 +135,17 @@ final class StayCombination
      * @param list<float> $roomTotals  each room's accommodation total, in the combination's order
      * @return list<array{list: float, discount: float, total: float}>
      */
+    public static function stayShares(array $roomTotals, float $extrasTotal, array $discounts): array
+    {
+        $out = [];
+        foreach (array_values($roomTotals) as $i => $room) {
+            $discount = min((float) $room, max(0.0, (float) ($discounts[$i] ?? 0)));
+            $list = round((float) $room + ($i === 0 ? $extrasTotal : 0), 2);
+            $out[] = ['list' => $list, 'discount' => $discount, 'total' => round($list - $discount, 2)];
+        }
+        return $out;
+    }
+
     public static function shares(array $roomTotals, float $extrasTotal, float $grossTotal): array
     {
         $lists = [];

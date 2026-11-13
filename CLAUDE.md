@@ -107,6 +107,12 @@ or add the next dated one, at the end of a session.
 
 ### Member portal — stays and cancellation (phase 3)
 
+- Stay promotions (owner 2026-11-13, `docs/booking-promotions.md`): the main portal's public widget and member stays
+  accept an explicit promo code behind the per-organisation `booking_promotions_enabled` switch (off by default).
+  Campaigns discount accommodation only; extras stay at full price. Booking windows and occupied-night restrictions
+  are separate. Preserve the accepted campaign snapshot and allocations through Stripe and the one booking writer;
+  never re-evaluate an accepted campaign during its hold. Venues with the switch off and old member holds retain
+  their previous pricing rules. Read the runbook before changing this pricing path.
 - **The public booking widget must not change** (owner's ruling, 2026-09-29): `/api/v1/booking/*` and
   `/api/v1/services/*` keep their requests, responses, stored columns, prices, Smoobu payload and emails
   for a booking without a member. The tests named "widget" in `tests/Feature/Booking/BookingEngineConfirmTest.php`

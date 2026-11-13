@@ -168,6 +168,7 @@ final class AccessMap
         'admin/team'                            => ['staff',              'manager',            'account'],       // Team (Settings, manager); the Planner lists team members for everyone. Account: an organisation on modules manages its team at /account/team (2026-11-02)
 
         // ── Bookings, rooms and services
+        'admin/booking-promotions'              => ['manager',            'manager',            'booking'],
         'admin/booking-extras'                  => ['staff',              'manager',            'booking'],       // Room extras (menu: manager)
         'admin/booking-rooms'                   => ['staff',              'manager',            'booking'],       // Rooms (menu: manager); booking screens read them
         'admin/bookings'                        => ['staff',              'staff',              'booking'],       // Room bookings (menu: everyone); submissions overridden below

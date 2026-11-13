@@ -142,6 +142,15 @@
     "claim_failed": "Ce code n'a pas fonctionné. Vérifiez-le et réessayez.", "already_set_up": "Déjà configuré ?"
   },
   "book": {
+    "promotion_unavailable": "Les codes promotionnels ne sont pas disponibles ici.",
+    "promotion_invalid": "Nous ne reconnaissons pas ce code promotionnel.",
+    "promotion_inactive": "Ce code promotionnel est inactif.",
+    "promotion_expired": "Ce code est en dehors de sa période de réservation.",
+    "promotion_currency": "Ce code ne s’applique pas à la devise de la réservation.",
+    "promotion_min_nights": "Ce séjour est trop court pour ce code.",
+    "promotion_dates": "Ces dates de séjour sont exclues de la promotion.",
+    "promotion_room": "Ce code ne s’applique pas à l’hébergement choisi.",
+    "promotion_rate_unavailable": "Le prix de la nuit gratuite n’a pas pu être vérifié. Veuillez réessayer.",
     "coupon_membership_inactive": "Ce code nécessite une adhésion active aujourd’hui au niveau requis.",
     "title": "Réserver", "step_service": "Service", "step_staff": "Qui", "step_when": "Quand", "step_review": "Récapitulatif", "step_pay": "Paiement",
     "your_price": "Votre prix", "list_price": "Prix standard", "member_price_note": "{{label}} appliqué", "duration": "{{count}} min",
@@ -179,6 +188,10 @@
     "error": { "payment_check_failed": "Nous n'avons pas pu vérifier votre paiement pour le moment. Aucun nouveau paiement n'a été effectué. Veuillez essayer de confirmer une nouvelle fois." }
   },
   "stay": {
+    "promo_code": "Code promotionnel",
+    "promo_hint": "Hébergement uniquement. Les services supplémentaires restent au plein tarif.",
+    "promo_apply": "Appliquer le code",
+    "promo_remove": "Retirer le code",
     "title": "Réserver un séjour", "step_dates": "Dates", "step_room": "Chambre", "step_review": "Vérification", "step_pay": "Paiement",
     "heading_dates": "Quand souhaitez-vous venir ?", "heading_room": "Choisissez une chambre", "heading_review": "Vérifiez les détails", "heading_pay": "Confirmez votre séjour",
     "check_in": "Arrivée", "check_out": "Départ", "adults": "Adultes", "children": "Enfants", "nights_count": "Nuits : {{count}}",

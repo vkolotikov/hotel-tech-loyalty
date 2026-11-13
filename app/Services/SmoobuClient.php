@@ -30,6 +30,7 @@ class SmoobuClient
 {
     private ?string $baseUrl     = null;
     private ?string $apiKey      = null;
+    private string $apiSecret    = '';
     private ?string $channelId   = null;
     /** Cached output of resolveDirectChannelId() so the booking flow
      *  doesn't repeat /channels on every confirm. */
@@ -66,12 +67,14 @@ class SmoobuClient
         // there is no tenant context at all). This lets a corporate group run
         // separate Smoobu accounts per sub-brand without forking SmoobuClient.
         $perBrandKey = '';
+        $perBrandSecret = '';
         $perBrandChannelId = '';
         if ($brandId) {
             try {
                 $brand = \App\Models\Brand::withoutGlobalScopes()->where('organization_id', $orgId)->find($brandId);
                 if ($brand) {
                     $perBrandKey = (string) ($brand->pms_smoobu_api_key ?? '');
+                    $perBrandSecret = (string) ($brand->pms_smoobu_api_secret ?? '');
                     $perBrandChannelId = (string) ($brand->pms_smoobu_channel_id ?? '');
                 }
             } catch (\Throwable $e) {
@@ -83,6 +86,8 @@ class SmoobuClient
 
         $perOrgKey       = $this->setting('booking_smoobu_api_key', '');
         $this->apiKey    = $perBrandKey ?: ($perOrgKey ?: ($orgId ? '' : config('services.smoobu.api_key', '')));
+        // A brand key never borrows another key's signing secret.
+        $this->apiSecret = $perBrandKey ? $perBrandSecret : $this->setting('booking_smoobu_api_secret', '');
         $provider        = $this->setting('booking_smoobu_provider', config('services.smoobu.provider', 'mock'));
         // Admin can deactivate the integration without removing credentials.
         // When disabled, behave as if no key is configured: serve mock data,
@@ -390,7 +395,7 @@ class SmoobuClient
         // intentional too: the symptom (200 + HTML) is not transient.
         try {
             $url = "{$this->baseUrl}/channels";
-            $response = Http::withHeaders(['Api-Key' => $this->apiKey])->withoutRedirecting()
+            $response = \App\Support\SmoobuAuthentication::apply(Http::withoutRedirecting(), (string) $this->apiKey, $this->apiSecret)
                 ->timeout($this->timeout)
                 ->get($url);
         } catch (\Throwable $e) {
@@ -957,7 +962,7 @@ class SmoobuClient
             // out at 8s mid-sync. Treat any of those as transient and
             // fall into the same exponential backoff path as 429+5xx.
             try {
-                $client = Http::withHeaders(['Api-Key' => $this->apiKey])->withoutRedirecting()->timeout($this->timeout);
+                $client = \App\Support\SmoobuAuthentication::apply(Http::withoutRedirecting()->timeout($this->timeout), (string) $this->apiKey, $this->apiSecret);
                 $response = match ($method) {
                     'GET'    => $client->get($url, $options['query'] ?? []),
                     'POST'   => $client->post($url, $options['json'] ?? []),
