@@ -21,7 +21,7 @@ Each campaign controls:
 
 Duplicate creates a draft requiring a new code. Editing uses a revision check: refresh a stale editor before saving. Changes and the checkout switch are audited. Usage figures are lifetime confirmed uses and accepted accommodation revenue after discount, not cancellation-adjusted sales reports.
 
-For Forrest, create these campaigns after the exact booking window and exclusions are confirmed:
+For Forrest, review the prepared drafts and complete their booking windows and exclusions before publishing:
 
 | Code | Type | Value | Minimum nights |
 | --- | --- | --- | --- |
