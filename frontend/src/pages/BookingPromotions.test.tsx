@@ -2,12 +2,19 @@ import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import BookingPromotions from './BookingPromotions'
-import { duplicatePromotion, newPromotion, promotionBody } from './bookingPromotions'
+import { duplicatePromotion, filterPromotions, newPromotion, promotionBody } from './bookingPromotions'
 import { initialStayState, stayQuoteBody } from '../portal/pages/stay/staySteps'
 
 vi.mock('../lib/api', () => ({ api: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }))
 
 describe('stay promotions', () => {
+  it('finds campaigns by code or name and uses the server status for filtering', () => {
+    const list = [{ ...newPromotion('VIPFORREST'), name: 'VIP stay', status: 'published' as const, state: 'scheduled' }, newPromotion('EARLYFOR20')]
+    expect(filterPromotions(list, 'forrest', 'scheduled')).toHaveLength(1)
+    expect(filterPromotions(list, 'vip stay', 'all')).toHaveLength(1)
+    expect(filterPromotions(list, '', 'draft')).toHaveLength(1)
+    expect(filterPromotions(list, 'missing', 'all')).toHaveLength(0)
+  })
   it('creates free-night campaigns as drafts without inventing dates', () => {
     expect(newPromotion('VIPFORREST', 'second_night_free')).toMatchObject({ code: 'VIPFORREST', min_nights: 2, status: 'draft', booking_from: null, booking_until: null, value: 0 })
   })

@@ -24,10 +24,13 @@ class BookingPromotionController extends Controller
     public function index(): JsonResponse
     {
         $org = (int) app('current_organization_id');
+        $brand = \App\Models\Brand::orderByDesc('is_default')->first();
+        $token = $brand?->widget_token ?: Organization::findOrFail($org)->widget_token;
         $stats = DB::table('booking_promotion_uses')->where('organization_id', $org)->selectRaw('promotion_id, COUNT(*) as bookings, SUM(discount_amount) as discounts, SUM(accommodation_total) as accommodation_revenue')->groupBy('promotion_id')->get()->keyBy('promotion_id');
         return response()->json([
             'enabled' => StayPromotions::enabled(), 'timezone' => $this->zone(), 'currency' => BookingEngineService::stayCurrency(),
-            'rooms' => BookingRoom::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'booking_url' => $token ? url('/book/' . $token) : null,
+            'rooms' => BookingRoom::orderBy('name')->get(['id', 'name', 'is_active']),
             'promotions' => BookingPromotion::orderByDesc('id')->get()->map(fn ($p) => $this->dto($p) + ['stats' => $stats[$p->id] ?? ['bookings' => 0, 'discounts' => 0, 'accommodation_revenue' => 0]]),
         ]);
     }
@@ -68,7 +71,8 @@ class BookingPromotionController extends Controller
     private function validated(Request $request, ?BookingPromotion $promotion = null): array
     {
         $request->merge(['code' => strtoupper(trim((string) $request->input('code')))]);
-        $roomRule = OwnRows::rule('booking_rooms')->where('is_active', true);
+        $roomRule = OwnRows::rule('booking_rooms');
+        if (!$promotion || $request->input('status') === 'published') $roomRule->where('is_active', true);
         if (app()->bound('current_brand_id') && app('current_brand_id')) $roomRule->where('brand_id', app('current_brand_id'));
         $data = $request->validate([
             'name' => 'required|string|max:120',

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Copy, X, Tag, CalendarDays, Trash2, Save } from 'lucide-react'
+import { Plus, Pencil, Copy, X, Tag, CalendarDays, Trash2, Save, Search, ExternalLink, CheckCircle2, Pause, Archive } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { money } from '../lib/money'
-import { duplicatePromotion, newPromotion, promotionBody, type BookingPromotion } from './bookingPromotions'
+import { duplicatePromotion, filterPromotions, newPromotion, promotionBody, type BookingPromotion } from './bookingPromotions'
 
-interface Catalogue { enabled: boolean; timezone: string; currency: string; rooms: { id: number; name: string }[]; promotions: BookingPromotion[] }
+interface Catalogue { enabled: boolean; timezone: string; currency: string; booking_url?: string | null; rooms: { id: number; name: string; is_active?: boolean }[]; promotions: BookingPromotion[] }
 const input = 'min-w-0 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-hidden focus:ring-2 focus:ring-primary-500'
 const card = 'rounded-2xl border border-white/10 bg-white/3 p-5'
 const button = 'inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm hover:bg-white/10 disabled:opacity-50'
@@ -18,15 +18,22 @@ const errorText = (e: unknown) => {
 export default function BookingPromotions() {
   const cache = useQueryClient()
   const [editing, setEditing] = useState<BookingPromotion | null>(null)
+  const [search, setSearch] = useState('')
+  const [stateFilter, setStateFilter] = useState('all')
   const query = useQuery<Catalogue>({ queryKey: ['booking-promotions'], queryFn: () => api.get('/v1/admin/booking-promotions').then(r => r.data) })
   const save = useMutation({
     mutationFn: (p: BookingPromotion) => p.id ? api.put(`/v1/admin/booking-promotions/${p.id}`, promotionBody(p)) : api.post('/v1/admin/booking-promotions', promotionBody(p)),
     onSuccess: () => { void cache.invalidateQueries({ queryKey: ['booking-promotions'] }); setEditing(null); toast.success('Promotion saved') },
-    onError: (e: unknown) => toast.error(errorText(e)),
+    onError: (e: unknown) => { toast.error(errorText(e)); void cache.invalidateQueries({ queryKey: ['booking-promotions'] }) },
   })
   const settings = useMutation({ mutationFn: (enabled: boolean) => api.put('/v1/admin/booking-promotions/settings', { enabled }),
     onSuccess: () => { void cache.invalidateQueries({ queryKey: ['booking-promotions'] }) }, onError: (e: unknown) => toast.error(errorText(e)) })
   const data = query.data
+  const changeStatus = useMutation({ mutationFn: ({ promotion, status }: { promotion: BookingPromotion; status: BookingPromotion['status'] }) => api.put(`/v1/admin/booking-promotions/${promotion.id}`, promotionBody({ ...promotion, status })),
+    onSuccess: () => { void cache.invalidateQueries({ queryKey: ['booking-promotions'] }); toast.success('Campaign status updated') }, onError: (e: unknown) => toast.error(errorText(e)) })
+  const visible = data ? filterPromotions(data.promotions, search, stateFilter) : []
+  const active = data?.promotions.filter(p => p.state === 'active').length ?? 0
+  const scheduled = data?.promotions.filter(p => p.state === 'scheduled').length ?? 0
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -40,25 +47,32 @@ export default function BookingPromotions() {
         <div><strong>Promo codes at checkout</strong><p className="text-sm text-gray-400">New quotes follow this switch. Accepted quotes keep their price until expiry.</p></div>
         <label className="flex items-center gap-2"><input type="checkbox" checked={data.enabled} disabled={settings.isPending} onChange={e => settings.mutate(e.target.checked)} /> Enabled</label>
       </div>
+      <div className={`${card} space-y-3`}>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold flex items-center gap-2"><CheckCircle2 size={17} /> Campaign launch</h2>{data.booking_url && <a href={data.booking_url} target="_blank" rel="noopener noreferrer" className={button}><ExternalLink size={15} /> Open guest booking</a>}</div>
+        <div className="flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-white/8 px-3 py-1">Checkout {data.enabled ? 'enabled' : 'disabled'}</span><span className="rounded-full bg-white/8 px-3 py-1">{active} active</span><span className="rounded-full bg-white/8 px-3 py-1">{scheduled} scheduled</span><span className="rounded-full bg-white/8 px-3 py-1">{data.rooms.filter(r => r.is_active !== false).length} active accommodation options</span></div>
+        <p className="text-sm text-gray-400">{!data.enabled ? 'Enable checkout when your campaigns are ready.' : active === 0 && scheduled === 0 ? 'Promo entry is on. Set booking dates and publish a campaign before customers can use a code.' : 'Check the campaign dates and test your guest checkout before advertising a code.'}</p>
+      </div>
       <p className="text-xs text-gray-400 flex items-center gap-2"><CalendarDays size={14} /> Campaign booking times use {data.timezone}. Stay dates are independent.</p>
       {data.promotions.length === 0 && <div className={`${card} space-y-4`}><p>No promotions yet. Start with a draft and choose the campaign dates.</p><div className="flex flex-wrap gap-2">
         <button className={button} onClick={() => setEditing({ ...newPromotion('', 'second_night_free'), name: 'Second night free' })}>Second night free</button>
         <button className={button} onClick={() => setEditing({ ...newPromotion(), name: 'Percentage discount' })}>Percentage discount</button>
         <button className={button} onClick={() => setEditing({ ...newPromotion('', 'fixed_amount', 25), name: 'Fixed stay discount' })}>Fixed stay discount</button>
       </div></div>}
-      <div className="grid gap-4 lg:grid-cols-2">{data.promotions.map(p => <article className={card} key={p.id}>
+      {data.promotions.length > 0 && <div className="flex flex-wrap gap-3"><label className="min-w-0 flex-1 relative"><span className="sr-only">Find a campaign</span><Search size={16} className="absolute top-3 left-3 text-gray-400" /><input className={`${input} pl-10`} placeholder="Find a campaign or code" value={search} onChange={e => setSearch(e.target.value)} /></label><select aria-label="Filter campaign status" className={`${input} w-auto`} value={stateFilter} onChange={e => setStateFilter(e.target.value)}><option value="all">All campaigns</option>{['draft', 'scheduled', 'active', 'paused', 'expired', 'archived'].map(s => <option value={s} key={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}</select></div>}
+      {data.promotions.length > 0 && visible.length === 0 && <p className="text-sm text-gray-400" role="status">No campaigns match your search.</p>}
+      <div className="grid gap-4 lg:grid-cols-2">{visible.map(p => <article className={card} key={p.id}>
         <div className="flex items-start justify-between gap-3"><div><strong className="text-white">{p.name}</strong><p className="font-mono text-sm mt-1">{p.code}</p></div><span className="rounded-full bg-white/8 px-3 py-1 text-xs capitalize">{p.state}</span></div>
         <p className="mt-4 text-sm">{p.type === 'second_night_free' ? 'Second night free' : p.type === 'percentage' ? `${p.value}% off accommodation` : `${money(p.value, data.currency)} off accommodation`} · minimum {p.min_nights} night{p.min_nights === 1 ? '' : 's'}</p>
         <p className="text-xs text-gray-400 mt-2">{p.booking_from?.replace('T', ' ') || 'Start not set'} → {p.booking_until?.replace('T', ' ') || 'End not set'}</p>
         <div className="grid grid-cols-3 gap-2 my-4 text-xs text-gray-400"><span>{Number(p.stats?.bookings ?? 0)} bookings</span><span>{money(Number(p.stats?.discounts ?? 0), p.currency || data.currency)} discounts</span><span>{money(Number(p.stats?.accommodation_revenue ?? 0), p.currency || data.currency)} stay revenue</span></div>
-        <div className="flex gap-2"><button className={button} onClick={() => setEditing({ ...p, room_ids: p.room_ids || [], excluded_dates: p.excluded_dates || [] })}><Pencil size={14} /> Edit</button><button className={button} onClick={() => setEditing(duplicatePromotion(p))}><Copy size={14} /> Duplicate</button></div>
+        <div className="flex flex-wrap gap-2"><button className={button} onClick={() => setEditing({ ...p, room_ids: p.room_ids || [], excluded_dates: p.excluded_dates || [] })}><Pencil size={14} /> Edit</button><button className={button} onClick={() => setEditing(duplicatePromotion(p))}><Copy size={14} /> Duplicate</button>{p.status === 'published' && <button className={button} disabled={changeStatus.isPending} onClick={() => changeStatus.mutate({ promotion: p, status: 'paused' })}><Pause size={14} /> Pause</button>}{p.status !== 'archived' && <button className={button} disabled={changeStatus.isPending} onClick={() => changeStatus.mutate({ promotion: p, status: 'archived' })}><Archive size={14} /> Archive</button>}</div>
       </article>)}</div>
     </>}
-    {editing && data && <PromotionEditor key={`${editing.id ?? 'new'}-${editing.code}`} initial={editing} catalogue={data} pending={save.isPending} onClose={() => setEditing(null)} onSave={p => save.mutate(p)} />}
+    {editing && data && <PromotionEditor key={`${editing.id ?? 'new'}-${editing.revision ?? 0}-${editing.code}`} initial={editing} catalogue={data} pending={save.isPending} error={save.isError ? errorText(save.error) : null} onReload={editing.id ? () => { void query.refetch().then(r => { const current = r.data?.promotions.find(p => p.id === editing.id); if (current) { save.reset(); setEditing(current) } }) } : undefined} onClose={() => { setEditing(null); save.reset() }} onSave={p => save.mutate(p)} />}
   </div>
 }
 
-function PromotionEditor({ initial, catalogue, pending, onClose, onSave }: { initial: BookingPromotion; catalogue: Catalogue; pending: boolean; onClose: () => void; onSave: (p: BookingPromotion) => void }) {
+function PromotionEditor({ initial, catalogue, pending, error, onReload, onClose, onSave }: { initial: BookingPromotion; catalogue: Catalogue; pending: boolean; error: string | null; onReload?: () => void; onClose: () => void; onSave: (p: BookingPromotion) => void }) {
   const [form, setForm] = useState(initial)
   const panel = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -79,9 +93,9 @@ function PromotionEditor({ initial, catalogue, pending, onClose, onSave }: { ini
   }
   const patch = (p: Partial<BookingPromotion>) => setForm(f => ({ ...f, ...p }))
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(form) }
-  return <div className="fixed inset-0 z-50 flex justify-end bg-black/60" onClick={() => { if (!pending) onClose() }}>
+  return <div className="fixed inset-0 z-50 flex justify-end bg-black/60" onClick={() => { if (!pending && JSON.stringify(form) === JSON.stringify(initial)) onClose() }}>
     <section ref={panel} onKeyDown={keyboard} role="dialog" aria-modal="true" aria-labelledby="promotion-title" className="min-w-0 w-full max-w-2xl overflow-y-auto bg-gray-950 p-5 sm:p-7 shadow-2xl" onClick={e => e.stopPropagation()}>
-      <div className="flex items-center justify-between mb-6"><h2 id="promotion-title" className="text-lg font-bold">{initial.id ? 'Edit promotion' : 'New promotion'}</h2><button type="button" className={button} aria-label="Close promotion" disabled={pending} onClick={onClose}><X size={18} /></button></div>
+      <div className="sticky -top-5 sm:-top-7 z-10 bg-gray-950 py-4 flex items-center justify-between mb-4 border-b border-white/10"><h2 id="promotion-title" className="text-lg font-bold">{initial.id ? 'Edit promotion' : 'New promotion'}</h2><button type="button" className={button} aria-label="Close promotion" disabled={pending} onClick={onClose}><X size={18} /></button></div>
       <form onSubmit={submit}><fieldset disabled={pending} className="min-w-0 space-y-5">
         <label className="block text-sm">Campaign name<input required maxLength={120} className={`${input} mt-1`} value={form.name} onChange={e => patch({ name: e.target.value })} /></label>
         <label className="block text-sm">Promo code<input required minLength={2} maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9_-]+" className={`${input} mt-1 font-mono`} value={form.code} onChange={e => patch({ code: e.target.value.toUpperCase() })} /></label>
@@ -93,7 +107,7 @@ function PromotionEditor({ initial, catalogue, pending, onClose, onSave }: { ini
         <label className="block text-sm">Minimum nights<input required type="number" min={form.type === 'second_night_free' ? 2 : 1} max={365} className={`${input} mt-1`} value={form.min_nights} onChange={e => patch({ min_nights: Number(e.target.value) })} /></label>
         <div><h3 className="font-semibold mb-3">When guests can book · {catalogue.timezone}</h3><div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">Booking opens<input type="datetime-local" required={form.status === 'published'} className={`${input} mt-1`} value={form.booking_from || ''} onChange={e => patch({ booking_from: e.target.value || null })} /></label>
-          <label className="block text-sm">Booking closes<input type="datetime-local" required={form.status === 'published'} min={form.booking_from || undefined} className={`${input} mt-1`} value={form.booking_until || ''} onChange={e => patch({ booking_until: e.target.value || null })} /></label>
+          <label className="block text-sm">Booking closes<input aria-label="Booking closes" aria-describedby="booking-closes-help" type="datetime-local" required={form.status === 'published'} min={form.booking_from || undefined} className={`${input} mt-1`} value={form.booking_until || ''} onChange={e => patch({ booking_until: e.target.value || null })} /><span id="booking-closes-help" className="text-xs text-gray-400">Closes at this exact time. For a full final day, choose midnight of the following day.</span></label>
         </div></div>
         <div><h3 className="font-semibold mb-1">Eligible stay nights</h3><p className="text-xs text-gray-400 mb-3">Leave both empty to allow any available future stay.</p><div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">First eligible night<input type="date" className={`${input} mt-1`} value={form.stay_from || ''} onChange={e => patch({ stay_from: e.target.value || null })} /></label>
@@ -103,9 +117,10 @@ function PromotionEditor({ initial, catalogue, pending, onClose, onSave }: { ini
           {form.excluded_dates.map((range, i) => <div key={i} className="flex gap-2 mb-2"><label className="min-w-0 flex-1 text-xs">From<input aria-label={`Excluded first night ${i + 1}`} required type="date" className={`${input} mt-1`} value={range.from} onChange={e => patch({ excluded_dates: form.excluded_dates.map((r, j) => i === j ? { ...r, from: e.target.value } : r) })} /></label><label className="min-w-0 flex-1 text-xs">Through<input aria-label={`Excluded last night ${i + 1}`} required type="date" min={range.from} className={`${input} mt-1`} value={range.until} onChange={e => patch({ excluded_dates: form.excluded_dates.map((r, j) => i === j ? { ...r, until: e.target.value } : r) })} /></label><button type="button" className={button} aria-label={`Remove excluded range ${i + 1}`} onClick={() => patch({ excluded_dates: form.excluded_dates.filter((_, j) => i !== j) })}><Trash2 size={16} /></button></div>)}
           <button type="button" className={button} onClick={() => patch({ excluded_dates: [...form.excluded_dates, { from: '', until: '' }] })}><Plus size={14} /> Exclude dates</button>
         </div>
-        <div><h3 className="font-semibold mb-2">Eligible accommodation</h3><p className="text-xs text-gray-400 mb-3">No selection means all accommodation in this campaign’s brand scope.</p><div className="grid gap-2 sm:grid-cols-2">{catalogue.rooms.map(room => <label key={room.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.room_ids.includes(room.id)} onChange={e => patch({ room_ids: e.target.checked ? [...form.room_ids, room.id] : form.room_ids.filter(id => id !== room.id) })} />{room.name}</label>)}</div></div>
+        <div><h3 className="font-semibold mb-2">Eligible accommodation</h3><p className="text-xs text-gray-400 mb-3">No selection means all accommodation in this campaign’s brand scope. Remove inactive rooms before publishing.</p><div className="grid gap-2 sm:grid-cols-2">{catalogue.rooms.map(room => <label key={room.id} className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={room.is_active === false && !form.room_ids.includes(room.id)} checked={form.room_ids.includes(room.id)} onChange={e => patch({ room_ids: e.target.checked ? [...form.room_ids, room.id] : form.room_ids.filter(id => id !== room.id) })} />{room.name}{room.is_active === false ? ' (inactive)' : ''}</label>)}</div>{form.room_ids.filter(id => !catalogue.rooms.some(r => r.id === id)).map(id => <button key={id} type="button" className={`${button} mt-2`} onClick={() => patch({ room_ids: form.room_ids.filter(r => r !== id) })}>Remove unavailable room #{id}</button>)}</div>
         <label className="block text-sm">Status<select aria-label="Status" className={`${input} mt-1`} value={form.status} onChange={e => patch({ status: e.target.value as BookingPromotion['status'] })}><option value="draft">Draft</option><option value="published">Published · follows campaign dates</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
-        <div className="flex gap-3 pt-3"><button className={button} type="submit"><Save size={16} />{pending ? 'Saving…' : 'Save promotion'}</button><button className={button} type="button" onClick={onClose}>Cancel</button></div>
+        {error && <div role="alert" className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm">{error}{onReload && <button className={`${button} mt-2`} type="button" onClick={onReload}>Reload saved version</button>}</div>}
+        <div className="sticky -bottom-5 sm:-bottom-7 bg-gray-950 border-t border-white/10 flex gap-3 py-4"><button className={button} type="submit"><Save size={16} />{pending ? 'Saving…' : 'Save promotion'}</button><button className={button} type="button" onClick={onClose}>Cancel</button></div>
       </fieldset></form>
     </section>
   </div>

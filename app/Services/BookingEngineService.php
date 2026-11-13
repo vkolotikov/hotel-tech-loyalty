@@ -223,6 +223,13 @@ class BookingEngineService
         if ($totalCapacity < $adults + $children) {
             throw new \InvalidArgumentException('Selected rooms do not have enough capacity for your group');
         }
+        $party = \App\Services\Booking\StayCombination::party(array_column($rooms, 'max_guests'), (int) $adults, (int) $children);
+        if ($party === null) throw new \InvalidArgumentException('Every room in a combination needs an adult and enough guest capacity.');
+        foreach ($rooms as $index => &$room) {
+            $room['adults'] = $party[$index]['adults'];
+            $room['children'] = $party[$index]['children'];
+        }
+        unset($room);
 
         $this->assertExtrasMeetLeadTime($extras, $checkIn);
         $extrasTotal = $this->calcExtras($extras, (int) $adults, (int) $children, $nights);
@@ -1910,6 +1917,8 @@ class BookingEngineService
 
                 foreach ($rooms as $idx => $room) {
                     $apartmentId = $room['unit_id'];
+                    $roomAdults = (int) ($room['adults'] ?? $adults);
+                    $roomChildren = (int) ($room['children'] ?? $children);
                     $roomTotal   = $room['room_total'];
                     $roomDiscount = (float) ($payload['stay_discount_allocations'][$idx] ?? 0);
                     $unitName    = $room['unit_name'] ?? 'Room';
@@ -2003,8 +2012,8 @@ class BookingEngineService
                         'lastName'      => $guest['last_name'] ?? '',
                         'email'         => $guest['email'] ?? '',
                         'phone'         => $guest['phone'] ?? '',
-                        'adults'        => $adults,
-                        'children'      => $children,
+                        'adults'        => $roomAdults,
+                        'children'      => $roomChildren,
                         'price'         => $smoobuRoomPrice,
                         'price-paid'    => $roomPaid,
                         'priceStatus'   => $roomPaid > 0 ? 1 : 0,
@@ -2125,8 +2134,8 @@ class BookingEngineService
                         'guest_name'               => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
                         'guest_email'              => $guest['email'] ?? null,
                         'guest_phone'              => $guest['phone'] ?? null,
-                        'adults'                   => $adults,
-                        'children'                 => $children,
+                        'adults'                   => $roomAdults,
+                        'children'                 => $roomChildren,
                         'arrival_date'             => $checkIn,
                         'departure_date'           => $checkOut,
                         'price_total'              => $smoobuRoomPrice,
@@ -3272,7 +3281,7 @@ class BookingEngineService
     private function memberColumns(array $payload, array $data): array
     {
         if (empty($payload['member_id']) && ($payload['discount_source'] ?? null) !== 'booking_promotion') {
-            return [];
+            return ['notice' => trim((string) ($data['special_requests'] ?? '')) ?: null];
         }
 
         return [

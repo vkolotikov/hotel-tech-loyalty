@@ -6,7 +6,7 @@ The main portal owns campaign eligibility and prices. Smoobu supplies availabili
 
 Open **Bookings → Stay promotions** (`/booking-promotions`). Managers can create, edit, duplicate, pause and archive campaigns. The page and its API require the booking product. Every promotion and room selection belongs to the current organisation; a selected brand narrows the scope.
 
-Promo codes are disabled by default per organisation. Prepare drafts first, then enable **Promo codes at checkout**. Enabling also makes new member stay discounts apply to accommodation only. Existing quotes and venues with the switch off retain their prior member pricing rules.
+Promo codes are disabled by default per organisation. Forrest's owner-requested activation is the targeted exception in `2026_11_13_180000_enable_forrest_stay_promotions`; see `docs/booking-journey.md`. Prepare drafts first, then enable **Promo codes at checkout**. Enabling also makes new member stay discounts apply to accommodation only. Existing quotes and venues with the switch off retain their prior member pricing rules.
 
 Each campaign controls:
 
@@ -29,7 +29,7 @@ For Forrest, create these campaigns after the exact booking window and exclusion
 | EARLYFOR20 | Percentage | 20% | 1, or the agreed campaign minimum |
 | BLACKFOR15 | Percentage | 15% | 1, or the agreed campaign minimum |
 
-No customer campaigns or dates are seeded by the migrations. December 31 exclusions are explicit calendar dates; add each required year.
+The initial schema migration seeds no campaigns. The later Forrest activation prepares its three codes as drafts only; no booking window or stay exclusions are invented. December 31 exclusions are explicit calendar dates; add each required year.
 
 ## Pricing and checkout
 

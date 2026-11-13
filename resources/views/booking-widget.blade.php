@@ -80,6 +80,12 @@ input,select,textarea{font-family:inherit}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 .field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .field textarea{resize:vertical;min-height:72px}
+.extra-rate{display:block;margin-top:3px;font-size:11px;font-weight:400;color:var(--text-secondary)}
+.extra-info{min-width:0;overflow-wrap:anywhere}
+.extra-price{max-width:45%;white-space:normal;text-align:right}
+.booking-status{padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--primary-light);margin:16px 0;font-size:14px}
+button:focus-visible,[role="button"]:focus-visible,[role="checkbox"]:focus-visible{outline:3px solid var(--primary);outline-offset:4px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.confetti-container{display:none}}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 
 /* Buttons */
@@ -239,7 +245,8 @@ input,select,textarea{font-family:inherit}
 
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
 .cal-dow{font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);text-align:center;padding:4px 0 8px;letter-spacing:.5px}
-.cal-day{text-align:center;padding:2px;position:relative;cursor:pointer}
+.cal-day{text-align:center;padding:2px;position:relative;cursor:pointer;border:0;background:transparent;color:inherit;font:inherit}
+body.calendar-open{overflow:hidden}
 .cal-day.empty{cursor:default}
 .cal-day.disabled{cursor:not-allowed;opacity:.35}
 .cal-day.sold-out{cursor:not-allowed;pointer-events:none}
@@ -474,6 +481,10 @@ var state = {
   paymentIntentClientSecret: null,
   paymentIntentId: null,
   paymentProcessing: false,
+  paymentAuthorized: false,
+  paymentUncertain: false,
+  confirmationPending: false,
+  returnNotice: null,
   paymentError: null,
   calendarOpen: false,
   calendarPrices: {},
@@ -595,24 +606,38 @@ function apiGet(path, params) {
   params = params || {};
   params.org = ORG_ID;
   var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
-  return fetch(API_BASE + '/v1/booking/' + path + '?' + qs).then(function(r){ return r.json(); });
+  return fetch(API_BASE + '/v1/booking/' + path + '?' + qs, { headers: { Accept: 'application/json' } }).then(readApiResponse);
+}
+function readApiResponse(response) {
+  return response.json().then(function(data) {
+    if (!response.ok && !data.error) data.error = Object.values(data.errors || {}).flat()[0] || data.message || 'This request could not be completed. Please try again.';
+    return data;
+  });
 }
 function apiPost(path, body) {
   body = body || {};
   body.org = ORG_ID;
   return fetch(API_BASE + '/v1/booking/' + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Org-Token': ORG_ID },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Org-Token': ORG_ID },
     body: JSON.stringify(body)
-  }).then(function(r){ return r.json(); });
+  }).then(readApiResponse);
 }
 
 var _lastStep = 0;
+var _lastCalendarOpen = false;
 
 /* --- Render --- */
 function render() {
   var stepChanged = state.step !== _lastStep;
   _lastStep = state.step;
+  var calendarChanged = state.calendarOpen !== _lastCalendarOpen;
+  _lastCalendarOpen = state.calendarOpen;
+  var focused = document.activeElement;
+  var focusId = focused && focused.id;
+  var focusedChoice = focused && focused.closest ? focused.closest('[data-unit], [data-extra-card], [data-combo], [data-date]') : null;
+  var choiceKey = focusedChoice ? ['data-unit', 'data-extra-card', 'data-combo', 'data-date'].find(function(k) { return focusedChoice.hasAttribute(k); }) : null;
+  var choiceValue = choiceKey ? focusedChoice.getAttribute(choiceKey) : null;
 
   var html = '';
 
@@ -632,10 +657,10 @@ function render() {
   var steps = getSteps();
   var sStep = successStep();
   if (state.step < sStep) {
-    html += '<div class="stepper">';
+    html += '<div class="stepper" role="list" aria-label="Booking progress">';
     for (var i = 0; i < steps.length; i++) {
       var cls = (i + 1) < state.step ? 'stepper-item done' : ((i + 1) === state.step ? 'stepper-item active' : 'stepper-item');
-      html += '<div class="' + cls + '">';
+      html += '<div class="' + cls + '" role="listitem"' + ((i + 1) === state.step ? ' aria-current="step"' : '') + '>';
       html += '<div class="step-circle">' + ((i + 1) < state.step ? svgCheck() : (i + 1)) + '</div>';
       html += '<div class="step-label">' + steps[i] + '</div>';
       html += '</div>';
@@ -666,6 +691,23 @@ function render() {
 
   $app.innerHTML = html;
   bindEvents();
+  document.body.classList.toggle('calendar-open', state.calendarOpen);
+  if (state.step === 5 && state.paymentEnabled) updatePayButton();
+  if (stepChanged) window.scrollTo(0, 0);
+  if (calendarChanged && state.calendarOpen) {
+    var day = $app.querySelector('.cal-day.range-start:not(:disabled)') || $app.querySelector('.cal-day[data-date]:not(:disabled)');
+    if (day) day.focus({ preventScroll: true });
+  } else if (calendarChanged) {
+    var trigger = document.getElementById(state.pickingCheckout ? 'w-co-trigger' : 'w-ci-trigger');
+    if (trigger) trigger.focus({ preventScroll: true });
+  } else if (stepChanged) {
+    var heading = $app.querySelector('.card-title, .success-wrap h2');
+    if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }); }
+  } else {
+    var restoreFocus = focusId ? document.getElementById(focusId) : null;
+    if (!restoreFocus && choiceKey) restoreFocus = Array.from($app.querySelectorAll('[' + choiceKey + ']')).find(function(el) { return el.getAttribute(choiceKey) === choiceValue; });
+    if (restoreFocus) restoreFocus.focus({ preventScroll: true });
+  }
   notifyHeight();
 }
 
@@ -685,7 +727,7 @@ function renderShimmer() {
 
 /* --- Step 1: Search --- */
 function renderSearch() {
-  var today = new Date().toISOString().slice(0, 10);
+  var today = (state.config && state.config.today) || new Date().toISOString().slice(0, 10);
   var h = '<div class="card">';
   /* Phase 9 — search step copy driven by VOCAB so beauty / medical /
      restaurant orgs see their industry's nouns. Hotel keeps the
@@ -693,6 +735,7 @@ function renderSearch() {
   h += '<div class="card-title">' + esc(VOCAB.search_title) + '</div>';
   h += '<div class="card-sub">' + esc(VOCAB.search_sub) + '</div>';
   if (state.error) h += errorHtml(state.error);
+  if (state.returnNotice) h += errorHtml(state.returnNotice);
 
   // Date picker triggers
   h += '<div class="row">';
@@ -731,12 +774,12 @@ function renderSearch() {
 /* --- Calendar popup --- */
 function renderCalendar() {
   var h = '<div class="cal-overlay" id="cal-overlay">';
-  h += '<div class="cal-popup">';
+  h += '<div class="cal-popup" role="dialog" aria-modal="true" aria-labelledby="booking-calendar-title">';
 
   // Header
   h += '<div class="cal-header">';
-  h += '<h3>' + (state.pickingCheckout ? 'Select check-out date' : 'Select check-in date') + '</h3>';
-  h += '<button class="cal-close" id="cal-close">&times;</button>';
+  h += '<h3 id="booking-calendar-title">' + (state.pickingCheckout ? 'Select check-out date' : 'Select check-in date') + '</h3>';
+  h += '<button class="cal-close" id="cal-close" aria-label="Close date picker">&times;</button>';
   h += '</div>';
 
   // Two months
@@ -768,11 +811,11 @@ function renderCalendar() {
 }
 
 // Can this sold-out date be picked as checkout? Requires a set check-in,
-// no checkout yet, date strictly after check-in, and every NIGHT between
+// actively choosing checkout, date strictly after check-in, and every NIGHT between
 // check-in (inclusive) and this date (exclusive) available — the guest's
 // stay nights must all have inventory; only the leaving morning can be sold.
 function isCheckoutEligible(dateStr) {
-  if (!state.checkIn || state.checkOut) return false;
+  if (!state.checkIn || !state.pickingCheckout) return false;
   if (dateStr <= state.checkIn) return false;
   var cur = new Date(state.checkIn + 'T00:00:00');
   var end = new Date(dateStr + 'T00:00:00');
@@ -790,20 +833,20 @@ function isCheckoutEligible(dateStr) {
 function renderMonth(year, month) {
   var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var dows = ['Mo','Tu','We','Th','Fr','Sa','Su'];
-  var today = new Date().toISOString().slice(0,10);
+  var today = (state.config && state.config.today) || new Date().toISOString().slice(0,10);
 
   var h = '<div class="cal-month">';
 
   // Month header with nav
   h += '<div class="cal-month-header">';
   if (month === state.calendarMonth && year === state.calendarYear) {
-    h += '<button class="cal-nav" id="cal-prev">&lsaquo;</button>';
+    h += '<button class="cal-nav" id="cal-prev" aria-label="Previous month">&lsaquo;</button>';
   } else {
     h += '<div></div>';
   }
   h += '<div class="cal-month-title">' + months[month] + ' ' + year + '</div>';
   if (month !== state.calendarMonth || year !== state.calendarYear) {
-    h += '<button class="cal-nav" id="cal-next">&rsaquo;</button>';
+    h += '<button class="cal-nav" id="cal-next" aria-label="Next month">&rsaquo;</button>';
   } else {
     h += '<div></div>';
   }
@@ -849,7 +892,7 @@ function renderMonth(year, month) {
     if (inRange) cls += ' in-range';
 
     var dayTitle = soldOut ? (checkoutEligible ? 'Fully booked — can be used as checkout' : 'Fully booked') : '';
-    h += '<div class="' + cls + '" data-date="' + dateStr + '"' + (dayTitle ? ' title="' + dayTitle + '"' : '') + '>';
+    h += '<button type="button" class="' + cls + '" data-date="' + dateStr + '" aria-label="' + esc(formatDate(dateStr) + (dayTitle ? ', ' + dayTitle : '')) + '" aria-pressed="' + (isStart || isEnd ? 'true' : 'false') + '"' + (isPast || (soldOut && !checkoutEligible) ? ' disabled' : '') + (dayTitle ? ' title="' + dayTitle + '"' : '') + '>';
     h += '<div class="day-inner">';
     h += '<span class="day-num">' + d + '</span>';
 
@@ -861,7 +904,7 @@ function renderMonth(year, month) {
       h += '<span class="day-price' + (isCheap ? ' cheap' : '') + '">' + formatCompactPrice(price) + '</span>';
     }
 
-    h += '</div></div>';
+    h += '</div></button>';
   }
 
   h += '</div></div>';
@@ -1023,7 +1066,7 @@ function renderSummary() {
 
   if (state.selectedUnit) {
     h += '<div style="margin:12px 0;padding-top:12px;border-top:1px solid var(--border)">';
-    h += '<div class="summary-line"><span>' + svgBed() + ' ' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total != null ? q.room_total : state.selectedUnit.price_per_night * n) + '</span></div>';
+    h += '<div class="summary-line"><span>' + svgBed() + ' ' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total != null ? q.room_total : (state.selectedUnit.total_price != null ? state.selectedUnit.total_price : state.selectedUnit.price_per_night * n)) + '</span></div>';
     h += '</div>';
   }
 
@@ -1051,7 +1094,7 @@ function renderSummary() {
 
   var quoted = typeof q.gross_total === 'number';
   if (quoted && q.discount > 0) h += '<div class="summary-line"><span>' + esc(q.discount_label || 'Stay discount') + '</span><span>−' + formatCurrency(q.discount) + '</span></div>';
-  var total = quoted ? q.gross_total : (state.selectedCombo ? state.selectedCombo.total_price : (state.selectedUnit ? state.selectedUnit.price_per_night * n : 0));
+  var total = quoted ? q.gross_total : (state.selectedCombo ? state.selectedCombo.total_price : (state.selectedUnit ? (state.selectedUnit.total_price != null ? state.selectedUnit.total_price : state.selectedUnit.price_per_night * n) : 0));
   if (!quoted && state.config && state.config.extras) {
     state.config.extras.forEach(function(ex) { if (state.selectedExtras[ex.id]) total += extraEstimate(ex, n); });
   }
@@ -1060,7 +1103,7 @@ function renderSummary() {
   }
 
   // Continue button in summary
-  if (state.step === 2 && state.selectedUnit) {
+  if (state.step === 2 && (state.selectedUnit || state.selectedCombo)) {
     h += '<button class="btn btn-primary" id="w-summary-next" style="margin-top:16px">Continue ' + svgArrowRight() + '</button>';
   } else if (state.step === 3) {
     h += '<button class="btn btn-primary" id="w-summary-quote" style="margin-top:16px"' + (state.quoteLoading ? ' disabled' : '') + '>';
@@ -1068,14 +1111,14 @@ function renderSummary() {
     h += '</button>';
   } else if (state.step === 4) {
     if (state.paymentEnabled) {
-      h += '<button class="btn btn-primary" id="w-to-payment" style="margin-top:16px">Continue to Payment ' + svgArrowRight() + '</button>';
+      h += '<button class="btn btn-primary" id="w-summary-payment" style="margin-top:16px"' + (state.paymentProcessing ? ' disabled' : '') + '>Continue to Payment ' + svgArrowRight() + '</button>';
     } else {
       h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.confirming ? ' disabled' : '') + '>';
       h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
       h += '</button>';
     }
   } else if (state.step === 5 && state.paymentEnabled) {
-    h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.paymentProcessing ? ' disabled' : '') + '>';
+    h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.paymentProcessing || (!state.paymentAuthorized && !state.stripeReady) ? ' disabled' : '') + '>';
     h += state.paymentProcessing ? spinner() + ' Processing...' : svgLock() + ' Pay & Confirm';
     h += '</button>';
   }
@@ -1143,7 +1186,7 @@ function renderExtras() {
       h += '<div class="extra-info"><div class="extra-name">' + esc(ex.name) + '</div>';
       if (ex.description) h += '<div class="extra-desc">' + esc(ex.description) + '</div>';
       h += '</div>';
-      h += '<div class="extra-price">' + formatCurrency(ex.price) + '</div>';
+      h += '<div class="extra-price">' + formatCurrency(extraEstimate(ex, nights())) + '<small class="extra-rate">' + formatCurrency(ex.price) + ' ' + esc(extraRateLabel(ex.price_type || ex.type)) + '</small></div>';
       h += '</div>';
       h += '</div>';
     });
@@ -1164,6 +1207,7 @@ function renderExtras() {
 function renderDetails() {
   var h = '';
   if (state.error) h += errorHtml(state.error);
+  h += quoteExpiryHtml();
 
   h += '<div class="page-layout">';
 
@@ -1173,18 +1217,18 @@ function renderDetails() {
   h += '<div class="card"><div class="card-title">' + esc(VOCAB.details_title) + '</div>';
   h += '<div class="card-sub">Fill in your information to complete the reservation</div>';
   h += '<div class="row">';
-  h += field('First Name *', '<input id="w-fname" value="' + esc(state.firstName) + '" placeholder="John" autocomplete="given-name" autocapitalize="words" spellcheck="false">');
-  h += field('Last Name *', '<input id="w-lname" value="' + esc(state.lastName) + '" placeholder="Doe" autocomplete="family-name" autocapitalize="words" spellcheck="false">');
+  h += field('First Name *', '<input required maxlength="100" id="w-fname" value="' + esc(state.firstName) + '" placeholder="John" autocomplete="given-name" autocapitalize="words" spellcheck="false">');
+  h += field('Last Name *', '<input required maxlength="100" id="w-lname" value="' + esc(state.lastName) + '" placeholder="Doe" autocomplete="family-name" autocapitalize="words" spellcheck="false">');
   h += '</div>';
-  h += field('Email Address *', '<input type="email" id="w-email" value="' + esc(state.email) + '" placeholder="john@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">');
-  h += field('Phone Number', '<input type="tel" id="w-phone" value="' + esc(state.phone) + '" placeholder="+1 234 567 890" autocomplete="tel" inputmode="tel">');
-  h += field('Special Requests', '<textarea id="w-requests" placeholder="Any special requirements...">' + esc(state.requests) + '</textarea>');
+  h += field('Email Address *', '<input required maxlength="254" type="email" id="w-email" value="' + esc(state.email) + '" placeholder="john@example.com" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">');
+  h += field('Phone Number', '<input maxlength="40" type="tel" id="w-phone" value="' + esc(state.phone) + '" placeholder="+1 234 567 890" autocomplete="tel" inputmode="tel">');
+  h += field('Special Requests', '<textarea maxlength="2000" id="w-requests" placeholder="Any special requirements...">' + esc(state.requests) + '</textarea>');
   h += '<div class="btn-row">';
   h += '<button class="btn btn-outline" id="w-back3">' + svgArrowLeft() + ' Back</button>';
 
   if (state.paymentEnabled) {
     // When payment is enabled, this step just collects details — payment is next
-    h += '<button class="btn btn-primary" id="w-to-payment">Continue to Payment ' + svgArrowRight() + '</button>';
+    h += '<button class="btn btn-primary" id="w-to-payment"' + (state.paymentProcessing ? ' disabled' : '') + '>Continue to Payment ' + svgArrowRight() + '</button>';
   } else {
     h += '<button class="btn btn-primary" id="w-confirm"' + (state.confirming ? ' disabled' : '') + '>';
     h += state.confirming ? spinner() + ' Confirming...' : svgLock() + ' Confirm Booking';
@@ -1205,6 +1249,15 @@ function renderPayment() {
   var h = '';
   if (state.error) h += errorHtml(state.error);
   if (state.paymentError) h += errorHtml(state.paymentError);
+  if (!state.paymentAuthorized && !state.paymentUncertain) h += quoteExpiryHtml();
+  if (state.paymentAuthorized || state.paymentUncertain) {
+    h += '<div class="page-layout"><div class="card"><h2 class="card-title">Complete your booking</h2>';
+    h += '<p class="booking-status" role="status">' + (state.paymentAuthorized ? 'Your card payment has been secured. We are checking the reservation.' : 'We are checking the outcome of your payment with the bank.') + ' Do not submit another payment.</p>';
+    h += '<p>Payment reference: <strong>' + esc(state.paymentIntentId) + '</strong></p>';
+    h += '<p class="card-sub">If confirmation still fails, contact the venue with this reference. A payment alone does not confirm a reservation.</p>';
+    h += '<div class="btn-row"><button class="btn btn-primary" id="' + (state.paymentAuthorized ? 'w-retry-confirm' : 'w-retry-payment') + '"' + (state.confirming || state.paymentProcessing ? ' disabled' : '') + '>' + (state.confirming || state.paymentProcessing ? spinner() + ' Checking...' : state.paymentAuthorized ? 'Retry booking confirmation' : 'Check payment status') + '</button></div></div>';
+    return h + renderSummary() + '</div>';
+  }
 
   h += '<div class="page-layout">';
   h += '<div>';
@@ -1223,6 +1276,7 @@ function renderPayment() {
   h += '<div class="field"><label>Card Details</label>';
   h += '<div id="stripe-card-element" style="padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-height:44px;transition:border-color .2s"></div>';
   h += '<div id="stripe-card-errors" style="color:var(--error);font-size:12px;margin-top:6px"></div>';
+  if (state.paymentError && !state.stripeReady) h += '<button class="btn btn-outline" id="w-retry-payment">Check payment / reload card form</button>';
   h += '</div>';
 
   // Security badges
@@ -1265,11 +1319,20 @@ function renderSuccess() {
   h += '<div class="success-icon">' + svgCheckLg() + '</div>';
   h += '<h2>Booking Confirmed!</h2>';
   var msg = 'Thank you for your reservation.';
-  if (state.paymentEnabled) msg += ' Your payment has been processed successfully.';
-  msg += ' A confirmation email has been sent to <strong>' + esc(state.email) + '</strong>.';
+  if (state.paymentEnabled) msg += ' Your card payment is secured.';
+  msg += ' Confirmation details will be sent to <strong>' + esc(state.email) + '</strong>. Please keep your booking reference.';
+  if (c.payment_capture_pending) msg += ' Your card is authorised; the venue will complete collection shortly.';
   h += '<p>' + msg + '</p>';
   if (c.booking_reference) h += '<div class="success-ref">' + esc(c.booking_reference) + '</div>';
   else if (c.reference) h += '<div class="success-ref">' + esc(c.reference) + '</div>';
+  if (c.unit_name || c.check_in || c.check_out || typeof c.gross_total === 'number') {
+    h += '<div class="booking-status" style="max-width:420px;margin:20px auto;text-align:left">';
+    if (c.unit_name) h += '<strong>' + esc(c.unit_name) + '</strong>';
+    if (c.check_in && c.check_out) h += '<p>' + formatDate(c.check_in) + ' → ' + formatDate(c.check_out) + '</p>';
+    if (typeof c.gross_total === 'number') h += '<div class="summary-total"><span>Booking total</span><span>' + formatCurrency(c.gross_total) + '</span></div>';
+    h += '</div>';
+  }
+  if (c.booking_reference || c.reference) h += '<button class="btn btn-outline" id="w-copy-reference" style="max-width:220px;margin:12px auto">Copy booking reference</button><span id="w-copy-status" role="status" class="card-sub"></span>';
 
   // Price breakdown — Smoobu's per-line items including any length-of-
   // stay discount the host has configured. Only renders when the
@@ -1321,9 +1384,10 @@ function renderConfetti() {
 function bindEvents() {
   on('w-search', 'click', doSearch);
   on('w-back1', 'click', function() { state.step = 1; state.error = null; render(); });
-  on('w-back2', 'click', function() { state.step = 2; render(); });
-  on('w-back3', 'click', function() { state.step = 3; render(); });
+  on('w-back2', 'click', function() { if (!state.paymentProcessing && !state.confirming) { state.step = 2; render(); } });
+  on('w-back3', 'click', function() { if (!state.paymentProcessing && !state.confirming) { state.step = 3; render(); } });
   on('w-back4', 'click', function() {
+    if (state.paymentProcessing || state.paymentAuthorized || state.paymentUncertain || state.confirming) return;
     unmountStripeElement();
     // Clear cached PaymentIntent state so re-entering the payment
     // step always goes through the cache-check / status-verify path
@@ -1332,6 +1396,7 @@ function bindEvents() {
     state.paymentIntentClientSecret = null;
     state.paymentIntentId = null;
     state.paymentError = null;
+    forgetPayment();
     state.step = 4;
     render();
   });
@@ -1339,16 +1404,32 @@ function bindEvents() {
   on('w-next3', 'click', doQuote);
   on('w-confirm', 'click', doConfirm);
   on('w-to-payment', 'click', doGoToPayment);
+  on('w-summary-payment', 'click', doGoToPayment);
+  on('w-retry-confirm', 'click', function() { if (!state.confirming) submitBooking(); });
+  on('w-retry-payment', 'click', doGoToPayment);
+  on('w-copy-reference', 'click', function() {
+    var reference = state.confirmation.booking_reference || state.confirmation.reference;
+    var status = document.getElementById('w-copy-status');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(reference).then(function() { if (status) status.textContent = 'Reference copied'; }).catch(function() { if (status) status.textContent = 'Please select and copy the reference above.'; });
+    else if (status) status.textContent = 'Please select and copy the reference above.';
+  });
+  on('w-refresh-quote', 'click', function() {
+    if (state.paymentProcessing || state.paymentAuthorized || state.paymentUncertain || state.confirming) return;
+    forgetPayment(); unmountStripeElement(); state.quote = null; state.paymentIntentId = null;
+    state.paymentIntentClientSecret = null; state.paymentError = null; state.error = null; state.step = 3; render();
+  });
   on('w-pay', 'click', doPayAndConfirm);
   // Summary sidebar buttons
   on('w-summary-next', 'click', doSelectUnit);
   on('w-summary-quote', 'click', doQuote);
   on('w-summary-confirm', 'click', state.paymentEnabled ? doPayAndConfirm : doConfirm);
   on('w-new', 'click', function() {
+    forgetPayment(); unmountStripeElement();
     state.step = 1; state.selectedUnit = null; state.selectedExtras = {};
+    state.selectedCombo = null; state.promo = ''; state.paymentAuthorized = false; state.paymentUncertain = false; state.confirmationPending = false;
     state.quote = null; state.confirmation = null; state.error = null;
     state.paymentError = null; state.paymentIntentClientSecret = null; state.paymentIntentId = null;
-    state.firstName = ''; state.lastName = ''; state.email = ''; state.phone = ''; state.requests = '';
+    state.requests = '';
     render();
   });
 
@@ -1356,6 +1437,9 @@ function bindEvents() {
   var rooms = document.querySelectorAll('.room-card[data-unit]');
   for (var i = 0; i < rooms.length; i++) {
     (function(el) {
+      el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-pressed', state.selectedUnit && String(state.selectedUnit.id) === el.getAttribute('data-unit') ? 'true' : 'false');
+      el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
       el.addEventListener('click', function() {
         var uid = el.getAttribute('data-unit');
         state.selectedUnit = state.available.find(function(u) { return String(u.id) === uid; }) || null;
@@ -1391,6 +1475,8 @@ function bindEvents() {
   var combos = document.querySelectorAll('.room-card[data-combo]');
   for (var ci = 0; ci < combos.length; ci++) {
     (function(el) {
+      el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
+      el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
       el.addEventListener('click', function() {
         var idx = parseInt(el.getAttribute('data-combo'), 10);
         var combo = (state.combinations || [])[idx];
@@ -1408,10 +1494,14 @@ function bindEvents() {
   var exCards = document.querySelectorAll('[data-extra-card]');
   for (var j = 0; j < exCards.length; j++) {
     (function(el) {
+      el.setAttribute('role', 'checkbox'); el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-checked', state.selectedExtras[el.getAttribute('data-extra-card')] ? 'true' : 'false');
+      el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
       el.addEventListener('click', function() {
         var eid = el.getAttribute('data-extra-card');
         if (state.selectedExtras[eid]) delete state.selectedExtras[eid];
         else state.selectedExtras[eid] = true;
+        state.quote = null;
         render();
       });
     })(exCards[j]);
@@ -1419,12 +1509,14 @@ function bindEvents() {
 
   // Calendar triggers — render first, then load prices in background
   on('w-ci-trigger', 'click', function() {
+    openCalendarMonth(state.checkIn);
     state.calendarOpen = true;
     state.pickingCheckout = false;
     render();
     loadCalendarPrices();
   });
   on('w-co-trigger', 'click', function() {
+    openCalendarMonth(state.checkOut || state.checkIn);
     state.calendarOpen = true;
     state.pickingCheckout = true;
     render();
@@ -1455,6 +1547,7 @@ function bindEvents() {
 
 /* --- Actions --- */
 function doSearch() {
+  if (state.searching || state.paymentProcessing || state.paymentAuthorized) return;
   state.error = null;
   if (!state.checkIn || !state.checkOut) { state.error = 'Please select both check-in and check-out dates.'; render(); return; }
   if (state.checkIn >= state.checkOut) { state.error = 'Check-out date must be after check-in.'; render(); return; }
@@ -1470,10 +1563,13 @@ function doSearch() {
     adults: state.adults,
     children: state.children
   }).then(function(data) {
+    if (data.error) { state.error = data.error; state.searching = false; render(); return; }
     state.available = data.available || [];
     state.combinations = data.combinations || [];
     state.selectedUnit = null;
     state.selectedCombo = null;
+    state.quote = null;
+    state.selectedExtras = {};
     state.step = 2;
     state.searching = false;
     render();
@@ -1491,6 +1587,7 @@ function doSelectUnit() {
 }
 
 function doQuote() {
+  if (state.quoteLoading || state.paymentProcessing || state.paymentAuthorized) return;
   state.quoteLoading = true; state.error = null; render();
   var extras = Object.keys(state.selectedExtras).map(function(id) { return { id: id, quantity: 1 }; });
 
@@ -1524,40 +1621,92 @@ function doQuote() {
   });
 }
 
+function guestDetails() {
+  return { first_name: state.firstName.trim(), last_name: state.lastName.trim(), email: state.email.trim(), phone: state.phone.trim() };
+}
+function quoteExpired() { return !!(state.quote && state.quote.expires_at && Date.parse(state.quote.expires_at) <= Date.now()); }
+function quoteExpiryHtml() {
+  if (!state.quote || !state.quote.expires_at) return '';
+  if (quoteExpired()) return '<div class="booking-status" role="alert">Your quote expired. Review your stay to check the current price and availability.<button class="btn btn-outline" id="w-refresh-quote" style="margin-top:10px">Review stay again</button></div>';
+  return '<p class="card-sub">Quote valid until ' + esc(new Date(state.quote.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + '. Availability is checked when you confirm.</p>';
+}
+function validateGuest() {
+  var fieldId = !state.firstName.trim() ? 'w-fname' : !state.lastName.trim() ? 'w-lname' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim()) ? 'w-email' : null;
+  if (!fieldId) return true;
+  state.error = fieldId === 'w-email' ? 'Please enter a valid email address.' : 'Please enter your first and last name.';
+  render();
+  var input = document.getElementById(fieldId);
+  if (input) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
+  return false;
+}
+function pendingPaymentKey() { return 'booking-payment:' + ORG_ID; }
+function rememberPayment() {
+  try { sessionStorage.setItem(pendingPaymentKey(), JSON.stringify({ saved: Date.now(), quote: state.quote, unit: state.selectedUnit, combo: state.selectedCombo, extras: state.selectedExtras, guest: guestDetails(), requests: state.requests, intent: state.paymentIntentId, authorized: state.paymentAuthorized })); } catch (e) {}
+}
+function forgetPayment() { try { sessionStorage.removeItem(pendingPaymentKey()); } catch (e) {} }
+function resumePayment(params) {
+  var saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(pendingPaymentKey()) || 'null'); } catch (e) {}
+  if (!saved || !saved.quote || !saved.guest || !saved.intent || typeof saved.guest.first_name !== 'string' || typeof saved.guest.last_name !== 'string' || typeof saved.guest.email !== 'string' || !Number.isFinite(saved.saved) || Date.now() - saved.saved > 30 * 60000 || (params.payment_intent && params.payment_intent !== saved.intent)) {
+    if (params.payment_intent) state.returnNotice = 'We cannot confirm a reservation from the bank return alone. Contact the venue with payment reference ' + params.payment_intent + '. Do not pay again until its status is checked.';
+    return false;
+  }
+  state.quote = saved.quote; state.selectedUnit = saved.unit; state.selectedCombo = saved.combo;
+  state.selectedExtras = saved.extras || {};
+  state.checkIn = saved.quote.check_in; state.checkOut = saved.quote.check_out;
+  state.adults = saved.quote.adults || 2; state.children = saved.quote.children || 0;
+  state.firstName = saved.guest.first_name; state.lastName = saved.guest.last_name;
+  state.email = saved.guest.email; state.phone = saved.guest.phone || '';
+  state.requests = saved.requests || ''; state.paymentIntentId = saved.intent;
+  state.step = 5; state.paymentEnabled = true; state.paymentUncertain = true;
+  // The server reads the existing intent before either mounting a card or confirming the booking.
+  doGoToPayment();
+  return true;
+}
 function doConfirm() {
+  if (state.confirming || state.paymentProcessing) return;
   state.error = null;
-  if (!state.firstName.trim()) { state.error = 'First name is required.'; render(); return; }
-  if (!state.lastName.trim()) { state.error = 'Last name is required.'; render(); return; }
-  if (!state.email.trim() || state.email.indexOf('@') < 1) { state.error = 'A valid email address is required.'; render(); return; }
+  if (quoteExpired()) { render(); return; }
+  if (!validateGuest()) return;
+  submitBooking();
+}
+function submitBooking() {
+  if (state.confirming) return;
   state.confirming = true; render();
-
   apiPost('confirm', {
     hold_token: state.quote ? state.quote.hold_token : '',
-    guest: {
-      first_name: state.firstName.trim(),
-      last_name: state.lastName.trim(),
-      email: state.email.trim(),
-      phone: state.phone.trim()
-    },
+    guest: guestDetails(),
+    special_requests: state.requests.trim() || null,
+    payment_intent_id: state.paymentAuthorized ? state.paymentIntentId : undefined,
+    payment_method: state.paymentAuthorized ? 'stripe' : undefined,
     source: state.source
   }).then(function(data) {
     state.confirming = false;
-    if (data.error) { state.error = data.error; render(); return; }
+    state.paymentProcessing = false;
+    if (data.error || data.success !== true) {
+      state.error = data.error || 'We could not verify your booking. Please retry confirmation or contact the venue.';
+      state.confirmationPending = state.paymentAuthorized;
+      render(); return;
+    }
+    forgetPayment();
+    unmountStripeElement();
     state.confirmation = data;
     state.step = successStep();
     render();
   }).catch(function() {
     state.confirming = false;
-    state.error = 'Booking failed. Please try again.';
+    state.paymentProcessing = false;
+    state.confirmationPending = state.paymentAuthorized;
+    state.error = state.paymentAuthorized ? 'Your payment may be secured, but we could not verify the booking. Retry confirmation below; do not pay again.' : 'We could not verify your booking. Retry confirmation to check the same booking.';
     render();
   });
 }
 
 function doGoToPayment() {
+  if (state.paymentProcessing || state.confirming) return;
   state.error = null;
-  if (!state.firstName.trim()) { state.error = 'First name is required.'; render(); return; }
-  if (!state.lastName.trim()) { state.error = 'Last name is required.'; render(); return; }
-  if (!state.email.trim() || state.email.indexOf('@') < 1) { state.error = 'A valid email address is required.'; render(); return; }
+  if (!state.paymentAuthorized && !state.paymentUncertain && quoteExpired()) { render(); return; }
+  if (!validateGuest()) return;
 
   // Create a PaymentIntent from the hold token
   state.paymentProcessing = true;
@@ -1565,16 +1714,36 @@ function doGoToPayment() {
   render();
 
   apiPost('payment-intent', {
-    hold_token: state.quote ? state.quote.hold_token : ''
+    hold_token: state.quote ? state.quote.hold_token : '',
+    guest: guestDetails(), special_requests: state.requests.trim() || null
   }).then(function(data) {
     state.paymentProcessing = false;
+    if (data.code === 'payment_restart_required') {
+      forgetPayment(); unmountStripeElement(); state.paymentAuthorized = false; state.paymentUncertain = false;
+      state.paymentIntentId = null; state.paymentIntentClientSecret = null; state.quote = null; state.step = 3;
+      state.error = data.error; render(); return;
+    }
     if (data.error) { state.error = data.error; render(); return; }
+    if (data.nothing_to_pay) { state.paymentEnabled = false; state.step = 4; submitBooking(); return; }
+    if (data.payment_received) {
+      state.paymentIntentId = data.payment_intent_id;
+      state.paymentAuthorized = true;
+      state.step = 5;
+      rememberPayment(); submitBooking(); return;
+    }
     state.paymentIntentClientSecret = data.client_secret;
     state.paymentIntentId = data.payment_intent_id;
+    state.paymentAuthorized = false;
+    state.paymentUncertain = false;
+    if (data.expires_at && state.quote) state.quote.expires_at = data.expires_at;
+    state.stripeRetried = false;
+    rememberPayment();
     state.step = 5;
     render();
     // Mount Stripe Elements after DOM is rendered
-    mountStripeElement();
+    if (!state.stripeInstance) {
+      loadStripeJs(function() { state.stripeInstance = Stripe(state.stripePublishableKey); mountStripeElement(); });
+    } else mountStripeElement();
   }).catch(function() {
     state.paymentProcessing = false;
     state.error = 'Failed to initialize payment. Please try again.';
@@ -1589,10 +1758,10 @@ function unmountStripeElement() {
   }
   state.stripeElements = null;
   state.stripeReady = false;
-  state.stripeRetried = false;
 }
 
 function mountStripeElement() {
+  if (state.step !== 5 || state.paymentAuthorized || state.paymentUncertain) return;
   unmountStripeElement();
 
   if (!state.stripeInstance || !state.paymentIntentClientSecret) return;
@@ -1654,9 +1823,10 @@ function mountStripeElement() {
       state.stripeRetried = true;
       apiPost('payment-intent', {
         hold_token: state.quote ? state.quote.hold_token : '',
-        force_new: true,
+        force_new: true, guest: guestDetails(), special_requests: state.requests.trim() || null,
       }).then(function(data) {
         if (data.error) { state.paymentError = data.error; render(); return; }
+        if (data.payment_received) { state.paymentAuthorized = true; rememberPayment(); submitBooking(); return; }
         state.paymentIntentClientSecret = data.client_secret;
         state.paymentIntentId = data.payment_intent_id;
         mountStripeElement();
@@ -1680,17 +1850,24 @@ function mountStripeElement() {
  * untouched.
  */
 function updatePayButton() {
-  var btn = document.getElementById('w-pay');
-  if (!btn) return;
-  var payDisabled = state.paymentProcessing || !state.stripeReady;
+  var buttons = document.querySelectorAll('#w-pay, #w-summary-confirm, #w-retry-confirm');
+  var payDisabled = state.paymentProcessing || state.confirming || (!state.paymentAuthorized && !state.paymentUncertain && !state.stripeReady);
+  buttons.forEach(function(btn) {
   btn.disabled = payDisabled;
   if (state.paymentProcessing) {
     btn.innerHTML = spinner() + ' Processing...';
+  } else if (state.paymentAuthorized) {
+    btn.innerHTML = 'Retry booking confirmation ' + svgArrowRight();
+  } else if (state.paymentUncertain) {
+    btn.innerHTML = 'Check payment status';
   } else if (!state.stripeReady) {
     btn.innerHTML = spinner() + ' Loading card form...';
   } else {
     btn.innerHTML = svgLock() + ' Pay & Confirm';
   }
+  });
+  var back = document.getElementById('w-back4');
+  if (back) back.disabled = state.paymentProcessing || state.paymentAuthorized || state.paymentUncertain || state.confirming;
 }
 
 /**
@@ -1713,6 +1890,10 @@ function showPaymentError(msg) {
 }
 
 function doPayAndConfirm() {
+  if (state.paymentProcessing || state.confirming) return;
+  if (state.paymentUncertain && !state.paymentAuthorized) { doGoToPayment(); return; }
+  if (state.paymentAuthorized) { submitBooking(); return; }
+  if (quoteExpired()) { state.paymentError = 'Your quote expired before payment. Review your stay again.'; render(); return; }
   if (!state.stripeInstance || !state.stripeElements || !state.paymentIntentClientSecret) {
     state.paymentError = 'Payment not initialized. Please go back and try again.';
     render();
@@ -1738,6 +1919,7 @@ function doPayAndConfirm() {
   // updatePayButton() flips the button to its 'Processing…' state
   // without touching the iframe's parent.
   updatePayButton();
+  rememberPayment();
   // Also clear any visible error toast at the top without re-render.
   var errBanner = document.getElementById('stripe-card-errors');
   if (errBanner) errBanner.textContent = '';
@@ -1758,6 +1940,9 @@ function doPayAndConfirm() {
   }).then(function(result) {
     if (result.error) {
       state.paymentProcessing = false;
+      if (result.error.type === 'api_connection_error') {
+        state.paymentUncertain = true; state.paymentError = 'We could not verify the bank response. Check payment status below.'; render(); return;
+      }
       // Keep the iframe mounted so the user can retry — show the
       // error inline rather than rerunning render().
       showPaymentError(result.error.message || 'Payment failed. Please try again.');
@@ -1765,43 +1950,26 @@ function doPayAndConfirm() {
       return;
     }
 
-    // Payment succeeded — now confirm the booking
-    state.confirming = true;
-    render();
-
-    apiPost('confirm', {
-      hold_token: state.quote ? state.quote.hold_token : '',
-      guest: {
-        first_name: state.firstName.trim(),
-        last_name: state.lastName.trim(),
-        email: state.email.trim(),
-        phone: state.phone.trim()
-      },
-      special_requests: state.requests ? state.requests.trim() : null,
-      payment_intent_id: state.paymentIntentId,
-      payment_method: 'stripe',
-      source: state.source
-    }).then(function(data) {
-      state.confirming = false;
-      state.paymentProcessing = false;
-      if (data.error) { state.paymentError = data.error; render(); return; }
-      state.confirmation = data;
-      state.step = successStep();
-      render();
-    }).catch(function() {
-      state.confirming = false;
-      state.paymentProcessing = false;
-      state.paymentError = 'Payment was processed but booking confirmation failed. Please contact support.';
-      render();
-    });
+    state.paymentProcessing = false;
+    var intent = result.paymentIntent;
+    if (!intent || intent.id !== state.paymentIntentId || ['succeeded', 'requires_capture'].indexOf(intent.status) < 0) {
+      state.paymentUncertain = true;
+      state.paymentError = 'Your bank has not confirmed the payment yet. Check payment status before trying again.';
+      state.stripeReady = false;
+      render(); return;
+    }
+    state.paymentAuthorized = true;
+    rememberPayment();
+    submitBooking();
   }).catch(function(err) {
     // confirmPayment itself rejected — typically an IntegrationError
     // (Element not ready) or a network drop. Don't full-render — the
     // iframe is probably still alive and the user can retry.
     state.paymentProcessing = false;
-    showPaymentError((err && err.message)
-      || 'Payment could not start. Please refresh and try again.');
-    updatePayButton();
+    state.paymentUncertain = true;
+    state.paymentError = 'We could not verify the payment outcome. Check payment status below before trying again.';
+    render();
+    return;
   });
 }
 
@@ -1820,23 +1988,25 @@ function nights() {
 }
 function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '';
-  var loc = LANG === 'de' ? 'de-DE' : (LANG === 'fr' ? 'fr-FR' : 'en-US');
-  return new Intl.NumberFormat(loc, { style: 'currency', currency: CURRENCY, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
+  var loc = ({ en: 'en-US', de: 'de-DE', fr: 'fr-FR', lv: 'lv-LV', ru: 'ru-RU', es: 'es-ES' })[LANG] || 'en-US';
+  return new Intl.NumberFormat(loc, { style: 'currency', currency: CURRENCY }).format(amount);
 }
 function formatDate(d) {
   if (!d) return '';
   var dt = new Date(d + 'T00:00:00');
-  return dt.toLocaleDateString(LANG === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  var loc = ({ en: 'en-US', de: 'de-DE', fr: 'fr-FR', lv: 'lv-LV', ru: 'ru-RU', es: 'es-ES' })[LANG] || 'en-US';
+  return dt.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 function range(a, b) { var r = []; for (var i = a; i <= b; i++) r.push(i); return r; }
-function field(label, input) { return '<div class="field"><label>' + label + '</label>' + input + '</div>'; }
+function field(label, input) { var id = /id="([^"]+)"/.exec(input); return '<div class="field"><label' + (id ? ' for="' + esc(id[1]) + '"' : '') + '>' + label + '</label>' + input + '</div>'; }
 function selectHtml(id, opts, val) {
   var h = '<select id="' + id + '">';
   opts.forEach(function(o) { h += '<option value="' + o + '"' + (val === o ? ' selected' : '') + '>' + o + '</option>'; });
   h += '</select>';
   return h;
 }
-function errorHtml(msg) { return '<div class="error-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' + esc(msg) + '</div>'; }
+function errorHtml(msg) { return '<div class="error-box" role="alert"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' + esc(msg) + '</div>'; }
+function extraRateLabel(type) { return ({ per_night: 'per night', per_person: 'per guest', per_guest: 'per guest', per_person_night: 'per guest / night', per_person_per_night: 'per guest / night' })[type] || 'per stay'; }
 function spinner() { return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .7s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>'; }
 function notifyHeight() {
   try { window.parent.postMessage({ type: 'hoteltech-widget-height', height: document.documentElement.scrollHeight }, '*'); } catch (e) {}
@@ -1886,6 +2056,7 @@ function loadCalendarPrices() {
         // "all days available" when absent.
         if (data.availability) {
           for (var ad in data.availability) {
+            if (state.calendarAvailability[ad] !== data.availability[ad]) added = true;
             state.calendarAvailability[ad] = data.availability[ad];
           }
         }
@@ -1905,17 +2076,43 @@ function renderCalendarInPlace() {
   // Rebuild months content
   var monthsEl = popup.querySelector('.cal-months');
   if (monthsEl) {
+    var focusedDate = document.activeElement && document.activeElement.getAttribute('data-date');
     var nextMonth = state.calendarMonth + 1;
     var nextYear = state.calendarYear;
     if (nextMonth > 11) { nextMonth = 0; nextYear++; }
     monthsEl.innerHTML = renderMonth(state.calendarYear, state.calendarMonth) + renderMonth(nextYear, nextMonth);
     bindCalendarDays();
     bindCalendarNav();
+    if (focusedDate) {
+      var restore = Array.from(popup.querySelectorAll('button[data-date]:not(:disabled)')).find(function(el) { return el.getAttribute('data-date') === focusedDate; });
+      if (restore) restore.focus({ preventScroll: true });
+    }
   }
   notifyHeight();
 }
 
 function bindCalendarNav() {
+  var popup = document.querySelector('.cal-popup');
+  if (popup && !popup.hasAttribute('data-keys-bound')) {
+    popup.setAttribute('data-keys-bound', 'true');
+    popup.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') { event.preventDefault(); state.calendarOpen = false; render(); return; }
+      var buttons = Array.from(popup.querySelectorAll('button:not(:disabled)'));
+      if (event.key === 'Tab') {
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons[buttons.length - 1].focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) { event.preventDefault(); buttons[0].focus(); }
+      }
+      var offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+      var days = Array.from(popup.querySelectorAll('button[data-date]'));
+      var current = days.indexOf(document.activeElement);
+      if (offset && current >= 0) {
+        event.preventDefault();
+        for (var next = current + offset; next >= 0 && next < days.length; next += offset > 0 ? 1 : -1) {
+          if (!days[next].disabled) { days[next].focus(); break; }
+        }
+      }
+    });
+  }
   on('cal-prev', 'click', function() {
     var now = new Date();
     if (state.calendarYear === now.getFullYear() && state.calendarMonth <= now.getMonth()) return;
@@ -1930,6 +2127,11 @@ function bindCalendarNav() {
     render();
     loadCalendarPrices();
   });
+}
+
+function openCalendarMonth(date) {
+  var chosen = date || (state.config && state.config.today) || new Date().toISOString().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(chosen)) { state.calendarYear = Number(chosen.slice(0, 4)); state.calendarMonth = Number(chosen.slice(5, 7)) - 1; }
 }
 
 function bindCalendarDays() {
@@ -2017,7 +2219,11 @@ function loadStripeJs(cb) {
   s.src = 'https://js.stripe.com/v3/';
   s.async = true;
   s.onload = cb;
-  s.onerror = function() { console.warn('Failed to load Stripe.js'); };
+  s.onerror = function() {
+    state.paymentError = 'The secure card form could not load. Check your connection and reload the card form below.';
+    state.stripeReady = false;
+    if (state.step === 5) render();
+  };
   document.head.appendChild(s);
 }
 
@@ -2041,6 +2247,7 @@ apiGet('config').then(function(data) {
     state.stripePublishableKey = data.stripe_publishable_key;
     loadStripeJs(function() {
       state.stripeInstance = Stripe(state.stripePublishableKey);
+      if (state.step === 5 && !state.paymentAuthorized && state.paymentIntentClientSecret) mountStripeElement();
     });
   }
 
@@ -2052,38 +2259,24 @@ apiGet('config').then(function(data) {
   } catch(e) {}
 
   // Sensible default dates (overridden by URL params if present)
-  var d = new Date();
-  d.setDate(d.getDate() + 1);
+  var d = new Date((data.today || new Date().toISOString().slice(0, 10)) + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
   state.checkIn = urlParams.check_in || d.toISOString().slice(0, 10);
-  d.setDate(d.getDate() + 2);
+  d.setUTCDate(d.getUTCDate() + 2);
   state.checkOut = urlParams.check_out || d.toISOString().slice(0, 10);
 
-  if (urlParams.adults) state.adults = Math.max(1, Math.min(20, parseInt(urlParams.adults) || 2));
-  if (urlParams.children) state.children = Math.max(0, Math.min(10, parseInt(urlParams.children) || 0));
+  if (urlParams.adults) state.adults = Math.max(1, Math.min(10, parseInt(urlParams.adults) || 2));
+  if (urlParams.children) state.children = Math.max(0, Math.min(6, parseInt(urlParams.children) || 0));
 
-  // 3D Secure return — Stripe redirects back to return_url with
-  // ?payment_intent=… on the query string after the guest completes
-  // 3DS at their bank. The mirror is normally created by /confirm
-  // before the redirect kicks in, but if the user closed the tab
-  // mid-3DS or has a slow bank, the server-side webhook will
-  // eventually orphan-recover. Either way, on landing back here we
-  // jump straight to the success step so the guest sees a clear
-  // confirmation instead of restarting from step 1.
-  if (urlParams.payment_intent && urlParams.redirect_status === 'succeeded') {
-    state.step = successStep();
-    state.confirmation = state.confirmation || {
-      booking_reference: 'PI-' + String(urlParams.payment_intent).slice(-8),
-      payment_intent_id: urlParams.payment_intent,
-    };
-    render();
-    return;
+  // A query string is never proof that a payment or booking succeeded.
+  if (urlParams.payment_intent || urlParams.payment_intent_client_secret) {
+    try {
+      var cleanUrl = new URL(window.location.href);
+      ['payment_intent', 'payment_intent_client_secret', 'redirect_status'].forEach(function(k) { cleanUrl.searchParams.delete(k); });
+      history.replaceState(null, '', cleanUrl.toString());
+    } catch (e) {}
   }
-  if (urlParams.payment_intent && urlParams.redirect_status === 'failed') {
-    state.paymentError = 'Your bank declined the 3-D Secure verification. Please try a different card.';
-    state.step = 5;
-    render();
-    return;
-  }
+  if (resumePayment(urlParams)) return;
 
   render();
 

@@ -107,6 +107,11 @@ or add the next dated one, at the end of a session.
 
 ### Member portal — stays and cancellation (phase 3)
 
+- Booking journey review (owner 2026-11-13, `docs/booking-journey.md`) authorises the public widget's checkout,
+  accessibility and payment-recovery improvements. New public holds save contact details before payment and carry
+  `widget_checkout_version = 2`; their webhook recovery uses the one booking writer. Never infer success from bank
+  return parameters, create another intent while the earlier outcome is unknown, or accept client totals. Forrest's
+  promo activation is scoped to its verified public booking identifier; dates and published campaigns remain explicit.
 - Stay promotions (owner 2026-11-13, `docs/booking-promotions.md`): the main portal's public widget and member stays
   accept an explicit promo code behind the per-organisation `booking_promotions_enabled` switch (off by default).
   Campaigns discount accommodation only; extras stay at full price. Booking windows and occupied-night restrictions
