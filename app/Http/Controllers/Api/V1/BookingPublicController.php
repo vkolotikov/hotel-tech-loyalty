@@ -1816,6 +1816,7 @@ class BookingPublicController extends Controller
                             try {
                                 app(BookingEngineService::class)->confirm([
                                     'hold_token' => $holdToken, 'guest' => $payload['guest'] ?? [],
+                                    'special_requests' => $payload['guest']['special_requests'] ?? '',
                                     'payment_intent_id' => $intent->id, 'payment_status' => 'paid', 'payment_method' => 'stripe',
                                 ], 'promotion-recovery:' . $intent->id);
                                 return response()->json(['received' => true]);

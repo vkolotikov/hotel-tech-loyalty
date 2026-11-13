@@ -187,7 +187,7 @@ class PublicStayJourneyTest extends MemberEndpointTestCase
         $event = ['id' => 'evt_journey_recovery', 'type' => 'payment_intent.succeeded', 'data' => ['object' => ['id' => 'pi_journey', 'object' => 'payment_intent', 'amount' => 20000, 'currency' => 'eur', 'metadata' => ['org_id' => (string) $this->org->id, 'hold_token' => $h->hold_token]]]];
         $this->stripe()->shouldReceive('constructWebhookEvent')->andReturn(\Stripe\Event::constructFrom($event));
         $engine = \Mockery::mock(\App\Services\BookingEngineService::class);
-        $engine->shouldReceive('confirm')->once()->with(\Mockery::on(fn ($data) => $data['hold_token'] === $h->hold_token && $data['guest']['email'] === 'guest@example.test' && $data['guest']['special_requests'] === 'Late arrival' && $data['payment_intent_id'] === 'pi_journey'), \Mockery::type('string'))->andReturn(['success' => true]);
+        $engine->shouldReceive('confirm')->once()->with(\Mockery::on(fn ($data) => $data['hold_token'] === $h->hold_token && $data['guest']['email'] === 'guest@example.test' && $data['special_requests'] === 'Late arrival' && $data['payment_intent_id'] === 'pi_journey'), \Mockery::type('string'))->andReturn(['success' => true]);
         $this->app->instance(\App\Services\BookingEngineService::class, $engine);
         $this->postJson('/api/v1/booking/webhooks/stripe', $event)->assertOk()->assertJsonPath('received', true);
     }
