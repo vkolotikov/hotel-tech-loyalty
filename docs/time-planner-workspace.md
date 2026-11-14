@@ -208,6 +208,9 @@ and add tasks to employees by day". Four pieces, all behind the same gates as th
 - **Everywhere the AI plans** — the day plan, the week plan, the assistant — it now reads the business, the type and
   task notes and the people's titles, levels, strengths and development (`AiFacts`), and every candidate is sized by
   `Learning::size`.
+- **Renaming a task type** in Settings moves what the AI was taught about it (`planner_type_notes`) to the new name,
+  read afresh after the types are saved, never over a note the new name already has (`settingsLogic.typeRenames`,
+  `renamedNotes`). Tasks, templates and preferences keep the old name as before.
 
 ## The areas
 
@@ -217,7 +220,7 @@ and add tasks to employees by day". Four pieces, all behind the same gates as th
 | Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI"; in the week view "Plan the team's week with AI", "Plan my week with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
-| AI assistant | `/time/assistant` | ask about days, weeks, the pool and the team; proposed changes applied one by one or all at once; what the AI knows (readiness) |
+| AI assistant | `/time/assistant` | ask about days, weeks, the pool and the team; proposed changes applied one by one or all at once; what the AI knows (readiness); in the phone's top bar too |
 | AI coach | `/time/coach` (`?tab=overview|durations|people|knowledge`, `?weeks=4|8|12|26`) | readiness, the period's figures, the AI strategy with one-press fixes, task lengths planned against real, people by type, Teach the AI (a manager's) |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
 | Settings | `/time/settings` (`?tab=day|planning|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), task types, tasks, templates (shared with the full admin) |
@@ -230,7 +233,8 @@ templates as a list that opens above the types (`task/TaskPickers.tsx`, decision
 title (focused; a task picked fills an empty one, never one the person typed; Enter adds), who, the day and the rest. "Add
 & next" adds the task and keeps the panel open for the next one of the same day, person and type.
 
-Find (⌘K / Ctrl K): add a task, add with AI, plan my day, a person's day, the areas. Keys: N new task, A add with AI,
+Find (⌘K / Ctrl K): add a task, add with AI, plan my day, plan the week (`/time/plan?view=week&ai=week`: the team's
+week for whoever may plan for others, else mine), a person's day, the areas. Keys: N new task, A add with AI,
 P Planner, B Backlog, ? shortcuts.
 
 ## Rules the code keeps (and the tests that keep them)

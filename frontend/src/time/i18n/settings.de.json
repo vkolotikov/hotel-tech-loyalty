@@ -131,7 +131,7 @@
     "problem_empty": "Geben Sie dem Typ einen Namen.",
     "remove_line": "Aufgaben mit diesem Typ behalten ihn als Text; nach dem Speichern wird er für neue Arbeit nicht mehr angeboten.",
     "remove_title": "„{{name}}“ entfernen?",
-    "rename_hint": "Wenn Sie einen Typ umbenennen oder entfernen, bleiben Aufgaben, die ihn schon haben, unverändert.",
+    "rename_hint": "Beim Umbenennen eines Typs bleibt erhalten, was die KI darüber gelernt hat. Umbenennen oder Entfernen ändert nichts an Aufgaben, die ihn schon haben.",
     "title": "Aufgabentypen",
     "unnamed": "Unbenannter Typ"
   },

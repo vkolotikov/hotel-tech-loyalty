@@ -39,6 +39,7 @@ function FindPanel({ onClose, onRun, nav, dark, slim, fallbackFocus }: Parameter
     { id: 'new-task', kind: 'action', label: t('time.find.new_task', 'Add a task'), go: { run: 'new-task' }, icon: Plus },
     { id: 'capture', kind: 'action', label: t('time.find.capture', 'Add tasks with AI (text or voice)'), go: { run: 'capture' }, icon: Mic },
     { id: 'plan', kind: 'action', label: t('time.find.plan', 'Plan my day with AI'), go: { to: '/time/plan?ai=me' }, icon: Sparkles },
+    { id: 'plan-week', kind: 'action', label: t('time.find.plan_week', 'Plan the week with AI'), go: { to: '/time/plan?view=week&ai=week' }, icon: Sparkles },
     ...nav.map(item => ({ id: `go-${item.to}`, kind: 'action', label: item.label, sub: t('time.find.go_to', 'Go to'), go: { to: item.to }, icon: item.icon })),
     { id: 'theme', kind: 'action', label: dark ? t('time.find.theme_light', 'Switch to light') : t('time.find.theme_dark', 'Switch to dark'), go: { run: 'theme' }, icon: dark ? Sun : Moon },
     { id: 'rail', kind: 'action', label: slim ? t('workspace.shell.expand', 'Expand menu') : t('workspace.shell.collapse', 'Collapse menu'), go: { run: 'rail' }, icon: PanelLeft },

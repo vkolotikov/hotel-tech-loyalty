@@ -131,7 +131,7 @@
     "problem_empty": "Donnez un nom au type.",
     "remove_line": "Les tâches qui ont déjà ce type le gardent comme texte ; après l’enregistrement, il n’est plus proposé pour le nouveau travail.",
     "remove_title": "Retirer « {{name}} » ?",
-    "rename_hint": "Renommer ou retirer un type ne change rien aux tâches qui l’ont déjà.",
+    "rename_hint": "Renommer un type conserve ce que l’IA a appris à son sujet. Renommer ou supprimer un type ne change pas les tâches qui l’ont déjà.",
     "title": "Types de tâches",
     "unnamed": "Type sans nom"
   },

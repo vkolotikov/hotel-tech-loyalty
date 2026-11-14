@@ -66,9 +66,41 @@ word: deploy when done.
   or next, the next first late in the week), a staff member's overview tiles showing the team's totals (now their own),
   the week's "not planned" sentence speaking of a day.
 
-## Deploy
+## Deploy (14 Nov, 17:38 UTC)
 
-(filled in after the deploy, below)
+- Production **84cdb581** by the source-patch recipe on `origin/main` **76b6a2c7** (another session's booking release):
+  source patch **e828e2a0** — the branch from bc410bd to **3ca87339** plus this handoff, 80 files (31 added, 49
+  changed, none deleted). Five files had changed on main too and were merged three-way (`CLAUDE.md`, `AccessMap.php`,
+  `routes/api.php`, the 9 Nov handoff, and `frontend/src/time/lib/api.ts`, where main had added `time/pulse`: both
+  kept). Per-file parity: the 75 others match the branch byte for byte; every line this round added to the five
+  merged files is present. Fresh build **84cdb581**. The artifact had its own `composer install` (main's lock carries a
+  Laravel security fix).
+- **On the artifact**: the full PHP sweep, 82 scoped runs — **7,796 passed, 25 skipped, 0 failed**; Vitest **483
+  files / 7,211 tests** passed; `tsc -b` and lint clean; `npm run build`; the built SPA served by `php artisan serve`
+  from the artifact renders `/time`, `/time/plan?view=week`, `/time/assistant` and `/time/coach` with no error.
+  (`php -S` with `public/index.php` as the router answers the SPA's assets as HTML — use `artisan serve` for this check.)
+- **Live by content** (17:41 UTC): `index-Cw6cqmvO.js` → `TimeApp-BKIzMVDb.js` (the week plan's button) →
+  `CoachPage-CIOXgmPP.js` ("Make a strategy"), `AssistantPage-f9CagO2P.js` ("Proposed changes"); `/time`,
+  `/time/coach`, `/time/assistant`, `/time/plan`, `/time/register` 200; `api/v1/admin/time/coach` and the other
+  session's `time/pulse` 401 without a login; `hexa-academy`'s kit 64,577 bytes, 0 `rp-` markers; the retired
+  `ruled_page.css` 404. Production's bundle names differ from the committed build's (Cloud rebuilds it): check by
+  content, not by the committed hash.
+- CI on main 84cdb581: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43622167280 — **green** (all
+  eight jobs: PHP on SQLite in three shards, PHP on PostgreSQL 18 with only known failures, Larastan, the SPA on Node 24
+  and 26, the dependency audit).
+- **Next source-patch baseline: 3ca87339** (handoff commits after it are docs only).
+
+## Follow-up the same day (the owner: "is there anything else what need to do, if yes do it")
+
+- The AI assistant is in the phone's top bar (staff plan their own day from their phones); Find has "Plan the week with
+  AI" (`/time/plan?view=week&ai=week`).
+- Renaming a task type in Settings moves what the AI was taught about it to the new name (checked in the browser: the
+  note followed the rename and came back with the old name).
+- The Time Planner's sign-up page names the week plan, the assistant and the coach in every package (five languages).
+- Worth watching: one assistant answer may take several AI calls, so Lite's allowance (5 € a month) covers fewer
+  conversations than the plans and reviews did. The allowance stops the AI before the provider is asked, and the rules
+  still plan when it is used up; if Lite customers run out early, raising Lite's `ai_monthly_cost_cents` is billing's
+  change (and `PlanModules`' fallback with it).
 
 ## What the owner does by hand
 
@@ -78,4 +110,5 @@ Nothing for this round. The AI uses the venue's existing allowance and the serve
 
 - The full admin's own Planner does not show clocked time; its Stats count planned minutes as before.
 - Real lengths need clocked work (3 per type or task); until teams use Start and Finish, the planned length stands in.
-- Renaming a task type does not rename its notes (as with tasks, templates and preferences in the full admin).
+- Renaming a task type renames neither tasks, templates nor preferences (as in the full admin); its AI notes do follow
+  it (follow-up below).

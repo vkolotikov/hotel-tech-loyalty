@@ -16,7 +16,8 @@ export const AREAS: readonly AreaDef[] = [
   { key: 'today', to: '/time', end: true, phone: true },
   { key: 'plan', to: '/time/plan', end: false, phone: true, group: 'planning' },
   { key: 'backlog', to: '/time/backlog', end: false, phone: true, group: 'planning' },
-  { key: 'assistant', to: '/time/assistant', end: false, phone: false, group: 'ai' },
+  // On a phone too (2026-11-14): staff plan their own day from their phones.
+  { key: 'assistant', to: '/time/assistant', end: false, phone: true, group: 'ai' },
   { key: 'coach', to: '/time/coach', end: false, phone: false, group: 'ai' },
   { key: 'team', to: '/time/team', end: false, phone: false, group: 'people' },
   { key: 'insights', to: '/time/insights', end: false, phone: true, group: 'reports' },

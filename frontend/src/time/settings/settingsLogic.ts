@@ -116,7 +116,11 @@ export function dayChanges(form: DayForm, saved: DayForm): { key: string; value:
 
 /* ─── Task types (`planner_groups`) ──────────────────────────────── */
 
-export interface GroupEntry { name: string; icon: string; color: string }
+export interface GroupEntry {
+  name: string; icon: string; color: string
+  /** The name it was saved under (a row read from the settings), so a rename can carry what the AI was taught. */
+  was?: string
+}
 
 /** A new type's look, as the full admin gives one (its Custom fallback). */
 export const NEW_GROUP_LOOK = { icon: CUSTOM_GROUP_META.iconKey ?? 'sparkles', color: CUSTOM_GROUP_META.color } as const
@@ -140,7 +144,7 @@ export function lookOf(name: string | null | undefined, groups: readonly GroupDe
 
 /** The editor's rows: every type with its look filled in, as the full admin's editor shows (and saves) them. */
 export function groupEntries(groups: readonly GroupDef[]): GroupEntry[] {
-  return groups.map(g => ({ name: g.name, ...lookOf(g.name, [g]) }))
+  return groups.map(g => ({ name: g.name, ...lookOf(g.name, [g]), was: g.name }))
 }
 
 /** What `planner_groups` is saved as: the whole list in its order, `[{name, icon, color}]`. */
@@ -150,6 +154,33 @@ export function groupsPayload(list: readonly GroupEntry[]): GroupEntry[] {
 
 export function sameGroups(a: readonly GroupEntry[], b: readonly GroupEntry[]): boolean {
   return JSON.stringify(groupsPayload(a)) === JSON.stringify(groupsPayload(b))
+}
+
+/** The types a save renames: saved name → new name (rows added since, or left as they were, are not renames). */
+export function typeRenames(list: readonly GroupEntry[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const g of list) {
+    const name = g.name.trim()
+    if (g.was !== undefined && name !== '' && name !== g.was) out[g.was] = name
+  }
+  return out
+}
+
+/**
+ * What the AI was taught about each type (`planner_type_notes`, by name) after a rename (2026-11-14): a renamed type's
+ * note moves to its new name, unless the new name already has one of its own. Null when nothing moves.
+ */
+export function renamedNotes<N>(notes: Record<string, N>, renames: Record<string, string>): Record<string, N> | null {
+  const out: Record<string, N> = { ...notes }
+  let moved = false
+  for (const [from, to] of Object.entries(renames)) {
+    if (from in out && !(to in out)) {
+      out[to] = out[from]
+      delete out[from]
+      moved = true
+    }
+  }
+  return moved ? out : null
 }
 
 export type NameProblem = 'empty' | 'duplicate'

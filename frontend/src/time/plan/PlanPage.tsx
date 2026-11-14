@@ -62,6 +62,16 @@ export function PlanPage() {
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
   // The week's plan (2026-11-14): the days left of the week shown, the team's for whoever may plan for others.
   const [weekPlan, setWeekPlan] = useState<null | 'me' | 'team'>(null)
+  // Find's "Plan the week with AI" lands here with ?view=week&ai=week: the team's week for whoever may plan for others.
+  const weekPlanning = weekPlan ?? (asked === 'week' ? (boot.staff.can.plan_team ? 'team' : 'me') : null)
+  const closeWeekPlan = () => {
+    setWeekPlan(null)
+    if (asked === 'week') {
+      const params = new URLSearchParams(search)
+      params.delete('ai')
+      setSearch(params, { replace: true })
+    }
+  }
   const shownWeek = weekStart(q.date)
   // A week whose days have all passed still offers the week after it (the dialog's "next week").
   const weekOpen = addDays(shownWeek, 13) >= boot.venue.today
@@ -161,7 +171,7 @@ export function PlanPage() {
             onOpenDay={date => go({ view: null, date })} onOpen={task => openTask(task)}
             onCreate={(date, lane) => openTask(null, { task_date: date, person: laneFor(lane) })} />}
 
-      {weekPlan && <WeekPlanDialog monday={shownWeek} team={weekPlan === 'team'} onClose={() => setWeekPlan(null)} />}
+      {weekPlanning && <WeekPlanDialog monday={shownWeek} team={weekPlanning === 'team'} onClose={closeWeekPlan} />}
       {planning && (
         <PlanDialog date={q.date < boot.venue.today ? boot.venue.today : q.date} scope={planning}
           person={planning === 'person' ? q.person ?? undefined : undefined} onClose={() => setPlanning(null)} />

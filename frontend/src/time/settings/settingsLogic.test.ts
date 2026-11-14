@@ -5,7 +5,7 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 import type { ChannelDef, Template } from '../lib/types'
 import {
   GENERAL, NEW_CHANNEL_LOOK, NEW_GROUP_LOOK, addChannel, addGroup, categoriesOf, channelOf, channelsFor, channelsPayload, clockValue, dayChanges,
-  dayFormOf, dayProblem, groupEntries, groupsPayload, lookOf, moved, nameProblems, newNameProblem, replaced, sameChannels, sameDay, sameGroups,
+  dayFormOf, dayProblem, groupEntries, groupsPayload, lookOf, renamedNotes, typeRenames, moved, nameProblems, newNameProblem, replaced, sameChannels, sameDay, sameGroups,
   settingsTabOf, slugOf, templateFormOf, templateGroups, templatePayload, templateProblem, toggleType, typeChips, uniqueKey, withTab, withType,
   without, type DayForm, type TemplateForm,
 } from './settingsLogic'
@@ -82,12 +82,24 @@ describe('task types', () => {
       { name: 'Garden', icon: null, color: null },
     ]
     expect(groupEntries(groups)).toEqual([
-      { name: 'Housekeeping', icon: 'bed-double', color: '#10b981' },
-      { name: 'Spa', icon: 'heart', color: '#ec4899' },
-      { name: 'Garden', ...NEW_GROUP_LOOK },
+      { name: 'Housekeeping', icon: 'bed-double', color: '#10b981', was: 'Housekeeping' },
+      { name: 'Spa', icon: 'heart', color: '#ec4899', was: 'Spa' },
+      { name: 'Garden', ...NEW_GROUP_LOOK, was: 'Garden' },
     ])
     expect(lookOf('spa', groups)).toEqual({ icon: 'heart', color: '#ec4899' })
     expect(lookOf(null, groups)).toEqual(NEW_GROUP_LOOK)
+  })
+
+  it('moves what the AI was taught about a renamed type to its new name, never over a note of the new name', () => {
+    const saved = groupEntries([{ name: 'Spa', icon: 'heart', color: '#ec4899' }, { name: 'Garden', icon: null, color: null }, { name: 'Bar', icon: null, color: null }])
+    const list = addGroup([{ ...saved[0], name: ' Wellness ' }, saved[1], { ...saved[2], name: 'Garden ' }], 'Concierge')
+    // Spa → Wellness; Garden as it was; Bar renamed to a name that has its own note; Concierge is new.
+    expect(typeRenames(list)).toEqual({ Spa: 'Wellness', Bar: 'Garden' })
+    const notes = { Spa: { notes: 'Book the rooms', typical_minutes: 50, best_time: 'morning' }, Garden: { notes: 'Own', typical_minutes: null, best_time: null } }
+    expect(renamedNotes(notes, typeRenames(list))).toEqual({ Wellness: notes.Spa, Garden: notes.Garden })
+    expect(renamedNotes(notes, { Bar: 'Pub' })).toBeNull()
+    // A saved list carries no name it was saved under.
+    expect(groupsPayload(list).every(g => !('was' in g))).toBe(true)
   })
 
   it('saves the whole list in its order with trimmed names', () => {
