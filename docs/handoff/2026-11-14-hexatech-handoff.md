@@ -66,9 +66,26 @@ word: deploy when done.
   or next, the next first late in the week), a staff member's overview tiles showing the team's totals (now their own),
   the week's "not planned" sentence speaking of a day.
 
-## Deploy
+## Deploy (14 Nov, 17:38 UTC)
 
-(filled in after the deploy, below)
+- Production **84cdb581** by the source-patch recipe on `origin/main` **76b6a2c7** (another session's booking release):
+  source patch **e828e2a0** — the branch from bc410bd to **3ca87339** plus this handoff, 80 files (31 added, 49
+  changed, none deleted). Five files had changed on main too and were merged three-way (`CLAUDE.md`, `AccessMap.php`,
+  `routes/api.php`, the 9 Nov handoff, and `frontend/src/time/lib/api.ts`, where main had added `time/pulse`: both
+  kept). Per-file parity: the 75 others match the branch byte for byte; every line this round added to the five
+  merged files is present. Fresh build **84cdb581**. The artifact had its own `composer install` (main's lock carries a
+  Laravel security fix).
+- **On the artifact**: the full PHP sweep, 82 scoped runs — **7,796 passed, 25 skipped, 0 failed**; Vitest **483
+  files / 7,211 tests** passed; `tsc -b` and lint clean; `npm run build`; the built SPA served by `php artisan serve`
+  from the artifact renders `/time`, `/time/plan?view=week`, `/time/assistant` and `/time/coach` with no error.
+  (`php -S` with `public/index.php` as the router answers the SPA's assets as HTML — use `artisan serve` for this check.)
+- **Live by content** (17:41 UTC): `index-Cw6cqmvO.js` → `TimeApp-BKIzMVDb.js` (the week plan's button) →
+  `CoachPage-CIOXgmPP.js` ("Make a strategy"), `AssistantPage-f9CagO2P.js` ("Proposed changes"); `/time`,
+  `/time/coach`, `/time/assistant`, `/time/plan`, `/time/register` 200; `api/v1/admin/time/coach` and the other
+  session's `time/pulse` 401 without a login; `hexa-academy`'s kit 64,577 bytes, 0 `rp-` markers; the retired
+  `ruled_page.css` 404. Production's bundle names differ from the committed build's (Cloud rebuilds it): check by
+  content, not by the committed hash.
+- **Next source-patch baseline: 3ca87339** (handoff commits after it are docs only).
 
 ## What the owner does by hand
 
