@@ -88,6 +88,42 @@ trait SetsUpTimeWorkspace
         ]);
     }
 
+    /**
+     * Claude's replies in order (the assistant's rounds): each `['tool' => name, 'input' => [...]]` (a tool call) or
+     * `['text' => '...']` (an answer).
+     *
+     * @param  list<array<string, mixed>>  $replies
+     */
+    protected function claudeReplies(array $replies): void
+    {
+        $sequence = \Illuminate\Support\Facades\Http::sequence();
+        foreach ($replies as $i => $r) {
+            $sequence->push([
+                'id' => 'msg_' . $i, 'type' => 'message', 'role' => 'assistant', 'model' => 'claude-sonnet-test',
+                'content' => isset($r['tool'])
+                    ? [['type' => 'tool_use', 'id' => 'toolu_' . $i, 'name' => $r['tool'], 'input' => (object) ($r['input'] ?? [])]]
+                    : [['type' => 'text', 'text' => (string) $r['text']]],
+                'stop_reason' => isset($r['tool']) ? 'tool_use' : 'end_turn',
+                'usage' => ['input_tokens' => 1000, 'output_tokens' => 100],
+            ], 200);
+        }
+        \Illuminate\Support\Facades\Http::fake(['api.anthropic.com/*' => $sequence]);
+    }
+
+    /** A finished task of this organisation: planned `minutes`, clocked `real` (or none), done on its day unless `late`. */
+    protected function doneTask(array $attributes, int $minutes, ?int $real = null, bool $late = false): int
+    {
+        $day = $attributes['task_date'] ?? '2026-11-02';
+
+        return $this->task($attributes + [
+            'duration_minutes' => $minutes,
+            'actual_minutes'   => $real,
+            'completed'        => true,
+            'status'           => 'done',
+            'completed_at'     => $late ? \Carbon\CarbonImmutable::parse($day . ' 10:00:00', 'UTC')->addDays(2) : \Carbon\CarbonImmutable::parse($day . ' 10:00:00', 'UTC'),
+        ]);
+    }
+
     protected function buildTimeTables(): void
     {
         foreach ([

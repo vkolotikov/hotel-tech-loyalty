@@ -18,6 +18,8 @@ const BacklogPage = lazy(() => import('./backlog/BacklogPage').then(m => ({ defa
 const TeamPage = lazy(() => import('./team/TeamPage').then(m => ({ default: m.TeamPage })))
 const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const SettingsPage = lazy(() => import('./settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const AssistantPage = lazy(() => import('./assistant/AssistantPage').then(m => ({ default: m.AssistantPage })))
+const CoachPage = lazy(() => import('./coach/CoachPage').then(m => ({ default: m.CoachPage })))
 
 function PageLoad({ children }: { children: ReactNode }) {
   return (
@@ -52,6 +54,8 @@ export function TimeApp() {
                 <Route index element={<TodayPage />} />
                 <Route path="plan" element={<PlanPage />} />
                 <Route path="backlog" element={<BacklogPage />} />
+                <Route path="assistant" element={<AssistantPage />} />
+                <Route path="coach" element={<CoachPage />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="insights" element={<InsightsPage />} />
                 <Route path="settings" element={<SettingsPage />} />

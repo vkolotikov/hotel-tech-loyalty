@@ -65,8 +65,11 @@
     "week": "This week"
   },
   "nav": {
+    "assistant": "AI assistant",
     "backlog": "Backlog & pool",
+    "coach": "AI coach",
     "groups": {
+      "ai": "AI",
       "people": "People",
       "planning": "Planning",
       "reports": "Reports",

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, CalendarRange, Home, Inbox, Mic, Plus, Search, Settings2, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, Bot, CalendarRange, GraduationCap, Home, Inbox, Mic, Plus, Search, Settings2, Users, type LucideIcon } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -25,6 +25,8 @@ const ICONS: Record<AreaKey, LucideIcon> = {
   today: Home,
   plan: CalendarRange,
   backlog: Inbox,
+  assistant: Bot,
+  coach: GraduationCap,
   team: Users,
   insights: BarChart3,
   settings: Settings2,
@@ -32,11 +34,11 @@ const ICONS: Record<AreaKey, LucideIcon> = {
 
 /** The default (English) name of each area, beside its key time.nav.<area>. */
 const NAV_DEFAULTS: Record<AreaKey, string> = {
-  today: 'My day', plan: 'Planner', backlog: 'Backlog & pool', team: 'Team & skills', insights: 'Insights', settings: 'Settings',
+  today: 'My day', plan: 'Planner', backlog: 'Backlog & pool', assistant: 'AI assistant', coach: 'AI coach', team: 'Team & skills', insights: 'Insights', settings: 'Settings',
 }
 
 /** The groups' default (English) names, beside their keys time.nav.groups.<group>. */
-const GROUP_DEFAULTS: Record<AreaGroup, string> = { planning: 'Planning', people: 'People', reports: 'Reports', setup: 'Set up' }
+const GROUP_DEFAULTS: Record<AreaGroup, string> = { planning: 'Planning', ai: 'AI', people: 'People', reports: 'Reports', setup: 'Set up' }
 
 /**
  * HexaTech Time Planner on the shared frame (WorkspaceShell): the areas in their groups, Settings, Help and the person

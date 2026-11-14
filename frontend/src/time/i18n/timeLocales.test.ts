@@ -4,6 +4,7 @@ import path from 'node:path'
 import { KNOWN_ERRORS } from '../lib/errors'
 import { SIGNAL_CODES } from '../lib/signals'
 import { REASONS, SKIPPED, UNPLACED } from '../plan/planLogic'
+import { READINESS } from '../coach/coachLogic'
 import { timeBundles, LANGS } from './index'
 
 /**
@@ -35,8 +36,17 @@ const files = Object.fromEntries(fs.readdirSync(I18N).filter(f => f.endsWith('.j
 const bundles = timeBundles(files)
 const used = [...new Set(sources(DIR).flatMap(file => [...fs.readFileSync(file, 'utf8').matchAll(/\bt\(\s*['"`](time\.[a-zA-Z0-9_.]+)['"`]/g)].map(m => m[1])))].sort()
 const built = [
-  ...['today', 'plan', 'backlog', 'team', 'insights', 'settings'].map(a => `time.nav.${a}`),
-  ...['planning', 'people', 'reports', 'setup'].map(g => `time.nav.groups.${g}`),
+  ...['today', 'plan', 'backlog', 'team', 'insights', 'settings', 'assistant', 'coach'].map(a => `time.nav.${a}`),
+  ...['planning', 'people', 'reports', 'setup', 'ai'].map(g => `time.nav.groups.${g}`),
+  // The AI assistant and coach (2026-11-14): the words their codes pick.
+  ...['plan_tomorrow_team', 'fill_week', 'best_at', 'last_week', 'longer_than_planned', 'plan_my_day', 'pool_for_me', 'my_week'].map(k => `time.assistant.suggest.${k}`),
+  ...READINESS.flatMap(code => [`time.coach.item.${code}`, `time.coach.item_hint.${code}`]),
+  ...['low', 'mid', 'high'].map(s => `time.coach.state.${s}`),
+  ...['high', 'medium', 'low'].map(s => `time.coach.impact.${s}`),
+  ...['duration', 'training', 'cross_skill', 'schedule', 'recognition', 'process', 'data'].map(k => `time.coach.kind.${k}`),
+  ...['few', 'longer', 'shorter', 'set_typical', 'ok'].map(k => `time.coach.advice.${k}`),
+  ...['morning', 'midday', 'afternoon', 'evening', 'any'].map(k => `time.coach.best.${k}`),
+  ...['trainee', 'junior', 'experienced', 'senior', 'lead'].map(k => `time.team.levels.${k}`),
   ...SIGNAL_CODES.map(code => `time.signals.${code}`),
   ...REASONS.map(r => `time.plan.reason.${r}`),
   ...UNPLACED.map(r => `time.plan.unplaced.${r}`),

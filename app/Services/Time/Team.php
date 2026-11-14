@@ -73,7 +73,7 @@ final class Team
                 'manager'     => false,
                 'avatar_url'  => null,
                 'has_account' => false,
-                'profile'     => ['skills' => null, 'knowledge' => '', 'work_start' => null, 'work_end' => null, 'work_days' => null, 'break_minutes' => 0],
+                'profile'     => PlannerProfiles::blank(),
                 'prefers'     => $prefs[$name] ?? ['groups' => [], 'tasks' => []],
             ];
         }

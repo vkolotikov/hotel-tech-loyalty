@@ -12,17 +12,19 @@ import { weekdayName } from '../lib/format'
 import { useRefresh } from '../lib/queries'
 import { plannerApi } from '../lib/tasks'
 import type { Person } from '../lib/types'
-import { TextArea, TextInput, Toggle } from '../ui/inputs'
+import { Select, TextArea, TextInput, Toggle } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
 import {
-  BREAK_MAX, BREAKS, WEEKDAYS, canEditProfile, canSetSkills, choices, formOf, formProblem, hasChanges, mergePrefs,
+  BREAK_MAX, BREAKS, NOTE_MAX, TITLE_MAX, WEEKDAYS, canEditProfile, canSetSkills, choices, formOf, formProblem, hasChanges, mergePrefs,
   parsePrefs, savePlan, toggleIn, type FormProblem, type TeamForm,
 } from './teamLogic'
 
 /** A problem with the form, in words. */
 function problemText(t: TFunction, problem: FormProblem, max: number): string {
   if (problem === 'knowledge') return t('time.team.problem_knowledge', 'Keep what they know to {{max}} characters.', { max })
+  if (problem === 'title') return t('time.team.problem_title', 'Keep the job title to {{max}} characters.', { max: TITLE_MAX })
+  if (problem === 'notes') return t('time.team.problem_notes', 'Keep each note to {{max}} characters.', { max: NOTE_MAX })
   if (problem === 'hours_both') return t('time.team.problem_hours_both', 'Give both times, or leave both empty for the venue’s hours.')
   if (problem === 'hours_order') return t('time.team.problem_hours_order', 'The day must end after it starts.')
   if (problem === 'days') return t('time.team.problem_days', 'Choose at least one work day.')
@@ -50,13 +52,17 @@ function Group({ title, hint, children }: { title: string; hint?: string; childr
   )
 }
 
+/** The levels the server keeps (PlannerProfiles::LEVELS); the people endpoint answers the list. */
+const LEVELS = ['trainee', 'junior', 'experienced', 'senior', 'lead'] as const
+const LEVEL_DEFAULTS: Record<string, string> = { trainee: 'Trainee', junior: 'Junior', experienced: 'Experienced', senior: 'Senior', lead: 'Team lead' }
+
 /**
  * A person's planner profile (a manager's): what they know, their hours, days and break, the types they may take from
  * the open pool, and the work that fits them best. Saved by the writer each part has — `time/people/{user}`, the full
  * admin's `team/{staff}`, and the `planner_employee_prefs` setting (read afresh first, only this person's entry
  * changed) — and only the parts that changed.
  */
-export function ProfilePanel({ person, knowledgeMax, onClose }: { person: Person; knowledgeMax: number; onClose: () => void }) {
+export function ProfilePanel({ person, knowledgeMax, levels = LEVELS, onClose }: { person: Person; knowledgeMax: number; levels?: readonly string[]; onClose: () => void }) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const toast = useToast()
@@ -128,6 +134,30 @@ export function ProfilePanel({ person, knowledgeMax, onClose }: { person: Person
                 {t('time.team.knowledge_count', '{{used}} of {{max}}', { used: form.knowledge.length, max: knowledgeMax })}
               </p>
             </div>
+
+            <Group title={t('time.team.teach', 'For the AI')}
+              hint={t('time.team.teach_hint', 'Their role, level, what they do best and what they are learning. The AI weighs it when it plans and coaches.')}>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem]">
+                <Field label={t('time.team.job_title', 'Job title')}>
+                  <TextInput value={form.job_title} maxLength={TITLE_MAX} onChange={e => set('job_title', e.target.value)}
+                    placeholder={t('time.team.job_title_placeholder', 'Room attendant, receptionist…')} />
+                </Field>
+                <Field label={t('time.team.level', 'Level')}>
+                  <Select value={form.level} onChange={e => set('level', e.target.value)}>
+                    <option value="">{t('time.team.level_none', 'Not set')}</option>
+                    {levels.map(l => <option key={l} value={l}>{t(`time.team.levels.${l}`, LEVEL_DEFAULTS[l] ?? l)}</option>)}
+                  </Select>
+                </Field>
+              </div>
+              <Field label={t('time.team.strengths', 'What they do best')}>
+                <TextArea rows={2} value={form.strengths} maxLength={NOTE_MAX} onChange={e => set('strengths', e.target.value)}
+                  placeholder={t('time.team.strengths_placeholder', 'Fast and careful with suites; calm with guests…')} />
+              </Field>
+              <Field label={t('time.team.develop', 'What they are learning')}>
+                <TextArea rows={2} value={form.develop} maxLength={NOTE_MAX} onChange={e => set('develop', e.target.value)}
+                  placeholder={t('time.team.develop_placeholder', 'Front desk shifts with a senior colleague…')} />
+              </Field>
+            </Group>
 
             <Group title={t('time.team.hours', 'Hours')}
               hint={t('time.team.hours_hint', 'Leave both empty for the venue’s hours ({{start}}–{{end}}).', { start: venue.start, end: venue.end })}>

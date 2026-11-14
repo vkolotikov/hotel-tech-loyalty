@@ -1695,6 +1695,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::post('review', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'review'])->middleware('throttle:20,1,time-review');
                     Route::post('capture', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'capture'])->middleware('throttle:20,1,time-capture');
                     Route::post('transcribe', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'transcribe'])->middleware('throttle:30,1,time-voice');
+                    // The AI assistant (2026-11-14): the week's plan, the conversation, the coach and its drafts.
+                    Route::post('plan-week', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'planWeek'])->middleware('throttle:10,1,time-week');
+                    Route::post('assistant', [\App\Http\Controllers\Api\V1\Admin\Time\AssistantController::class, 'turn'])->middleware('throttle:30,1,time-assistant');
+                    Route::get('coach', [\App\Http\Controllers\Api\V1\Admin\Time\AssistantController::class, 'coach']);
+                    Route::post('coach/strategy', [\App\Http\Controllers\Api\V1\Admin\Time\AssistantController::class, 'strategy'])->middleware('throttle:10,1,time-coach');
+                    Route::post('coach/draft', [\App\Http\Controllers\Api\V1\Admin\Time\AssistantController::class, 'draft'])->middleware('throttle:10,1,time-draft');
                 });
             });
 

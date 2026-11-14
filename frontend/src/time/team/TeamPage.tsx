@@ -139,7 +139,7 @@ export function TeamPage() {
         )}
       </div>
 
-      {editPerson && <ProfilePanel key={editPerson.key} person={editPerson} knowledgeMax={knowledgeMax} onClose={() => setEditing(null)} />}
+      {editPerson && <ProfilePanel key={editPerson.key} person={editPerson} knowledgeMax={knowledgeMax} levels={people.data?.levels} onClose={() => setEditing(null)} />}
       {planning && <PlanDialog date={boot.venue.today} scope={planning.scope} person={planning.person} onClose={() => setPlanning(null)} />}
     </Page>
   )
@@ -224,7 +224,7 @@ function PersonCard({ person, canEdit, canPlan, onEdit, onPlan }: { person: Pers
   const skills = skillsKind(person)
   const experience = experienceRows(person.experience)
   const titleId = `time-person-${person.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`
-  const line = [roleText(t, person), person.department].filter(Boolean).join(' · ')
+  const line = [person.profile.job_title?.trim() || null, roleText(t, person), person.department].filter(Boolean).join(' · ')
   const prefers = person.prefers.groups.length + person.prefers.tasks.length > 0
 
   return (

@@ -65,8 +65,11 @@
     "week": "Diese Woche"
   },
   "nav": {
+    "assistant": "KI-Assistent",
     "backlog": "Backlog & Pool",
+    "coach": "KI-Coach",
     "groups": {
+      "ai": "KI",
       "people": "Personen",
       "planning": "Planung",
       "reports": "Berichte",

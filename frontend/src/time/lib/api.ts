@@ -1,5 +1,8 @@
 import { api } from '../../lib/api'
-import type { ApplyResult, Board, Bootstrap, CaptureDraft, Insights, Person, PlanResult, Review, Task, Today, Week } from './types'
+import type {
+  ApplyResult, AssistantAnswer, AssistantProposal, Board, Bootstrap, CaptureDraft, CoachOverview, Drafts, Insights, Person, PlanResult, Review, Strategy, Task, Today, Week,
+  WeekPlanResult,
+} from './types'
 import type { Pulse } from '../../lib/venuePulse'
 
 /**
@@ -113,17 +116,27 @@ export const timeApi = {
   pulse: () => get<Pulse>('time/pulse'),
   day: (date: string, person?: string | null) => get<Board>(`time/day${params({ date, person })}`),
   week: (start: string, person?: string | null) => get<Week>(`time/week${params({ start, person })}`),
-  people: () => get<{ people: Person[]; knowledge_max: number }>('time/people'),
+  people: () => get<{ people: Person[]; knowledge_max: number; note_max?: number; levels?: string[] }>('time/people'),
   /** The backlog as the full admin's `planner/backlog` chooses it, in the workspace's task shape. */
   backlog: (scope: 'mine' | 'pool') => get<{ tasks: Task[] }>(`time/backlog${params({ scope })}`),
   teamBacklog: () => get<{ pool: Task[]; buckets: { key: string; user_id: number; name: string; tasks: Task[] }[] }>('time/backlog?scope=team'),
   insights: (from: string, to: string, person?: string | null) => get<Insights>(`time/insights${params({ from, to, person })}`),
-  estimate: (q: { task_group?: string | null; task_category?: string | null; title?: string | null }) =>
+  estimate: (q: { task_group?: string | null; task_category?: string | null; title?: string | null; person?: string | null }) =>
     get<{ estimate: { minutes: number; samples: number; basis: string } | null }>(`time/estimate${params(q)}`),
   clock: (taskId: number, action: 'start' | 'pause' | 'finish') => send<Task>('post', `time/tasks/${taskId}/${action}`),
   plan: (body: PlanRequest) => send<PlanResult>('post', 'time/plan', body),
-  apply: (date: string, lines: { task_id: number; person: string; start_time: string; duration_minutes: number; seen: string | null }[]) =>
+  apply: (date: string, lines: { task_id: number; person: string; start_time: string; duration_minutes: number; seen: string | null; date?: string }[]) =>
     send<ApplyResult>('post', 'time/plan/apply', { date, lines }),
+  /** A week's plan (2026-11-14): the pool, backlogs and overdue work to days and people, each day's times. */
+  planWeek: (body: { start: string; scope: 'me' | 'team'; include_pool?: boolean; include_backlog?: boolean; include_overdue?: boolean; use_ai?: boolean; instruction?: string; lang?: string }) =>
+    send<WeekPlanResult>('post', 'time/plan-week', body),
+  /** One turn of the AI assistant: its reply and the changes it proposes (checked by the server). */
+  assistant: (messages: { role: 'user' | 'assistant'; content: string }[], lang: string) => send<AssistantAnswer>('post', 'time/assistant', { messages, lang }),
+  /** Applies one of the assistant's proposals: the planner call the server worked out (the planner's own endpoints decide). */
+  applyProposal: (p: AssistantProposal) => send<unknown>(p.request.method, p.request.path, p.request.body),
+  coach: (weeks?: number) => get<CoachOverview>(`time/coach${params({ weeks })}`),
+  strategy: (weeks: number, lang: string) => send<Strategy>('post', 'time/coach/strategy', { weeks, lang }),
+  draft: (kind: 'people' | 'types' | 'business', lang: string) => send<Drafts>('post', 'time/coach/draft', { kind, lang }),
   review: (body: { kind: 'day'; date: string; person?: string | null; lang?: string } | { kind: 'period'; from: string; to: string; person?: string | null; lang?: string }) =>
     send<Review>('post', 'time/review', body),
   capture: (text: string, lang: string, date?: string) => send<{ tasks: CaptureDraft[] }>('post', 'time/capture', { text, lang, ...(date ? { date } : {}) }),

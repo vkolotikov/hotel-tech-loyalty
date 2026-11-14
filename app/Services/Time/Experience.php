@@ -75,6 +75,34 @@ final class Experience
     }
 
     /**
+     * How long this person usually takes for such work: the median of their own finished tasks with the same task, else
+     * the same type (2026-11-14). Null with fewer than three of their own to go by.
+     *
+     * @return array{minutes: int, samples: int, basis: string}|null
+     */
+    public function estimateFor(int $orgId, string $personKey, ?string $group, ?string $category): ?array
+    {
+        $mine = $this->finished($orgId, self::DAYS)->filter(fn (PlannerTask $t) => $this->team->ownerKey($t) === $personKey);
+        $label = mb_strtolower(trim((string) ($category ?: '')));
+        foreach ([
+            $label !== '' ? $mine->filter(fn (PlannerTask $t) => mb_strtolower(trim((string) $t->task_category)) === $label) : collect(),
+            $group ? $mine->filter(fn (PlannerTask $t) => $t->task_group === $group) : collect(),
+        ] as $rows) {
+            $minutes = $rows->map(fn (PlannerTask $t) => $t->actual_minutes !== null ? (int) $t->actual_minutes : TaskView::minutes($t))
+                ->filter(fn (int $m) => $m > 0)->sort()->values();
+            if ($minutes->count() < 3) {
+                continue;
+            }
+            $mid = intdiv($minutes->count(), 2);
+            $median = $minutes->count() % 2 ? $minutes[$mid] : (int) round(($minutes[$mid - 1] + $minutes[$mid]) / 2);
+
+            return ['minutes' => max(5, (int) (round($median / 5) * 5)), 'samples' => $minutes->count(), 'basis' => 'person'];
+        }
+
+        return null;
+    }
+
+    /**
      * How long a task like this usually takes: the median of the finished tasks with the same task label, else the
      * same type, from clocked time where there is some. Null with fewer than three to go by.
      *

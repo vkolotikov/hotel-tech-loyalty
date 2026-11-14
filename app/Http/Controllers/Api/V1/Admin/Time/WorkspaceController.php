@@ -9,6 +9,7 @@ use App\Models\PlannerTask;
 use App\Services\Appointments\VenueClock;
 use App\Services\Time\DayBoard;
 use App\Services\Time\Experience;
+use App\Services\Time\Knowledge;
 use App\Services\Time\PlannerAi;
 use App\Services\Time\PlannerCatalogue;
 use App\Services\Time\PlannerProfiles;
@@ -248,7 +249,7 @@ class WorkspaceController extends Controller
             'today'      => isset($loads[$p['key']])
                 ? ['works' => $loads[$p['key']]['works'], 'planned_minutes' => $loads[$p['key']]['planned_minutes'], 'capacity_minutes' => $loads[$p['key']]['capacity_minutes'], 'load_pct' => $loads[$p['key']]['load_pct'], 'window' => $loads[$p['key']]['window']]
                 : null,
-        ], $team->people()), 'knowledge_max' => PlannerProfiles::KNOWLEDGE_MAX]);
+        ], $team->people()), 'knowledge_max' => PlannerProfiles::KNOWLEDGE_MAX, 'note_max' => PlannerProfiles::NOTE_MAX, 'levels' => PlannerProfiles::LEVELS]);
     }
 
     /** A person's planner profile (a manager's): knowledge, hours, days, break. Skills stay the full admin's `team/{id}`. */
@@ -262,6 +263,11 @@ class WorkspaceController extends Controller
             'work_days'     => 'sometimes|nullable|array|max:7',
             'work_days.*'   => 'integer|between:1,7',
             'break_minutes' => 'sometimes|nullable|integer|between:0,180',
+            // What a manager teaches the AI about the person (2026-11-14).
+            'job_title'     => 'sometimes|nullable|string|max:' . PlannerProfiles::TITLE_MAX,
+            'level'         => 'sometimes|nullable|string|in:' . implode(',', PlannerProfiles::LEVELS),
+            'strengths'     => 'sometimes|nullable|string|max:' . PlannerProfiles::NOTE_MAX,
+            'develop'       => 'sometimes|nullable|string|max:' . PlannerProfiles::NOTE_MAX,
         ]);
         $profiles->write($user, $data);
 
@@ -280,18 +286,29 @@ class WorkspaceController extends Controller
         return response()->json($insights->for((int) $request->attributes->get('workspace_org')->id, $data['from'], $data['to'], $data['person'] ?? null));
     }
 
-    /** How long a task like this usually takes, from the team's finished ones; null with too few to go by. */
-    public function estimate(Request $request, Experience $experience): JsonResponse
+    /**
+     * How long a task like this usually takes: this person's own finished ones when `person` is given (`basis: person`),
+     * else the manager's typical length (Knowledge, `basis: typical`), else the team's finished ones (title, task, type);
+     * null with nothing to go by.
+     */
+    public function estimate(Request $request, Experience $experience, Knowledge $knowledge): JsonResponse
     {
         $data = $request->validate([
             'task_group'    => 'nullable|string|max:80',
             'task_category' => 'nullable|string|max:120',
             'title'         => 'nullable|string|max:200',
+            'person'        => 'nullable|string|max:200',
         ]);
+        $orgId = (int) $request->attributes->get('workspace_org')->id;
+        $group = $data['task_group'] ?? null;
+        $category = $data['task_category'] ?? null;
 
-        return response()->json(['estimate' => $experience->estimate(
-            (int) $request->attributes->get('workspace_org')->id, $data['task_group'] ?? null, $data['task_category'] ?? null, $data['title'] ?? null,
-        )]);
+        $estimate = !empty($data['person']) ? $experience->estimateFor($orgId, (string) $data['person'], $group, $category) : null;
+        if ($estimate === null && ($typical = $knowledge->typical($group, $category)) !== null) {
+            $estimate = ['minutes' => $typical, 'samples' => 0, 'basis' => 'typical'];
+        }
+
+        return response()->json(['estimate' => $estimate ?? $experience->estimate($orgId, $group, $category, $data['title'] ?? null)]);
     }
 
     public function start(Request $request, int $task, TaskClock $clock): JsonResponse
