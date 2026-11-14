@@ -65,8 +65,11 @@
     "week": "Cette semaine"
   },
   "nav": {
+    "assistant": "Assistant IA",
     "backlog": "À planifier et réserve",
+    "coach": "Coach IA",
     "groups": {
+      "ai": "IA",
       "people": "Personnes",
       "planning": "Planification",
       "reports": "Rapports",

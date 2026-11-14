@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import type { ComponentProps, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { ComponentProps, SelectHTMLAttributes } from 'react'
 
 /** The look of every text box, list box and text area here. */
 export const CONTROL = 'w-full rounded-xl border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text placeholder:text-a-text-2 focus:border-a-accent focus:outline-hidden focus:ring-2 focus:ring-a-accent/25 disabled:opacity-60'
@@ -9,7 +9,7 @@ export function TextInput(props: ComponentProps<'input'>) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />
 }
 
-export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextArea(props: ComponentProps<'textarea'>) {
   return <textarea {...props} className={`${CONTROL} ${props.className ?? ''}`} />
 }
 

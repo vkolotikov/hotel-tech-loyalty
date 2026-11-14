@@ -127,7 +127,11 @@ export interface Week {
   unassigned: { date: string; tasks: Task[] }[]
 }
 
-export interface Profile { skills: string[] | null; knowledge: string; work_start: string | null; work_end: string | null; work_days: number[] | null; break_minutes: number }
+export interface Profile {
+  skills: string[] | null; knowledge: string; work_start: string | null; work_end: string | null; work_days: number[] | null; break_minutes: number
+  /** What a manager teaches the AI about the person (2026-11-14); absent on an older answer. */
+  job_title?: string; level?: string | null; strengths?: string; develop?: string
+}
 
 export interface Person {
   key: string
@@ -181,10 +185,92 @@ export interface Proposal {
   reasons: string[]
   note: string
   source: 'ai' | 'rules'
-  from: 'day' | 'unassigned' | 'pool' | 'overdue'
+  from: 'day' | 'unassigned' | 'pool' | 'overdue' | 'backlog'
   previous: { date: string | null; start_time: string | null; person: string | null }
   seen: string | null
+  /** A week plan's line names its day (2026-11-14). */
+  date?: string
 }
+
+/** A week's plan (time/plan-week): each day's lines, what could not be placed. */
+export interface WeekPlanResult {
+  from: string
+  to: string
+  source: 'ai' | 'rules'
+  ai_status: string
+  summary: string
+  days: { date: string; proposals: Proposal[]; people: { person: string; name: string; works: boolean; capacity_minutes: number; free_minutes: number }[] }[]
+  unplaced: { task_id: number; title: string; reason: string; date: string | null }[]
+  people: { key: string; name: string }[]
+}
+
+/** A change the assistant proposes, checked by the server, with the planner call that applies it. */
+export interface AssistantProposal {
+  id: string
+  kind: 'create' | 'assign' | 'move' | 'set_length'
+  task_id?: number
+  title: string
+  person?: { key: string; name: string } | null
+  date?: string | null
+  start_time?: string | null
+  minutes?: number
+  was?: number
+  task_type?: string | null
+  note?: string | null
+  request: { method: 'post' | 'put' | 'patch'; path: string; body: Record<string, unknown> }
+}
+
+export interface AssistantAnswer { reply: string; proposals: AssistantProposal[]; used: string[]; rounds: number }
+
+export interface DurationRow {
+  key: string; name: string; samples: number; clocked: number; planned_median: number | null; real_median: number | null
+  suggested: number | null; drift_pct: number | null; typical: number | null; advice: 'few' | 'longer' | 'shorter' | 'set_typical' | 'ok'
+}
+
+export interface LearnedPerson {
+  person: string; name: string; has_account: boolean; tasks: number; done: number; on_time_pct: number | null; completion_pct: number | null
+  late_open: number; clocked: number; accuracy_pct: number | null
+  types: { type: string; done: number; on_time_pct: number | null; team_on_time_pct: number | null; median_minutes: number | null; team_median_minutes: number | null; speed: number | null }[]
+  strengths: string[]; support: string[]
+}
+
+export interface Learned {
+  from: string; to: string; weeks: number
+  totals: { tasks: number; done: number; on_time_pct: number | null; late_open: number; clocked: number; clocked_pct: number | null; accuracy_pct: number | null }
+  types: DurationRow[]
+  tasks: DurationRow[]
+  people: LearnedPerson[]
+  leaders: { type: string; people: number; best: { person: string; name: string; done: number; on_time_pct: number | null; speed: number | null }; least: { person: string; name: string; done: number; on_time_pct: number | null; speed: number | null } }[]
+}
+
+export interface TypeNote { notes: string; typical_minutes: number | null; best_time: string | null }
+export interface TaskNote { notes: string; typical_minutes: number | null }
+export interface AiContext { about: string; rules: string; goals: string }
+
+export interface CoachOverview {
+  readiness: { score: number; items: { code: string; pct: number; count: number | null; total: number | null }[] }
+  learning: Learned
+  knowledge: { context: AiContext; types: Record<string, TypeNote>; tasks: Record<string, TaskNote> }
+  manager: boolean
+  levels: string[]
+  best_times: string[]
+}
+
+export interface StrategyFix {
+  type: 'set_typical' | 'add_skill'; label: string; minutes?: number; type_name?: string; task_key?: string
+  person?: string; name?: string; staff_id?: number; skills?: string[]
+}
+
+export interface Strategy {
+  summary: string
+  weeks: number
+  recommendations: { title: string; detail?: string; kind: string; impact: 'high' | 'medium' | 'low'; fix?: StrategyFix }[]
+}
+
+export type Drafts =
+  | { kind: 'people'; people: { person: string; user_id: number; name: string; job_title: string; knowledge: string; strengths: string; develop: string; now: Partial<Profile> }[] }
+  | { kind: 'types'; types: ({ type: string } & TypeNote)[]; tasks: ({ task_key: string; label: string } & TaskNote)[] }
+  | { kind: 'business'; context: AiContext }
 
 export interface PlanResult {
   date: string

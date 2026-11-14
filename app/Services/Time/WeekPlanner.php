@@ -30,6 +30,9 @@ final class WeekPlanner
     /** @var array<string, array<string, int>> free minutes per day and person */
     private array $free = [];
 
+    /** @var array<string, array<string, int>> free minutes per day and person before the plan */
+    private array $freeBefore = [];
+
     /** @var array<string, array<string, mixed>> DayBoard per day */
     private array $boards = [];
 
@@ -75,6 +78,7 @@ final class WeekPlanner
             }
         }
 
+        $this->freeBefore = $this->free;
         [$fixed, $flexible] = $this->candidates($orgId, $days, $today, $scope, $options);
         $byId = [];
         foreach ($flexible as $t) {
@@ -377,7 +381,8 @@ final class WeekPlanner
     {
         return array_map(fn ($p) => [
             'person' => $p['key'], 'name' => $p['name'], 'works' => $p['works'], 'capacity_minutes' => $p['capacity_minutes'],
-            'free_minutes' => $this->free[$date][$p['key']] ?? 0,
+            // Before this plan: the page adds the plan's lines itself, for the lines a person keeps.
+            'free_minutes' => $this->freeBefore[$date][$p['key']] ?? 0,
         ], $this->boards[$date]['people']);
     }
 }

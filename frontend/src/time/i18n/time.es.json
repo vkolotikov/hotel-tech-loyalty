@@ -65,8 +65,11 @@
     "week": "Esta semana"
   },
   "nav": {
+    "assistant": "Asistente de IA",
     "backlog": "Pendientes y bolsa común",
+    "coach": "Coach de IA",
     "groups": {
+      "ai": "IA",
       "people": "Personas",
       "planning": "Planificación",
       "reports": "Informes",

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Board, Lane, Proposal, Task } from '../lib/types'
 import { NOBODY, cellOf, lanesOf, readQuery, step, untimedOf } from './boardLogic'
-import { byPerson, changesPerson, knownReasons, linesToApply } from './planLogic'
+import { byPerson, changesPerson, dayLoad, knownReasons, linesToApply, weekLinesToApply, weekOptions, weekTaskIds } from './planLogic'
 import { columnsOf, heightOf, loadState, minutesAt, topOf, visibleRange } from './timeline'
 
 const task = (id: number, start: string | null, minutes = 60, extra: Partial<Task> = {}): Task => ({
@@ -94,5 +94,42 @@ describe('a plan as a person reviews it', () => {
     expect(changesPerson(line(1, 'u2', '10:00', { previous: { date: null, start_time: null, person: 'u1' } }))).toBe(true)
     expect(changesPerson(line(1, 'u2', '10:00'))).toBe(false)
     expect(knownReasons(['most_free', 'invented'])).toEqual(['most_free'])
+  })
+
+  it('applies a week’s ticked lines each on its own day', () => {
+    const days = [
+      { date: '2026-11-16', proposals: [line(1, 'u1', '09:00', { from: 'pool' }), line(2, 'u2', '10:00')] },
+      { date: '2026-11-17', proposals: [line(3, 'u1', '11:00', { from: 'backlog', date: '2026-11-17' })] },
+    ]
+    expect(weekTaskIds(days)).toEqual([1, 2, 3])
+    expect(weekLinesToApply(days, new Set([1, 3])).map(l => [l.task_id, l.date])).toEqual([[1, '2026-11-16'], [3, '2026-11-17']])
+  })
+
+  it('offers the shown week from today on, or the next one — first when two days or fewer are left', () => {
+    expect(weekOptions('2026-11-09', '2026-11-11')).toEqual({ this: { start: '2026-11-11', daysLeft: 5 }, next: { start: '2026-11-16' }, preferred: 'this' })
+    expect(weekOptions('2026-11-09', '2026-11-14')).toMatchObject({ this: { daysLeft: 2 }, preferred: 'next' })
+    expect(weekOptions('2026-11-16', '2026-11-14')).toMatchObject({ this: { start: '2026-11-16', daysLeft: 7 }, next: { start: '2026-11-23' }, preferred: 'this' })
+    expect(weekOptions('2026-11-02', '2026-11-14')).toMatchObject({ this: { daysLeft: 0 }, preferred: 'next' })
+  })
+
+  it('shows how full each day gets: new work adds, a day’s own task moves from one person to the other', () => {
+    const day = {
+      proposals: [
+        line(1, 'u1', '09:00', { from: 'pool', duration_minutes: 60 }),
+        line(2, 'u1', '10:00', { from: 'day', duration_minutes: 30, previous: { date: '2026-11-16', start_time: null, person: 'u1' } }),
+        line(3, 'u1', '11:00', { from: 'day', duration_minutes: 45, previous: { date: '2026-11-16', start_time: null, person: 'u2' } }),
+      ],
+      people: [
+        { person: 'u1', name: 'Anna', capacity_minutes: 480, free_minutes: 450 },
+        { person: 'u2', name: 'Boris', capacity_minutes: 480, free_minutes: 300 },
+        { person: 'u3', name: 'Off', capacity_minutes: 0, free_minutes: 0 },
+      ],
+    }
+    // Anna had 30 (task 2, already hers) + 60 from the pool + 45 taken over from Boris; Boris had 180 and loses 45.
+    expect(dayLoad(day, new Set([1, 2, 3]))).toEqual([
+      { person: 'u1', name: 'Anna', capacity: 480, planned: 135, pct: 28 },
+      { person: 'u2', name: 'Boris', capacity: 480, planned: 135, pct: 28 },
+    ])
+    expect(dayLoad(day, new Set([2])).map(l => l.planned)).toEqual([30, 180])
   })
 })

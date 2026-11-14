@@ -104,7 +104,24 @@ listed in `frontend/src/time/lib/api.ts` (`AREAS`: `time`, `planner`, `team`), a
 - **Skills** (`staff.planner_skills`, the full admin's): the task types a person may take from the pool; NULL = any,
   managers always any. Written only by the full admin's `PUT team/{id}` (the workspace's Team page calls it).
 - **Planner profile** (`staff.planner_profile`, new, one writer `PlannerProfiles`): `knowledge` (what they know, in a
-  manager's words — the AI reads it), `work_start` / `work_end`, `work_days` (1 = Monday … 7 = Sunday), `break_minutes`.
+  manager's words — the AI reads it), `work_start` / `work_end`, `work_days` (1 = Monday … 7 = Sunday), `break_minutes`;
+  since 2026-11-14 also what the AI is taught about the person: `job_title` (80), `level` (`trainee`, `junior`,
+  `experienced`, `senior`, `lead`), `strengths` and `develop` (600 each).
+- **What the AI is taught** (2026-11-14, `Knowledge`, `crm_settings` rows written only through `PUT time/settings/{key}`,
+  a manager's): `planner_ai_context` `{about, rules, goals}` (the business, its house rules, its goals);
+  `planner_type_notes` per task type `{notes, typical_minutes, best_time}`; `planner_task_notes` per task key
+  `{notes, typical_minutes}`. Saved cleaned (`Knowledge::clean*`: 5–720 minutes, best times `morning`, `midday`,
+  `afternoon`, `evening`, `any`, empty entries dropped) and answered as objects.
+- **What the planner learned** (2026-11-14, `Learning`, reads only): over the last 8 weeks (4, 12 or 26 on asking),
+  per task type and per task the planned and the real median (real only with at least 3 clocked), the drift, the
+  suggested length and the typical one written down, with advice (`few`, `longer`, `shorter`, `set_typical`, `ok`); per
+  person finished, on time, completion, real against planned, and per type on time and speed against the team (the
+  team's median real time over theirs), with `strengths` and `support`; per type who leads and who could use support.
+  Comparing people is a manager's: a staff member is answered only their own row.
+- **A task's length when it has none** (`Learning::size`): the manager's typical length (task, then type), else the
+  learned suggestion, else 60 minutes. Every plan (day, week, assistant) sizes its candidates this way, and
+  `time/estimate` answers the person's own finished work first (`basis: person`), then the typical length
+  (`basis: typical`), then the team's.
 - **Preferred work** (`crm_settings.planner_employee_prefs`, the full admin's "Employee skills", by name): types and
   tasks that fit a person's knowledge best — a soft preference.
 - **Shown experience** (`Experience`): from the last 90 days of finished tasks, per type: how many, how many on time,
@@ -138,7 +155,8 @@ asked the scope's overdue work (30 days) and the pool tasks their skills allow.
 
 - Every AI call is Claude (`services.anthropic.model`) answering through one tool, so the reply is data the server
   checks. The month's AI allowance and the plan's model list are asked before the provider (`PlannerAi::status`); spend
-  is recorded in `ai_usage_logs` as `time_plan`, `time_review`, `time_capture`. A provider failure is logged with its
+  is recorded in `ai_usage_logs` as `time_plan`, `time_review`, `time_capture` and, since 2026-11-14,
+  `time_week_plan`, `time_assistant` (each round), `time_coach`, `time_draft`. A provider failure is logged with its
   text and answered as `ai_failed` in our words; the review and the capture refuse with `ai_budget_used_up`,
   `model_not_allowed`, `ai_unavailable`.
 - The AI never writes: a plan is applied by a person, a capture's tasks are saved by a person (each checked first),
@@ -147,14 +165,60 @@ asked the scope's overdue work (30 days) and the pool tasks their skills allow.
   `transcription_unavailable`). The words go into a field or the AI capture for the person to read; a recording is
   never saved. At most two minutes a note.
 
+## The AI assistant and coach (2026-11-14)
+
+The owner: "an AI assistant which will help to plan the day or the week for our employees, analyse the data from the
+previous weeks, suggest how long each task could be and who does better and worse … some education before AI about our
+employees, the tasks, the roles, their knowledge … it could suggest a strategy and help fill the data … use the pool
+and add tasks to employees by day". Four pieces, all behind the same gates as the rest of `admin/time/*`:
+
+- **Plan the week** (`POST time/plan-week`, `WeekPlanner`, throttle 10/min): `scope` `me` or `team` (team only for who
+  may plan for others, `PlanningMode`), `start` (any day of the week; days before today are left out, a week wholly
+  past is `past_day`), and whether to share out the pool, give backlog work a day and bring in overdue work. The days'
+  untimed work stays on its day; the pool, backlogs and overdue work go to a day and a person. The AI
+  (`PlannerAi::planWeek`, spend `time_week_plan`) proposes `{task_id, date, person}`; each line is checked (the day is
+  one of the week's, the person is in scope, works that day, may take the task's type, has room); what fails goes to
+  the rules (a task with an owner stays theirs, an urgent one goes to the earliest day it fits, the rest to the day with
+  most room; reasons `their_own`, `earliest_day`, `most_room`). Then each day is timed by `DayPlanner::merge` as a day
+  plan is. The answer is grouped by day with each person's capacity and free time before the plan; nothing is written
+  until `time/plan/apply`, whose lines may now carry their own `date` (never a past one). The Planner's week view shows
+  "Plan the team's week with AI" / "Plan my week with AI"; the dialog offers this week (from today) or the next, the
+  next first when two days or fewer are left.
+- **The assistant** (`POST time/assistant`, `Assistant`, throttle 30/min, spend `time_assistant`, `/time/assistant`):
+  a conversation (the last 12 messages, 4,000 characters each, kept in the browser's session only). Claude answers with
+  read-only tools — `get_day`, `get_week`, `get_pool`, `get_people`, `get_learning` (a staff member's own figures
+  only), `get_insights`, `find_tasks` — up to 6 rounds, the last without tools, and proposes changes through
+  `propose_changes` (`create_task`, `assign`, `move`, `set_length`). Each change is checked against the asker's rights
+  (`PlanningMode`, skills, past days, the task existing in this organisation) before it is shown; a refused one goes back
+  to Claude with the reason. A shown change carries the full admin's own planner call (`POST planner/tasks`,
+  `PATCH planner/tasks/{id}/move`, `PUT planner/tasks/{id}`), which the page sends when the person presses Apply —
+  so the planner's own endpoints decide again.
+- **The coach** (`/time/coach`, `GET time/coach?weeks=`, everyone; `POST time/coach/strategy` and `time/coach/draft`,
+  a manager's, throttle 10/min each, spend `time_coach`, `time_draft`): readiness (`AiReadiness`: the business, house
+  rules, type notes, people's titles or knowledge, skills, hours, 20 finished tasks, 30 % clocked — a score and a
+  checklist with the way to each gap); the overview's figures (a staff member sees their own); the strategy (at most
+  eight recommendations with impact and kind; a `fix` the server checked — a typical length for a type or task that
+  exists, or a type added to a person who has a skills list — applied with one press through the setting's and the
+  Team endpoint's own writers, read afresh first); task lengths planned against real with "Use <length>" (writes the
+  typical length); people (who leads each type and who could use support; each person's figures by type); and, a
+  manager's, **Teach the AI**: the business, every type's and task's note, typical length and best time, and the
+  people's titles, knowledge, strengths and development. "Draft with AI" fills the form (business, types and tasks) or
+  lists people's drafts to save one by one (`PUT time/people/{user}`, only what the AI wrote); nothing is saved until
+  the manager saves, and a save changes only the rows touched, over the notes as they are now.
+- **Everywhere the AI plans** — the day plan, the week plan, the assistant — it now reads the business, the type and
+  task notes and the people's titles, levels, strengths and development (`AiFacts`), and every candidate is sized by
+  `Learning::size`.
+
 ## The areas
 
 | Area | Address | What it does |
 |---|---|---|
 | My day | `/time` | greeting, quick add (type, With AI, Speak), figures, now / up next with Start / Pause / Finish, my day on the clock (press an hour to add, drag to move), without a time, AI briefing, heads-up, overdue (to today), from the pool (Take), my week, the day's note; "Plan my day with AI" |
-| Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI" |
+| Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI"; in the week view "Plan the team's week with AI", "Plan my week with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
+| AI assistant | `/time/assistant` | ask about days, weeks, the pool and the team; proposed changes applied one by one or all at once; what the AI knows (readiness) |
+| AI coach | `/time/coach` (`?tab=overview|durations|people|knowledge`, `?weeks=4|8|12|26`) | readiness, the period's figures, the AI strategy with one-press fixes, task lengths planned against real, people by type, Teach the AI (a manager's) |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
 | Settings | `/time/settings` (`?tab=day|planning|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), task types, tasks, templates (shared with the full admin) |
 
@@ -179,6 +243,11 @@ P Planner, B Backlog, ? shortcuts.
 - **Another organisation's tasks never show or move** (`DayBoardTest`, `PlanTest`, `ClockAndInsightsTest`).
 - **Days are the venue's** (Riga's 12:00 at 10:00 UTC; on-time judged in the venue's zone) (`DayBoardTest`,
   `ClockAndInsightsTest`).
+- **The AI assistant** (2026-11-14): knowledge cleaned and saved by a manager only, learning and readiness figures,
+  sizes, a staff member's own figures only (`KnowledgeLearningTest`); the week plan's checks, rules, reasons, dated apply
+  and the planning mode (`WeekPlanTest`); the assistant's tools, checked proposals and refusals, the coach's strategy
+  fixes and drafts (`AssistantCoachTest`); frontend `coach/coach.test.ts`, `coach/CoachPage.test.tsx`,
+  `plan/plan.test.ts` (week lines, day load, which week).
 - **The planning mode** on the full admin's planner endpoints and the workspace's, a manager's choice, `team` by default
   (`PlanningModeTest`, `SettingsTest`, `GateAndBootstrapTest`; frontend `time/lib/rights.test.ts`,
   `settings/SettingsPage.test.tsx`).
@@ -205,6 +274,11 @@ P Planner, B Backlog, ? shortcuts.
 - The planning mode is chosen in the Time Planner's Settings only; the full admin's Settings → Planner does not show it
   (its Planner follows it, and says the server's sentence when a change is refused).
 
+- The assistant's conversation lives in the browser's session (it is not kept on the server); a new tab starts afresh.
+- Learning needs finished work, and real lengths need clocked work (3 per type or task); until then the planned length
+  stands in and the coach says so.
+- A week plan places at most 120 tasks (`WeekPlanner::MAX_TASKS`: the days' own untimed work first, then the pool,
+  backlogs and overdue work, each read 300 at most).
 - The full admin's own Planner does not show clocked time yet (its Stats count planned minutes as before).
 - Planning reads at most 60 tasks per plan, a period at most 92 days, overdue work 30 days back.
 - The AI and voice need the server's `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`; without them the rules plan and the

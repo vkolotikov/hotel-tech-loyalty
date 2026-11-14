@@ -113,9 +113,12 @@ describe('the planner profile form', () => {
 
   it('starts from the person as they are', () => {
     expect(formOf(ANNA)).toEqual({
-      knowledge: 'Speaks Latvian and German', work_start: '08:00', work_end: '16:00', days: [1, 2, 3, 4, 5], break_minutes: '30',
+      knowledge: 'Speaks Latvian and German', job_title: '', level: '', strengths: '', develop: '',
+      work_start: '08:00', work_end: '16:00', days: [1, 2, 3, 4, 5], break_minutes: '30',
       any_type: false, skills: ['Housekeeping'], pref_groups: ['Housekeeping'], pref_tasks: ['deep_clean'],
     })
+    expect(formOf({ ...ANNA, profile: { ...ANNA.profile, job_title: 'Room attendant', level: 'senior', strengths: 'Suites', develop: 'Desk' } }))
+      .toMatchObject({ job_title: 'Room attendant', level: 'senior', strengths: 'Suites', develop: 'Desk' })
     expect(formOf(BORIS)).toMatchObject({ work_start: '', work_end: '', days: [1, 2, 3, 4, 5, 6, 7], any_type: true, skills: [] })
   })
 
@@ -136,13 +139,16 @@ describe('the planner profile form', () => {
     expect(formProblem(form({ break_minutes: '200' }), 1000, ANNA)).toBe('break')
     expect(formProblem(form({ break_minutes: '' }), 1000, ANNA)).toBe('break')
     expect(formProblem(form({ break_minutes: '12.5' }), 1000, ANNA)).toBe('break')
+    expect(formProblem(form({ job_title: 'x'.repeat(81) }), 1000, ANNA)).toBe('title')
+    expect(formProblem(form({ develop: 'x'.repeat(601) }), 1000, ANNA)).toBe('notes')
     expect(formProblem({ ...formOf(CLEANER), days: [] }, 1000, CLEANER)).toBeNull()
   })
 
   it('builds the profile body: empty hours and every day as null, days in order', () => {
     expect(profileBody(form({ knowledge: '  First aid  ', work_start: '', work_end: '', days: [7, 1, 3, 3], break_minutes: '45' }))).toEqual({
-      knowledge: 'First aid', work_start: null, work_end: null, work_days: [1, 3, 7], break_minutes: 45,
+      knowledge: 'First aid', job_title: '', level: null, strengths: '', develop: '', work_start: null, work_end: null, work_days: [1, 3, 7], break_minutes: 45,
     })
+    expect(profileBody(form({ job_title: ' Receptionist ', level: 'junior', strengths: ' Calm ' }))).toMatchObject({ job_title: 'Receptionist', level: 'junior', strengths: 'Calm' })
     expect(profileBody(form({ days: [1, 2, 3, 4, 5, 6, 7] })).work_days).toBeNull()
   })
 
@@ -162,6 +168,8 @@ describe('the planner profile form', () => {
 
   it('plans only the writes that changed', () => {
     expect(hasChanges(savePlan(ANNA, form()))).toBe(false)
+    // What the AI is taught about the person is part of the profile.
+    expect(savePlan(ANNA, form({ level: 'lead' })).profile).toMatchObject({ level: 'lead' })
     // The same days in another order are no change.
     expect(savePlan(ANNA, form({ days: [5, 4, 3, 2, 1] })).profile).toBeNull()
 

@@ -155,6 +155,11 @@ export function typeRoster(people: Person[], groups: Pick<GroupDef, 'name' | 'co
 
 export interface TeamForm {
   knowledge: string
+  /** What a manager teaches the AI about the person (2026-11-14): a job title, a level, what they do best, what they learn. */
+  job_title: string
+  level: string
+  strengths: string
+  develop: string
   /** `HH:MM`, or empty for the venue's. */
   work_start: string
   work_end: string
@@ -171,6 +176,10 @@ export interface TeamForm {
 export function formOf(person: Person): TeamForm {
   return {
     knowledge: person.profile.knowledge ?? '',
+    job_title: person.profile.job_title ?? '',
+    level: person.profile.level ?? '',
+    strengths: person.profile.strengths ?? '',
+    develop: person.profile.develop ?? '',
     work_start: person.profile.work_start ?? '',
     work_end: person.profile.work_end ?? '',
     days: workDays(person.profile),
@@ -203,12 +212,18 @@ export function validateHours(start: string, end: string): HoursProblem | null {
   return e > s ? null : 'hours_order'
 }
 
-export type FormProblem = HoursProblem | 'knowledge' | 'days' | 'break'
+export type FormProblem = HoursProblem | 'knowledge' | 'title' | 'notes' | 'days' | 'break'
+
+/** The longest job title and the longest note on strengths or development (PlannerProfiles on the server). */
+export const TITLE_MAX = 80
+export const NOTE_MAX = 600
 
 /** What stops the form from being saved, first problem first; null when it can be. Without an account only preferences are kept. */
 export function formProblem(form: TeamForm, knowledgeMax: number, person: Pick<Person, 'user_id' | 'has_account'>): FormProblem | null {
   if (!canEditProfile(person)) return null
   if (form.knowledge.trim().length > knowledgeMax) return 'knowledge'
+  if (form.job_title.trim().length > TITLE_MAX) return 'title'
+  if (form.strengths.trim().length > NOTE_MAX || form.develop.trim().length > NOTE_MAX) return 'notes'
   const hours = validateHours(form.work_start, form.work_end)
   if (hours) return hours
   if (form.days.length === 0) return 'days'
@@ -217,13 +232,20 @@ export function formProblem(form: TeamForm, knowledgeMax: number, person: Pick<P
   return null
 }
 
-export interface ProfileBody { knowledge: string; work_start: string | null; work_end: string | null; work_days: number[] | null; break_minutes: number }
+export interface ProfileBody {
+  knowledge: string; work_start: string | null; work_end: string | null; work_days: number[] | null; break_minutes: number
+  job_title: string; level: string | null; strengths: string; develop: string
+}
 
 /** The body `PUT time/people/{user}` takes: empty hours as null (the venue's), every day as null, the days in order. */
 export function profileBody(form: TeamForm): ProfileBody {
   const days = [...new Set(form.days.filter(d => d >= 1 && d <= 7))].sort((a, b) => a - b)
   return {
     knowledge: form.knowledge.trim(),
+    job_title: form.job_title.trim(),
+    level: form.level || null,
+    strengths: form.strengths.trim(),
+    develop: form.develop.trim(),
     work_start: form.work_start || null,
     work_end: form.work_end || null,
     work_days: days.length === 7 ? null : days,
@@ -256,6 +278,10 @@ export function savePlan(person: Person, form: TeamForm): SavePlan {
     const body = profileBody(form)
     const was = person.profile
     const changed = body.knowledge !== (was.knowledge ?? '').trim()
+      || body.job_title !== (was.job_title ?? '').trim()
+      || body.level !== (was.level || null)
+      || body.strengths !== (was.strengths ?? '').trim()
+      || body.develop !== (was.develop ?? '').trim()
       || body.work_start !== (was.work_start ?? null)
       || body.work_end !== (was.work_end ?? null)
       || (body.work_days === null) !== (was.work_days === null || was.work_days.length === 0)

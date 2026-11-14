@@ -128,14 +128,15 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
   }
 
   // How long a task like this usually takes, once there is something to go by and no length chosen.
-  const [asked, setAsked] = useState({ group: form.task_group, category: form.task_category, title: form.title })
+  // The person's own finished work comes first (2026-11-14), then the manager's typical length, then the team's.
+  const [asked, setAsked] = useState({ group: form.task_group, category: form.task_category, title: form.title, person: form.person })
   useEffect(() => {
-    const id = window.setTimeout(() => setAsked({ group: form.task_group, category: form.task_category, title: form.title.trim() }), 500)
+    const id = window.setTimeout(() => setAsked({ group: form.task_group, category: form.task_category, title: form.title.trim(), person: form.person }), 500)
     return () => window.clearTimeout(id)
-  }, [form.task_group, form.task_category, form.title])
+  }, [form.task_group, form.task_category, form.title, form.person])
   const estimate = useQuery({
     queryKey: ['time', 'estimate', asked],
-    queryFn: () => timeApi.estimate({ task_group: asked.group || null, task_category: asked.category || null, title: asked.title || null }),
+    queryFn: () => timeApi.estimate({ task_group: asked.group || null, task_category: asked.category || null, title: asked.title || null, person: asked.person || null }),
     enabled: !form.duration_minutes && (Boolean(asked.group) || Boolean(asked.category) || asked.title.length >= 3),
     staleTime: 5 * 60_000,
   }).data?.estimate
@@ -340,11 +341,15 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
           {estimate && !form.duration_minutes && (
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl time-ai-soft px-3 py-2 text-sm">
               <Sparkles size={14} aria-hidden />
-              <span>{estimate.basis === 'title'
-                ? t('time.task.estimate_title', 'Tasks like this usually take about {{length}} ({{count}} done before).', { length: duration(estimate.minutes, units), count: estimate.samples })
-                : estimate.basis === 'category'
-                  ? t('time.task.estimate_category', '“{{name}}” usually takes about {{length}} ({{count}} done before).', { name: boot.settings.channels.find(c => c.key === form.task_category)?.label ?? form.task_category, length: duration(estimate.minutes, units), count: estimate.samples })
-                  : t('time.task.estimate_group', '{{name}} work usually takes about {{length}} ({{count}} done before).', { name: form.task_group, length: duration(estimate.minutes, units), count: estimate.samples })}</span>
+              <span>{estimate.basis === 'person'
+                ? t('time.task.estimate_person', '{{name}} usually takes about {{length}} for this ({{count}} done before).', { name: chosen?.name ?? '', length: duration(estimate.minutes, units), count: estimate.samples })
+                : estimate.basis === 'typical'
+                  ? t('time.task.estimate_typical', 'Your team plans about {{length}} for this.', { length: duration(estimate.minutes, units) })
+                  : estimate.basis === 'title'
+                    ? t('time.task.estimate_title', 'Tasks like this usually take about {{length}} ({{count}} done before).', { length: duration(estimate.minutes, units), count: estimate.samples })
+                    : estimate.basis === 'category'
+                      ? t('time.task.estimate_category', '“{{name}}” usually takes about {{length}} ({{count}} done before).', { name: boot.settings.channels.find(c => c.key === form.task_category)?.label ?? form.task_category, length: duration(estimate.minutes, units), count: estimate.samples })
+                      : t('time.task.estimate_group', '{{name}} work usually takes about {{length}} ({{count}} done before).', { name: form.task_group, length: duration(estimate.minutes, units), count: estimate.samples })}</span>
               <button type="button" className="ml-auto font-semibold underline" onClick={() => set('duration_minutes', String(estimate.minutes))}>{t('time.task.use', 'Use it')}</button>
             </div>
           )}

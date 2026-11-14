@@ -30,6 +30,7 @@ import { useToast } from '../ui/Toast'
 import { DayTimeline, DRAG } from './DayTimeline'
 import { NOBODY, allTasks, cellOf, lanesOf, readQuery, step, untimedOf, weekPeople, type View } from './boardLogic'
 import { PlanDialog } from './PlanDialog'
+import { WeekPlanDialog } from './WeekPlanDialog'
 import { loadState } from './timeline'
 
 /**
@@ -59,6 +60,11 @@ export function PlanPage() {
     }
   }
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
+  // The week's plan (2026-11-14): the days left of the week shown, the team's for whoever may plan for others.
+  const [weekPlan, setWeekPlan] = useState<null | 'me' | 'team'>(null)
+  const shownWeek = weekStart(q.date)
+  // A week whose days have all passed still offers the week after it (the dialog's "next week").
+  const weekOpen = addDays(shownWeek, 13) >= boot.venue.today
 
   const go = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(search)
@@ -97,7 +103,20 @@ export function PlanPage() {
 
   return (
     <Page wide title={t('time.plan.title', 'Planner')} line={personName ? `${title} · ${personName}` : title}
-      actions={(
+      actions={q.view === 'week' ? (
+        weekOpen ? (
+          <>
+            {boot.staff.can.plan_team && !q.person && (
+              <AiButton onClick={() => setWeekPlan('team')}><Wand2 size={15} aria-hidden />{t('time.plan.plan_week_team_ai', 'Plan the team’s week with AI')}</AiButton>
+            )}
+            {(q.person === null || q.person === boot.staff.key) && (
+              boot.staff.can.plan_team && !q.person
+                ? <Button variant="secondary" onClick={() => setWeekPlan('me')}><Wand2 size={15} aria-hidden />{t('time.plan.plan_week_me_ai', 'Plan my week with AI')}</Button>
+                : <AiButton onClick={() => setWeekPlan('me')}><Wand2 size={15} aria-hidden />{t('time.plan.plan_week_me_ai', 'Plan my week with AI')}</AiButton>
+            )}
+          </>
+        ) : undefined
+      ) : (
         <>
           {boot.staff.can.plan_team && !q.person && (
             <AiButton onClick={() => setPlanning('team')}><Wand2 size={15} aria-hidden />{t('time.plan.plan_team_ai', 'Plan the team with AI')}</AiButton>
@@ -142,6 +161,7 @@ export function PlanPage() {
             onOpenDay={date => go({ view: null, date })} onOpen={task => openTask(task)}
             onCreate={(date, lane) => openTask(null, { task_date: date, person: laneFor(lane) })} />}
 
+      {weekPlan && <WeekPlanDialog monday={shownWeek} team={weekPlan === 'team'} onClose={() => setWeekPlan(null)} />}
       {planning && (
         <PlanDialog date={q.date < boot.venue.today ? boot.venue.today : q.date} scope={planning}
           person={planning === 'person' ? q.person ?? undefined : undefined} onClose={() => setPlanning(null)} />

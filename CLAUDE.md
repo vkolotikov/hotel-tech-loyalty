@@ -378,6 +378,17 @@ or add the next dated one, at the end of a session.
   a person (`PlanApplier`, which skips what changed); capture drafts are saved by a person; a review's action must name
   the day's task and a team member. The rules plan whenever the AI cannot be asked. Spend is `time_plan`,
   `time_review`, `time_capture`; the allowance is asked first. A name without an account is never handed work by a plan.
+- The AI assistant (owner 2026-11-14; `docs/time-planner-workspace.md` "The AI assistant and coach"): what the AI is
+  taught is `App\Services\Time\Knowledge` (`planner_ai_context`, `planner_type_notes`, `planner_task_notes`, written only
+  through `PUT time/settings/{key}`, cleaned, a manager's) and the profile's `job_title`, `level`, `strengths`,
+  `develop` (`PlannerProfiles`); what it learned is `Learning` (reads only; comparing people is a manager's — a staff
+  member gets only their own row, in the coach and in the assistant's `get_learning`); a task without a length is sized
+  only by `Learning::size()` (typical, learned, 60). A week plan is `WeekPlanner` (AI lines checked, the rules place the
+  rest, `DayPlanner::merge` times each day) and is applied by a person through `time/plan/apply` (dated lines, never a
+  past day). The assistant's tools only read; a change it proposes is checked by `Assistant` against the asker's rights
+  and carries the full admin's own planner call, sent only when the person presses Apply. A coach fix or an AI draft is
+  written by the setting's, the profile's or the Team endpoint's own writer, over the rows as they are now. Spend is
+  `time_week_plan`, `time_assistant`, `time_coach`, `time_draft`.
 - Days and times are the venue's wall clock (`task_date` + `start_time`, `VenueClock`); the frontend's day arithmetic is
   `time/lib/dates.ts`, never `new Date('YYYY-MM-DD')`. Figures (load, capacity, on time, accuracy, signals) are the
   server's (`DayBoard`, `TimeInsights`); the workspace only words and draws them. Decisions live in pure functions with
