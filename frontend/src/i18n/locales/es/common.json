@@ -348,9 +348,10 @@
         "crm_core": "Bandeja en directo, visitantes, clientes potenciales, embudo y tareas",
         "crm_ai_base": "Un saldo mensual de IA para el asistente y los borradores de respuesta",
         "time_core": "Planificador del día y la semana para todo el equipo, pendientes y bolsa abierta",
-        "time_ai": "La IA planifica cada día según habilidades, horarios y experiencia",
+        "time_ai": "La IA planifica el día y la semana según habilidades, conocimientos, horarios e historial",
         "time_capture": "Tareas desde un mensaje o una nota de voz, revisiones y análisis",
-        "time_ai_base": "Una asignación mensual de IA para planes, revisiones y captura"
+        "time_ai_base": "Una asignación mensual de IA para planes, el asistente, revisiones y captura",
+        "time_coach": "Un asistente y un coach de IA que aprenden de las semanas de su equipo"
       },
       "signup": {
         "step": "Paso {{n}} de {{total}}",

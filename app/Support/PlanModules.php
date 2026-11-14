@@ -130,7 +130,8 @@ final class PlanModules
         // `time_planner`; the Enterprise plan keeps it through `time_management` (a full customer's workspace). Every
         // package carries `time_management` — the switch the full admin's Planner endpoints and the workspace's own are
         // behind — and they differ by team (`max_team_members`: the people who sign in and plan) and the AI allowance the
-        // plans, reviews and captures spend (`time_plan`, `time_review`, `time_capture`).
+        // plans, reviews and captures spend (`time_plan`, `time_review`, `time_capture`; since 2026-11-14 also the week
+        // plan, the assistant and the coach: `time_week_plan`, `time_assistant`, `time_coach`, `time_draft`).
         'time' => [
             'name' => 'HexaTech Time Planner',
             'products' => ['time_planner'],

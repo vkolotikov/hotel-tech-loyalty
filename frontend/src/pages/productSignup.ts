@@ -149,12 +149,13 @@ export function packageLines(product: SignupProduct, features: Record<string, st
     const base = limitOf(lite, 'ai_monthly_cost_cents')
     const times = budget && base ? Math.round((budget / base) * 10) / 10 : null
     lines.push({ text: t('auth.product.line.time_core', 'Day and week planner for the whole team, backlog and open pool'), included: true })
-    lines.push({ text: t('auth.product.line.time_ai', 'AI plans each day from skills, hours and experience'), included: true })
+    lines.push({ text: t('auth.product.line.time_ai', 'AI plans the day and the week from skills, knowledge, hours and history'), included: true })
+    lines.push({ text: t('auth.product.line.time_coach', 'An AI assistant and coach that learn from your team’s weeks'), included: true })
     lines.push({ text: t('auth.product.line.time_capture', 'Tasks from a message or a voice note, reviews and insights'), included: true })
     lines.push({
       text: times && times > 1
         ? t('auth.product.line.ai_times', { x: n(times), defaultValue: '{{x}}× the monthly AI allowance of Lite' })
-        : t('auth.product.line.time_ai_base', 'A monthly AI allowance for plans, reviews and capture'),
+        : t('auth.product.line.time_ai_base', 'A monthly AI allowance for plans, the assistant, reviews and capture'),
       included: true,
     })
   } else {

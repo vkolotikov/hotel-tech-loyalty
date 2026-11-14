@@ -13,7 +13,8 @@ import { TextInput } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
 import { Hint, LookPicker, LookTile, RowButtons, SaveBar } from './parts'
 import {
-  addGroup, groupEntries, groupsPayload, moved, nameProblems, newNameProblem, replaced, sameGroups, without, type GroupEntry, type NameProblem,
+  addGroup, groupEntries, groupsPayload, moved, nameProblems, newNameProblem, renamedNotes, replaced, sameGroups, typeRenames, without, type GroupEntry,
+  type NameProblem,
 } from './settingsLogic'
 import { useDraft } from './useDraft'
 
@@ -37,7 +38,15 @@ export function TypesSection({ can }: { can: boolean }) {
   const addProblem = adding.trim() ? newNameProblem(adding, list.map(g => g.name)) : null
 
   const save = useMutation({
-    mutationFn: (sent: GroupEntry[]) => plannerApi.saveSetting('planner_groups', groupsPayload(sent)),
+    mutationFn: async (sent: GroupEntry[]) => {
+      await plannerApi.saveSetting('planner_groups', groupsPayload(sent))
+      // A renamed type keeps what the AI was taught about it (its note, typical length and best time), read afresh.
+      const renames = typeRenames(sent)
+      if (Object.keys(renames).length > 0) {
+        const notes = renamedNotes(((await plannerApi.settings()).planner_type_notes ?? {}) as Record<string, unknown>, renames)
+        if (notes) await plannerApi.saveSetting('planner_type_notes', notes)
+      }
+    },
     onSuccess: (_, sent) => { draft.sent(sent); refresh(); toast(t('time.common.saved', 'Saved')) },
     onError: error => toast(errorText(t, error), 'danger'),
   })
@@ -100,7 +109,7 @@ export function TypesSection({ can }: { can: boolean }) {
               <Button type="submit" variant="secondary" disabled={off || !adding.trim() || addProblem !== null}><Plus size={15} aria-hidden />{t('time.common.add', 'Add')}</Button>
             </form>
           )}
-          <Hint>{t('time.settings.types.rename_hint', 'Renaming or removing a type leaves the tasks that already have it as they are.')}</Hint>
+          <Hint>{t('time.settings.types.rename_hint', 'Renaming a type keeps what the AI was taught about it. Renaming or removing a type leaves the tasks that already have it as they are.')}</Hint>
         </div>
       </Card>
 

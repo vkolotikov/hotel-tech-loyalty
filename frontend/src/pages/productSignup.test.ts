@@ -158,12 +158,13 @@ describe('HexaTech Time Planner on its own (2026-11-09)', () => {
     expect(productCopy('time', t).brand).toBe('HexaTech Time Planner')
   })
 
-  it('reads its lines from what the server grants: the planner, the AI, capture, the allowance as a multiple, the team', () => {
+  it('reads its lines from what the server grants: the planner, the AI, the assistant and coach, capture, the allowance as a multiple, the team', () => {
     const lite = { time_management: 'true', ai_monthly_cost_cents: '500', max_team_members: '3' }
     const pro = { time_management: 'true', ai_monthly_cost_cents: '4000', max_team_members: '25', max_properties: '3', priority_support: 'priority' }
     expect(packageLines('time', pro, lite, t, 'en').map(l => l.text)).toEqual([
       'Day and week planner for the whole team, backlog and open pool',
-      'AI plans each day from skills, hours and experience',
+      'AI plans the day and the week from skills, knowledge, hours and history',
+      'An AI assistant and coach that learn from your team’s weeks',
       'Tasks from a message or a voice note, reviews and insights',
       '8× the monthly AI allowance of Lite',
       '25 team members',
@@ -171,8 +172,8 @@ describe('HexaTech Time Planner on its own (2026-11-09)', () => {
       'Priority support',
     ])
     const liteLines = packageLines('time', lite, lite, t, 'en')
-    expect(liteLines[3].text).toBe('A monthly AI allowance for plans, reviews and capture')
-    expect(liteLines[4].text).toBe('3 team members')
+    expect(liteLines[4].text).toBe('A monthly AI allowance for plans, the assistant, reviews and capture')
+    expect(liteLines[5].text).toBe('3 team members')
   })
 })
 

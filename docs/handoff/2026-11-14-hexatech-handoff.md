@@ -90,6 +90,18 @@ word: deploy when done.
   and 26, the dependency audit).
 - **Next source-patch baseline: 3ca87339** (handoff commits after it are docs only).
 
+## Follow-up the same day (the owner: "is there anything else what need to do, if yes do it")
+
+- The AI assistant is in the phone's top bar (staff plan their own day from their phones); Find has "Plan the week with
+  AI" (`/time/plan?view=week&ai=week`).
+- Renaming a task type in Settings moves what the AI was taught about it to the new name (checked in the browser: the
+  note followed the rename and came back with the old name).
+- The Time Planner's sign-up page names the week plan, the assistant and the coach in every package (five languages).
+- Worth watching: one assistant answer may take several AI calls, so Lite's allowance (5 € a month) covers fewer
+  conversations than the plans and reviews did. The allowance stops the AI before the provider is asked, and the rules
+  still plan when it is used up; if Lite customers run out early, raising Lite's `ai_monthly_cost_cents` is billing's
+  change (and `PlanModules`' fallback with it).
+
 ## What the owner does by hand
 
 Nothing for this round. The AI uses the venue's existing allowance and the server's `ANTHROPIC_API_KEY`, as before.
@@ -98,4 +110,5 @@ Nothing for this round. The AI uses the venue's existing allowance and the serve
 
 - The full admin's own Planner does not show clocked time; its Stats count planned minutes as before.
 - Real lengths need clocked work (3 per type or task); until teams use Start and Finish, the planned length stands in.
-- Renaming a task type does not rename its notes (as with tasks, templates and preferences in the full admin).
+- Renaming a task type renames neither tasks, templates nor preferences (as in the full admin); its AI notes do follow
+  it (follow-up below).

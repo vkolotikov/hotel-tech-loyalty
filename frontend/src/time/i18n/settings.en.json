@@ -131,7 +131,7 @@
     "problem_empty": "Give the type a name.",
     "remove_line": "Tasks that already have this type keep it as their text; it is no longer offered for new work once you save.",
     "remove_title": "Remove “{{name}}”?",
-    "rename_hint": "Renaming or removing a type leaves the tasks that already have it as they are.",
+    "rename_hint": "Renaming a type keeps what the AI was taught about it. Renaming or removing a type leaves the tasks that already have it as they are.",
     "title": "Task types",
     "unnamed": "Unnamed type"
   },

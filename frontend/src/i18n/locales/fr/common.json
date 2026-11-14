@@ -348,9 +348,10 @@
         "crm_core": "Messagerie en direct, visiteurs, prospects, pipeline et tâches",
         "crm_ai_base": "Un crédit IA mensuel pour l'assistant et les brouillons de réponse",
         "time_core": "Planning du jour et de la semaine pour toute l’équipe, backlog et pool ouvert",
-        "time_ai": "L’IA planifie chaque journée selon les compétences, les horaires et l’expérience",
+        "time_ai": "L’IA planifie la journée et la semaine selon les compétences, les connaissances, les horaires et l’historique",
         "time_capture": "Tâches depuis un message ou une note vocale, analyses et statistiques",
-        "time_ai_base": "Un crédit IA mensuel pour les plannings, analyses et saisies"
+        "time_ai_base": "Une enveloppe IA mensuelle pour les plannings, l’assistant, les bilans et la saisie",
+        "time_coach": "Un assistant et un coach IA qui apprennent des semaines de votre équipe"
       },
       "signup": {
         "step": "Étape {{n}} sur {{total}}",

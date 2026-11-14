@@ -348,9 +348,10 @@
         "crm_core": "Live inbox, visitors, leads, pipeline and tasks",
         "crm_ai_base": "A monthly AI allowance for the assistant and reply drafts",
         "time_core": "Day and week planner for the whole team, backlog and open pool",
-        "time_ai": "AI plans each day from skills, hours and experience",
+        "time_ai": "AI plans the day and the week from skills, knowledge, hours and history",
         "time_capture": "Tasks from a message or a voice note, reviews and insights",
-        "time_ai_base": "A monthly AI allowance for plans, reviews and capture"
+        "time_ai_base": "A monthly AI allowance for plans, the assistant, reviews and capture",
+        "time_coach": "An AI assistant and coach that learn from your team’s weeks"
       },
       "signup": {
         "step": "Step {{n}} of {{total}}",

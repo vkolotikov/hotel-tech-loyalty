@@ -348,9 +348,10 @@
         "crm_core": "Live-Posteingang, Besucher, Leads, Pipeline und Aufgaben",
         "crm_ai_base": "Ein monatliches KI-Kontingent für den Assistenten und Antwortentwürfe",
         "time_core": "Tages- und Wochenplaner für das ganze Team, Backlog und offener Pool",
-        "time_ai": "KI plant jeden Tag nach Fähigkeiten, Arbeitszeiten und Erfahrung",
+        "time_ai": "KI plant Tag und Woche nach Fähigkeiten, Wissen, Arbeitszeiten und Verlauf",
         "time_capture": "Aufgaben aus Nachricht oder Sprachnotiz, Auswertungen und Einblicke",
-        "time_ai_base": "Ein monatliches KI-Kontingent für Pläne, Auswertungen und Erfassung"
+        "time_ai_base": "Ein monatliches KI-Kontingent für Pläne, den Assistenten, Auswertungen und Erfassung",
+        "time_coach": "Ein KI-Assistent und Coach, die aus den Wochen Ihres Teams lernen"
       },
       "signup": {
         "step": "Schritt {{n}} von {{total}}",

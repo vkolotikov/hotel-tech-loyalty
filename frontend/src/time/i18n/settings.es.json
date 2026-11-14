@@ -131,7 +131,7 @@
     "problem_empty": "Ponga un nombre al tipo.",
     "remove_line": "Las tareas que ya tienen este tipo lo conservan como texto; al guardar, deja de ofrecerse para trabajo nuevo.",
     "remove_title": "¿Quitar «{{name}}»?",
-    "rename_hint": "Renombrar o quitar un tipo no cambia las tareas que ya lo tienen.",
+    "rename_hint": "Al renombrar un tipo se conserva lo que la IA aprendió sobre él. Renombrar o eliminar un tipo no cambia las tareas que ya lo tienen.",
     "title": "Tipos de tarea",
     "unnamed": "Tipo sin nombre"
   },
