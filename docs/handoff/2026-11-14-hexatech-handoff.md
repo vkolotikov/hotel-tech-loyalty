@@ -88,7 +88,7 @@ word: deploy when done.
 - CI on main 84cdb581: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43622167280 — **green** (all
   eight jobs: PHP on SQLite in three shards, PHP on PostgreSQL 18 with only known failures, Larastan, the SPA on Node 24
   and 26, the dependency audit).
-- **Next source-patch baseline: 3ca87339** (handoff commits after it are docs only).
+- Next source-patch baseline after this deploy: 3ca87339 (superseded by the follow-up below: **7f2dc364**).
 
 ## Follow-up the same day (the owner: "is there anything else what need to do, if yes do it")
 
@@ -101,6 +101,14 @@ word: deploy when done.
   conversations than the plans and reviews did. The allowance stops the AI before the provider is asked, and the rules
   still plan when it is used up; if Lite customers run out early, raising Lite's `ai_monthly_cost_cents` is billing's
   change (and `PlanModules`' fallback with it).
+
+- **Deploy** (20:37 UTC): production **013d05e7** on `origin/main` 84cdb581 (nothing else had landed): source patch
+  **f022296e** (3ca87339..7f2dc364, 26 files, 1 added, 25 changed; the five `common.json` merged three-way, every added
+  line present; the 21 others byte for byte), fresh build. Artifact: Unit/Support 216, TimeWorkspace 63, AdminAccess 91,
+  Planner 59 passed; `tsc -b`, lint clean; Vitest 483 files / 7,212 tests; the built SPA served by `artisan serve`
+  renders the four pages. Live by content (20:40 UTC): `index-DUwu9uEG.js` → `TimeApp-DRTkZfrg.js` (`ai=week`, "Renaming a
+  type keeps…"), the sign-up line in `i18n-fi7wjKEW.js`; `/time`, `/time/assistant`, `/time/register` 200; the kit 64,577
+  bytes. **Next source-patch baseline: 7f2dc364.**
 
 ## What the owner does by hand
 
