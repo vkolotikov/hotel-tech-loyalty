@@ -108,7 +108,8 @@ word: deploy when done.
   Planner 59 passed; `tsc -b`, lint clean; Vitest 483 files / 7,212 tests; the built SPA served by `artisan serve`
   renders the four pages. Live by content (20:40 UTC): `index-DUwu9uEG.js` → `TimeApp-DRTkZfrg.js` (`ai=week`, "Renaming a
   type keeps…"), the sign-up line in `i18n-fi7wjKEW.js`; `/time`, `/time/assistant`, `/time/register` 200; the kit 64,577
-  bytes. **Next source-patch baseline: 7f2dc364.**
+  bytes. CI on 013d05e7: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43638455326 — **green**.
+  **Next source-patch baseline: 7f2dc364.**
 
 ## What the owner does by hand
 
