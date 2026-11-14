@@ -85,6 +85,9 @@ word: deploy when done.
   session's `time/pulse` 401 without a login; `hexa-academy`'s kit 64,577 bytes, 0 `rp-` markers; the retired
   `ruled_page.css` 404. Production's bundle names differ from the committed build's (Cloud rebuilds it): check by
   content, not by the committed hash.
+- CI on main 84cdb581: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43622167280 — **green** (all
+  eight jobs: PHP on SQLite in three shards, PHP on PostgreSQL 18 with only known failures, Larastan, the SPA on Node 24
+  and 26, the dependency audit).
 - **Next source-patch baseline: 3ca87339** (handoff commits after it are docs only).
 
 ## What the owner does by hand
