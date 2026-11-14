@@ -9,7 +9,10 @@ use App\Services\Ai\SpeechToText;
 use App\Services\Appointments\VenueClock;
 use App\Services\Time\DayBoard;
 use App\Services\Time\DayPlanner;
+use App\Services\Time\AiFacts;
 use App\Services\Time\Experience;
+use App\Services\Time\Knowledge;
+use App\Services\Time\Learning;
 use App\Services\Time\PlanApplier;
 use App\Services\Time\PlannerAi;
 use App\Services\Time\PlannerCatalogue;
@@ -18,6 +21,7 @@ use App\Services\Time\Team;
 use App\Services\Time\PlanningMode;
 use App\Services\Time\TimeInsights;
 use App\Services\Time\TimeRefused;
+use App\Services\Time\WeekPlanner;
 use App\Services\Time\WorkWindow;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -34,7 +38,7 @@ class AiController extends Controller
     /** Most tasks one plan places. */
     private const MAX_CANDIDATES = 60;
 
-    public function plan(Request $request, DayBoard $boards, DayPlanner $planner, PlannerAi $ai, Experience $experience, Team $team): JsonResponse
+    public function plan(Request $request, DayBoard $boards, DayPlanner $planner, PlannerAi $ai, Experience $experience, Team $team, Learning $learning, Knowledge $knowledge): JsonResponse
     {
         $data = $request->validate([
             'date'             => 'required|date_format:Y-m-d',
@@ -75,7 +79,8 @@ class AiController extends Controller
         $assignOthers = $scope === 'team';
 
         $board = $boards->build($orgId, $data['date'], $scopeKeys);
-        $candidates = $this->candidates($board, $scopeKeys, $data, $today, $team);
+        // A task without a length of its own is planned with the manager's typical one, else the learned one (Learning).
+        $candidates = $learning->sized($orgId, $this->candidates($board, $scopeKeys, $data, $today, $team));
         $shown = $experience->byPerson($orgId);
         $options = ['scope' => $scopeKeys, 'assign_others' => $assignOthers];
 
@@ -90,7 +95,7 @@ class AiController extends Controller
         $aiLines = [];
         if ($status === 'ready') {
             try {
-                $answer = $ai->planDay($orgId, $this->planFacts($board, $candidates, $shown, $assignOthers), $data['instruction'] ?? null, $data['lang'] ?? 'en');
+                $answer = $ai->planDay($orgId, $this->planFacts($board, $candidates, $shown, $assignOthers, $team, $knowledge), $data['instruction'] ?? null, $data['lang'] ?? 'en');
                 $aiLines = $answer['proposals'];
                 $summary = $answer['summary'];
                 $source = 'ai';
@@ -121,14 +126,83 @@ class AiController extends Controller
             'lines.*.start_time'          => 'required|date_format:H:i',
             'lines.*.duration_minutes'    => 'required|integer|min:5|max:720',
             'lines.*.seen'                => 'nullable|string|max:40',
+            // A week's plan names each line's own day (2026-11-14); a day's plan leaves it to `date`.
+            'lines.*.date'                => 'nullable|date_format:Y-m-d',
         ]);
         $orgId = (int) $request->attributes->get('workspace_org')->id;
-        if ($data['date'] < VenueClock::today($orgId)) {
+        $today = VenueClock::today($orgId);
+        if ($data['date'] < $today || collect($data['lines'])->contains(fn ($l) => ($l['date'] ?? $today) < $today)) {
             throw new TimeRefused('past_day', 'A day that has passed cannot be planned.', 422);
         }
         $user = $request->user();
 
         return response()->json($applier->apply($user, PlanningMode::mayPlanOthers($user), $data['date'], $data['lines']));
+    }
+
+    /**
+     * A week's plan (2026-11-14): the day and the person for each piece of open work in scope, and each day's times —
+     * the AI's lines first, each checked, the rules for the rest (WeekPlanner). Writes nothing; `plan/apply` takes its
+     * lines, each with its date. `scope=team` (or anyone's day) follows the planning mode, as a day's plan does.
+     */
+    public function planWeek(Request $request, WeekPlanner $weeks, PlannerAi $ai, Experience $experience, Team $team, Knowledge $knowledge): JsonResponse
+    {
+        $data = $request->validate([
+            'start'           => 'required|date_format:Y-m-d',
+            'scope'           => 'required|string|in:me,team',
+            'include_pool'    => 'sometimes|boolean',
+            'include_backlog' => 'sometimes|boolean',
+            'include_overdue' => 'sometimes|boolean',
+            'use_ai'          => 'sometimes|boolean',
+            'instruction'     => 'nullable|string|max:500',
+            'lang'            => 'nullable|string|in:en,ru,de,fr,es',
+        ]);
+        /** @var Organization $org */
+        $org = $request->attributes->get('workspace_org');
+        $orgId = (int) $org->id;
+        $user = $request->user();
+        $today = VenueClock::today($orgId);
+        if ($data['scope'] === 'team' && !PlanningMode::mayPlanOthers($user)) {
+            throw PlanningMode::refused();
+        }
+        $days = WeekPlanner::days($data['start'], $today);
+        if ($days === []) {
+            throw new TimeRefused('past_day', 'A day that has passed cannot be planned.', 422);
+        }
+        $scope = $data['scope'] === 'team' ? array_map(fn ($p) => $p['key'], $team->people()) : ['u' . $user->id];
+        $options = [
+            'include_pool'    => (bool) ($data['include_pool'] ?? true),
+            'include_backlog' => (bool) ($data['include_backlog'] ?? true),
+            'include_overdue' => (bool) ($data['include_overdue'] ?? true),
+            'assign_others'   => $data['scope'] === 'team',
+        ];
+        $shown = $experience->byPerson($orgId);
+
+        $status = ($data['use_ai'] ?? true) ? $ai->status($org) : 'off';
+        $summary = '';
+        $source = 'rules';
+        $lines = [];
+        if ($status === 'ready') {
+            try {
+                $answer = $ai->planWeek($orgId, $weeks->facts($orgId, $days, $today, $scope, $options, $shown, $knowledge), $data['instruction'] ?? null, $data['lang'] ?? 'en');
+                $lines = $answer['lines'];
+                $summary = $answer['summary'];
+                $source = 'ai';
+            } catch (TimeRefused) {
+                $status = 'failed';
+            }
+        }
+        $result = $weeks->plan($orgId, $days, $today, $scope, $options, $shown, $lines);
+
+        return response()->json([
+            'from'      => $result['from'],
+            'to'        => $result['to'],
+            'source'    => $source,
+            'ai_status' => $status,
+            'summary'   => $summary,
+            'days'      => $result['days'],
+            'unplaced'  => $result['unplaced'],
+            'people'    => array_map(fn ($p) => ['key' => $p['key'], 'name' => $p['name']], array_values(array_filter($team->people(), fn ($p) => in_array($p['key'], $scope, true)))),
+        ]);
     }
 
     /** The AI's read of a day (`kind=day`) or a period (`kind=period`), with suggestions it may act on. */
@@ -323,11 +397,13 @@ class AiController extends Controller
     }
 
     /** The facts the AI plans from: people in scope with their day, and the tasks to place. */
-    private function planFacts(array $board, array $candidates, array $shown, bool $assignOthers): array
+    private function planFacts(array $board, array $candidates, array $shown, bool $assignOthers, Team $team, Knowledge $knowledge): array
     {
         $placing = array_flip(array_column($candidates, 'id'));
 
         return [
+            // What a manager taught the AI (2026-11-14): the business, its rules and goals, notes per type and task.
+            'business'      => $knowledge->forAi() ?: null,
             'date'          => $board['date'],
             'weekday'       => CarbonImmutable::createFromFormat('!Y-m-d', $board['date'], 'UTC')->englishDayOfWeek,
             'now'           => $board['now'],
@@ -343,6 +419,7 @@ class AiController extends Controller
                 'skills'     => $p['skills'] ?? 'any',
                 'prefers'    => $p['prefers'],
                 'knowledge'  => mb_substr((string) $p['knowledge'], 0, 600),
+                'profile'    => ($found = $team->find($p['key'])) ? array_intersect_key(AiFacts::person($found), array_flip(['job_title', 'level', 'strengths', 'develop'])) : null,
                 'experience' => collect($shown[$p['key']]['groups'] ?? [])->take(8)->map(fn ($g, $name) => "{$g['done']} done, " . ($g['done'] > 0 ? (int) round($g['on_time'] / $g['done'] * 100) : 0) . "% on time, ~{$g['avg_minutes']} min")->all(),
                 'busy'       => array_values(array_map(fn ($t) => $t['start_time'] . '-' . $t['end_time'] . ' ' . mb_substr($t['title'], 0, 60),
                     array_filter($p['tasks'], fn ($t) => $t['start_time'] !== null && !isset($placing[$t['id']])))),
@@ -354,6 +431,7 @@ class AiController extends Controller
                 'task'     => $t['task_category'],
                 'priority' => $t['priority'],
                 'minutes'  => $t['minutes'],
+                'length_from' => ($t['sized'] ?? 'own') !== 'own' ? $t['sized'] : null,
                 'owner'    => $t['owner'],
                 'from'     => $t['from'],
                 'due'      => $t['task_date'] ?? $t['pool_due_date'],

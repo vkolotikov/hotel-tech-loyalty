@@ -28,7 +28,7 @@ final class PlanApplier
 
     /**
      * @param  bool  $others  whether this person may put work on others' days (PlanningMode::mayPlanOthers)
-     * @param  list<array{task_id: int, person: string, start_time: string, duration_minutes: int, seen?: ?string}>  $lines
+     * @param  list<array{task_id: int, person: string, start_time: string, duration_minutes: int, seen?: ?string, date?: ?string}>  $lines  a week's lines carry their own day
      * @return array{applied: int, skipped: list<array{task_id: int, reason: string}>}
      */
     public function apply(User $by, bool $others, string $date, array $lines): array
@@ -71,7 +71,7 @@ final class PlanApplier
                 $start = WorkWindow::toMinutes($line['start_time']);
                 $minutes = max(5, min(720, (int) $line['duration_minutes']));
                 $task->update([
-                    'task_date'        => $date,
+                    'task_date'        => $line['date'] ?? $date,
                     'start_time'       => WorkWindow::toClock($start),
                     'end_time'         => WorkWindow::toClock(min(24 * 60 - 1, $start + $minutes)),
                     'duration_minutes' => $minutes,

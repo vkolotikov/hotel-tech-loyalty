@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Time;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\CrmSetting;
+use App\Services\Time\Knowledge;
 use App\Services\Time\PlanningMode;
 use App\Services\Time\TimeAccess;
 use App\Services\Time\TimeRefused;
@@ -18,6 +19,9 @@ use Illuminate\Http\Request;
  *
  * Reads are everyone's (the planner lists them all); a change is a manager's (AccessMap `admin/time/settings`, and
  * TimeAccess here as well, since the planning mode decides what everyone else may do).
+ *
+ * Since 2026-11-14 also what a manager teaches the AI (Knowledge: the business, house rules and goals; notes and
+ * typical lengths per task type and per task), answered and saved cleaned, as objects.
  */
 class SettingsController extends Controller
 {
@@ -25,11 +29,13 @@ class SettingsController extends Controller
     public const KEYS = [
         'business_hours_profile', 'planner_work_hours_per_day', 'planner_work_days_per_week',
         'planner_groups', 'planner_channels', 'planner_employee_prefs', PlanningMode::KEY, 'employees',
+        Knowledge::CONTEXT, Knowledge::TYPE_NOTES, Knowledge::TASK_NOTES,
     ];
 
     public const WRITABLE = [
         'business_hours_profile', 'planner_work_hours_per_day', 'planner_work_days_per_week',
         'planner_groups', 'planner_channels', 'planner_employee_prefs', PlanningMode::KEY,
+        Knowledge::CONTEXT, Knowledge::TYPE_NOTES, Knowledge::TASK_NOTES,
     ];
 
     /** The longest list a setting may hold, as JSON text (the full admin's lists are a few kB). */
@@ -39,6 +45,10 @@ class SettingsController extends Controller
     {
         $rows = CrmSetting::query()->whereIn('key', self::KEYS)->pluck('value', 'key')->all();
         $rows[PlanningMode::KEY] = PlanningMode::read($rows[PlanningMode::KEY] ?? null);
+        $knowledge = new Knowledge();
+        $rows[Knowledge::CONTEXT] = $knowledge->context();
+        $rows[Knowledge::TYPE_NOTES] = (object) $knowledge->typeNotes();
+        $rows[Knowledge::TASK_NOTES] = (object) $knowledge->taskNotes();
 
         return response()->json($rows);
     }
@@ -64,6 +74,9 @@ class SettingsController extends Controller
 
                 return ['start' => $v['start'], 'end' => $v['end']];
             })(),
+            Knowledge::CONTEXT => json_encode(Knowledge::cleanContext($this->objectValue($request)), JSON_UNESCAPED_UNICODE),
+            Knowledge::TYPE_NOTES => json_encode((object) Knowledge::cleanTypeNotes($this->objectValue($request)), JSON_UNESCAPED_UNICODE),
+            Knowledge::TASK_NOTES => json_encode((object) Knowledge::cleanTaskNotes($this->objectValue($request)), JSON_UNESCAPED_UNICODE),
             default => $this->listValue($request),
         };
 
@@ -74,7 +87,32 @@ class SettingsController extends Controller
                 $value === PlanningMode::OWN ? 'Planner: everyone plans only their own day' : 'Planner: everyone may plan for the team');
         }
 
-        return response()->json(['key' => $key, 'value' => $key === PlanningMode::KEY ? $value : CrmSetting::query()->where('key', $key)->value('value')]);
+        return response()->json(['key' => $key, 'value' => match (true) {
+            $key === PlanningMode::KEY => $value,
+            in_array($key, Knowledge::KEYS, true) => json_decode((string) $value),
+            default => CrmSetting::query()->where('key', $key)->value('value'),
+        }]);
+    }
+
+    /**
+     * What a manager teaches the AI: an object sent as JSON, or as JSON text.
+     *
+     * @return array<mixed>
+     */
+    private function objectValue(Request $request): array
+    {
+        $raw = $request->input('value');
+        if (is_string($raw)) {
+            if (strlen($raw) > self::MAX_LIST_BYTES) {
+                throw new TimeRefused('invalid', 'The setting is too long.', 422);
+            }
+            $raw = json_decode($raw, true);
+        }
+        if (!is_array($raw)) {
+            throw new TimeRefused('invalid', 'The setting is not something the planner can read.', 422);
+        }
+
+        return $raw;
     }
 
     /**
