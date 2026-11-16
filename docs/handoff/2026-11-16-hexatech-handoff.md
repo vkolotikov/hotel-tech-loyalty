@@ -37,3 +37,21 @@ Live content: /spa/assets/index-_xYuyRgF.js → /spa/assets/ContentApp-OmO6Ta2S.
 All eight jobs on code release00e4de78 passed: PostgreSQL18 (only documented known failures allowed), three SQLite
 shards, Larastan, Node24/26 and the dependency audit. [Pipeline](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43848030732).
 Later handoff/report commits are documentation only; application and generated-asset trees remain identical to00e4de78.
+
+## Stay-promotion controls follow-up
+
+Owner's screenshots requested a modern date calendar and readable status selection. Source branch
+`feature/promo-controls-20261116` starts at production `4d14e377b`; the original C: checkout and owner assets are
+untouched. Changes are confined to the stay-promotion admin page, its new date-field component/scoped stylesheet,
+the existing browser journey and these two documents. Dates retain native input validation and their existing
+API strings; no campaign, pricing, checkout, payment or database writer changed.
+
+The calendar supports month/year jumps, keyboard days, leap dates, minimum bounds, Clear/Today, editable booking
+times and Escape without closing the editor. Glass/Light controls and status-option contrast, 390px/1440px fit,
+and the existing create/duplicate/filter/pause/archive/stale-save flow pass in the browser. Initial mobile
+auto-scroll dismissal was reproduced and fixed by repositioning the popup; screenshot review also removed its
+redundant title and fixed the editor's existing hard-coded dark background in Clean light.
+
+Source verification: TypeScript, focused ESLint and all 491 Vitest files / 7,275 tests pass. Private browser
+screenshots/fixture results: `C:/wamp64/tmp/promo-browser-20261116/`. Release artifact and live receipts follow
+after the required source-patch gates; this paragraph alone is not a production-deployment claim.
