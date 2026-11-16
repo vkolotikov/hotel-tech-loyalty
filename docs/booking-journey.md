@@ -41,7 +41,9 @@ PHP 8.5 tests cover venue-day boundaries, server night limits, pre-payment conta
 
 Deployment follows the separate source-patch worktree recipe. Verify the live admin chunk by the new campaign-launch text, the public Blade by the new recovery/calendar code, and Forrest's public configuration by `promotions_enabled: true`. A read-only live search/quote can validate rates; real card, capture/refund and reservation/cancellation checks require a controlled venue transaction and must be reported separately from mocked tests.
 
-The framework security follow-up is identified by the non-secret `booking-release` HTML metadata value `2026-11-13.2`. This lets deployment checks distinguish it from the initial journey release even though both use the same SPA sources.
+The framework security follow-up was identified by `booking-release` value `2026-11-13.2`. The confirmation/recovery
+repair below uses `2026-11-16.1`. This non-secret Blade metadata distinguishes releases even when the SPA sources
+are unchanged.
 
 ## Confirmation and released-payment recovery — 16 November 2026
 
