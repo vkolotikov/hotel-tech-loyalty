@@ -196,6 +196,45 @@ class PublicStayJourneyTest extends MemberEndpointTestCase
         $this->assertSame(1, \App\Models\BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->count());
     }
 
+    public function test_a_refunded_payment_cannot_resume_the_card_step_or_fund_a_new_reservation(): void
+    {
+        $hold = $this->cachedHold();
+        $stripe = $this->stripe();
+        $stripe->shouldNotReceive('createPaymentIntent');
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $this->smoobu->shouldNotReceive('createReservation');
+        $stripe->shouldReceive('retrievePaymentIntent')->andReturn(PaymentIntent::constructFrom([
+            'id' => 'pi_journey', 'status' => 'succeeded', 'amount' => 20000, 'currency' => 'eur',
+            'metadata' => ['hold_token' => $hold->hold_token, 'org_id' => (string) $this->org->id],
+            'latest_charge' => ['id' => 'ch_refunded_fixture', 'object' => 'charge', 'paid' => true, 'amount_refunded' => 20000, 'refunded' => true],
+        ]));
+        foreach ([[], ['recovery_version' => 1]] as $version) {
+            $this->postJson($this->endpoint('payment-intent'), $version + ['hold_token' => $hold->hold_token])
+                ->assertStatus(409)->assertJsonPath('code', 'payment_refunded');
+            $this->postJson($this->endpoint('confirm'), $version + ['hold_token' => $hold->hold_token, 'payment_intent_id' => 'pi_journey', 'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test']])
+                ->assertStatus(409)->assertJsonPath('code', 'payment_refunded');
+        }
+        $this->assertSame(0, \App\Models\BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->count());
+    }
+
+    public function test_a_cancelled_stays_payment_replay_is_not_acknowledged_as_a_confirmed_booking(): void
+    {
+        $hold = $this->cachedHold();
+        \App\Models\BookingMirror::withoutGlobalScopes()->create([
+            'organization_id' => $this->org->id, 'reservation_id' => 'CANCELLED-REPLAY', 'booking_reference' => 'CANCELLED-REPLAY',
+            'apartment_id' => '101', 'arrival_date' => $this->checkIn, 'departure_date' => $this->checkOut,
+            'price_total' => 200, 'booking_state' => 'cancelled', 'internal_status' => 'cancelled', 'cancelled_at' => now(),
+            'stripe_payment_intent_id' => 'pi_journey', 'payment_status' => 'refunded',
+        ]);
+        $this->stripe()->shouldReceive('retrievePaymentIntent')->andReturn(PaymentIntent::constructFrom([
+            'id' => 'pi_journey', 'status' => 'succeeded', 'amount' => 20000, 'currency' => 'eur',
+            'metadata' => ['hold_token' => $hold->hold_token, 'org_id' => (string) $this->org->id],
+        ]));
+        $this->smoobu->shouldNotReceive('createReservation');
+        $this->postJson($this->endpoint('confirm'), ['hold_token' => $hold->hold_token, 'payment_intent_id' => 'pi_journey', 'recovery_version' => 1, 'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test']])
+            ->assertStatus(409)->assertJsonPath('code', 'booking_not_active')->assertJsonPath('payment_recovery', 'contact_venue');
+    }
+
     public function test_new_public_checkout_webhook_recovers_through_the_booking_writer_with_saved_contact(): void
     {
         if (!\Illuminate\Support\Facades\Schema::hasTable('stripe_webhook_events')) {

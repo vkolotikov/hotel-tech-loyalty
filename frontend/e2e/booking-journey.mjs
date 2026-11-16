@@ -105,8 +105,9 @@ try {
     check(calls.find(call => call.endpoint === 'confirm').body.recovery_version === 1, 'Checkout explicitly asks for scoped recovery information')
     await page.screenshot({ path: path.join(out, 'released-payment-status-mobile.png'), fullPage: true })
     await page.reload()
-    await page.getByText('Your previous card authorisation was cancelled. Please review your stay again.', { exact: true }).waitFor()
-    check(calls.filter(call => call.endpoint === 'confirm').length === 1, 'Reload checks the server instead of retrying a cancelled payment')
+    await page.getByRole('button', { name: 'Review availability', exact: true }).first().waitFor()
+    check(calls.filter(call => call.endpoint === 'confirm').length === 1, 'Reload never retries a cancelled payment')
+    check(calls.filter(call => call.endpoint === 'payment-intent').length === 1, 'Released-state review survives reload without creating or resuming a payment')
     check(await page.locator('#w-pay').count() === 0, 'A fresh quote is required after release')
   }, { confirmRecovery: 'released', mobile: true })
   await scenario('released-payment-review', async ({ page, calls, enter, details }) => {
@@ -133,13 +134,30 @@ try {
     check(await page.evaluate(() => window.__stripeCalls) === 1, 'Status recovery never authorises another payment')
     check(calls.filter(call => call.endpoint === 'confirm').length === 2, 'The same checkout is checked again')
   }, { confirmRecovery: 'unknown' })
-  await scenario('refund-requested-recovery', async ({ page, enter, details }) => {
+  await scenario('refund-requested-recovery', async ({ page, fixture, calls, enter, details }) => {
     await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
     await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
     await page.locator('#w-pay').click()
     await page.getByText(/A refund has been requested/).waitFor()
     check(await page.locator('#w-pay, #w-retry-confirm, #w-summary-confirm').count() === 0, 'A captured payment sent for refund is not retried as payable')
+    fixture.confirmRecovery = null
+    await page.reload()
+    await page.getByText(/A refund has been requested/).waitFor()
+    check(calls.filter(call => call.endpoint === 'confirm').length === 1, 'Reload cannot confirm a new reservation with an already-refunded payment')
+    check(calls.filter(call => call.endpoint === 'payment-intent').length === 1, 'A refund recovery remains blocked until venue review')
   }, { confirmRecovery: 'refund_requested' })
+  await scenario('expired-unknown-payment-recovery', async ({ page, calls, enter, details }) => {
+    await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
+    await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
+    await page.locator('#w-pay').click()
+    await page.getByRole('button', { name: 'Check booking status', exact: true }).first().waitFor()
+    await page.evaluate(() => { const key = Object.keys(sessionStorage).find(key => key.startsWith('booking-payment:')); const saved = JSON.parse(sessionStorage.getItem(key)); saved.saved = Date.now() - 31 * 60000; sessionStorage.setItem(key, JSON.stringify(saved)) })
+    await page.reload()
+    await page.getByText(/The earlier payment or reservation still needs venue review/).waitFor()
+    check(await page.locator('#w-search, #w-pay, #w-summary-payment').count() === 0, 'An expired unresolved payment never reopens fresh checkout')
+    check(calls.filter(call => call.endpoint === 'confirm').length === 1, 'An aged unresolved checkout is not automatically confirmed')
+    check(calls.filter(call => call.endpoint === 'payment-intent').length === 1, 'An aged unresolved checkout cannot request another payment')
+  }, { confirmRecovery: 'unknown', mobile: true })
   await scenario('paid-discount-extras', async ({ page, calls, enter, details }) => {
     await enter()
     await page.locator('[data-extra-card="1"]').press('Space')

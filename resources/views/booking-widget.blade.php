@@ -486,6 +486,7 @@ var state = {
   paymentUncertain: false,
   confirmationPending: false,
   paymentRecovery: null,
+  paymentAttempted: false,
   returnNotice: null,
   paymentError: null,
   calendarOpen: false,
@@ -1122,7 +1123,7 @@ function renderSummary() {
   } else if (state.step === 5 && state.paymentEnabled) {
     if (state.paymentRecovery === 'released') {
       h += '<button class="btn btn-primary" id="w-summary-review" style="margin-top:16px">Review availability</button>';
-    } else if (state.paymentRecovery !== 'refund_requested') {
+    } else if (state.paymentRecovery !== 'refund_requested' && state.paymentRecovery !== 'contact_venue') {
       h += '<button class="btn btn-primary" id="w-summary-confirm" style="margin-top:16px"' + (state.confirming || state.paymentProcessing || (!state.paymentAuthorized && !state.paymentUncertain && !state.stripeReady) ? ' disabled' : '') + '>';
       h += state.confirming || state.paymentProcessing ? spinner() + ' Checking...' : state.confirmationPending ? 'Check booking status' : state.paymentAuthorized ? 'Retry booking confirmation' : state.paymentUncertain ? 'Check payment status' : svgLock() + ' Pay & Confirm';
       h += '</button>';
@@ -1255,14 +1256,15 @@ function renderPayment() {
   var h = '';
   if (state.error) h += errorHtml(state.error);
   if (state.paymentError) h += errorHtml(state.paymentError);
-  if (state.paymentRecovery === 'released' || state.paymentRecovery === 'refund_requested') {
+  if (state.paymentRecovery === 'released' || state.paymentRecovery === 'refund_requested' || state.paymentRecovery === 'contact_venue') {
     var released = state.paymentRecovery === 'released';
-    h += '<div class="page-layout"><div class="card"><h2 class="card-title">Booking not confirmed</h2>';
-    h += '<p class="booking-status" role="status">' + (released ? 'The card authorisation was cancelled. Your bank may take time to remove the pending hold.' : 'A refund has been requested for this payment. Contact the venue before making another payment.') + '</p>';
+    var review = state.paymentRecovery === 'contact_venue';
+    h += '<div class="page-layout"><div class="card"><h2 class="card-title">' + (review ? 'Check with the venue' : 'Booking not confirmed') + '</h2>';
+    h += '<p class="booking-status" role="status">' + (released ? 'The card authorisation was cancelled. Your bank may take time to remove the pending hold.' : review ? 'The earlier payment or reservation still needs venue review. Do not make another payment.' : 'A refund has been requested for this payment. Contact the venue before making another payment.') + '</p>';
     h += '<p>Payment reference: <strong>' + esc(state.paymentIntentId) + '</strong></p>';
     h += '<p class="card-sub">' + (released ? 'Review availability to get a fresh quote before trying again.' : 'Keep this reference so the venue can check the reservation and refund with you.') + '</p>';
     if (released) h += '<div class="btn-row"><button class="btn btn-primary" id="w-review-after-release">Review availability ' + svgArrowRight() + '</button></div>';
-    return h + '</div>' + renderSummary() + '</div>';
+    return h + '</div>' + (state.quote ? renderSummary() : '') + '</div>';
   }
   if (!state.paymentAuthorized && !state.paymentUncertain) h += quoteExpiryHtml();
   if (state.paymentAuthorized || state.paymentUncertain) {
@@ -1443,7 +1445,7 @@ function bindEvents() {
   on('w-new', 'click', function() {
     forgetPayment(); unmountStripeElement();
     state.step = 1; state.selectedUnit = null; state.selectedExtras = {};
-    state.selectedCombo = null; state.promo = ''; state.paymentAuthorized = false; state.paymentUncertain = false; state.confirmationPending = false; state.paymentRecovery = null;
+    state.selectedCombo = null; state.promo = ''; state.paymentAuthorized = false; state.paymentUncertain = false; state.confirmationPending = false; state.paymentRecovery = null; state.paymentAttempted = false;
     state.quote = null; state.confirmation = null; state.error = null;
     state.paymentError = null; state.paymentIntentClientSecret = null; state.paymentIntentId = null;
     state.requests = '';
@@ -1658,13 +1660,13 @@ function validateGuest() {
 }
 function pendingPaymentKey() { return 'booking-payment:' + ORG_ID; }
 function rememberPayment() {
-  try { sessionStorage.setItem(pendingPaymentKey(), JSON.stringify({ saved: Date.now(), quote: state.quote, unit: state.selectedUnit, combo: state.selectedCombo, extras: state.selectedExtras, guest: guestDetails(), requests: state.requests, intent: state.paymentIntentId, authorized: state.paymentAuthorized })); } catch (e) {}
+  try { sessionStorage.setItem(pendingPaymentKey(), JSON.stringify({ saved: Date.now(), quote: state.quote, unit: state.selectedUnit, combo: state.selectedCombo, extras: state.selectedExtras, guest: guestDetails(), requests: state.requests, intent: state.paymentIntentId, authorized: state.paymentAuthorized, recovery: state.paymentRecovery, attempted: state.paymentAttempted })); } catch (e) {}
 }
 function forgetPayment() { try { sessionStorage.removeItem(pendingPaymentKey()); } catch (e) {} }
 function resumePayment(params) {
   var saved = null;
   try { saved = JSON.parse(sessionStorage.getItem(pendingPaymentKey()) || 'null'); } catch (e) {}
-  if (!saved || !saved.quote || !saved.guest || !saved.intent || typeof saved.guest.first_name !== 'string' || typeof saved.guest.last_name !== 'string' || typeof saved.guest.email !== 'string' || !Number.isFinite(saved.saved) || Date.now() - saved.saved > 30 * 60000 || (params.payment_intent && params.payment_intent !== saved.intent)) {
+  if (!saved || !saved.quote || !saved.guest || !saved.intent || typeof saved.guest.first_name !== 'string' || typeof saved.guest.last_name !== 'string' || typeof saved.guest.email !== 'string' || (params.payment_intent && params.payment_intent !== saved.intent)) {
     if (params.payment_intent) state.returnNotice = 'We cannot confirm a reservation from the bank return alone. Contact the venue with payment reference ' + params.payment_intent + '. Do not pay again until its status is checked.';
     return false;
   }
@@ -1676,6 +1678,20 @@ function resumePayment(params) {
   state.email = saved.guest.email; state.phone = saved.guest.phone || '';
   state.requests = saved.requests || ''; state.paymentIntentId = saved.intent;
   state.step = 5; state.paymentEnabled = true; state.paymentUncertain = true;
+  state.paymentAttempted = saved.attempted !== false || !!saved.authorized;
+  if (['released', 'refund_requested', 'contact_venue'].indexOf(saved.recovery) >= 0) {
+    state.paymentRecovery = saved.recovery;
+    state.paymentUncertain = saved.recovery !== 'released';
+    render(); return true;
+  }
+  if (!Number.isFinite(saved.saved) || Date.now() - saved.saved > 30 * 60000) {
+    if (saved.attempted === false && !saved.authorized) {
+      forgetPayment(); state.step = 1; state.paymentUncertain = false; state.paymentAttempted = false;
+      state.quote = null; state.selectedUnit = null; state.selectedCombo = null; state.paymentIntentId = null;
+      return false;
+    }
+    state.paymentRecovery = 'contact_venue'; render(); return true;
+  }
   // The server reads the existing intent before either mounting a card or confirming the booking.
   doGoToPayment();
   return true;
@@ -1690,13 +1706,13 @@ function doConfirm() {
 function reviewAfterRelease() {
   if (state.paymentRecovery !== 'released' || state.confirming || state.paymentProcessing) return;
   forgetPayment(); unmountStripeElement();
-  state.paymentRecovery = null; state.paymentAuthorized = false; state.paymentUncertain = false; state.confirmationPending = false;
+  state.paymentRecovery = null; state.paymentAuthorized = false; state.paymentUncertain = false; state.confirmationPending = false; state.paymentAttempted = false;
   state.paymentIntentId = null; state.paymentIntentClientSecret = null; state.paymentError = null;
   state.quote = null; state.selectedUnit = null; state.selectedCombo = null; state.error = null; state.step = 1;
   render();
 }
 function submitBooking() {
-  if (state.confirming || state.paymentRecovery === 'released' || state.paymentRecovery === 'refund_requested') return;
+  if (state.confirming || ['released', 'refund_requested', 'contact_venue'].indexOf(state.paymentRecovery) >= 0) return;
   state.confirming = true; state.error = null; render();
   apiPost('confirm', {
     hold_token: state.quote ? state.quote.hold_token : '',
@@ -1713,7 +1729,7 @@ function submitBooking() {
       state.error = data.error || 'We could not verify your booking. Please retry confirmation or contact the venue.';
       state.confirmationPending = state.paymentAuthorized;
       state.paymentRecovery = data.payment_recovery || 'unknown';
-      if (state.paymentRecovery === 'released' || state.paymentRecovery === 'refund_requested') {
+      if (['released', 'refund_requested', 'contact_venue'].indexOf(state.paymentRecovery) >= 0) {
         state.paymentAuthorized = false;
         state.paymentUncertain = state.paymentRecovery !== 'released';
         state.confirmationPending = false;
@@ -1736,7 +1752,7 @@ function submitBooking() {
 }
 
 function doGoToPayment() {
-  if (state.paymentProcessing || state.confirming || state.paymentRecovery === 'released' || state.paymentRecovery === 'refund_requested') return;
+  if (state.paymentProcessing || state.confirming || ['released', 'refund_requested', 'contact_venue'].indexOf(state.paymentRecovery) >= 0) return;
   state.error = null;
   if (!state.paymentAuthorized && !state.paymentUncertain && quoteExpired()) { render(); return; }
   if (!validateGuest()) return;
@@ -1748,13 +1764,17 @@ function doGoToPayment() {
 
   apiPost('payment-intent', {
     hold_token: state.quote ? state.quote.hold_token : '',
+    recovery_version: 1,
     guest: guestDetails(), special_requests: state.requests.trim() || null
   }).then(function(data) {
     state.paymentProcessing = false;
     if (data.code === 'payment_restart_required') {
-      forgetPayment(); unmountStripeElement(); state.paymentAuthorized = false; state.paymentUncertain = false;
-      state.paymentIntentId = null; state.paymentIntentClientSecret = null; state.quote = null; state.step = 3;
-      state.error = data.error; render(); return;
+      unmountStripeElement(); state.paymentAuthorized = false; state.paymentUncertain = false; state.confirmationPending = false;
+      state.paymentRecovery = 'released'; state.step = 5; state.error = data.error; rememberPayment(); render(); return;
+    }
+    if (data.payment_recovery === 'contact_venue' || data.code === 'payment_refunded') {
+      unmountStripeElement(); state.paymentAuthorized = false; state.paymentUncertain = true; state.confirmationPending = false;
+      state.paymentRecovery = 'contact_venue'; state.step = 5; state.error = data.error; rememberPayment(); render(); return;
     }
     if (data.error) { state.error = data.error; render(); return; }
     if (data.nothing_to_pay) { state.paymentEnabled = false; state.step = 4; submitBooking(); return; }
@@ -1925,7 +1945,7 @@ function showPaymentError(msg) {
 }
 
 function doPayAndConfirm() {
-  if (state.paymentProcessing || state.confirming || state.paymentRecovery === 'released' || state.paymentRecovery === 'refund_requested') return;
+  if (state.paymentProcessing || state.confirming || ['released', 'refund_requested', 'contact_venue'].indexOf(state.paymentRecovery) >= 0) return;
   if (state.paymentUncertain && !state.paymentAuthorized) { doGoToPayment(); return; }
   if (state.paymentAuthorized) { submitBooking(); return; }
   if (quoteExpired()) { state.paymentError = 'Your quote expired before payment. Review your stay again.'; render(); return; }
@@ -1954,6 +1974,7 @@ function doPayAndConfirm() {
   // updatePayButton() flips the button to its 'Processing…' state
   // without touching the iframe's parent.
   updatePayButton();
+  state.paymentAttempted = true;
   rememberPayment();
   // Also clear any visible error toast at the top without re-render.
   var errBanner = document.getElementById('stripe-card-errors');

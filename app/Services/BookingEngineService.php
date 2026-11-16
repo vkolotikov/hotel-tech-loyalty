@@ -303,6 +303,11 @@ class BookingEngineService
                 ->where('stripe_payment_intent_id', $piId)
                 ->first();
             if ($existingMirror) {
+                if ($existingMirror->booking_state === 'cancelled' || $existingMirror->getAttribute('cancelled_at')
+                    || in_array($existingMirror->internal_status, ['cancelled', 'no-show'], true)
+                    || in_array($existingMirror->payment_status, ['refunded', 'cancelled', 'canceled', 'capture_expired'], true)) {
+                    throw new \App\Services\Booking\PublicCheckoutBlocked('booking_not_active', 'This reservation is no longer active. Please contact the venue before making another payment.');
+                }
                 // A room group's payment is on its lead room (GroupPayment):
                 // the replay answers the lead, with what the one payment paid
                 // for all the group's rooms.
@@ -1508,6 +1513,9 @@ class BookingEngineService
         }
 
         $attributes['raw_json'] = array_replace($raw, (array) $attributes['raw_json']);
+        // The accepted quote replaces the import's provisional receipt in the
+        // same transaction; persistPriceElements() writes the canonical lines.
+        $mirror->priceElements()->delete();
         $mirror->fill($attributes)->save();
         return $mirror;
     }
@@ -2205,7 +2213,7 @@ class BookingEngineService
                         // can distinguish "no extras" from "missing data".
                         'extras_json'              => $isFirstRoom ? $comboExtrasSnapshot : [],
                     ] + $this->memberColumns($roomPayload, $data));
-                    if (!empty($payload['promotion'])) $this->persistPriceElements($mirror, $roomPayload, $orgId);
+                    if (!empty($payload['promotion']) || !$mirror->wasRecentlyCreated) $this->persistPriceElements($mirror, $roomPayload, $orgId);
                     $mirrors[] = $mirror;
                 }
             });
@@ -2665,6 +2673,28 @@ class BookingEngineService
         if (!in_array($status, ['succeeded', 'requires_capture'], true)) {
             $failed[] = ['payment_not_completed', 'Payment no longer payable at confirm (status: ' . ($status !== '' ? $status : 'none') . ')'];
             throw new \RuntimeException('Payment has not been completed.');
+        }
+        self::assertWidgetPaymentNotRefunded($stripe, $intent);
+    }
+
+    /** A captured card remains succeeded after refund; that does not fund a new stay. */
+    public static function assertWidgetPaymentNotRefunded(StripeService $stripe, \Stripe\PaymentIntent $intent): void
+    {
+        if ($intent->status !== 'succeeded') return;
+        try {
+            $charge = $intent->toArray()['latest_charge'] ?? null;
+            if (!is_array($charge)) {
+                $intent = StripeService::underLock(fn () => $stripe->retrievePaymentIntent($intent->id, ['latest_charge']));
+                $charge = $intent->toArray()['latest_charge'] ?? null;
+            }
+            if ($intent->status !== 'succeeded' || !is_array($charge) || !is_numeric($charge['amount_refunded'] ?? null)) {
+                throw new \RuntimeException('Captured payment refund state could not be verified.');
+            }
+        } catch (\Throwable $error) {
+            throw new PaymentUnverifiable(PaymentUnverifiable::MESSAGE, 0, $error);
+        }
+        if ((int) $charge['amount_refunded'] > 0 || ($charge['refunded'] ?? false)) {
+            throw new \App\Services\Booking\PublicCheckoutBlocked('payment_refunded', 'This payment has already been refunded or partly refunded. Contact the venue before making another payment.');
         }
     }
 

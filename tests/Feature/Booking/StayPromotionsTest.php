@@ -197,7 +197,7 @@ class StayPromotionsTest extends MemberEndpointTestCase
         $quote = $this->postJson('/api/v1/booking/quote?org=' . $this->org->widget_token, $this->quoteBody())->assertOk();
         $this->stripe(false);
         $this->smoobu->shouldReceive('resolveDirectChannelId')->andReturn(7);
-        $this->smoobu->shouldReceive('getPriceElements')->andReturn([]);
+        $this->smoobu->shouldReceive('getPriceElements')->andReturn(['price-elements' => [['id' => 777, 'type' => 'basePrice', 'name' => 'Imported accommodation', 'amount' => 160, 'quantity' => 1, 'currencyCode' => 'EUR']]]);
         $this->smoobu->shouldReceive('createReservation')->once()->andReturnUsing(function (array $sent) {
             app(BookingEngineService::class)->upsertBookingFromData([
                 'id' => 955601, 'reference-id' => 'IMPORTED-PROMO', 'type' => 'reservation',
@@ -215,6 +215,7 @@ class StayPromotionsTest extends MemberEndpointTestCase
         $this->assertSame('EARLYFOR20', $mirror->discount_label);
         $this->assertSame('quoted_snapshot', $mirror->currency_source);
         $this->assertSame(1, DB::table('booking_promotion_uses')->where('organization_id', $this->org->id)->count());
+        $this->assertCount(2, $mirror->priceElements, 'one accepted accommodation line and one discount, without imported duplicates');
     }
 
     public function test_payment_recovery_uses_the_booking_writer_and_preserves_retry_on_failure(): void

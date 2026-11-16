@@ -236,6 +236,7 @@ class BookingPublicController extends Controller
             'guest.email' => 'required_with:guest|email|max:254',
             'guest.phone' => 'nullable|string|max:40',
             'special_requests' => 'nullable|string|max:2000',
+            'recovery_version' => 'sometimes|integer|in:1',
         ]);
 
         $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
@@ -360,6 +361,7 @@ class BookingPublicController extends Controller
                 try {
                     $existing = StripeService::underLock(fn () => $stripe->retrievePaymentIntent($cachedId));
                     if (in_array($existing->status, ['succeeded', 'requires_capture'], true)) {
+                        BookingEngineService::assertWidgetPaymentNotRefunded($stripe, $existing);
                         return response()->json(['payment_received' => true, 'payment_intent_id' => $cachedId]);
                     }
                     if ($existing->status === 'processing') {
@@ -383,6 +385,8 @@ class BookingPublicController extends Controller
                     } else {
                         return response()->json(['error' => 'Please wait while we check the earlier payment.', 'code' => 'payment_pending'], 409);
                     }
+                } catch (\App\Services\Booking\PublicCheckoutBlocked $e) {
+                    return response()->json(['error' => $e->getMessage(), 'code' => $e->publicCode, 'payment_recovery' => 'contact_venue'], 409);
                 } catch (\Throwable $e) {
                     return \App\Services\Booking\PublicBookingError::response($e, 'We could not check your earlier payment. Please retry; do not start another payment.', 'payment_check_failed', 503);
                 }
@@ -661,6 +665,11 @@ class BookingPublicController extends Controller
                 'error' => self::WIDGET_PAYMENT_CHECK_FAILED,
                 'code'  => \App\Services\Booking\PaymentUnverifiable::CODE,
             ], 503), $recovery);
+        } catch (\App\Services\Booking\PublicCheckoutBlocked $e) {
+            $this->logConfirmFailureWithContext('checkout_blocked', $validated, $e);
+            // A previous booking's/refunded payment is never cancelled or
+            // refunded again merely because its old browser tab retried.
+            return $this->withPaymentRecovery($request, \App\Services\Booking\PublicBookingError::response($e, $e->getMessage(), $e->publicCode, 409), 'contact_venue');
         } catch (\RuntimeException $e) {
             // The full RuntimeException surface: PI status mismatch, hold-token
             // mismatch on succeeded PI, Stripe retrieve failure, inventory race,

@@ -65,7 +65,8 @@ repair the checkout/import race, explicit public group/replay success and stale/
 No historical production reservation or payment is changed. See the [report](../audits/2026-11-16-booking-confirmation-recovery.md)
 and [journey runbook](../booking-journey.md#confirmation-and-released-payment-recovery--16-november-2026).
 
-Source regressions reproduce the original failures and the 17-scenario browser journey passes after repair.
-Larastan passes the two changed PHP application paths. PostgreSQL, wider regressions, review and the separate
+Source regressions reproduce the original failures and the 18-scenario browser journey passes after repair.
+Independent review also found terminal reload, aged unknown payment, inactive replay and duplicate imported
+receipt edge cases; their regressions now pass. PostgreSQL, wider regressions, final review and the separate
 source-patch artifact gates must complete before production release. Private evidence prefix:
 `C:/wamp64/tmp/booking-recovery-`; disposable PostgreSQL port54616. Release receipts follow after verification.

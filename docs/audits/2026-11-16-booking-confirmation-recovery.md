@@ -15,13 +15,19 @@ single-room and public/member combination writers all use this path.
 The public controller acknowledges successful legacy group/replay results without changing the engine's
 existing response contracts. The widget's opted-in, own-hold recovery response distinguishes released
 authorisations, refund requests and unknown outcomes. Unknown outcomes cannot start another payment. Released
-payments require the guest to review availability and obtain a new quote. Reloads still consult the server.
+payments require the guest to review availability and obtain a new quote. Terminal recovery receipts survive
+reload without automatically confirming. Older unresolved attempted payments require venue review; they cannot
+silently become a fresh checkout. Captured payments are checked for refunds on both current and legacy routes,
+and inactive booking replays are refused without a second rescue. Imported price lines are replaced with the
+accepted quote receipt, preventing duplicate breakdown lines.
 
 Regression tests first reproduced the duplicate identity failure, absent successful group/replay acknowledgments
 and missing recovery outcome. Browser tests first reproduced the stale released-payment screen. They cover
 single and grouped imports, unrelated-checkout refusal, retained promotion snapshots, cancelled/already-cancelled
 authorisations, failed cancellation, refund-request wording, exact hold/payment binding, lost replies and the
-existing booking journey. Lock-order checks now follow the shared writer and still forbid a booking-row lock
+existing booking journey, refunded-payment and inactive-booking replay, imported receipt replacement, terminal
+reload and aged unresolved snapshots. An independent review identified these latter edge cases and they were
+reproduced before repair. Lock-order checks now follow the shared writer and still forbid a booking-row lock
 under `pi:`. The existing engine widget contract assertions are unchanged.
 
 Source baseline: `455818e40a49bcbc3e77785cf75fc83675e9c099`. Worktree/branch:
