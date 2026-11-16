@@ -41,4 +41,37 @@ PHP 8.5 tests cover venue-day boundaries, server night limits, pre-payment conta
 
 Deployment follows the separate source-patch worktree recipe. Verify the live admin chunk by the new campaign-launch text, the public Blade by the new recovery/calendar code, and Forrest's public configuration by `promotions_enabled: true`. A read-only live search/quote can validate rates; real card, capture/refund and reservation/cancellation checks require a controlled venue transaction and must be reported separately from mocked tests.
 
-The framework security follow-up is identified by the non-secret `booking-release` HTML metadata value `2026-11-13.2`. This lets deployment checks distinguish it from the initial journey release even though both use the same SPA sources.
+The framework security follow-up was identified by `booking-release` value `2026-11-13.2`. The confirmation/recovery
+repair below uses `2026-11-16.1`. This non-secret Blade metadata distinguishes releases even when the SPA sources
+are unchanged.
+
+## Confirmation and released-payment recovery — 16 November 2026
+
+A provider webhook or sync may import a reservation before its create response reaches checkout. Both writers
+now serialize on the organisation/reservation identity. Checkout completes only the matching provider-imported
+row (same room, dates and guest email, no existing payment, member, group or staff cancellation), keeping the
+accepted quote, promotion, extras and payment. Another checkout's row is refused. There is no new booking-row
+lock under the payment lock. Single-room and both combination paths share this writer.
+
+The public confirm response explicitly acknowledges successful legacy group and payment-replay results. The
+engine's existing return shapes are preserved for its other consumers.
+
+The widget opts into `recovery_version: 1`. Failure responses add `payment_recovery` only when this organisation's
+unguessable hold caches the exact payment being named; member holds are excluded. The values are `released`,
+`refund_requested`, `contact_venue` and `unknown`. Existing rescue ownership checks, Stripe operations and audit rows remain in
+force. A confirmed cancellation offers **Review availability**, clears the old payment only on that explicit
+action and requires a fresh quote. A refund request directs the guest to the venue. Unknown/lost outcomes keep
+the same payment and offer **Check booking status**, with no claim that money is still secured and no new card
+authorisation. Reloads preserve released/refund/venue-contact receipts without auto-confirming them. Other recent
+snapshots ask the server about the cached payment; an unresolved attempted payment older than 30 minutes stays
+blocked for venue review instead of opening another checkout. A never-attempted expired card draft can restart.
+
+Captured payments are checked for refunds before either reporting payment received or creating a reservation,
+including legacy requests. A cancelled/refunded booking replay is refused without repeating rescue operations.
+When checkout adopts an imported reservation, its provisional price lines are replaced by the accepted quote's
+receipt in the same transaction, preventing duplicate accommodation or promotion lines.
+
+The reported production payment's audit row records a unique reservation-ID conflict followed by a completed
+authorisation cancellation. This release repairs the writer and recovery flow; it does not charge that cancelled
+payment or alter the historical PMS reservation. Review that existing reservation separately before collecting
+any new payment. See [the recovery report](audits/2026-11-16-booking-confirmation-recovery.md).

@@ -331,7 +331,10 @@ class WidgetStayUnderLockTest extends TestCase
         $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest()]);
 
         $org = $this->org->id;
-        $this->assertSame(["lock:room:{$org}:101", "lock:room:{$org}:102", 'hold'], $trace);
+        $this->assertSame([
+            "lock:room:{$org}:101", "lock:room:{$org}:102", 'hold',
+            "lock:pms-reservation:{$org}:555501", "lock:pms-reservation:{$org}:555502",
+        ], $trace);
         $this->assertCount(2, $this->mirrors());
     }
 

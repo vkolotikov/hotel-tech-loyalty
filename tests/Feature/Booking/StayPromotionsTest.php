@@ -189,6 +189,35 @@ class StayPromotionsTest extends MemberEndpointTestCase
         $this->assertSame(1, DB::table('booking_promotion_uses')->where('organization_id', $this->org->id)->count());
     }
 
+    public function test_a_provider_import_before_confirmation_keeps_the_accepted_promotion_snapshot(): void
+    {
+        if (!collect(Schema::getIndexes('booking_mirror'))->contains('name', 'booking_mirror_organization_id_reservation_id_unique')) {
+            Schema::table('booking_mirror', fn ($table) => $table->unique(['organization_id', 'reservation_id']));
+        }
+        $quote = $this->postJson('/api/v1/booking/quote?org=' . $this->org->widget_token, $this->quoteBody())->assertOk();
+        $this->stripe(false);
+        $this->smoobu->shouldReceive('resolveDirectChannelId')->andReturn(7);
+        $this->smoobu->shouldReceive('getPriceElements')->andReturn(['price-elements' => [['id' => 777, 'type' => 'basePrice', 'name' => 'Imported accommodation', 'amount' => 160, 'quantity' => 1, 'currencyCode' => 'EUR']]]);
+        $this->smoobu->shouldReceive('createReservation')->once()->andReturnUsing(function (array $sent) {
+            app(BookingEngineService::class)->upsertBookingFromData([
+                'id' => 955601, 'reference-id' => 'IMPORTED-PROMO', 'type' => 'reservation',
+                'apartment' => ['id' => 101, 'name' => 'Imported room'], 'channel' => ['id' => 7, 'name' => 'Direct booking'],
+                'arrival' => $sent['arrivalDate'], 'departure' => $sent['departureDate'],
+                'email' => $sent['email'], 'guest-name' => 'Test Guest', 'price' => $sent['price'], 'currency' => 'EUR',
+            ]);
+            return ['id' => 955601, 'reference-id' => 'PROMO-IMPORTED'];
+        });
+        $this->postJson('/api/v1/booking/confirm?org=' . $this->org->widget_token, ['hold_token' => $quote->json('hold_token'), 'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test']])
+            ->assertCreated()->assertJsonPath('success', true)->assertJsonPath('gross_total', 160);
+        $mirror = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->sole();
+        $this->assertEquals(160, $mirror->price_total);
+        $this->assertEquals(40, $mirror->discount_amount);
+        $this->assertSame('EARLYFOR20', $mirror->discount_label);
+        $this->assertSame('quoted_snapshot', $mirror->currency_source);
+        $this->assertSame(1, DB::table('booking_promotion_uses')->where('organization_id', $this->org->id)->count());
+        $this->assertCount(2, $mirror->priceElements, 'one accepted accommodation line and one discount, without imported duplicates');
+    }
+
     public function test_payment_recovery_uses_the_booking_writer_and_preserves_retry_on_failure(): void
     {
         (require database_path('migrations/2026_06_01_120200_create_stripe_webhook_events_table.php'))->up();
