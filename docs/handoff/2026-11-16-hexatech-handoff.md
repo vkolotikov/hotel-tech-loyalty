@@ -55,3 +55,17 @@ redundant title and fixed the editor's existing hard-coded dark background in Cl
 Source verification: TypeScript, focused ESLint and all 491 Vitest files / 7,275 tests pass. Private browser
 screenshots/fixture results: `C:/wamp64/tmp/promo-browser-20261116/`. Release artifact and live receipts follow
 after the required source-patch gates; this paragraph alone is not a production-deployment claim.
+
+## Booking confirmation and payment recovery follow-up
+
+Owner requested investigation and repairs for a paid checkout's failed reservation. Live read-only audit lookup
+identified the unique reservation-ID conflict and a completed authorisation cancellation. Work is on
+`fix/booking-recovery-20261116`, based on production `455818e40`; the original C: checkout is untouched. Changes
+repair the checkout/import race, explicit public group/replay success and stale/unsafe payment recovery states.
+No historical production reservation or payment is changed. See the [report](../audits/2026-11-16-booking-confirmation-recovery.md)
+and [journey runbook](../booking-journey.md#confirmation-and-released-payment-recovery--16-november-2026).
+
+Source regressions reproduce the original failures and the 17-scenario browser journey passes after repair.
+Larastan passes the two changed PHP application paths. PostgreSQL, wider regressions, review and the separate
+source-patch artifact gates must complete before production release. Private evidence prefix:
+`C:/wamp64/tmp/booking-recovery-`; disposable PostgreSQL port54616. Release receipts follow after verification.

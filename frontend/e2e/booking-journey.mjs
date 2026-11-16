@@ -12,6 +12,7 @@ const results = []
 const check = (value, message) => { if (!value) throw Error(message) }
 
 async function scenario(name, run, options = {}) {
+  if (process.env.E2E_CASE && process.env.E2E_CASE !== name) return
   const context = await browser.newContext({ viewport: { width: options.mobile ? 390 : 1440, height: 950 }, reducedMotion: 'reduce' })
   const page = await context.newPage(), calls = [], errors = []
   const fixture = { paid: false, lost: options.lost || false, availabilityError: false, payment: options.payment !== false, code: '', ...options }
@@ -52,10 +53,17 @@ async function scenario(name, run, options = {}) {
       const discount = body.promo_code === 'FREE' ? stayTotal : body.promo_code === 'EARLYFOR20' ? stayTotal * 0.2 : 0
       data = { hold_token: 'fixture_hold', expires_at: new Date(Date.now() + (fixture.expired ? -1000 : 600000)).toISOString(), unit_id: room.id, unit_name: room.name, check_in: body.check_in, check_out: body.check_out, nights: 2, adults: body.adults, children: 0, room_total: stayTotal, extras_total: extras, gross_total: stayTotal - discount + extras, currency: 'EUR', discount, discount_label: body.promo_code, extras: extras ? [{ ...extra, unit_price: 10, quantity: 1, line_total: 40 }] : [] }
     }
-    if (endpoint === 'payment-intent') data = fixture.paid ? { payment_received: true, payment_intent_id: 'pi_journey_fixture' } : { client_secret: 'local_fixture_secret', payment_intent_id: 'pi_journey_fixture' }
+    if (endpoint === 'payment-intent') {
+      if (fixture.released) { status = 409; data = { code: 'payment_restart_required', error: 'Your previous card authorisation was cancelled. Please review your stay again.' } }
+      else data = fixture.paid ? { payment_received: true, payment_intent_id: 'pi_journey_fixture' } : { client_secret: 'local_fixture_secret', payment_intent_id: 'pi_journey_fixture' }
+    }
     if (endpoint === 'confirm') {
       fixture.paid = !!body.payment_intent_id
       if (fixture.lost) { fixture.lost = false; return route.abort() }
+      if (fixture.confirmRecovery) {
+        fixture.released = fixture.confirmRecovery === 'released'
+        return route.fulfill({ status: 400, json: { error: 'The reservation could not be confirmed.', code: 'booking_unavailable', reference: 'support-fixture', payment_recovery: fixture.confirmRecovery } })
+      }
       data = { success: true, booking_reference: 'FORREST-FIXTURE', unit_name: room.name, check_in: '2027-01-10', check_out: '2027-01-12', gross_total: 280, currency: 'EUR' }
     }
     return route.fulfill({ status, json: data })
@@ -86,6 +94,52 @@ async function scenario(name, run, options = {}) {
 }
 
 try {
+  await scenario('released-payment-recovery', async ({ page, calls, enter, details }) => {
+    await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
+    await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
+    await page.locator('#w-pay').click()
+    await page.getByRole('button', { name: 'Review availability', exact: true }).first().waitFor()
+    check((await page.locator('.booking-status').innerText()).includes('authorisation was cancelled'), 'Released funds replace the stale secured-payment claim')
+    check(!(await page.locator('#app').innerText()).includes('Your card payment has been secured'), 'No stale secured-payment banner')
+    check(await page.locator('#w-pay, #w-retry-confirm').count() === 0, 'No payment or confirmation retry for a cancelled intent')
+    check(calls.find(call => call.endpoint === 'confirm').body.recovery_version === 1, 'Checkout explicitly asks for scoped recovery information')
+    await page.screenshot({ path: path.join(out, 'released-payment-status-mobile.png'), fullPage: true })
+    await page.reload()
+    await page.getByText('Your previous card authorisation was cancelled. Please review your stay again.', { exact: true }).waitFor()
+    check(calls.filter(call => call.endpoint === 'confirm').length === 1, 'Reload checks the server instead of retrying a cancelled payment')
+    check(await page.locator('#w-pay').count() === 0, 'A fresh quote is required after release')
+  }, { confirmRecovery: 'released', mobile: true })
+  await scenario('released-payment-review', async ({ page, calls, enter, details }) => {
+    await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
+    await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
+    await page.locator('#w-pay').click()
+    await page.getByRole('button', { name: 'Review availability', exact: true }).first().waitFor()
+    await page.screenshot({ path: path.join(out, 'released-payment-status-desktop.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Review availability', exact: true }).first().click()
+    await page.locator('#w-search').waitFor()
+    check(calls.filter(call => call.endpoint === 'payment-intent').length === 1, 'Reviewing after release creates no payment')
+    check(await page.evaluate(() => window.__stripeCalls) === 1, 'Reviewing availability cannot repeat card authorisation')
+  }, { confirmRecovery: 'released' })
+  await scenario('unknown-payment-recovery', async ({ page, calls, fixture, enter, details }) => {
+    await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
+    await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
+    await page.locator('#w-pay').click()
+    await page.getByRole('button', { name: 'Check booking status', exact: true }).first().waitFor()
+    check(!(await page.locator('#app').innerText()).includes('Your card payment has been secured'), 'An unknown outcome makes no current authorisation claim')
+    check(await page.getByRole('button', { name: 'Review availability', exact: true }).count() === 0, 'An unknown payment cannot restart checkout')
+    fixture.confirmRecovery = null
+    await page.getByRole('button', { name: 'Check booking status', exact: true }).first().click()
+    await page.getByText('Booking Confirmed!', { exact: true }).waitFor()
+    check(await page.evaluate(() => window.__stripeCalls) === 1, 'Status recovery never authorises another payment')
+    check(calls.filter(call => call.endpoint === 'confirm').length === 2, 'The same checkout is checked again')
+  }, { confirmRecovery: 'unknown' })
+  await scenario('refund-requested-recovery', async ({ page, enter, details }) => {
+    await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
+    await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
+    await page.locator('#w-pay').click()
+    await page.getByText(/A refund has been requested/).waitFor()
+    check(await page.locator('#w-pay, #w-retry-confirm, #w-summary-confirm').count() === 0, 'A captured payment sent for refund is not retried as payable')
+  }, { confirmRecovery: 'refund_requested' })
   await scenario('paid-discount-extras', async ({ page, calls, enter, details }) => {
     await enter()
     await page.locator('[data-extra-card="1"]').press('Space')
@@ -119,8 +173,8 @@ try {
     await enter(); await page.locator('#w-next3').click(); await details(); await page.locator('#w-to-payment').click()
     await page.waitForFunction(() => !document.querySelector('#w-pay')?.disabled)
     await page.locator('#w-pay').click()
-    await page.getByRole('button', { name: /Retry booking confirmation/ }).first().waitFor()
-    await page.getByRole('button', { name: /Retry booking confirmation/ }).first().click()
+    await page.getByRole('button', { name: 'Check booking status', exact: true }).first().waitFor()
+    await page.getByRole('button', { name: 'Check booking status', exact: true }).first().click()
     await page.getByText('Booking Confirmed!', { exact: true }).waitFor()
     check(await page.evaluate(() => window.__stripeCalls) === 1, 'Retry never confirms another card payment')
     check(calls.filter(c => c.endpoint === 'confirm').length === 2, 'Same booking retried')

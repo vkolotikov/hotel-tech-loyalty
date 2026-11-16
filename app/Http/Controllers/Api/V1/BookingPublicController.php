@@ -459,6 +459,7 @@ class BookingPublicController extends Controller
             'payment_method'       => 'nullable|string|max:40',
             'payment_intent_id'    => 'nullable|string|max:255',
             'special_requests'     => 'nullable|string|max:2000',
+            'recovery_version'     => 'sometimes|integer|in:1',
         ]);
 
         if ($validator->fails()) {
@@ -482,19 +483,19 @@ class BookingPublicController extends Controller
 
             // 2) Release the held authorization so the guest's money is not
             //    stranded. No-op when there's no PI to cancel.
-            $this->rescuePaymentIntentOnConfirmFailure(
+            $recovery = $this->rescuePaymentIntentOnConfirmFailure(
                 $rawPi,
                 $rawHold,
                 ['stage' => 'validation', 'errors' => $errors],
                 new \RuntimeException('Confirm input validation failed'),
             );
 
-            return response()->json([
+            return $this->withPaymentRecovery($request, response()->json([
                 'error'  => 'We could not confirm your booking because some details were missing or invalid. '
                           . 'If your card shows a charge, it is only a temporary hold that will be released — '
                           . 'please try again or contact us to complete your booking.',
                 'errors' => $errors,
-            ], 422);
+            ], 422), $recovery);
         }
 
         $validated = $validator->validated();
@@ -584,6 +585,17 @@ class BookingPublicController extends Controller
                 $request->ip(),
             );
 
+            // Legacy group/replay results already name a committed reservation,
+            // but omit the explicit acknowledgement required by the widget.
+            if (!array_key_exists('success', $result)
+                && (!empty($result['reservation_id']) || (!empty($result['booking_group_id']) && !empty($result['rooms'])))) {
+                $result['success'] = true;
+                if (!empty($result['rooms'])) {
+                    $result['booking_reference'] = $result['rooms'][0]['booking_reference'] ?: (string) $result['rooms'][0]['reservation_id'];
+                    $result['unit_name'] = implode(', ', array_column($result['rooms'], 'apartment_name'));
+                }
+            }
+
             // Manual-capture commit. BookingMirror is persisted + DB
             // transaction committed at this point. Capture the held
             // funds NOW so the customer's card statement moves from
@@ -616,19 +628,19 @@ class BookingPublicController extends Controller
             $this->logConfirmFailureWithContext('service_http', $validated, $e, [
                 'http_status' => $e->getStatusCode(),
             ]);
-            $this->rescuePaymentIntentOnConfirmFailure(
+            $recovery = $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
                 ['stage' => 'service_http', 'status' => $e->getStatusCode()],
                 $e,
             );
             if ($e->getStatusCode() === 503) {
-                return response()->json([
+                return $this->withPaymentRecovery($request, response()->json([
                     'error' => 'The booking provider is unavailable. Please try again shortly.',
                     'code'  => 'pms_unavailable',
-                ], 503);
+                ], 503), $recovery);
             }
-            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again.', 'booking_unavailable', $e->getStatusCode());
+            return $this->withPaymentRecovery($request, \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again.', 'booking_unavailable', $e->getStatusCode()), $recovery);
         } catch (\App\Services\Booking\PaymentUnverifiable $e) {
             // Release 6: the engine read the payment again under the hold's
             // lock and Stripe could not be asked (an outage, a timeout).
@@ -639,16 +651,16 @@ class BookingPublicController extends Controller
             // cannot read — and staff have the enquiry (the engine's
             // `payment_check_failed` submission row) to follow up.
             $this->logConfirmFailureWithContext('payment_check', $validated, $e);
-            $this->rescuePaymentIntentOnConfirmFailure(
+            $recovery = $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
                 ['stage' => 'payment_check'],
                 $e,
             );
-            return response()->json([
+            return $this->withPaymentRecovery($request, response()->json([
                 'error' => self::WIDGET_PAYMENT_CHECK_FAILED,
                 'code'  => \App\Services\Booking\PaymentUnverifiable::CODE,
-            ], 503);
+            ], 503), $recovery);
         } catch (\RuntimeException $e) {
             // The full RuntimeException surface: PI status mismatch, hold-token
             // mismatch on succeeded PI, Stripe retrieve failure, inventory race,
@@ -661,13 +673,13 @@ class BookingPublicController extends Controller
             // exception message for the operator. Includes file:line so
             // ops can grep the source if needed.
             $this->logConfirmFailureWithContext('service_runtime', $validated, $e);
-            $this->rescuePaymentIntentOnConfirmFailure(
+            $recovery = $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
                 ['stage' => 'service_runtime', 'message' => $e->getMessage()],
                 $e,
             );
-            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please check availability and try again.', 'booking_unavailable', 400);
+            return $this->withPaymentRecovery($request, \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again or contact the venue.', 'booking_unavailable', 400), $recovery);
         } catch (\Throwable $e) {
             // Anything else — TypeError, PHP fatal, DB drop. Same risk
             // surface as RuntimeException: exception fires AFTER Stripe
@@ -675,14 +687,35 @@ class BookingPublicController extends Controller
             // Rescue first, then re-throw so the framework handler can
             // produce its usual 500 response (with full detail for staff).
             $this->logConfirmFailureWithContext('unhandled', $validated, $e);
-            $this->rescuePaymentIntentOnConfirmFailure(
+            $recovery = $this->rescuePaymentIntentOnConfirmFailure(
                 $validated['payment_intent_id'] ?? null,
                 $validated['hold_token'] ?? null,
                 ['stage' => 'unhandled', 'class' => get_class($e)],
                 $e,
             );
-            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again shortly.', 'booking_unavailable', 503);
+            return $this->withPaymentRecovery($request, \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again shortly.', 'booking_unavailable', 503), $recovery);
         }
+    }
+
+    /** Only the holder of this checkout's cached payment can learn its recovery state. */
+    private function withPaymentRecovery(Request $request, JsonResponse $response, string $state): JsonResponse
+    {
+        if ($request->integer('recovery_version') !== 1 || !app()->bound('current_organization_id')) return $response;
+        $token = $request->input('hold_token');
+        if (!is_string($token) || $token === '') return $response;
+        try {
+            $hold = \App\Models\BookingHold::withoutGlobalScopes()
+                ->where('organization_id', app('current_organization_id'))->where('hold_token', $token)->first();
+            if (!$hold) return $response;
+            $payload = $hold->payload_json ?? [];
+            $cached = $payload['stripe_payment_intent_id'] ?? null;
+            $named = $request->input('payment_intent_id') ?: $cached;
+            if (!is_string($cached) || $cached === '' || !is_string($named) || !hash_equals($cached, $named) || !empty($payload['member_id'])) return $response;
+            $response->setData($response->getData(true) + ['payment_recovery' => $state]);
+        } catch (\Throwable) {
+            // An unavailable database cannot become a claim that money was released.
+        }
+        return $response;
     }
 
     /**
@@ -958,10 +991,10 @@ class BookingPublicController extends Controller
         ?string $holdToken,
         array $context,
         \Throwable $original,
-    ): void {
+    ): string {
         // Mock intents never touched Stripe — nothing to rescue.
         if ($intentId && str_starts_with($intentId, 'pi_mock_')) {
-            return;
+            return 'unknown';
         }
 
         // Fall back to the hold's cached intent id if the request didn't
@@ -992,12 +1025,12 @@ class BookingPublicController extends Controller
         }
 
         if (!$intentId) {
-            return;
+            return 'unknown';
         }
 
         $stripe = app(StripeService::class);
         if (!$stripe->isEnabled()) {
-            return;
+            return 'unknown';
         }
 
         $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
@@ -1008,8 +1041,9 @@ class BookingPublicController extends Controller
         // whether the payment was left alone.
         $outcome = null;
         $sent = false;
+        $alreadyReleased = false;
         try {
-            $this->rescueOwnPaymentIntent($stripe, $intentId, $idFromHold, $holdToken, $orgId, $outcome, $sent);
+            $this->rescueOwnPaymentIntent($stripe, $intentId, $idFromHold, $holdToken, $orgId, $outcome, $sent, $alreadyReleased);
         } catch (\Throwable $checkErr) {
             \Illuminate\Support\Facades\Log::error('Booking confirm PI rescue: pi_rescue_checks_failed', [
                 'payment_intent_id'  => $intentId,
@@ -1030,6 +1064,12 @@ class BookingPublicController extends Controller
                 $this->alertRescueRefused($orgId, $intentId, $outcome[1], $context);
             }
         }
+        if ($alreadyReleased) return 'released';
+        return match ($outcome[0] ?? null) {
+            'pi_cancelled' => 'released',
+            'pi_refunded' => 'refund_requested',
+            default => 'unknown',
+        };
     }
 
     /**
@@ -1097,6 +1137,7 @@ class BookingPublicController extends Controller
         ?int $orgId,
         ?array &$outcome,
         bool &$sent,
+        bool &$alreadyReleased,
     ): void {
         // A booking relies on this payment: it is that booking's money,
         // whatever this request names.
@@ -1160,6 +1201,7 @@ class BookingPublicController extends Controller
 
         // Already-terminal states: nothing to rescue.
         if (in_array($status, ['canceled'], true)) {
+            $alreadyReleased = true;
             return;
         }
 

@@ -1006,7 +1006,7 @@ class BookingEngineService
             $paymentMethod   = $data['payment_method'] ?? null;
             $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? PaymentStatus::Paid->value : null);
 
-            $mirror = BookingMirror::create([
+            $mirror = $this->saveCheckoutMirror([
                 'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                 'reservation_id'    => (string) ($result['id'] ?? ''),
                 'booking_reference' => $result['reference-id'] ?? null,
@@ -1472,11 +1472,64 @@ class BookingEngineService
     }
 
     /**
+     * A webhook/import can save the PMS reservation before its create response
+     * reaches checkout. Complete that same imported row with the accepted quote
+     * and payment instead of inserting a second row. Never adopt another
+     * checkout, another guest/stay, or a reservation staff already cancelled.
+     * Called inside the checkout transaction; no booking-row lock is acquired.
+     */
+    private function saveCheckoutMirror(array $attributes): BookingMirror
+    {
+        $orgId = $attributes['organization_id'] ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+        if (!$orgId) throw new \RuntimeException('A booking must belong to an organisation.');
+        $attributes['organization_id'] = $orgId;
+        $identity = ['organization_id' => $orgId, 'reservation_id' => (string) $attributes['reservation_id']];
+        AdvisoryLock::within('pms-reservation:' . $orgId . ':' . $identity['reservation_id']);
+
+        // firstOrCreate confines a racing unique violation to a savepoint on
+        // PostgreSQL, and only recovers the winner of this exact identity.
+        $mirror = BookingMirror::withoutGlobalScopes()->firstOrCreate($identity, $attributes);
+        if ($mirror->wasRecentlyCreated) return $mirror;
+
+        $raw = (array) $mirror->raw_json;
+        $email = mb_strtolower(trim((string) ($attributes['guest_email'] ?? '')));
+        $sameImport = ($raw['_currency_source'] ?? '') === 'provider_snapshot'
+            && (string) ($raw['id'] ?? '') === $identity['reservation_id']
+            && (string) $mirror->apartment_id === (string) $attributes['apartment_id']
+            && $mirror->arrival_date?->toDateString() === substr((string) $attributes['arrival_date'], 0, 10)
+            && $mirror->departure_date?->toDateString() === substr((string) $attributes['departure_date'], 0, 10)
+            && $email !== '' && mb_strtolower(trim((string) $mirror->guest_email)) === $email
+            && !$mirror->stripe_payment_intent_id && !$mirror->getAttribute('member_id') && !$mirror->booking_group_id
+            && !$mirror->getAttribute('cancelled_at') && $mirror->booking_state !== 'cancelled'
+            && !in_array($mirror->internal_status, ['cancelled', 'checked-in', 'checked-out'], true)
+            && empty($raw['_staff_internal_status']);
+        if (!$sameImport) {
+            throw new \RuntimeException('The reservation is already linked to another booking. Please contact the venue.');
+        }
+
+        $attributes['raw_json'] = array_replace($raw, (array) $attributes['raw_json']);
+        $mirror->fill($attributes)->save();
+        return $mirror;
+    }
+
+    /**
      * Upsert a booking mirror from already-fetched Smoobu data (no extra API call).
      */
     public function upsertBookingFromData(array $data): ?BookingMirror
     {
         if (empty($data['id'])) return null;
+
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        return DB::transaction(function () use ($data, $orgId) {
+            // Read the checkout-owned snapshots only after the checkout writer
+            // has finished. A stale importer must not reopen an authorised stay.
+            AdvisoryLock::within('pms-reservation:' . $orgId . ':' . substr((string) $data['id'], 0, 30));
+            return $this->upsertBookingSnapshot($data);
+        });
+    }
+
+    private function upsertBookingSnapshot(array $data): BookingMirror
+    {
 
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
 
@@ -2119,7 +2172,7 @@ class BookingEngineService
                     $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
 
                     $roomPayload = $this->comboRoomPayload($payload, $room, ['list' => round($roomTotal + $extrasTotalThisRoom, 2), 'discount' => $roomDiscount, 'total' => $smoobuRoomPrice], $isFirstRoom);
-                    $mirror = BookingMirror::create([
+                    $mirror = $this->saveCheckoutMirror([
                         'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
                         'booking_group_id'         => $groupId,
@@ -2419,7 +2472,7 @@ class BookingEngineService
                 foreach ($rooms as $i => $room) {
                     $roomPayload = $this->comboRoomPayload($payload, $room, $shares[$i], $i === 0);
                     $total = $shares[$i]['total'];
-                    $mirror = BookingMirror::create([
+                    $mirror = $this->saveCheckoutMirror([
                         'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
                         'booking_group_id'         => $groupId,

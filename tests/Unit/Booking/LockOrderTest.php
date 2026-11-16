@@ -87,7 +87,7 @@ class LockOrderTest extends TestCase
             '$this->assertWidgetPaymentStillPayable($data, $failures)',
             '$hooks?->beforeReservation($payload)',
             '$this->smoobu->createReservation($smoobuPayload)',
-            'BookingMirror::create(',
+            '$this->saveCheckoutMirror(',
         ], 'the single-room confirm');
     }
 
