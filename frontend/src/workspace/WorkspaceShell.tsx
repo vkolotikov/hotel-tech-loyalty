@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowRightLeft, Users, CreditCard, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
@@ -43,7 +43,7 @@ export interface WorkspaceNavItem {
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, onNavigate, variant, railLabel, footer, phoneMenu, crumbs, stickyRail = false, children }: {
+export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, onNavigate, variant, railLabel, footer, phoneMenu, crumbs, stickyRail = false, navScroll = false, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
@@ -84,12 +84,27 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
    * is part of the page, as before.
    */
   stickyRail?: boolean
+  /** Content's viewport rail scrolls navigation alone. Measure overflow so its slim icons get native hover labels
+   * while clipped; a nav that fits can keep the existing CSS tips. Other workspaces keep their current behavior. */
+  navScroll?: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation()
   // <html data-shell="<workspace>"> keeps the full admin's Branding mood typography out, from the first paint.
   useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])
   const slim = look.rail === 'slim'
+  const navBox = useRef<HTMLElement>(null)
+  const [navOverflows, setNavOverflows] = useState(false)
+  useLayoutEffect(() => {
+    const el = navBox.current
+    if (!navScroll || !el) return
+    const measure = () => setNavOverflows(el.scrollHeight > el.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    for (const child of el.children) observer.observe(child)
+    return () => observer.disconnect()
+  }, [navScroll, nav.length, slim])
   // Areas that live in the phone menu rather than the phone's top bar.
   const offBar = nav.filter(n => n.phone === false)
   const cards = variant === 'cards'
@@ -113,7 +128,8 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
           </div>
         </div>
         {cards && railLabel && !slim && <p className="-mb-4 px-2 font-a-mono text-xs uppercase tracking-[0.14em] text-a-side-text-2">{railLabel}</p>}
-        <nav className={cards ? 'space-y-2' : 'space-y-1'}>
+        <nav ref={navBox} data-nav-scroll={navScroll ? '' : undefined} data-nav-overflow={navScroll && navOverflows ? '' : undefined}
+          className={cards ? 'space-y-2' : 'space-y-1'}>
           {nav.map(({ to, end, icon: Icon, label, count, section }, index) => (
             <Fragment key={to}>
             {section && section !== nav[index - 1]?.section && (
@@ -122,6 +138,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                 : <p data-nav-section="" className="!mt-4 px-3 pb-0.5 font-a-mono text-[12px] uppercase tracking-[0.12em] text-a-side-text-2">{section}</p>
             )}
             <NavLink to={to} end={end} onClick={event => toArea(to, event)} data-tip={slim ? label : undefined}
+              title={navScroll && slim && navOverflows ? label : undefined}
               className={({ isActive }) => cards
                 // The owner's mockup: each area a card; the current one filled with the brand (spec 2026-10-21 §4.1).
                 ? `relative flex min-h-11 items-center gap-3 rounded-[10px] border px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'border-transparent bg-linear-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a-sm' : 'border-a-side-2 bg-a-side-2 text-a-side-text-2 hover:text-a-side-text'}`

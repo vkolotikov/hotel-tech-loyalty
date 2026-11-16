@@ -178,14 +178,27 @@
 [data-content] .c-launch-link:focus-visible, [data-content] .c-section-link:focus-visible, [data-content] .c-launch-input:focus-visible { outline:2px solid rgb(var(--a-accent-text)); outline-offset:3px; }
 [data-content] .c-plan-pulse { min-height:76px; }
 [data-content] .c-plan-goals { height:90px; overflow:auto; }
-[data-content] [data-filter-row] { min-height:48px; }
+/* Dynamic channels use one chip row; the adjacent controls never reflow when that row fills. Its 44px height
+   holds the 30px chips, focus outlines and a thin horizontal scrollbar, including while no chips are known. */
+[data-content] .c-plan-filters { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; }
+[data-content] .c-plan-platforms { position:relative; display:flex; min-width:0; height:44px; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:thin; scrollbar-color:rgb(var(--a-text-2)) rgb(var(--a-surface-2)); scroll-padding-inline:3px; padding:3px; }
+[data-content] .c-plan-filter-controls { display:flex; min-height:44px; flex-wrap:wrap; align-items:center; gap:6px; }
+@media (min-width:1024px) {
+  /* The document may grow with a dense week; the rail is tied to the viewport. Only its navigation scrolls,
+     leaving the footer's upward/beside menus and slim-rail tooltips outside an overflow clipping ancestor. */
+  [data-content] [data-rail] { position:sticky; top:0; align-self:flex-start; height:100dvh; }
+  [data-content] [data-rail] > :not(nav) { flex-shrink:0; }
+  [data-content] [data-rail] > nav { min-height:0; overflow-y:auto; scrollbar-width:thin; }
+  /* A slim nav that fits keeps its existing outside tips. A scrolling one has native title labels instead. */
+  [data-content] [data-rail-size="slim"] > nav[data-nav-scroll]:not([data-nav-overflow]) { overflow:visible; }
+}
 @media (max-width:1023px) {
   [data-content] .c-composer-grid { gap:1rem; }
   [data-content] .c-section-select { display:block; }
   [data-content] .c-section-links { display:none; }
   [data-content] .c-plan-pulse { min-height:112px; }
   [data-content] .c-plan-goals { height:124px; }
-  [data-content] [data-filter-row] { min-height:88px; }
+  [data-content] .c-plan-filters { grid-template-columns:minmax(0,1fr); gap:6px; }
 }
 @media (max-width:639px) {
   [data-content] .c-composer { padding:1rem; }

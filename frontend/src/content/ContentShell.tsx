@@ -167,7 +167,7 @@ function ContentFrame({ children }: { children: ReactNode }) {
       moduleLinks={modules.links}
       onLeave={panel.guard}
       // The owner's side panel (spec 2026-10-21 §4.1): the areas as cards, and Settings, Help & resources and the person.
-      variant="cards" railLabel={t('content.shell.workspace', 'Workspace')}
+      variant="cards" railLabel={t('content.shell.workspace', 'Workspace')} navScroll
       footer={<FrameFooter {...foot} />}
       // From 640 px the breadcrumb starts the top bar; on a phone it has the row above Find (beside the six area buttons it cannot fit).
       crumbs={crumb && <div className="hidden min-w-0 sm:flex">{crumb}</div>}

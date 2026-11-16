@@ -23,11 +23,11 @@ const nav: WorkspaceNavItem[] = [
 ]
 const look = (rail: 'full' | 'slim' = 'full'): LiveLook => ({ theme: 'light', rail, resolved: 'light', setTheme: () => {}, setRail: () => {} })
 
-type Extra = Partial<Pick<ComponentProps<typeof WorkspaceShell>, 'variant' | 'railLabel' | 'footer' | 'phoneMenu' | 'crumbs'>>
-function render({ rail = 'full', fullAdmin = '/marketing', ...extra }: { rail?: 'full' | 'slim'; fullAdmin?: string | null } & Extra = {}) {
+type Extra = Partial<Pick<ComponentProps<typeof WorkspaceShell>, 'variant' | 'railLabel' | 'footer' | 'phoneMenu' | 'crumbs' | 'navScroll'>>
+function render({ rail = 'full', fullAdmin = '/marketing', workspace = 'content', ...extra }: { rail?: 'full' | 'slim'; fullAdmin?: string | null; workspace?: string } & Extra = {}) {
   return renderToStaticMarkup(
     <MemoryRouter initialEntries={['/content']}>
-      <WorkspaceShell workspace="content" look={look(rail)} accent={accentTokens('#c9a84c', 'light')} initial="L"
+      <WorkspaceShell workspace={workspace} look={look(rail)} accent={accentTokens('#c9a84c', 'light')} initial="L"
         organization="Lumière Salon" product="HexaTech Content" person="Vitalij K" nav={nav} fullAdmin={fullAdmin}
         header={<p data-header-own="">the workspace header</p>} overlays={<p>an overlay</p>} {...extra}>
         <main>page body</main>
@@ -37,6 +37,14 @@ function render({ rail = 'full', fullAdmin = '/marketing', ...extra }: { rail?: 
 }
 
 describe('WorkspaceShell', () => {
+  it.each(['appointments', 'loyalty', 'crm', 'time'])('keeps navigation overflow treatment off by default for %s', workspace => {
+    const html = render({ workspace, rail: 'slim' })
+    expect(html).toContain(`data-${workspace}=""`)
+    expect(html).not.toContain('data-nav-scroll')
+    expect(html).not.toContain('data-nav-overflow')
+    expect(html.match(/<aside[\s\S]*?<\/aside>/)?.[0]).not.toMatch(/<a[^>]* title=/)
+  })
+
   // Release 7a (spec 2026-10-21 §4): options only Content passes; without them the frame is today's (Appointments).
   it('draws the frame as it is today when no option is given (Appointments)', () => {
     const html = render()

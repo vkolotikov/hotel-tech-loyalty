@@ -288,8 +288,9 @@ export function PlanPage() {
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
       {/* The owner's header (spec 2026-10-21 §6.1): the title, its line, the period's numbers, and New post. */}
       <div className="px-4 pb-3 pt-4 lg:px-6">
-        <PageHeader title={t('content.nav.plan', 'Plan')} line={t('content.plan.line', 'A clear view of what comes next.')}
-          below={<NumbersLine figures={data && view === 'month' ? monthFigures(data.posts, data.slots, date) : data?.figures} pending={!data || query.isPlaceholderData} />} newPost />
+        <PageHeader title={t('content.nav.plan', 'Plan')} line={t('content.plan.line', 'A clear view of what comes next.')} newPost />
+        {/* Counts get the full row: a longer translated figure must not push New post onto a second header row. */}
+        <NumbersLine figures={data && view === 'month' ? monthFigures(data.posts, data.slots, date) : data?.figures} pending={!data || query.isPlaceholderData} />
         <div className="mt-3 c-plan-pulse"><PulseCard variant="strip" clockLabel={t('content.launch.planning_clock', 'Planning time: {{zone}}', { zone: boot.venue.timezone })} pulse={pulse.data ?? { timezone: boot.venue.timezone, now: '', today: boot.venue.today, place: null, weather: null }} name={boot.staff.name ? boot.staff.name.trim().split(/\s+/)[0] : null} /><div className="min-h-6 text-xs text-a-text-2">{!boot.venue.timezone_named && <>{t('content.launch.zone_unset', 'The planning clock uses UTC. Choose a time zone for your account.')} {boot.staff.can_manage && <Link to="/content/settings" className="c-launch-link">{t('content.launch.settings', 'Content settings')}</Link>}</>}</div></div>
       </div>
       {/* The owner's filter row, above the calendar bar (spec 2026-10-21 §6.2); the tray is the Unscheduled chip's list. */}

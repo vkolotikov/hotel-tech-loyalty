@@ -98,3 +98,22 @@ Validation receipts and per-finding dispositions are in `.superpowers/sdd/2026-1
 and the owned external evidence directory. These are source-readiness receipts, not production deployment evidence.
 The root executor owns the scoped rereview, isolated source-patch integration with newer main, artifact gates,
 deployment and live checks. No provider, real mail or production data was used in this repair wave.
+
+## Content loading follow-up, feature source only (16 November 2026)
+
+The released dense Plan exposed a remaining F17 gap at 1024 x 900: the document stretched the sidebar to
+1400px, moved its footer below the viewport, and late platform chips moved the existing filter controls. The narrow
+follow-up keeps Content's rail within the viewport, scrolls navigation separately from footer menus, reserves a
+horizontal platform strip independently of the other controls, and gives translated figures their own header row.
+The shared frame's `navScroll` overflow/title fallback is optional and enabled by Content only; sibling defaults
+are pinned by compatibility tests. All platforms remain reachable through keyboard focus, horizontal wheel and touch.
+
+Actual-component local browser evidence: all 270 layout checks across five locales, both themes and three widths
+passed, including short full/slim rails and unclipped footer menus. Delayed-data CLS is zero at 1024 and 1440;
+390px ranges from 0.000129 to 0.000178. The original combined 110 draft/work/collaboration/campaign checks also pass
+unchanged. Source readiness, exact reproduction/fixture assumptions, commands and failed resource-limited attempts
+are recorded in the ignored `.superpowers/sdd/2026-11-13-content-launch/task-11-report.md`.
+
+This is feature-source verification only. The root executor owns the fresh scoped review, current-main source patch,
+artifact checks/build, deployment and authenticated live confirmation. No production operation, provider call or
+customer message was performed by the layout implementer.

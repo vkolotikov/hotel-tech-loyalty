@@ -543,11 +543,13 @@ No migration, no new route; Appointments is unchanged (the shared shell's new op
   just added). Footer: Create post, Save draft for a draft, else Save.
 - **`logo_url`:** `GET bootstrap` gives each brand's `logo_url` (null without one) for the breadcrumb's chip.
 
-## What this release does not do
+## Publishing and notifications
 
-No email notices other than the opt-in morning email, no mentions or attachments (approvals, comments, reminders and the bell live in the app), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
-model selection UI for Content (the launch provider price guard applies server-side). The old AI Content Planner is gone: its `/v1/admin/content-planner/*` routes answer 404
-and its screens are removed; a browser tab left open across the deploy must be reloaded.
+Staff publish manually: copy the prepared caption, obtain its assets, open the saved channel and explicitly record
+publication. The launch includes campaigns, media, explicit mentions and optional review/mention email; each person's
+review-email consent starts off and remains separate from morning-email consent. Content uses the server's configured
+AI models and price guard. The retired AI Content Planner's `/v1/admin/content-planner/*` routes answer 404 and its
+screens are removed. Reload Content/admin tabs left open across a deployment before saving.
 
 ## Deploying
 
@@ -734,6 +736,25 @@ Browser regression command: `CONTENT_LAUNCH_CHECKS=1 node frontend/scripts/conte
 environment variable using the host shell). This preserves all original 41 draft/focus assertions and adds full-page,
 queued-work, explicit rewrite, retry/cancel and retained list-opening checks. Real-app screenshots, runtime media-byte
 checks and cold-load CLS are separate acceptance evidence, not substitutes for this deterministic delayed-response host.
+
+### Stable Plan loading (16 November 2026 follow-up)
+
+Content's desktop rail follows the viewport, independently of a dense calendar's document height. Navigation alone
+scrolls on short screens, so Settings, Help and the person remain reachable and their menus can extend outside the
+rail. The shared frame's optional `navScroll` observer is enabled by Content only: a scrolling slim nav uses native
+hover titles; when it fits, the existing custom tips remain. Sibling workspaces keep their previous defaults.
+
+Plan figures have their own full-width row, so translated numbers cannot move New post into another header row.
+Platform filters occupy a reserved single chip strip, alongside a separate Status/Unscheduled/Key dates group
+(stacked on phones). Narrow strips scroll horizontally with a visible scrollbar, touch and wheel support; keyboard
+focus brings each whole chip into view. The strip's positioned container also contains the platform marks' hidden
+accessible names, preventing those absolute spans from creating document overflow.
+
+Run `node frontend/scripts/content-layout-regression/run.mjs` for the isolated actual-component loading fixture.
+It delays bootstrap and then Plan/brand/goals/pulse, waits for the real self-hosted fonts, and checks the sanitized
+five-platform/14-slot dense week in all five locales, both themes and 390/1024/1440px layouts. It also checks footer
+menu hit testing, native Tab/touch/wheel access, page scrolling and 600px full/slim rails. This does not replace the
+existing combined 110-check draft regression or the release executor's actual authenticated live measurements.
 
 
 ### Campaigns and schedule exports (launch Task 8)
