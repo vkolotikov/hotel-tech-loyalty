@@ -19,6 +19,13 @@ Each campaign controls:
 - All accommodation or selected active rooms.
 - Draft, published, paused or archived status. Published campaigns need a booking window. The page shows scheduled, active and expired states from that window.
 
+Date fields also offer a themed calendar with month/year selection, Monday-first weeks, arrow-key navigation,
+Page Up/Down for months, and Clear/Today actions. Booking fields keep an editable time. Date and time values
+remain venue wall-clock strings; native required/minimum validation still applies. Escape closes the calendar
+first, keeping the promotion editor open. Calendars reposition inside the viewport while the editor scrolls.
+Status controls and campaign badges use green for published/active, blue for scheduled, amber for paused/expired,
+and neutral text for draft/archived. Native options have opaque, contrasting surfaces in Glass and Clean light.
+
 Duplicate creates a draft requiring a new code. Editing uses a revision check: refresh a stale editor before saving. Changes and the checkout switch are audited. Usage figures are lifetime confirmed uses and accepted accommodation revenue after discount, not cancellation-adjusted sales reports.
 
 For Forrest, review the prepared drafts and complete their booking windows and exclusions before publishing:
