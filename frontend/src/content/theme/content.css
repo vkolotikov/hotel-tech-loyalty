@@ -177,6 +177,7 @@
 [data-content] .c-attached-row .c-media-preview { width:3rem; height:3rem; }
 [data-content] .c-launch-link:focus-visible, [data-content] .c-section-link:focus-visible, [data-content] .c-launch-input:focus-visible { outline:2px solid rgb(var(--a-accent-text)); outline-offset:3px; }
 [data-content] .c-plan-pulse { min-height:76px; }
+[data-content] .c-plan-numbers { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px 16px; }
 [data-content] .c-plan-goals { height:90px; overflow:auto; }
 /* Dynamic channels use one chip row; the adjacent controls never reflow when that row fills. Its 44px height
    holds the 30px chips, focus outlines and a thin horizontal scrollbar, including while no chips are known. */
@@ -201,6 +202,10 @@
   [data-content] .c-plan-filters { grid-template-columns:minmax(0,1fr); gap:6px; }
 }
 @media (max-width:639px) {
+  [data-content] .c-plan-numbers { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  /* The backlog count grows independently of the switch: keep its phone row present before counts arrive. */
+  [data-content] .c-plan-filter-controls { display:grid; grid-template-columns:auto minmax(0,1fr); }
+  [data-content] .c-plan-filter-controls > [role="switch"] { grid-column:1 / -1; justify-self:end; }
   [data-content] .c-composer { padding:1rem; }
   [data-content] .c-composer-grid { display:block; }
   [data-content] .c-write-tabs { display:flex; gap:.5rem; margin-bottom:1rem; }

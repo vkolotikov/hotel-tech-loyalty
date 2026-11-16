@@ -76,6 +76,7 @@
     "promoting": "L’IA rédige les publications de promotion…",
     "line": "Une vue claire de ce qui arrive.",
     "numbers": "Prévues : {{planned}} · Prêtes : {{ready}} · Publiées : {{published}} · Créneaux libres : {{open}}",
+    "number_labels": { "planned": "Prévues", "ready": "Prêtes", "published": "Publiées", "open_slots": "Créneaux libres" },
     "status_chip": "Statut : {{name}}",
     "unscheduled_chip": "Sans date ({{count}})",
     "legend_draft": "Brouillon",

@@ -8,6 +8,7 @@ import tailwind from '@tailwindcss/vite'
 const root = path.dirname(fileURLToPath(import.meta.url)).replaceAll('\\', '/')
 const frontend = path.resolve(root, '../..').replaceAll('\\', '/')
 const output = process.env.CONTENT_LAYOUT_EVIDENCE ?? root + '/artifacts'
+const counts = process.env.CONTENT_LAYOUT_COUNTS === 'large' ? 'large' : 'empty'
 await fs.mkdir(output, { recursive: true })
 const server = await createServer({
   configFile: false, root, esbuild: { jsx: 'automatic' },
@@ -18,7 +19,7 @@ const server = await createServer({
 })
 await server.listen()
 const browser = await chromium.launch({ headless: true })
-const evidence = { createdAt: new Date().toISOString(), scope: 'Actual ContentProvider, ContentShell, PlanPage and complete app styles/fonts; only wire API replaced; no production network or data', checks: [], runs: [], errors: [] }
+const evidence = { createdAt: new Date().toISOString(), counts, scope: 'Actual ContentProvider, ContentShell, PlanPage and complete app styles/fonts; only wire API replaced; no production network or data', checks: [], runs: [], errors: [] }
 const check = (name, passed, detail = {}) => { evidence.checks.push({ name, passed, ...detail }) }
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 const geometry = page => page.evaluate(() => {
@@ -28,6 +29,8 @@ const geometry = page => page.evaluate(() => {
   return {
     filter: rect(filter), toolbar: rect(filter?.nextElementSibling), goals: rect(document.querySelector('.c-plan-goals')),
     header: rect(document.querySelector('[data-numbers]')?.parentElement?.parentElement), pulse: rect(document.querySelector('.c-plan-pulse')),
+    figuresHeader: rect(document.querySelector('[data-numbers]')?.parentElement), figures: rect(document.querySelector('[data-numbers]')),
+    figureValues: [...document.querySelectorAll('[data-numbers] dd')].map(el => el.textContent),
     controls: [...(filter?.querySelectorAll('[aria-haspopup="menu"], [data-drop="tray"], [role="switch"]') ?? [])].map(el => ({ text: el.textContent, ...rect(el) })),
     calendar: rect(calendar), rail: rect(document.querySelector('[data-rail]')), footer: rect(document.querySelector('[data-frame-footer]')),
     documentWidth: document.documentElement.scrollWidth, documentHeight: document.documentElement.scrollHeight, viewportWidth: innerWidth, viewportHeight: innerHeight,
@@ -44,7 +47,7 @@ try {
     page.on('pageerror', error => errors.push(error.message))
     await page.route('**/*', route => ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort())
     await page.addInitScript(({ theme }) => { localStorage.setItem('content:look', JSON.stringify({ theme, rail: 'full' })) }, { theme })
-    await page.goto(`http://127.0.0.1:5197/?locale=${locale}&density=${density}`)
+    await page.goto(`http://127.0.0.1:5197/?locale=${locale}&density=${density}&counts=${counts}`)
     await page.waitForFunction(() => window.__layout?.pending().includes('bootstrap'))
     await page.evaluate(() => document.fonts.ready)
     const bootstrapLoading = await geometry(page)
@@ -66,6 +69,7 @@ try {
     const cls = after.shifts.reduce((total, shift) => total + shift.value, 0)
     const id = `${locale}-${theme}-${width}-${density}`
     check(`${id}: same-data loaded filter keeps its reserved geometry`, Math.abs(after.filter.height - before.filter.height) <= 1 && Math.abs(after.calendar.y - before.calendar.y) <= 1 && before.controls.every((r, i) => Math.abs(r.x - after.controls[i].x) <= 1 && Math.abs(r.y - after.controls[i].y) <= 1), { before: before.filter, after: after.filter, calendarBefore: before.calendar.y, calendarAfter: after.calendar.y, controlsBefore: before.controls, controlsAfter: after.controls })
+    if (counts === 'large') check(`${id}: large figures preserve header and downstream loading geometry`, ['figuresHeader', 'figures', 'pulse', 'filter', 'toolbar', 'goals'].every(key => Math.abs(after[key].y - before[key].y) <= 1 && Math.abs(after[key].height - before[key].height) <= 1) && Math.abs(after.calendar.y - before.calendar.y) <= 1 && after.figureValues.join(',') === '12345,12345,12345,14', { before, after })
     check(`${id}: all14 dense slots are reachable without document overflow`, after.slots === 14 && after.documentWidth <= width + 1, { slots: after.slots, documentWidth: after.documentWidth })
     check(`${id}: delayed-data CLS stays below0.05`, cls < 0.05, { cls })
     if (width >= 1024) check(`${id}: sidebar footer stays inside900px viewport`, after.rail.height <= 901 && after.footer.y >= 0 && after.footer.bottom <= 901 && Math.abs(after.footer.y - before.footer.y) <= 1, { before: before.footer, after: after.footer, rail: after.rail })

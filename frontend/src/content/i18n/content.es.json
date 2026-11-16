@@ -76,6 +76,7 @@
     "promoting": "La IA está escribiendo las publicaciones de promoción…",
     "line": "Una visión clara de lo que viene.",
     "numbers": "Planificadas: {{planned}} · Listas: {{ready}} · Publicadas: {{published}} · Huecos libres: {{open}}",
+    "number_labels": { "planned": "Planificadas", "ready": "Listas", "published": "Publicadas", "open_slots": "Huecos libres" },
     "status_chip": "Estado: {{name}}",
     "unscheduled_chip": "Sin fecha ({{count}})",
     "legend_draft": "Borrador",

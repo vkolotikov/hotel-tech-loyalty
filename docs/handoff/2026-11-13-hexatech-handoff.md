@@ -117,3 +117,18 @@ are recorded in the ignored `.superpowers/sdd/2026-11-13-content-launch/task-11-
 This is feature-source verification only. The root executor owns the fresh scoped review, current-main source patch,
 artifact checks/build, deployment and authenticated live confirmation. No production operation, provider call or
 customer message was performed by the layout implementer.
+
+### Large-count loading repair (16 November 2026, feature source only)
+
+The retained12345-count French phone case exposed another20px loading shift in the wrapping figures sentence.
+Plan now draws the same full localized labels and values as compact definition pairs (two columns on phones,
+four otherwise). A broader count matrix also exposed Key dates wrapping below a large EN/RU phone backlog;
+its phone control row is now present before the count arrives. No guessed header height or clipped values.
+
+Fresh source browser evidence: canonical270/270; large-count280/300 across30 cases, with all30 new
+header/downstream/value checks and all80 phone checks passing, phone CLS0, no runtime errors. The20 failures
+are the explicitly retained Minor desktop horizontal Status/Unscheduled shift25.515625px at1024/1440 across
+five locales/both themes; no vertical geometry changes. Large mode is `CONTENT_LAYOUT_COUNTS=large` on the
+same layout runner. Detailed source/static receipts and intermediate RED/invalid attempts are appended to
+`.superpowers/sdd/2026-11-13-content-launch/task-11-report.md`. Original110 is unchanged; root owns its fresh
+integrated-artifact repeat, full frontend/build, scoped rereview, deployment and live checks. No production action.

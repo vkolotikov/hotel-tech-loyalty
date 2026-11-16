@@ -3,6 +3,7 @@ import type { Bootstrap, BrandPayload, Goals, PlanPayload, Platform } from '../.
 const platforms: Platform[] = ['linkedin', 'instagram', 'tiktok', 'facebook', 'youtube']
 const dates = Array.from({ length: 7 }, (_, i) => `2026-11-${16 + i}`)
 const dense = new URLSearchParams(location.search).get('density') !== 'even'
+const largeCounts = new URLSearchParams(location.search).get('counts') === 'large'
 const denseDays: [number, Platform[]][] = [[0, platforms], [2, ['linkedin', 'instagram', 'facebook']], [4, platforms], [6, ['instagram']]]
 const slots = dense
   ? denseDays.flatMap(([day, items]) => items.map(platform => ({ date: dates[day], platform })))
@@ -16,7 +17,8 @@ const boot: Bootstrap = {
   platforms: ['linkedin', 'instagram', 'tiktok', 'facebook', 'x', 'youtube', 'blog', 'email'],
   statuses: ['idea', 'draft', 'needs_review', 'needs_visual', 'approved', 'ready_to_publish', 'published', 'skipped', 'archived'], rewrites: ['shorter'],
 }
-const plan: PlanPayload = { posts: [], unscheduled: [], unscheduled_total: 0, slots, key_dates: [], figures: { planned: 0, ready: 0, published: 0, open_slots: slots.length } }
+const count = largeCounts ? 12345 : 0
+const plan: PlanPayload = { posts: [], unscheduled: [], unscheduled_total: count, slots, key_dates: [], figures: { planned: count, ready: count, published: count, open_slots: slots.length } }
 const brand: BrandPayload = {
   profile: {
     id: 1, name: 'Fixture brand', default_language: 'en', default_tone: null, primary_goal: null, secondary_goals: null,

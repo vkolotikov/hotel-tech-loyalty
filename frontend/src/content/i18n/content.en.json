@@ -76,6 +76,7 @@
     "promoting": "The AI is writing promotion posts…",
     "line": "A clear view of what comes next.",
     "numbers": "Planned: {{planned}} · Ready: {{ready}} · Published: {{published}} · Empty slots: {{open}}",
+    "number_labels": { "planned": "Planned", "ready": "Ready", "published": "Published", "open_slots": "Empty slots" },
     "status_chip": "Status: {{name}}",
     "unscheduled_chip": "Unscheduled ({{count}})",
     "legend_draft": "Draft",

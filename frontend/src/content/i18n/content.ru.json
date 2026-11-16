@@ -76,6 +76,7 @@
     "promoting": "ИИ пишет посты для продвижения…",
     "line": "Ясный взгляд на то, что впереди.",
     "numbers": "Запланировано: {{planned}} · Готово: {{ready}} · Опубликовано: {{published}} · Свободные места: {{open}}",
+    "number_labels": { "planned": "Запланировано", "ready": "Готово", "published": "Опубликовано", "open_slots": "Свободные места" },
     "status_chip": "Статус: {{name}}",
     "unscheduled_chip": "Без даты ({{count}})",
     "legend_draft": "Черновик",

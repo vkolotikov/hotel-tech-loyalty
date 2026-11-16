@@ -76,6 +76,7 @@
     "promoting": "Die KI schreibt Werbebeiträge…",
     "line": "Ein klarer Blick auf das, was als Nächstes kommt.",
     "numbers": "Geplant: {{planned}} · Bereit: {{ready}} · Veröffentlicht: {{published}} · Freie Plätze: {{open}}",
+    "number_labels": { "planned": "Geplant", "ready": "Bereit", "published": "Veröffentlicht", "open_slots": "Freie Plätze" },
     "status_chip": "Status: {{name}}",
     "unscheduled_chip": "Ohne Datum ({{count}})",
     "legend_draft": "Entwurf",

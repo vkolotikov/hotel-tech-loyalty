@@ -161,9 +161,14 @@ describe('SlotRow', () => {
 
 // Release 7a (spec 2026-10-21 §6.1): the period's numbers, one line under the Plan's title.
 describe('NumbersLine', () => {
-  it('says the numbers of the period in one line, and a dash for each until they are known', () => {
-    expect(html(<NumbersLine figures={{ planned: 12, ready: 3, published: 5, open_slots: 2 }} pending={false} />)).toContain('Planned: 12 · Ready: 3 · Published: 5 · Empty slots: 2')
-    expect(html(<NumbersLine figures={undefined} pending />)).toContain('Planned: – · Ready: – · Published: – · Empty slots: –')
+  it('pairs every complete period label with its value, and a dash for each until known', () => {
+    const loaded = html(<NumbersLine figures={{ planned: 12345, ready: 3, published: 5, open_slots: 2 }} pending={false} />)
+    const pending = html(<NumbersLine figures={undefined} pending />)
+    for (const [label, value] of [['Planned', 12345], ['Ready', 3], ['Published', 5], ['Empty slots', 2]]) {
+      expect(loaded).toContain(`<dt>${label}</dt><dd>${value}</dd>`)
+      expect(pending).toContain(`<dt>${label}</dt><dd>–</dd>`)
+    }
+    expect(html(<NumbersLine figures={{ planned: 12345, ready: 3, published: 5, open_slots: 2 }} pending />)).toContain('<dt>Planned</dt><dd>–</dd>')
   })
 })
 
