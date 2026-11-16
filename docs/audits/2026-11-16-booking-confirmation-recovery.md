@@ -35,3 +35,18 @@ Source baseline: `455818e40a49bcbc3e77785cf75fc83675e9c099`. Worktree/branch:
 `C:/wamp64/tmp/booking-recovery-*20261116*`. An isolated PostgreSQL 18 database on localhost port54616 is built
 from all migrations; no customer database is used. Validation and production receipts are recorded in the
 latest handoff after release gates finish.
+
+## Verified release candidate
+
+Final code `715bf3ccc498c933c65667bad3816c061dcd6032` passed the independent scoped re-review with no remaining
+Critical/Important/Minor findings. The public boundary validates current rows for cached successes and every
+group follower before acknowledgement or capture. A missing/inactive reservation is refused without repeating
+payment rescue. The original engine response-shape assertions remain unchanged.
+
+The isolated deployment artifact passes 1,173 Booking/Stripe/Widget/member-portal SQLite tests (13 inherited
+skips), 2,069 required Landing SQLite tests, 148 PostgreSQL 18 tests, all 7,275 Vitest tests, forced TypeScript,
+lint regression and Larastan on all three application paths. All 18 browser scenarios pass against the rendered
+Blade, with desktop/mobile released-payment screenshots inspected. Initial filesystem-scan Vitest timeouts
+were resolved by running the full suite with two workers, without changing timeouts or assertions. Fresh build
+and all 515 public-asset hashes match, with shell/stats excluded and no browser fixture markers. Private logs
+retain earlier red tests and interrupted/failing attempts; none is treated as a passing gate.

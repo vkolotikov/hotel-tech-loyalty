@@ -65,8 +65,21 @@ repair the checkout/import race, explicit public group/replay success and stale/
 No historical production reservation or payment is changed. See the [report](../audits/2026-11-16-booking-confirmation-recovery.md)
 and [journey runbook](../booking-journey.md#confirmation-and-released-payment-recovery--16-november-2026).
 
-Source regressions reproduce the original failures and the 18-scenario browser journey passes after repair.
-Independent review also found terminal reload, aged unknown payment, inactive replay and duplicate imported
-receipt edge cases; their regressions now pass. PostgreSQL, wider regressions, final review and the separate
-source-patch artifact gates must complete before production release. Private evidence prefix:
-`C:/wamp64/tmp/booking-recovery-`; disposable PostgreSQL port54616. Release receipts follow after verification.
+Independent review found terminal reload, aged unknown payment, inactive/cached/group-follower replay and
+duplicate imported receipt edge cases; regressions reproduce them and all four Important findings are closed.
+The final public replay guard runs before acknowledgement/capture and takes no booking-row locks. Legacy
+engine widget response assertions are unchanged; recovery metadata requires the explicit version flag.
+
+Final source code `715bf3ccc498c933c65667bad3816c061dcd6032`; separate source-patch artifact `a44e2f33d`
+has exact whole-source parity over the explicit 15-path allowlist, physical vendor and a fresh production build.
+Artifact gates: Booking/Stripe/Widget/member-portal SQLite 1,173 passed/6,812 assertions/13 existing skips;
+three required Landing SQLite scopes 2,069 passed/12,909 assertions; PostgreSQL 18: 148 passed/1,407 assertions;
+TypeScript forced build; 491 Vitest files/7,275 tests; lint regression with 1,381 inherited diagnostics; Larastan
+all three changed app paths; 18 browser scenarios; desktop/phone screenshot review. The initial unrestricted
+Vitest runs timed out in whole-tree filesystem scans; the full rerun with two workers passes at unchanged
+timeouts. Initial PostgreSQL trace expectation was extended to include the exact new reservation advisory keys
+after the unchanged room/hold sequence. No failing gate is waived.
+
+The fresh build publishes 515 identical assets, keeps shell/stats out of the docroot and contains no booking
+fixture markers. Private evidence prefix: `C:/wamp64/tmp/booking-recovery-`; PostgreSQL port 54616 is stopped and
+its disposable data retained. This candidate is ready for deployment; live receipts follow after verification.
