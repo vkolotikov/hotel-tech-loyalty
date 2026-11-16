@@ -65,3 +65,7 @@ read-only content/protection checks pass, including booking release `2026-11-16.
 both public booking hosts. Existing promo controls, admin protection, private shell/stats and landing-kit checks
 pass. No real payment, historical reservation, campaign setting or customer message was changed by these checks.
 The temporary release worktree and owned local servers are cleaned up; source and private receipts are retained.
+
+All eight release CI jobs pass, including the full PostgreSQL gate against its recorded known-failure baseline,
+three SQLite shards, both Node versions, Larastan and dependency audit.
+[Release pipeline](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43915898910).

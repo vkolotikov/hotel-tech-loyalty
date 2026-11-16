@@ -140,4 +140,7 @@ PMS reservation separately before collecting another payment. PostgreSQL and the
 the clean, verified temporary deployment worktree was removed after unlinking only its dependency junction.
 The source worktree and private evidence are retained; the original C: checkout and owner assets are untouched.
 
-Release CI: seven jobs pass; full PostgreSQL job pending. [Pipeline](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43915898910).
+Release CI: all eight jobs pass, including the full PostgreSQL gate (no failures beyond its recorded baseline),
+three SQLite shards, Larastan, both Node 24/26 builds and the dependency audit. [Pipeline](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43915898910).
+Private final CI receipt: `C:/wamp64/tmp/booking-recovery-ci-20261116.json`. Later source-branch commits record
+these receipts only; application code remains identical to the reviewed and deployed fix.
