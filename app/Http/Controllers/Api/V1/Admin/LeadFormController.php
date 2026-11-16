@@ -103,6 +103,7 @@ class LeadFormController extends Controller
             // Only this form's successfully saved submissions. capture() checks consent, expiry, opt-out and dedup.
             $form->submissions()->where('status', 'processed')->orderBy('id')->chunkById(100, function ($rows) use ($form, $replies) {
                 foreach ($rows as $submission) {
+                    /** @var \App\Models\LeadFormSubmission $submission */
                     $id = $replies->capture($form, $submission);
                     if ($id) \App\Jobs\SendLeadFormAutoReply::dispatchAfterResponse($id);
                 }
