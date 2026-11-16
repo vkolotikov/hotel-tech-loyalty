@@ -52,6 +52,21 @@ and the existing create/duplicate/filter/pause/archive/stale-save flow pass in t
 auto-scroll dismissal was reproduced and fixed by repositioning the popup; screenshot review also removed its
 redundant title and fixed the editor's existing hard-coded dark background in Clean light.
 
-Source verification: TypeScript, focused ESLint and all 491 Vitest files / 7,275 tests pass. Private browser
-screenshots/fixture results: `C:/wamp64/tmp/promo-browser-20261116/`. Release artifact and live receipts follow
-after the required source-patch gates; this paragraph alone is not a production-deployment claim.
+Source verification: TypeScript, focused ESLint and all 491 Vitest files / 7,275 tests pass. The exact six-path
+source patch is `384c5d1fc`, built and pushed as main **`455818e40a49bcbc3e77785cf75fc83675e9c099`**. Artifact
+verification: **2,080 PHP tests / 12,946 assertions** across the three recipe scopes plus promotion admin/unit
+tests, **7,275 frontend tests / 491 files**, TypeScript, lint regression (1,381 inherited diagnostics), fresh build,
+compiled browser journey and private-shell/report exclusion all pass. Exact whole-source parity passed against
+feature code **`174c75595`**, the next source-patch code baseline; this receipt is documentation only.
+
+Live content verification passed **19 checks at 17:12:07 Europe/Riga / 15:12:07 UTC**: entry `index-CXgdchRt.js`,
+promotion `BookingPromotions-CP4fhNFz.js`, new calendar and status CSS on both domains, admin API authentication401,
+landing-origin shell/API isolation404, private shell/report404 and the Academy landing/kit stylesheet. The live
+verifier initially expected a shell on the landing origin; that expectation was corrected after reading
+`LandingHostGuard`, and its required404 was verified. No application security rule changed.
+
+Private evidence: `C:/wamp64/tmp/promo-release-{manifest,gates}-20261116.json`,
+`promo-production-20261116.json`, `promo-artifact-*-20261116.log`, source browser directory
+`promo-browser-20261116/` and compiled `promo-artifact-browser-20261116/`. Desktop/mobile screenshots were inspected
+in both themes. Local preview servers are stopped. The verified release checkout is temporary; the feature branch,
+physical source PHP dependencies and evidence are retained. No production campaign/settings data was written.
