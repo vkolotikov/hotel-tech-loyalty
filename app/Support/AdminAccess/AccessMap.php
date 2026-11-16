@@ -219,6 +219,7 @@ final class AccessMap
         'admin/inquiry-lost-reasons'            => ['staff',              'manager',            'crm'],           // Lost reasons (Pipelines admin)
         'admin/inquiry-lost-reasons-admin'      => ['manager',            'manager',            'crm'],           // Lost reasons admin list (Pipelines admin)
         'admin/lead-forms'                      => ['staff',              'staff',              'crm'],           // Lead forms tab of Leads (menu: everyone)
+        'admin/lead-forms/{leadForm}/auto-reply' => ['staff',              'manager',            'crm'],
         'admin/pipeline-stages'                 => ['staff',              'manager',            'crm'],           // Pipeline stages (Pipelines admin)
         'admin/pipelines'                       => ['staff',              'manager',            'crm'],           // Pipelines (Pipelines admin)
         'admin/saved-views'                     => ['staff',              'staff',              'crm'],           // A person's saved views

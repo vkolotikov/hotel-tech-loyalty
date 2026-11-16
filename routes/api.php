@@ -297,6 +297,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // Throttle is generous on read (the iframe page hits config) but
     // strict on submit to keep spam in check. embed_key is the only
     // gate — admins regenerate it from the editor when leaked.
+    Route::match(['get', 'post'], 'public/lead-form-mail/unsubscribe/{token}', \App\Http\Controllers\LeadFormUnsubscribeController::class)
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:60,1');
+
     Route::prefix('public/lead-forms')->middleware('throttle:200,1')->group(function () {
         Route::get('{embedKey}',         [LeadFormPublicController::class, 'show']);
         Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1,leadform-submit');
@@ -1146,6 +1149,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
             Route::get('lead-forms',                            [LeadFormController::class, 'index']);
             Route::post('lead-forms',                           [LeadFormController::class, 'store']);
+            Route::get('lead-forms/{leadForm}/auto-reply',      [LeadFormController::class, 'autoReply']);
+            Route::put('lead-forms/{leadForm}/auto-reply',      [LeadFormController::class, 'autoReply']);
             Route::get('lead-forms/{leadForm}',                 [LeadFormController::class, 'show']);
             Route::put('lead-forms/{leadForm}',                 [LeadFormController::class, 'update']);
             Route::delete('lead-forms/{leadForm}',              [LeadFormController::class, 'destroy']);

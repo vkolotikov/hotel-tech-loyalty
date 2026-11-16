@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
+// Durable recovery for form replies reserved before a request stopped. Atomic claims prevent duplicate attempts.
+Schedule::command('lead-forms:send-pending')->everyMinute()->withoutOverlapping(5);
+
 // Heartbeat — every minute, write a row directly via a closure
 // schedule. Bypasses both withoutOverlapping() and the
 // ScheduledTask* event chain, so it isolates "is schedule:work

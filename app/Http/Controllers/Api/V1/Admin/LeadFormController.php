@@ -68,8 +68,52 @@ class LeadFormController extends Controller
             'is_active'             => 'sometimes|boolean',
         ]);
 
+        if (isset($data['design']) && ($data['design']['auto_reply'] ?? null) !== ($form->design['auto_reply'] ?? null)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['design.auto_reply' => 'Use the automatic-reply settings endpoint to change email delivery.']);
+        }
+        $replies = app(\App\Services\LeadForms\AutoReply::class);
+        $replies->validateSettings($form, $data);
         $form->fill($data)->save();
         return response()->json($form->fresh());
+    }
+
+    /** Manager-only delivery settings; ordinary form edits cannot switch sending on or off. */
+    public function autoReply(Request $request, int $leadForm): JsonResponse
+    {
+        $form = $this->resolveForm($leadForm);
+        $replies = app(\App\Services\LeadForms\AutoReply::class);
+        if ($request->isMethod('put')) {
+            $data = $request->validate([
+                'enabled' => 'required|boolean',
+                'template_id' => ['nullable', 'integer', OwnRows::rule('email_templates')],
+                'consent_field' => 'nullable|string|max:120',
+                'expires_at' => 'nullable|string|max:40',
+                'send_existing' => 'sometimes|boolean',
+            ]);
+            $sendExisting = (bool) ($data['send_existing'] ?? false);
+            unset($data['send_existing']);
+            $data['enabled'] = (bool) $data['enabled'];
+            $design = [...($form->design ?? []), 'auto_reply' => $data];
+            $replies->validateSettings($form, ['design' => $design]);
+            $form->forceFill(['design' => $design])->save();
+        } else {
+            $sendExisting = false;
+        }
+        if ($sendExisting) {
+            // Only this form's successfully saved submissions. capture() checks consent, expiry, opt-out and dedup.
+            $form->submissions()->where('status', 'processed')->orderBy('id')->chunkById(100, function ($rows) use ($form, $replies) {
+                foreach ($rows as $submission) {
+                    /** @var \App\Models\LeadFormSubmission $submission */
+                    $id = $replies->capture($form, $submission);
+                    if ($id) \App\Jobs\SendLeadFormAutoReply::dispatchAfterResponse($id);
+                }
+            });
+        }
+        return response()->json([
+            'configuration' => $form->design['auto_reply'] ?? ['enabled' => false],
+            'deliveries' => \App\Models\LeadFormEmailDelivery::where('lead_form_id', $form->id)
+                ->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status'),
+        ]);
     }
 
     public function destroy(int $leadForm): JsonResponse

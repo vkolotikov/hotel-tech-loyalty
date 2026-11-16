@@ -83,3 +83,25 @@ after the unchanged room/hold sequence. No failing gate is waived.
 The fresh build publishes 515 identical assets, keeps shell/stats out of the docroot and contains no booking
 fixture markers. Private evidence prefix: `C:/wamp64/tmp/booking-recovery-`; PostgreSQL port 54616 is stopped and
 its disposable data retained. This candidate is ready for deployment; live receipts follow after verification.
+
+The initial candidate was not pushed: the pre-push guard detected production advance to `130872409` (the
+separate lead-form reply release). Its source and handoff section below are preserved. A new source-patch
+candidate on that production baseline must pass combined gates before deployment.
+
+## ForRest campaign form fulfilment
+
+Source branch `codex/forrest-bf-autoreply-20261116` adds optional lead-form automatic email replies, off by default.
+The owner's campaign request authorises an EARLYFOR20 email to the people opting in through the ForRest popup.
+No campaign or recipient is seeded. A manager must explicitly configure a form and request any catch-up.
+
+The shared public submission writer reserves a durable, unique form/address delivery after successful CRM intake;
+after-response sending and a minute recovery sweep claim each attempt once. Consent, expiry, tenant/brand ownership,
+marketing opt-out, provider suppression and shared hourly budgets are checked. Unknown SMTP outcomes never retry
+automatically. One-click marketing opt-out leaves booking/password mail available. Other forms retain their existing
+behaviour. Advanced configuration is API-only in this release; [runbook](../lead-form-auto-replies.md).
+
+Feature checks: 15 new tests / 57 assertions pass on SQLite and a fresh migrated PostgreSQL 18 database with UTC
+sessions, using the actual array mail transport and a real failing transport. The earlier PostgreSQL fixture collisions
+were corrected without changing application behaviour. The scoped LeadForm/AdminAccess gate passed 141 tests before
+the final two operator tests were added. Release-artifact gates and live controlled delivery must precede activation;
+this section records source work, not a production-send claim.
