@@ -209,8 +209,10 @@ class PublicStayJourneyTest extends MemberEndpointTestCase
             'latest_charge' => ['id' => 'ch_refunded_fixture', 'object' => 'charge', 'paid' => true, 'amount_refunded' => 20000, 'refunded' => true],
         ]));
         foreach ([[], ['recovery_version' => 1]] as $version) {
-            $this->postJson($this->endpoint('payment-intent'), $version + ['hold_token' => $hold->hold_token])
+            $response = $this->postJson($this->endpoint('payment-intent'), $version + ['hold_token' => $hold->hold_token])
                 ->assertStatus(409)->assertJsonPath('code', 'payment_refunded');
+            if ($version) $response->assertJsonPath('payment_recovery', 'contact_venue');
+            else $response->assertJsonMissingPath('payment_recovery');
             $this->postJson($this->endpoint('confirm'), $version + ['hold_token' => $hold->hold_token, 'payment_intent_id' => 'pi_journey', 'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test']])
                 ->assertStatus(409)->assertJsonPath('code', 'payment_refunded');
         }
@@ -233,6 +235,48 @@ class PublicStayJourneyTest extends MemberEndpointTestCase
         $this->smoobu->shouldNotReceive('createReservation');
         $this->postJson($this->endpoint('confirm'), ['hold_token' => $hold->hold_token, 'payment_intent_id' => 'pi_journey', 'recovery_version' => 1, 'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test']])
             ->assertStatus(409)->assertJsonPath('code', 'booking_not_active')->assertJsonPath('payment_recovery', 'contact_venue');
+        \App\Models\BookingIdempotencyKey::withoutGlobalScopes()->create([
+            'organization_id' => $this->org->id, 'idempotency_key' => 'cancelled-replay', 'request_hash' => 'fixture',
+            'response_json' => ['success' => true, 'reservation_id' => 'CANCELLED-REPLAY'], 'expires_at' => now()->addHour(),
+        ]);
+        $this->withHeader('Idempotency-Key', 'cancelled-replay')->postJson($this->endpoint('confirm'), [
+            'hold_token' => $hold->hold_token, 'payment_intent_id' => 'pi_journey', 'recovery_version' => 1,
+            'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test'],
+        ])->assertStatus(409)->assertJsonPath('code', 'booking_not_active');
+    }
+
+    public function test_a_cancelled_group_follower_blocks_payment_and_cached_replays_before_capture(): void
+    {
+        $hold = $this->cachedHold();
+        $group = (string) \Illuminate\Support\Str::uuid();
+        foreach (['LEAD', 'FOLLOWER'] as $index => $suffix) {
+            \App\Models\BookingMirror::withoutGlobalScopes()->create([
+                'organization_id' => $this->org->id, 'reservation_id' => 'GROUP-' . $suffix, 'booking_group_id' => $group,
+                'apartment_id' => '101', 'arrival_date' => $this->checkIn, 'departure_date' => $this->checkOut,
+                'price_total' => 100, 'booking_state' => $index ? 'cancelled' : 'confirmed',
+                'internal_status' => $index ? 'cancelled' : 'confirmed', 'payment_status' => 'paid',
+                'stripe_payment_intent_id' => $index ? null : 'pi_journey',
+            ]);
+        }
+        $stripe = $this->stripe();
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $stripe->shouldNotReceive('refundPaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+        $stripe->shouldReceive('retrievePaymentIntent')->andReturn(PaymentIntent::constructFrom([
+            'id' => 'pi_journey', 'status' => 'requires_capture', 'amount' => 20000, 'currency' => 'eur',
+            'metadata' => ['hold_token' => $hold->hold_token, 'org_id' => (string) $this->org->id],
+        ]));
+        $this->smoobu->shouldNotReceive('createReservation');
+        $body = ['hold_token' => $hold->hold_token, 'payment_intent_id' => 'pi_journey', 'recovery_version' => 1,
+            'guest' => ['first_name' => 'Test', 'last_name' => 'Guest', 'email' => 'guest@example.test']];
+        $this->postJson($this->endpoint('confirm'), $body)->assertStatus(409)->assertJsonPath('code', 'booking_not_active');
+        \App\Models\BookingIdempotencyKey::withoutGlobalScopes()->create([
+            'organization_id' => $this->org->id, 'idempotency_key' => 'cancelled-group-replay', 'request_hash' => 'fixture',
+            'response_json' => ['booking_group_id' => $group, 'rooms' => [['reservation_id' => 'GROUP-LEAD'], ['reservation_id' => 'GROUP-FOLLOWER']]],
+            'expires_at' => now()->addHour(),
+        ]);
+        $this->withHeader('Idempotency-Key', 'cancelled-group-replay')->postJson($this->endpoint('confirm'), $body)
+            ->assertStatus(409)->assertJsonPath('code', 'booking_not_active');
     }
 
     public function test_new_public_checkout_webhook_recovers_through_the_booking_writer_with_saved_contact(): void

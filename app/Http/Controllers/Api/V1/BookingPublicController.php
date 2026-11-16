@@ -322,7 +322,7 @@ class BookingPublicController extends Controller
         }
 
         // Serialize payment creation against another tab and the booking writer's hold lock.
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($hold, $validated, $stripe, $stripeCurrency, $widgetCurrency, $orgId) {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($hold, $validated, $stripe, $stripeCurrency, $widgetCurrency, $orgId, $request) {
             $hold = \App\Models\BookingHold::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($hold->id)->lockForUpdate()->first();
             if (!$hold || !$hold->isActive()) {
                 if ($hold && ($replay = $this->completedHoldPayment($hold))) return $replay;
@@ -386,7 +386,7 @@ class BookingPublicController extends Controller
                         return response()->json(['error' => 'Please wait while we check the earlier payment.', 'code' => 'payment_pending'], 409);
                     }
                 } catch (\App\Services\Booking\PublicCheckoutBlocked $e) {
-                    return response()->json(['error' => $e->getMessage(), 'code' => $e->publicCode, 'payment_recovery' => 'contact_venue'], 409);
+                    return $this->withPaymentRecovery($request, response()->json(['error' => $e->getMessage(), 'code' => $e->publicCode], 409), 'contact_venue');
                 } catch (\Throwable $e) {
                     return \App\Services\Booking\PublicBookingError::response($e, 'We could not check your earlier payment. Please retry; do not start another payment.', 'payment_check_failed', 503);
                 }
@@ -589,6 +589,10 @@ class BookingPublicController extends Controller
                 $request->ip(),
             );
 
+            // Cached successes and PI replays must still describe active
+            // reservations, including every follower of a paid group.
+            $this->assertConfirmationStillActive($result);
+
             // Legacy group/replay results already name a committed reservation,
             // but omit the explicit acknowledgement required by the widget.
             if (!array_key_exists('success', $result)
@@ -703,6 +707,37 @@ class BookingPublicController extends Controller
                 $e,
             );
             return $this->withPaymentRecovery($request, \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again shortly.', 'booking_unavailable', 503), $recovery);
+        }
+    }
+
+    /** A saved success is historical; staff may since have cancelled one of its rooms. */
+    private function assertConfirmationStillActive(array $result): void
+    {
+        if (empty($result['replayed']) || !app()->bound('current_organization_id')) return;
+        $orgId = (int) app('current_organization_id');
+        $query = \App\Models\BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId);
+        if (!empty($result['booking_group_id'])) {
+            $query->where('booking_group_id', $result['booking_group_id']);
+        } elseif (!empty($result['mirror_id'])) {
+            $query->whereKey($result['mirror_id']);
+        } elseif (!empty($result['reservation_id'])) {
+            $query->where('reservation_id', $result['reservation_id']);
+        } else {
+            throw new \App\Services\Booking\PublicCheckoutBlocked('booking_not_active', 'This reservation needs venue review. Please contact the venue before making another payment.');
+        }
+        $rows = $query->get();
+        if ($rows->count() === 1 && !empty($rows->first()->booking_group_id)) {
+            $rows = \App\Models\BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId)
+                ->where('booking_group_id', $rows->first()->booking_group_id)->get();
+        }
+        $inactive = $rows->isEmpty() || (!empty($result['rooms']) && $rows->count() !== count($result['rooms']));
+        foreach ($rows as $row) {
+            $inactive = $inactive || $row->booking_state === 'cancelled' || $row->getAttribute('cancelled_at')
+                || in_array($row->internal_status, ['cancelled', 'no-show'], true)
+                || in_array($row->payment_status, ['refunded', 'cancelled', 'canceled', 'capture_expired'], true);
+        }
+        if ($inactive) {
+            throw new \App\Services\Booking\PublicCheckoutBlocked('booking_not_active', 'This reservation is no longer active. Please contact the venue before making another payment.');
         }
     }
 
