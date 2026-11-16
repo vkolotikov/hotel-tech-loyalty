@@ -807,3 +807,22 @@ use the pre-gap offset (RFC5545 section3.3.5). No stored planning digits change.
 description includes hook, copy, CTA, platform and status. No guest, staff contact, credential or private provider
 fields are exported. Tests read actual bytes on SQLite/PostgreSQL and browser downloads, including Unicode,
 injection, winter/summer/DST, date-only/undated, brand boundaries and exact5,000/5,001 limits.
+
+### Verified launch — 16 November 2026
+
+Production code release `00e4de78e4e472b55340c5eaef7cb9ac38685537` includes the launch audit repairs and accepted
+features, plus the final loading correction. Live `index-_xYuyRgF.js` loads `ContentApp-OmO6Ta2S.js`; Cloud rebuilds
+assets, so verify the implementation markers rather than expecting the local build hash. The final artifact passed
+491 frontend files /7273 tests, forced TypeScript, lint regression (1381 inherited diagnostics),260 canonical and290
+large-count layout checks, and110 editor/browser regressions. All60 local layout cases have CLS0; six real cold
+1440/1024/390 loads have worst CLS0.004077 and no API/browser errors or overflow. The footer menu stays reachable
+inside the900px viewport and its popup is not clipped.
+
+Live upload capability is20971520bytes (20MiB). The checked account still uses unnamedUTC: a manager must explicitly
+choose its planning zone; no zone was inferred or saved by the audit. Collaboration emails remain off by default.
+Publishing remains manual. No paid provider/output-quality call, real external email, production upload/post write
+or live worker-console health check was performed; use the detailed report's limits when describing readiness.
+
+Final implementation, per-gate evidence, acceptance coverage and all23 decisions (including the superseded desktop
+movement deferral) are in [the launch report](audits/2026-11-16-content-launch.md). Current production handoff:
+[16 November](handoff/2026-11-16-hexatech-handoff.md). Reload existing Content/admin tabs after deployment.

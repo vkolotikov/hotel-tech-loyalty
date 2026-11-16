@@ -1,5 +1,7 @@
 # HexaTech Content — pre-launch audit
 
+**Resolution — 16 November 2026:** F01–F17 and the accepted workflow improvements are deployed. This document preserves the original audit verdict and reproductions; the final implementation, verification and operating limits are in [the launch release report](2026-11-16-content-launch.md).
+
 **13 November 2026 · Target: https://app.hexa-tech.uk/content · Verdict: hold public launch.**
 
 There are **17 confirmed findings, grouped into four P1 launch blockers and thirteen P2 issues**. The core product has substantial working functionality and its existing tests pass, including on PostgreSQL. The blockers concern paid access and loss or invalid approval of users' work. Passing the current suite does not cover those cases.

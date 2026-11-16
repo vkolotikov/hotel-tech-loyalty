@@ -1,6 +1,6 @@
 # Content Launch Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Complete the accepted Content audit fixes and improvements and deploy the verified product.
 
@@ -134,8 +134,17 @@
 
 **Files:** runbook/handoff/audit coverage/evidence and source manifest; dedicated fresh deploy worktree from latest origin/main. Root owns this task.
 
-- [ ] Reconcile every F01–F17/additional design item to implemented paths/tests. Read fresh whole-branch review and fix Critical/Important findings before release.
-- [ ] Run relevant complete PHP scopes on SQLite and fresh migrated PostgreSQL; all frontend tests, TypeScript, lint baseline, PHPStan/Pint as relevant; real-backend browser journeys in both themes/all locales/device sizes, delayed requests/permissions/media/exports/jobs and captured mail. No real customer messages or production posts.
-- [ ] Prepare exact A/M/D allowlisted manifest from this clean feature baseline. Rebase source patch onto fresh origin/main in separate deploy worktree with physical vendor; verify full-source parity except generated/documented unrelated main-only additions. No feature generated assets shipped.
-- [ ] Run required artifact suites, fresh production build, content/auth/landing checks; commit deploy artifact and push deploy branch to main under explicit authorization. Verify actual loaded Content chunks/new words/endpoints, landing/sibling workspaces, migrations/workers through content/health checks. Stop if a required gate fails.
-- [ ] Update runbook/handoff and coverage with exact release/testing/live receipts; stop owned helpers/PG; clean only verified owned worktrees/junctions per Windows rules. Final report states what shipped and any actual limitation.
+- [x] Reconcile every F01–F17/additional design item to implemented paths/tests. Read fresh whole-branch review and fix Critical/Important findings before release.
+- [x] Run relevant complete PHP scopes on SQLite and fresh migrated PostgreSQL; all frontend tests, TypeScript, lint baseline, PHPStan/Pint as relevant; real-backend browser journeys in both themes/all locales/device sizes, delayed requests/permissions/media/exports/jobs and captured mail. No real customer messages or production posts.
+- [x] Prepare exact A/M/D allowlisted manifest from this clean feature baseline. Rebase source patch onto fresh origin/main in separate deploy worktree with physical vendor; verify full-source parity except generated/documented unrelated main-only additions. No feature generated assets shipped.
+- [x] Run required artifact suites, fresh production build, content/auth/landing checks; commit deploy artifact and push deploy branch to main under explicit authorization. Verify actual loaded Content chunks/new words/endpoints, landing/sibling workspaces, migrations/workers through content/health checks. Stop if a required gate fails.
+- [x] Update runbook/handoff and coverage with exact release/testing/live receipts; stop owned helpers/PG; clean only verified owned worktrees/junctions per Windows rules. Final report states what shipped and any actual limitation.
+
+### Task 11: Final live loading stability
+
+Added after the authorized16November deployment exposed a real F17 acceptance gap at1024px: a dense calendar stretches the sidebar/footer with the document and configured filter chips add a row. Original final review repairs remain closed.
+
+- [x] Reproduce the delayed dense-plan loading shift and sidebar/footer movement with actual components.
+- [x] Apply the narrow frontend correction, preserving all prior checks, themes/locales and sibling behavior; complete fresh scoped task review.
+- [x] Source-patch the correction onto current main, run required artifact checks/build and deploy; verify actual live1440/1024/390 loading and controls.
+- [x] Reconcile final coverage/handoff/report and clean only owned temporary artifacts.
