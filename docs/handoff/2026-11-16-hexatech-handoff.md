@@ -119,3 +119,25 @@ booking scopes 148 / 1,407; forced TypeScript; all 491 Vitest files / 7,275 test
 three application paths on Larastan; 18 rendered-Blade browser scenarios; fresh production build and all 515
 published asset hashes. Local PostgreSQL and the earlier fixture preview are stopped. Private final rerun logs
 use `C:/wamp64/tmp/booking-recovery-latest-*`. Live deployment receipts follow on the retained source branch.
+
+### Campaign release and live receipt
+
+Code deployed as `130872409fdb6946d34588b4b3d2cf657d3b567e` through the separate release worktree, with an exact
+18-path source patch from `2caa9385f` and a fresh Node 24 build. All eight jobs in
+[verification CI 43912236816](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43912236816) pass, including
+full PostgreSQL regression under its existing known-failure allowance. The temporary workflow export change in draft
+PR 6 was excluded from main. Every downloaded artifact file matched the release copy. Local required gates passed:
+LeadForm/AdminAccess143 tests/5855 assertions, Unit/Landing118/1763, Unit/Support216/1594, Feature/Landing1735/9552;
+the new15/57 also passed on fresh migrated PostgreSQL18/UTC. Changed-path PHPStan has no errors.
+
+The live manager API returned the new configuration and delivery counts. A controlled form7 signup reached the
+connected Gmail inbox/Promotions with the exact code, full terms, hosted artwork and both MIME alternatives; SPF,
+DKIM and DMARC passed. Repeated signup retained one sent delivery. One-click unsubscribe returned204 and its Latvian
+confirmation200. Test form7 is now inactive with sending off. No recipient addresses or unsubscribe tokens are kept here.
+
+ForRest organisation12, form6 now uses template5, consent `custom:a87oca`, expiry `2026-11-23T00:00:00+02:00`.
+Explicit catch-up for its8 processed/consented submissions produced7 unique sent deliveries,0 pending/failed.
+Its Joomla popup/form copy and booking promotion match the owner's20–22 November/Riga booking window, last eligible
+night31 December2027 and exclusion30 December2026–1 January2027 inclusive. The15% campaign is unchanged. No booking
+or payment was created. Future-window redemption and Outlook rendering remain unverified. Private campaign package:
+`C:/wamp64/www/forrest-blog/campaigns/black-friday-2026-earlyfor20/`.
