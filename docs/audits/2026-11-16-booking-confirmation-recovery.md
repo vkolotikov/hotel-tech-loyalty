@@ -57,3 +57,11 @@ The pre-push guard stopped that initial artifact when production advanced. The f
 Landing SQLite tests, 148 PostgreSQL tests, 7,275 Vitest tests, TypeScript, lint regression, Larastan, 18 browser
 scenarios and fresh-build asset parity. Booking application blobs are unchanged from the independently reviewed
 fix; only the shared historical handoff needed composition. See the final handoff for source/deploy receipts.
+
+## Production verification
+
+Production commit `caea7a659bd76087a2b05e067bf12f34fad27f4e` is live. At `2026-11-16T17:18:21Z`, all 38
+read-only content/protection checks pass, including booking release `2026-11-16.1` and its recovery code on
+both public booking hosts. Existing promo controls, admin protection, private shell/stats and landing-kit checks
+pass. No real payment, historical reservation, campaign setting or customer message was changed by these checks.
+The temporary release worktree and owned local servers are cleaned up; source and private receipts are retained.

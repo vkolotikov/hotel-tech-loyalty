@@ -119,3 +119,25 @@ booking scopes 148 / 1,407; forced TypeScript; all 491 Vitest files / 7,275 test
 three application paths on Larastan; 18 rendered-Blade browser scenarios; fresh production build and all 515
 published asset hashes. Local PostgreSQL and the earlier fixture preview are stopped. Private final rerun logs
 use `C:/wamp64/tmp/booking-recovery-latest-*`. Live deployment receipts follow on the retained source branch.
+
+## Booking recovery production receipt
+
+Production `caea7a659bd76087a2b05e067bf12f34fad27f4e` shipped through the separate source-patch branch
+`deploy/booking-recovery-latest-20261116` from `130872409`. The original candidate was never pushed. All 15
+source paths match retained feature `ee9365e86424a2aac3c0c4bf35044ad93ec69a8e`; generated assets were built only
+in the deploy worktree. Production's unchanged SPA serves `index-CXgdchRt.js` / `BookingPromotions-CP4fhNFz.js`.
+
+At `2026-11-16T17:18:21Z`, all 38 live content/protection checks pass. Both `loyalty.hotel-tech.ai` and
+`app.hexa-tech.uk` serve booking release `2026-11-16.1`, versioned recovery, retained attempted/terminal receipts,
+explicit availability review and venue-contact guards. Promotion calendar strings remain present, admin API
+access is protected, shell/stats remain private, the landing host refuses the documented retired stylesheet,
+and the Academy kit stylesheet has no retired markers. The initial private retired-asset check's typo and host
+scope were corrected against the repository before recording the passing receipt.
+
+No historical PMS reservation, payment, campaign setting, email recipient or financial transaction was changed
+by the live checks. The reported authorisation had already been cancelled. Staff must review its historical
+PMS reservation separately before collecting another payment. PostgreSQL and the fixture preview are stopped;
+the clean, verified temporary deployment worktree was removed after unlinking only its dependency junction.
+The source worktree and private evidence are retained; the original C: checkout and owner assets are untouched.
+
+Release CI: seven jobs pass; full PostgreSQL job pending. [Pipeline](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/43915898910).
