@@ -132,3 +132,11 @@ five locales/both themes; no vertical geometry changes. Large mode is `CONTENT_L
 same layout runner. Detailed source/static receipts and intermediate RED/invalid attempts are appended to
 `.superpowers/sdd/2026-11-13-content-launch/task-11-report.md`. Original110 is unchanged; root owns its fresh
 integrated-artifact repeat, full frontend/build, scoped rereview, deployment and live checks. No production action.
+
+Ruling23 subsequently superseded the earlier acceptance of that desktop Minor: no failing geometry assertion may
+ship. Desktop platform filters and static controls now each own a full-width row; the count cannot move the
+controls' starting positions. This costs one additional desktop row and changes no phone behavior. Fresh large
+mode is290/290 and canonical260/260 across30 runs each, no runtime errors; all retained assertions are intact.
+Counts are ten lower because the full-width1024 strip fits all five chips, naturally skipping the unchanged
+conditional wheel checks. Native Tab visibility still runs in every case and phone overflow retains touch checks.
+Earlier red receipts remain in the Task11 report; root owns final artifact/build/deploy/live verification.

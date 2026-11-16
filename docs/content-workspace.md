@@ -748,8 +748,9 @@ Plan figures have their own full-width row, so translated numbers cannot move Ne
 They use a compact definition grid (two columns on phones, four otherwise), with each complete localized label above
 its value or loading dash. Counts cannot add a line to a label. Below 640px, Key dates has its own filter-control row
 before the backlog total arrives, so a larger Unscheduled count cannot push it onto a new row during loading.
-Platform filters occupy a reserved single chip strip, alongside a separate Status/Unscheduled/Key dates group
-(stacked on phones). Narrow strips scroll horizontally with a visible scrollbar, touch and wheel support; keyboard
+Platform filters occupy a reserved full-width chip row above a separate Status/Unscheduled/Key dates row.
+Status/Unscheduled stay anchored left while Key dates stays right, so the backlog count cannot move their starting
+positions. Narrow strips scroll horizontally with a visible scrollbar, touch and wheel support; keyboard
 focus brings each whole chip into view. The strip's positioned container also contains the platform marks' hidden
 accessible names, preventing those absolute spans from creating document overflow.
 

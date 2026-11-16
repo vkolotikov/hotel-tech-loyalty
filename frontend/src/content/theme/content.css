@@ -179,9 +179,9 @@
 [data-content] .c-plan-pulse { min-height:76px; }
 [data-content] .c-plan-numbers { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px 16px; }
 [data-content] .c-plan-goals { height:90px; overflow:auto; }
-/* Dynamic channels use one chip row; the adjacent controls never reflow when that row fills. Its 44px height
-   holds the 30px chips, focus outlines and a thin horizontal scrollbar, including while no chips are known. */
-[data-content] .c-plan-filters { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; }
+/* Channels and controls each own a full row, so a wider backlog count cannot move the controls' left edge.
+   The chip row holds 30px chips, focus outlines and a thin scrollbar, including while no chips are known. */
+[data-content] .c-plan-filters { display:grid; grid-template-columns:minmax(0,1fr); align-items:center; gap:12px; }
 [data-content] .c-plan-platforms { position:relative; display:flex; min-width:0; height:44px; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:thin; scrollbar-color:rgb(var(--a-text-2)) rgb(var(--a-surface-2)); scroll-padding-inline:3px; padding:3px; }
 [data-content] .c-plan-filter-controls { display:flex; min-height:44px; flex-wrap:wrap; align-items:center; gap:6px; }
 @media (min-width:1024px) {

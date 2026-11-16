@@ -31,11 +31,13 @@ Receipts and screenshots default to ignored `artifacts/`. Set `CONTENT_LAYOUT_EV
 changes the locale or width for that quick run.
 `CONTENT_LAYOUT_COUNTS=large` retains the delayed-count counterexample: backlog and planned/ready/published are
 12345, empty slots remain 14. It runs the same original assertions and adds one header/figures/downstream geometry
-and complete-value check per case (300 checks for the full matrix; the default empty-count matrix remains 270).
-On phones, the figures use two label/value columns and Key dates always has its own control row. At desktop sizes,
-the auto-sized filter-control column still has a known horizontal shift when the backlog count widens; the strict
-original control-position assertion continues to expose that Minor issue. A large-count run with those failures
-must not be reported as a passing matrix.
+and complete-value check per case. Full modes currently run 290 large-count /260 empty-count checks; the count
+depends on actual strip overflow. Compared with the earlier 300/270 counts, the full-width1024 strip now fits all
+five chips, so ten conditional wheel checks no longer run. All original assertions remain unchanged; native Tab
+visibility still runs at every width and touch-swipe checks run on overflowing phone strips.
+The platform strip and static controls each occupy a full row at every width, anchoring Status/Unscheduled left
+and Key dates right independently of the loaded backlog count. On phones, the figures use two label/value columns
+and Key dates always has its own control row. The original strict control-position assertion remains intact.
 `?density=even` in the host instead uses two rotating platforms per day for exploratory comparison.
 
 This is deterministic loading/layout evidence, not a production backend, paid-provider or live release check. The
