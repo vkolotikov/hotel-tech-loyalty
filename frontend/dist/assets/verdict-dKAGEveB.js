@@ -1,1 +1,0 @@
-import{dr as e}from"./index-Dl5sSH4J.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};

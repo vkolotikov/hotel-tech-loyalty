@@ -1,0 +1,1 @@
+import{dr as e}from"./index-BWL9JIe6.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
