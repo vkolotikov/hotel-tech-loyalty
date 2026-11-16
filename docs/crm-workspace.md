@@ -331,3 +331,10 @@ Still open:
 - Multi-brand organisations: in "All brands" the chatbot's behaviour and the widget's look are the default brand's, as
   in the full admin without a brand chosen; choose the brand in the switcher to set up another brand's assistant and
   widget. A record added while one brand is chosen is that brand's (the models' `BelongsToBrand`).
+
+## Lead-form automatic replies (16 November 2026)
+
+Optional, off by default and enabled per form through the manager-only full-admin API. See
+[lead-form automatic replies](lead-form-auto-replies.md) for configuration, expiry, explicit catch-up and delivery
+states. The CRM workspace and full-admin form editor keep their existing UI. Consent, tenant/brand-owned templates,
+durable deduplication, shared hourly budgets and permanent marketing opt-out are enforced by the server.

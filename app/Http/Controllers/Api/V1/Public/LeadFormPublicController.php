@@ -43,7 +43,7 @@ class LeadFormPublicController extends Controller
         if (!$form) {
             return response()->json(['message' => 'Form not found.'], 404);
         }
-        if (!$form->is_active) {
+        if (!$form->is_active || app(\App\Services\LeadForms\AutoReply::class)->expired($form)) {
             return response()->json(['message' => 'This form is no longer accepting submissions.'], 410);
         }
 
@@ -51,7 +51,7 @@ class LeadFormPublicController extends Controller
             'name'        => $form->name,
             'embed_key'   => $form->embed_key,
             'fields'      => $form->fields ?: LeadForm::defaultFields(),
-            'design'      => $form->design ?: LeadForm::defaultDesign(),
+            'design'      => \Illuminate\Support\Arr::except($form->design ?: LeadForm::defaultDesign(), ['auto_reply']),
         ]);
     }
 
@@ -67,7 +67,7 @@ class LeadFormPublicController extends Controller
         if (!$form) {
             return response()->json(['message' => 'Form not found.'], 404);
         }
-        if (!$form->is_active) {
+        if (!$form->is_active || app(\App\Services\LeadForms\AutoReply::class)->expired($form)) {
             return response()->json(['message' => 'This form is no longer accepting submissions.'], 410);
         }
 
@@ -122,6 +122,13 @@ class LeadFormPublicController extends Controller
         }
 
         $design = $form->design ?: LeadForm::defaultDesign();
+        // The lead is already saved. An email problem must not make a visitor submit it again.
+        try {
+            $deliveryId = app(\App\Services\LeadForms\AutoReply::class)->capture($form, $submission);
+            if ($deliveryId) \App\Jobs\SendLeadFormAutoReply::dispatchAfterResponse($deliveryId);
+        } catch (\Throwable $e) {
+            \Log::error('Could not reserve lead form reply', ['lead_form_id' => $form->id, 'exception' => $e::class]);
+        }
         return response()->json([
             'success'         => true,
             'success_title'   => $design['success_title']   ?? 'Thanks!',
@@ -181,7 +188,11 @@ class LeadFormPublicController extends Controller
                                  $rules[$key] = ($required ? 'required' : 'nullable') . '|array';
                                  $rules["{$key}.*"] = 'string|max:120';
                                  break;
-                case 'checkbox': $rules[$key] = "{$base}|boolean";             break;
+                case 'checkbox':
+                    $auto = $form->design['auto_reply'] ?? [];
+                    $rules[$key] = !empty($auto['enabled']) && ($auto['consent_field'] ?? null) === $key
+                        ? 'required|boolean|accepted' : "{$base}|boolean";
+                    break;
                 case 'url':      $rules[$key] = "{$base}|url|max:500";         break;
                 case 'text':
                 default:         $rules[$key] = "{$base}|string|max:500";      break;

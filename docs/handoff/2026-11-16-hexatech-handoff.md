@@ -55,3 +55,21 @@ redundant title and fixed the editor's existing hard-coded dark background in Cl
 Source verification: TypeScript, focused ESLint and all 491 Vitest files / 7,275 tests pass. Private browser
 screenshots/fixture results: `C:/wamp64/tmp/promo-browser-20261116/`. Release artifact and live receipts follow
 after the required source-patch gates; this paragraph alone is not a production-deployment claim.
+
+## ForRest campaign form fulfilment
+
+Source branch `codex/forrest-bf-autoreply-20261116` adds optional lead-form automatic email replies, off by default.
+The owner's campaign request authorises an EARLYFOR20 email to the people opting in through the ForRest popup.
+No campaign or recipient is seeded. A manager must explicitly configure a form and request any catch-up.
+
+The shared public submission writer reserves a durable, unique form/address delivery after successful CRM intake;
+after-response sending and a minute recovery sweep claim each attempt once. Consent, expiry, tenant/brand ownership,
+marketing opt-out, provider suppression and shared hourly budgets are checked. Unknown SMTP outcomes never retry
+automatically. One-click marketing opt-out leaves booking/password mail available. Other forms retain their existing
+behaviour. Advanced configuration is API-only in this release; [runbook](../lead-form-auto-replies.md).
+
+Feature checks: 15 new tests / 57 assertions pass on SQLite and a fresh migrated PostgreSQL 18 database with UTC
+sessions, using the actual array mail transport and a real failing transport. The earlier PostgreSQL fixture collisions
+were corrected without changing application behaviour. The scoped LeadForm/AdminAccess gate passed 141 tests before
+the final two operator tests were added. Release-artifact gates and live controlled delivery must precede activation;
+this section records source work, not a production-send claim.
