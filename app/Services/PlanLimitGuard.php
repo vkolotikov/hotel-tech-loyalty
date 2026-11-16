@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Models\Property;
 use App\Models\Staff;
 use App\Scopes\TenantScope;
+use App\Scopes\BrandScope;
 
 /**
  * Enforces numeric quotas from the org's cached `plan_features`.
@@ -100,9 +101,10 @@ class PlanLimitGuard
             self::KEY_MEMBERS    => LoyaltyMember::withoutGlobalScope(TenantScope::class)
                                        ->where('organization_id', $orgId)->count(),
             self::KEY_PROPERTIES => Property::withoutGlobalScope(TenantScope::class)
+                                       ->withoutGlobalScope(BrandScope::class)
                                        ->where('organization_id', $orgId)->count(),
             self::KEY_TEAM       => Staff::withoutGlobalScope(TenantScope::class)
-                                       ->where('organization_id', $orgId)->count(),
+                                       ->where('organization_id', $orgId)->where('is_active', true)->count(),
             self::KEY_GUESTS     => \App\Models\Guest::withoutGlobalScope(TenantScope::class)
                                        ->where('organization_id', $orgId)->count(),
             self::KEY_BOOKING_STAFF => \App\Models\ServiceMaster::withoutGlobalScope(TenantScope::class)

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerVisualBrief;
 use App\Services\ContentPlanner\AiClient;
+use App\Services\Content\ContentPostWrites;
 
 /**
  * Generates a practical visual brief for a post (spec §18):
@@ -27,29 +28,37 @@ class ContentVisualBriefService
 
         $data = $this->ai->generateJson($profile, 'visual_brief', $this->buildPrompt($post, $profile), 3000);
 
-        // Clamp values to their varchar column limits — the AI writes prose
-        // and Postgres rejects over-long rows AFTER the paid API call.
-        return ContentPlannerVisualBrief::updateOrCreate(
-            ['post_id' => $post->id],
-            [
-                'visual_type' => $this->str($data['visual_type'] ?? null, 50),
-                'aspect_ratio' => $this->str($data['aspect_ratio'] ?? null, 20),
-                'style' => $this->str($data['style'] ?? null, 255),
-                'description' => $this->str($data['description'] ?? null),
-                'scene' => $this->str($data['scene'] ?? null),
-                'mood' => $this->str($data['mood'] ?? null, 100),
-                'composition' => $this->str($data['composition'] ?? null),
-                'text_overlay' => $this->str($data['text_overlay'] ?? null, 255),
-                'avoid' => $this->str($data['avoid'] ?? null),
-                'video_script' => $this->str($data['video_script'] ?? null),
-                // Ready-to-use prompt for AI image generation (OpenAI).
-                'image_prompt_future' => $this->str($data['image_prompt'] ?? null),
-                'metadata' => [
-                    'stock_idea' => $this->str($data['stock_idea'] ?? null),
-                    'design_notes' => $this->str($data['design_notes'] ?? null),
-                ],
-            ]
-        );
+        $brief = null;
+        $current = app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $current) use ($data, &$brief) {
+            $brief = ContentPlannerVisualBrief::updateOrCreate(['post_id' => $current->id], self::normalize($data));
+            ContentPostWrites::visualChanged($current);
+        });
+        $post->setRawAttributes($current->getAttributes(), true);
+
+        return $brief;
+    }
+
+    /** Normalize both standalone briefs and the brief returned with generated words against the same schema. */
+    public static function normalize(array $data): array
+    {
+        return [
+            'visual_type' => self::str($data['visual_type'] ?? null, 50),
+            'aspect_ratio' => self::str($data['aspect_ratio'] ?? null, 20),
+            'style' => self::str($data['style'] ?? null, 255),
+            'description' => self::str($data['description'] ?? null),
+            'scene' => self::str($data['scene'] ?? null),
+            'mood' => self::str($data['mood'] ?? null, 100),
+            'composition' => self::str($data['composition'] ?? null),
+            'text_overlay' => self::str($data['text_overlay'] ?? null, 255),
+            'avoid' => self::str($data['avoid'] ?? null),
+            'video_script' => self::str($data['video_script'] ?? null),
+            // Ready-to-use prompt for AI image generation (OpenAI).
+            'image_prompt_future' => self::str($data['image_prompt'] ?? null),
+            'metadata' => [
+                'stock_idea' => self::str($data['stock_idea'] ?? null),
+                'design_notes' => self::str($data['design_notes'] ?? null),
+            ],
+        ];
     }
 
     /**
@@ -102,7 +111,7 @@ PROMPT;
      * Coerce an AI-returned value into a trimmed string or null,
      * clamped to $max characters when the target column is a varchar.
      */
-    private function str(mixed $value, ?int $max = null): ?string
+    private static function str(mixed $value, ?int $max = null): ?string
     {
         if ($value === null) {
             return null;

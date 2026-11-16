@@ -1,3 +1,4 @@
+import { useRetainedState } from '../../drafts/useRetainedState'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Sparkles } from 'lucide-react'
@@ -16,8 +17,8 @@ function SnippetEditor({ kind, snippet, onDone }: { kind: SnippetKind; snippet: 
   const { t } = useTranslation()
   const api = useApi()
   const { adopt } = useBrand()
-  const [form, setForm] = useState<SnippetForm>(() => snippetForm(snippet))
-  const [busy, setBusy] = useState(false)
+  const [form, setForm, retained] = useRetainedState<SnippetForm>(`snippet:${kind}:${snippet?.id ?? 'new'}`, () => snippetForm(snippet))
+  const [busy, setBusy] = useRetainedState(`snippet-busy:${kind}:${snippet?.id ?? 'new'}`, false)
   const [error, setError] = useState<string | null>(null)
   const w = (key: string, english: string) => t(`content.brand.snippets.${key}`, english)
 
@@ -32,6 +33,7 @@ function SnippetEditor({ kind, snippet, onDone }: { kind: SnippetKind; snippet: 
     setError(null)
     try {
       await saveSnippet({ api, adopt }, snippet, kind, form)
+      retained.clear()
       onDone()
     } catch (e) {
       const [key, text] = errorKey('snippet', failureOf(e).code)
@@ -42,16 +44,16 @@ function SnippetEditor({ kind, snippet, onDone }: { kind: SnippetKind; snippet: 
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-a-border p-3">
+    <fieldset disabled={busy} className="space-y-3 rounded-lg border border-a-border p-3">
       <TextField label={w('name', 'Name')} value={form.name} maxLength={60} required onChange={(name) => setForm({ ...form, name })} />
       <TextField label={kind === 'hashtags' ? w('tags', 'Hashtags') : w('text', 'Text')} value={form.body} maxLength={2000} rows={kind === 'hashtags' ? 2 : 3}
         hint={kind === 'hashtags' ? w('tags_hint', 'Separate them with spaces.') : undefined} onChange={(body) => setForm({ ...form, body })} />
       {error && <Notice tone="danger">{error}</Notice>}
       <div className="flex gap-2">
         <Button size="sm" onClick={() => { void save() }} loading={busy}>{t('content.brand.save', 'Save')}</Button>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={onDone}>{t('content.common.cancel', 'Cancel')}</Button>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => { retained.clear(); onDone() }}>{t('content.common.cancel', 'Cancel')}</Button>
       </div>
-    </div>
+    </fieldset>
   )
 }
 
@@ -123,7 +125,7 @@ function SnippetList({ kind, brand, canEdit }: { kind: SnippetKind; brand: Brand
   const { t } = useTranslation()
   const api = useApi()
   const { adopt } = useBrand()
-  const [open, setOpen] = useState<number | 'new' | null>(null)
+  const [open, setOpen] = useRetainedState<number | 'new' | null>(`snippets-open:${kind}`, null, false)
   const [error, setError] = useState<string | null>(null)
   const list = snippetsOf(brand, kind)
   const full = list.length >= MAX_SNIPPETS
@@ -151,13 +153,13 @@ function SnippetList({ kind, brand, canEdit }: { kind: SnippetKind; brand: Brand
         )}
       </div>
       {canEdit && full && <p className="text-xs text-a-text-2">{t('content.snippet.error.too_many_snippets', 'A brand keeps at most 50 of each. Remove one first.')}</p>}
-      {open === 'new' && <SnippetEditor kind={kind} snippet={null} onDone={() => setOpen(null)} />}
+      {open === 'new' && <SnippetEditor kind={kind} snippet={null} onDone={() => setOpen(current => current === 'new' ? null : current)} />}
       {list.length === 0 && open !== 'new' && <p className="text-sm text-a-text-2">{kind === 'hashtags' ? w('none_groups', 'No hashtag groups yet.') : w('none_texts', 'No snippets yet.')}</p>}
       <ul className="space-y-2">
         {list.map(snippet => (
           <li key={snippet.id}>
             {open === snippet.id
-              ? <SnippetEditor kind={kind} snippet={snippet} onDone={() => setOpen(null)} />
+              ? <SnippetEditor kind={kind} snippet={snippet} onDone={() => setOpen(current => current === snippet.id ? null : current)} />
               : (
                 // The words keep 12rem (basis-48): on a phone the buttons wrap below them instead of squeezing them.
                 <div className="flex flex-wrap items-start gap-3 rounded-lg border border-a-border p-3">

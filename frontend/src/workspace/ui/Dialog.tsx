@@ -1,10 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { handBackFocus } from '../lib/handBack'
-import { trapTarget } from '../lib/dialogFocus'
-
-const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href]'
+import { modalScope } from '../lib/modalScope'
 
 /**
  * A modal over a scrim (Content's Generate, Loyalty's forms). It takes the focus when it opens and gives
@@ -22,30 +19,7 @@ export function Dialog({ title, onClose, busy = false, children }: { title: stri
   useEffect(() => { working.current = busy }, [busy])
 
   useEffect(() => {
-    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    box.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      const el = box.current
-      if (!el) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        if (!working.current) close.current()
-        return
-      }
-      if (e.key !== 'Tab') return
-      const items = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)]
-      const active = document.activeElement
-      const target = trapTarget(items, active === el ? null : (active as HTMLElement | null), e.shiftKey, el.contains(active))
-      if (target) {
-        e.preventDefault()
-        target.focus()
-      }
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => {
-      window.removeEventListener('keydown', onKey, true)
-      if (before?.isConnected) handBackFocus(before)
-    }
+    if (box.current) return modalScope(box.current, () => { if (!working.current) close.current() })
   }, [])
 
   return (

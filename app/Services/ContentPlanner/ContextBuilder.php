@@ -6,6 +6,7 @@ use App\Models\ContentPlannerProfile;
 use App\Models\ContentSite;
 use App\Models\Organization;
 use App\Services\ContentKnowledgeService;
+use App\Services\Content\ContentLocations;
 
 /**
  * Renders the full brand/audience/channel/strategy profile into a single
@@ -26,6 +27,7 @@ final class ContextBuilder
         $sections = array_filter([
             $this->brandProfileSection($profile),
             $this->websiteSection($profile),
+            $this->locationsSection($profile),
             $this->brandVoiceSection($profile),
             $this->audiencesSection($profile),
             $this->channelsSection($profile),
@@ -39,6 +41,22 @@ final class ContextBuilder
         ], fn ($section) => $section !== null && $section !== '');
 
         return implode("\n\n", $sections);
+    }
+
+    /** Selected campaign only, with explicit tenant/brand/profile boundaries also on queue workers. */
+    public function campaign(ContentPlannerProfile $profile, ?int $id): string
+    {
+        if (!$id) return '';
+        $campaign = \App\Models\ContentPlannerCampaign::withoutGlobalScopes()->whereKey($id)
+            ->where('organization_id', $profile->organization_id)->where('brand_id', $profile->brand_id)
+            ->where('planner_profile_id', $profile->id)->first();
+        if (!$campaign) return '';
+        return $this->section('SELECTED CAMPAIGN', [
+            $this->kv('Name', $campaign->name), $this->kv('Goal', $campaign->goal),
+            $this->kv('Start date', $campaign->start_date?->format('Y-m-d')),
+            $this->kv('End date', $campaign->end_date?->format('Y-m-d')),
+            $this->kv('Brief', $campaign->notes),
+        ]) ?? '';
     }
 
     /**
@@ -132,6 +150,20 @@ final class ContextBuilder
         $date = ($site->summary_updated_at ?? $site->scanned_at)?->format('Y-m-d');
 
         return "## FROM THE BRAND'S WEBSITE" . ($date ? " (scanned {$date})" : '') . "\n" . mb_substr($summary, 0, 6000);
+    }
+
+    private function locationsSection(ContentPlannerProfile $profile): ?string
+    {
+        $rows = ContentLocations::query((int) $profile->organization_id, (int) $profile->brand_id)
+            ->where('is_active', true)->orderBy('name')->orderBy('id')->get(ContentLocations::FIELDS);
+        $lines = $rows->map(fn ($row) => implode('; ', array_filter([
+            $this->kv('Name', $row->name), $this->kv('Address', $row->address),
+            $this->kv('City', $row->city), $this->kv('Country', $row->country),
+            $this->kv('Timezone', $row->timezone), $this->kv('Email', $row->email),
+            $this->kv('Phone', $row->phone), $this->kv('Website', $row->website),
+        ])))->all();
+
+        return $this->section('ACTIVE BRAND LOCATIONS', $lines);
     }
 
     private function brandVoiceSection(ContentPlannerProfile $profile): ?string

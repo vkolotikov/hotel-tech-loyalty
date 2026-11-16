@@ -7,7 +7,9 @@ use App\Http\Middleware\AdminAccess;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use App\Services\PlanLimitGuard;
 use Tests\Concerns\SetsUpAppointmentsSchema;
 use Tests\TestCase;
 
@@ -20,6 +22,7 @@ class OwnerInvariantTest extends TestCase
         parent::setUp();
         $this->setUpAppointments();
         Mail::fake();
+        Http::preventStrayRequests();
         config(['admin_access.mode' => 'enforce']);
         if (!Schema::hasColumn('staff', 'planner_skills')) {
             Schema::table('staff', fn ($t) => $t->text('planner_skills')->nullable());
@@ -80,5 +83,56 @@ class OwnerInvariantTest extends TestCase
         }
         config(['admin_access.mode' => 'report']);
         $this->assertFalse(AdminAccess::enforcing());
+    }
+
+    public function test_only_active_colleagues_consume_seats_and_an_invite_can_use_the_last_seat(): void
+    {
+        $this->org->update(['plan_features' => ['max_team_members' => '2']]);
+        foreach (range(1, 3) as $unused) $this->staffUser($this->org, ['is_active' => false]);
+        $this->assertSame(['count' => 1, 'limit' => 2], app(PlanLimitGuard::class)->usage(PlanLimitGuard::KEY_TEAM));
+        $this->actingAs($this->staff, 'sanctum')->postJson('/api/v1/admin/team/invite', [
+            'email' => 'last-seat@example.test', 'name' => 'Last seat', 'role' => 'staff',
+        ])->assertOk();
+        $this->assertSame(['count' => 2, 'limit' => 2], app(PlanLimitGuard::class)->usage(PlanLimitGuard::KEY_TEAM));
+        $this->postJson('/api/v1/admin/team/invite', [
+            'email' => 'over-cap@example.test', 'name' => 'Over cap', 'role' => 'staff',
+        ])->assertStatus(402)->assertJsonPath('reason', 'plan_limit');
+        $this->assertDatabaseMissing('users', ['email' => 'over-cap@example.test']);
+    }
+
+    public function test_expired_module_customers_can_still_manage_their_account_team(): void
+    {
+        $this->org->update(['subscription_status' => 'EXPIRED', 'entitled_products' => ['content'], 'plan_slug' => 'content']);
+        $this->actingAs($this->staff, 'sanctum')->getJson('/api/v1/admin/team')->assertOk();
+    }
+
+    public function test_reactivation_requires_a_free_seat_but_inactive_edits_and_reinvites_do_not(): void
+    {
+        $this->org->update(['plan_features' => ['max_team_members' => '1']]);
+        $inactive = $this->staffUser($this->org, ['role' => 'staff', 'is_active' => false]);
+        $id = $inactive->staff->id;
+        $this->actingAs($this->staff, 'sanctum')->patchJson('/api/v1/admin/team/'.$id.'/reactivate')
+            ->assertStatus(402)->assertJsonPath('reason', 'plan_limit');
+        $this->putJson('/api/v1/admin/team/'.$id, ['department' => 'Editorial'])->assertOk();
+        $this->postJson('/api/v1/admin/team/invite', [
+            'email' => $inactive->email, 'name' => 'Inactive', 'role' => 'manager',
+        ])->assertOk();
+        $this->assertDatabaseHas('staff', ['id' => $id, 'is_active' => false, 'role' => 'staff', 'department' => 'Editorial']);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'team.reactivate', 'subject_id' => $id]);
+        $this->org->update(['plan_features' => ['max_team_members' => '2']]);
+        $this->patchJson('/api/v1/admin/team/'.$id.'/reactivate')->assertOk();
+        $this->patchJson('/api/v1/admin/team/'.$id.'/reactivate')->assertOk();
+        $this->assertDatabaseHas('staff', ['id' => $id, 'is_active' => true]);
+    }
+
+    public function test_reinviting_an_active_colleague_at_capacity_preserves_their_existing_access(): void
+    {
+        $this->org->update(['plan_features' => ['max_team_members' => '2']]);
+        $existing = $this->staffUser($this->org, ['role' => 'staff']);
+        $this->actingAs($this->staff, 'sanctum')->postJson('/api/v1/admin/team/invite', [
+            'email' => $existing->email, 'name' => 'Existing', 'role' => 'manager',
+        ])->assertOk();
+        $this->assertDatabaseHas('staff', ['id' => $existing->staff->id, 'role' => 'staff', 'is_active' => true]);
+        $this->assertSame(2, app(PlanLimitGuard::class)->usage(PlanLimitGuard::KEY_TEAM)['count']);
     }
 }

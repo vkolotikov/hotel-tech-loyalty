@@ -57,3 +57,44 @@ The security artifact passed all 82 scoped PHP runs: **7,780 passed, 25 skipped,
 The initial journey release was verified live by its new admin chunk, public recovery/calendar code and Forrest configuration (`promotions_enabled: true`, `payment_enabled: true`, no currency mismatch or mock mode). A fresh live quote retained EUR 240 accommodation plus EUR 30 extras, total EUR 270, with the extra at its full catalogue price. All three codes returned `promotion_inactive` and no hold token. Actual public desktop/mobile browser walkthroughs passed date search, room selection, draft-code correction, quote creation and client-side contact validation, stopping before payment. Their network guard allowed only read requests and quote creation; no PaymentIntent, reservation, email or card charge was created. Temporary quote holds expire automatically.
 
 The security follow-up carries HTML metadata `booking-release=2026-11-13.2` so its live verification cannot accidentally accept the first journey release. The hosted preflight on the feature source (`43491421113`) passed the dependency audit, all three SQLite shards, both Node versions and Larastan; the full PostgreSQL 18 job was still running when this note was written. Final deployment and CI status are appended after rollout.
+
+
+---
+
+## Earlier Content pre-launch audit
+
+Historical audit status below predates the completion work; the final Content release record supersedes it.
+
+# Handoff — 13 November 2026
+
+## Content pre-launch audit, no product deployment
+
+Owner requested a deep review of `https://app.hexa-tech.uk/content` before public launch, covering functionality, design and missing features. Audit branch: `audit/content-prelaunch-20261113`, based on source `d38eec69a33dd3cdaf472305ce68ffde54aaae8a`. No application code or production data was changed and no deploy was performed. See [the full audit](../audits/2026-11-13-content-prelaunch.md) and its evidence directory.
+
+**Verdict: hold public launch.** Seventeen confirmed findings are grouped into four P1 and thirteen P2 issues. P1: expired tenant owners bypass subscription enforcement; second-precision revisions allow lost saves and approval of unseen words; an in-flight AI response overwrites a later human save/publication; and a late Create callback can erase a different brand's newer draft. P2 covers pending/unsaved edits, old-brand placeholder rows, publication goals, queued AI allowance/date enforcement, non-atomic AI writes and production varchar errors, stored provider-error disclosure, time-zone disagreement, inactive team seats, phone focus, document language and Plan layout shifts. Further source-only/product decisions concern the invite quota race, Pro's location promise, visual approvals and synchronous AI request latency.
+
+Validation on pinned PHP 8.5.12: existing Content/ContentCalendar feature + unit suites **541 passed / 3,524 assertions on SQLite**, and **541 / 3,524 on PostgreSQL 18.3** built from all migrations. TypeScript passes; Content/shared-workspace Vitest **1,284 tests / 131 files** pass. Private PostgreSQL audit reproduction run **34 checks / 221 assertions** (12 audit cases, 22 inherited module cases) confirms current unsafe behaviors; do not misread these passing proofs as repaired product tests. Seven actual-React deferred-response browser cases reproduce with zero page errors. The PostgreSQL brief-length proof used real column constraints and production-like autocommit behavior in the disposable database.
+
+All six live Content areas were inspected, plus real post controls, Generate configuration, Help/settings, language changes, signed-out protection, 1440px and 390px views. No real AI generation, email or social message was sent. The live owner session is restored to FDS Cards, English, Light, Week on `/content`, no post panel. Chrome DevTools' native language interaction stalled; the browser was recovered through its DOM control and the restored state was verified. A brief native-computer fallback could not inspect the minimized audit windows; no native app state was changed.
+
+Observed live: bootstrap uses UTC/no explicit venue zone while the clock banner resolves Europe/Riga from the location. Manual styled phone focus escapes behind the post panel. UI translation changes do not update html lang. Two Plan traces at 1440×1000, unthrottled/CPU1x: LCP 928/881ms and CLS0.30/0.30. English Strategy's Lighthouse snapshot scored Accessibility100/BestPractices100; this does not clear the manual accessibility findings.
+
+Private fixtures/logs/data remain in `E:/Hexa-Tech-audit-content-20261113/`. Owned Vite fixture port5187 and isolated PostgreSQL port54513 are stopped; no customer database was used. Curated screenshots and metadata are in `docs/audits/2026-11-13-content-prelaunch-evidence/`. Unrelated owner PDFs/videos/logos/plugin ZIPs and `public/alexa-skill-assets/` remain untouched.
+
+Fetched `origin/main` during review: `99e004ee2a776cc191e6fba41813f0f15bb234c0`. The cited Content/subscription/team/package files match it; shared main-only differences were unrelated CRM functionality. This audit does not establish that SHA as the exact deployed build and does not replace the source-patch deployment recipe or establish a new code-release baseline. For the preceding production receipts, setup and CRM email history, read [11 November's handoff](2026-11-11-hexatech-handoff.md), including its 12 November appendices.
+
+Next work is implementation of the audited repairs, followed by the complete source-patch release checks and the remaining safe real-provider/queue/billing acceptance journeys listed in the audit. No repairs have yet been shipped from this audit branch.
+
+## Content launch final-review repair, feature source only
+
+The implementation branch `feature/content-launch-20261113` in `E:/Hexa-Tech-content-launch-20261113`
+received the combined final-review fixes I1-I3 and M1-M4 after `7a5751220b92cc915a421c936d88325522614f0b`:
+legacy version/repeat queue continuation, pending Duplicate draft retention, viewed-revision checks on both manual
+mark actions, exact optional-total image accounting, clean retained planning-zone refresh, normalized export refusal
+observation, and model-specific query types. The current Content runbook documents the contracts. Mark ready and
+Mark published now require the complete viewed `updated_at`; stale authorized requests return 409 without mutation.
+
+Validation receipts and per-finding dispositions are in `.superpowers/sdd/2026-11-13-content-launch/final-fix-report.md`
+and the owned external evidence directory. These are source-readiness receipts, not production deployment evidence.
+The root executor owns the scoped rereview, isolated source-patch integration with newer main, artifact gates,
+deployment and live checks. No provider, real mail or production data was used in this repair wave.

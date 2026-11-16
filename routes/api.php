@@ -1133,12 +1133,15 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('loyalty-presets/skip',         [LoyaltyPresetController::class, 'skip']);
 
             // ─── Team / staff management ─────────────────────────────────
-            Route::get('team',                            [TeamController::class, 'index']);
-            Route::post('team/invite',                    [TeamController::class, 'invite']);
-            Route::put('team/{id}',                       [TeamController::class, 'update']);
-            Route::patch('team/{id}/deactivate',          [TeamController::class, 'deactivate']);
-            Route::patch('team/{id}/reactivate',          [TeamController::class, 'reactivate']);
-            Route::post('team/{id}/resend',               [TeamController::class, 'resend']);
+            // Account recovery remains available after expiry; staff rights and seat quotas still apply.
+            Route::withoutMiddleware('check.subscription')->group(function () {
+                Route::get('team',                            [TeamController::class, 'index']);
+                Route::post('team/invite',                    [TeamController::class, 'invite']);
+                Route::put('team/{id}',                       [TeamController::class, 'update']);
+                Route::patch('team/{id}/deactivate',          [TeamController::class, 'deactivate']);
+                Route::patch('team/{id}/reactivate',          [TeamController::class, 'reactivate']);
+                Route::post('team/{id}/resend',               [TeamController::class, 'resend']);
+            });
 
             // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
             Route::get('lead-forms',                            [LeadFormController::class, 'index']);
@@ -1336,8 +1339,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // `workspace:content` then answers 403, and `content.brand` pins
             // every call to exactly one brand.
             Route::prefix('content')->middleware(['workspace:content', 'content.brand'])->group(function () {
+                Route::get('media', [\App\Http\Controllers\Api\V1\Admin\Content\MediaController::class, 'index']);
+                Route::post('media', [\App\Http\Controllers\Api\V1\Admin\Content\MediaController::class, 'store']);
+                Route::put('media/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\MediaController::class, 'update'])->whereNumber('id');
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Content\BootstrapController::class, 'show']);
-                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\Content\PulseController::class, 'show']);
+                Route::get('settings', [\App\Http\Controllers\Api\V1\Admin\Content\SettingsController::class, 'show']);
+                Route::put('settings', [\App\Http\Controllers\Api\V1\Admin\Content\SettingsController::class, 'update']);
+                Route::get('locations', [\App\Http\Controllers\Api\V1\Admin\Content\LocationsController::class, 'index']);
+                Route::post('locations', [\App\Http\Controllers\Api\V1\Admin\Content\LocationsController::class, 'store']);
+                Route::put('locations/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\LocationsController::class, 'update'])->whereNumber('id');
                 Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
                 Route::get('goals', [\App\Http\Controllers\Api\V1\Admin\Content\GoalsController::class, 'show']);
                 Route::get('ideas', [\App\Http\Controllers\Api\V1\Admin\Content\IdeasController::class, 'show']);
@@ -1346,6 +1357,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('inbox/seen', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'seen']);
                 Route::get('team', [\App\Http\Controllers\Api\V1\Admin\Content\TeamController::class, 'index']);
                 Route::put('me/morning-email', [\App\Http\Controllers\Api\V1\Admin\Content\MorningEmailController::class, 'update']);
+                Route::put('me/collaboration-email', [\App\Http\Controllers\Api\V1\Admin\Content\CollaborationEmailController::class, 'update']);
                 Route::get('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'show']);
                 Route::put('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'update']);
                 // Release 6 (spec 2026-10-20 §6.2): the brand's website, its scan and its pages.
@@ -1387,9 +1399,18 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('posts/{id}/visual-brief', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'visualBrief'])->whereNumber('id');
                 Route::post('posts/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'image'])->whereNumber('id');
                 Route::post('slots/fill', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'fill']);
+                Route::post('work', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'store']);
+                Route::get('work', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'index']);
+                Route::get('work/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'show'])->whereNumber('id');
+                Route::delete('work/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'destroy'])->whereNumber('id');
                 Route::post('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'generate']);
                 // How the brand's Generate run stands (it runs on the queue worker): what the panel polls.
                 Route::get('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'status']);
+                Route::delete('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'cancel']);
+                Route::get('campaigns', [\App\Http\Controllers\Api\V1\Admin\Content\CampaignController::class, 'index']);
+                Route::post('campaigns', [\App\Http\Controllers\Api\V1\Admin\Content\CampaignController::class, 'store']);
+                Route::put('campaigns/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\CampaignController::class, 'update'])->whereNumber('id');
+                Route::get('exports/{format}', [\App\Http\Controllers\Api\V1\Admin\Content\ExportController::class, 'download'])->whereIn('format', ['csv', 'ics']);
                 Route::get('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'index']);
                 Route::post('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'store']);
                 Route::get('strategies/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'show'])->whereNumber('id');

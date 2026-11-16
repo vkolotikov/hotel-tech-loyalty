@@ -11,11 +11,11 @@ use Psr\Http\Message\ResponseInterface;
 /** Enforce calendar deadlines in the transport; the SDK's timeout option is advisory. */
 final class CalendarAiTransport implements ClientInterface
 {
-    public function __construct(private CalendarGenerationBudget $budget) {}
+    public function __construct(private ?CalendarGenerationBudget $budget = null) {}
 
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        $timeout = $this->budget->requestTimeout();
+        $timeout = ($this->budget ?? \App\Services\Content\ContentExecution::budget())->requestTimeout();
 
         try {
             // No retries here. Redirect handling stays with the SDK, as with

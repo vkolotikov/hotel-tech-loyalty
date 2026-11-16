@@ -3,8 +3,10 @@
 namespace App\Services\Content;
 
 use App\Models\Organization;
-use App\Services\AiUsageService;
 use App\Support\SharedCache;
+use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Contracts\Cache\LockProvider;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * What every Content AI action passes first (spec 2026-10-14 §5.2): the
@@ -30,15 +32,39 @@ final class ContentAiGate
      */
     public const QUEUED_SECONDS = 1800;
 
-    public function __construct(private AiUsageService $usage)
-    {
-    }
-
     public function allow(Organization $org): void
     {
-        if (($this->usage->budgetStatus($org)['status'] ?? null) === 'over') {
+        // No per-container cache and no brand scope: the cap belongs to the entire organisation.
+        $fresh = Organization::findOrFail($org->id);
+        $cap = (int) $fresh->featureValue('ai_monthly_cost_cents', 0);
+        if ($cap <= 0) return;
+        $used = (int) \App\Models\AiUsageLog::withoutGlobalScopes()->where('organization_id', $org->id)
+            ->where('created_at', '>=', now()->startOfMonth())->sum('cost_cents');
+        if ($used >= $cap) {
             throw new ContentRefused('ai_budget_used_up', "This month's AI budget is used up — see Settings → AI Usage.", 403);
         }
+    }
+
+    /** Shared lease covers the decision, paid request and ledger. No DB locks cross the network. */
+    public function attempt(int $orgId, callable $call): mixed
+    {
+        $lock = self::lease("content:allowance:{$orgId}", 120);
+        if (!$lock->get()) throw new ContentRefused('ai_busy', 'Another AI request is running for this organisation. Please try again shortly.', 409);
+        try {
+            ContentExecution::check();
+            $this->allow(Organization::findOrFail($orgId));
+            return $call();
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /** Fail closed when the configured shared store cannot coordinate workers. */
+    public static function lease(string $key, int $seconds): Lock
+    {
+        $store = Cache::store(config('cache.shared', 'database'))->getStore();
+        if (!$store instanceof LockProvider) throw new \RuntimeException('Content requires a shared lock provider.');
+        return $store->lock($key, $seconds);
     }
 
     /**
@@ -86,17 +112,22 @@ final class ContentAiGate
      */
     public function resumeGeneration(int $orgId, int $brandId, string $owner): bool
     {
-        if (!SharedCache::store()->restoreLock(self::lockKey($orgId, $brandId), $owner)->isOwnedByCurrentProcess()) {
+        if (!$this->ownsGeneration($orgId, $brandId, $owner)) {
             return false;
         }
         $lock = SharedCache::store()->lock(self::lockKey($orgId, $brandId), self::RUN_SECONDS, $owner);
         if (!$lock->get()) {
             // A store that does not refresh its owner's lock (array): hand it back and take it again, same owner.
             SharedCache::store()->restoreLock(self::lockKey($orgId, $brandId), $owner)->release();
-            $lock->get();
+            return (bool) $lock->get();
         }
 
         return true;
+    }
+
+    public function ownsGeneration(int $orgId, int $brandId, string $owner): bool
+    {
+        return SharedCache::store()->restoreLock(self::lockKey($orgId, $brandId), $owner)->isOwnedByCurrentProcess();
     }
 
     public function endGeneration(int $orgId, int $brandId, string $owner): void

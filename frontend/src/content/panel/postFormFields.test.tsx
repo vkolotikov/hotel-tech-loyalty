@@ -59,9 +59,9 @@ describe('the Link next to the call to action (spec 2026-10-19 §5.1, §5.5)', (
 // Release 7a (spec 2026-10-21 §7.4): the owner's order — the hook, the day, the status and who posts it, the words, then
 // the folding sections (platform, pillar, audience, language and topic under Targeting & language).
 describe('the panel’s field order', () => {
-  it('is Post hook, Date, Time, Status, Who posts it, Post text, Call to action, then Platform, Pillar, Audience in the folds', () => {
+  it('starts with Platform and Topic, then writing and publishing fields, with targeting in folds', () => {
     const html = render('')
-    const order = ['Post hook', 'Date', 'Time', 'Status', 'Who posts it', 'Post text', 'Call to action', 'Platform', 'Pillar', 'Audience'].map(label => html.indexOf(`>${label}<`))
+    const order = ['Platform', 'Topic', 'Post hook', 'Date', 'Time', 'Status', 'Who posts it', 'Post text', 'Call to action', 'Pillar', 'Audience'].map(label => html.indexOf(`>${label}<`))
     expect(order.every(i => i >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
   })

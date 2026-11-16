@@ -104,6 +104,7 @@ final class ContentVersions
             });
             // Each version gets its own short link to the same address (spec 2026-10-19 §5.1).
             ContentLinks::copyTo($original, $versions);
+            ContentMediaLibrary::copyTo($original, $versions);
 
             return $versions;
         });

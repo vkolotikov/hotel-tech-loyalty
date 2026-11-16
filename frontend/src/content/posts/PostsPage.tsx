@@ -1,6 +1,8 @@
+import { CampaignSelect } from '../campaigns/CampaignSelect'
+import { ExportControls } from '../exports/ExportControls'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -14,6 +16,7 @@ import { useActiveStrategy } from '../lib/useActiveStrategy'
 import { usePanel } from '../panel/PanelProvider'
 import { PageHeader } from '../ui/PageHeader'
 import { PostRow } from './PostRow'
+import { sameBrandPlaceholder } from '../panel/draftCompletion'
 import { NO_FILTERS, isFiltered, readFilters, withFilter, writeFilters } from './postsFilters'
 
 const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-1.5 text-sm text-a-text disabled:opacity-60'
@@ -49,7 +52,8 @@ export function PostsPage() {
     return () => window.clearTimeout(timer)
   }, [typed, filters, setParams])
 
-  const query = useQuery({ queryKey: ['content', brand, 'posts', filters], queryFn: () => api.posts(filters), placeholderData: keepPreviousData })
+  const campaigns = useQuery({ queryKey: ['content', brand, 'campaigns'], queryFn: api.campaigns })
+  const query = useQuery({ queryKey: ['content', brand, 'posts', filters], queryFn: () => api.posts(filters), placeholderData: (previous, query) => sameBrandPlaceholder(brand, query?.queryKey, previous) })
   const { strategy, known } = useActiveStrategy()
   const pillars = strategy?.pillars ?? []
   // Until the pillars are known a post's pillar is left unnamed (not called "another pillar").
@@ -84,6 +88,7 @@ export function PostsPage() {
           <option value="">{t('content.posts.all_platforms', 'All platforms')}</option>
           {boot.platforms.map(p => <option key={p} value={p}>{t(`content.platform.${p}`, p)}</option>)}
         </select>
+        <CampaignSelect all campaigns={campaigns.data?.campaigns ?? []} value={String(filters.campaign_id ?? '')} onChange={value => change({ campaign_id: value ? Number(value) : null })} />
         {(pillars.length > 0 || filters.pillar_id !== null) && (
           <select aria-label={t('content.posts.pillar', 'Pillar')} value={filters.pillar_id ?? ''} className={INPUT}
             onChange={(e) => change({ pillar_id: e.target.value === '' ? null : Number(e.target.value) })}>
@@ -113,6 +118,8 @@ export function PostsPage() {
         </label>
         {filtered && <Button variant="ghost" size="sm" onClick={clear}>{t('content.posts.clear', 'Clear filters')}</Button>}
       </div>
+
+      <ExportControls key={brand} filters={filters} disabled={typed !== filters.q} />
 
       {query.isError && !page && (
         <div className="space-y-3">

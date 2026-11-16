@@ -49,11 +49,11 @@ class AiUsageService
         'claude-haiku-5-5'               => ['input' => 0.10,  'output' => 0.50],
         'claude-sonnet-5-5'              => ['input' => 2.00,  'output' => 10.00],
         'claude-opus-5-5'                => ['input' => 4.00,  'output' => 20.00],
-        'claude-opus-4-7'                => ['input' => 15.00, 'output' => 75.00],
-        'claude-opus-4-7[1m]'            => ['input' => 30.00, 'output' => 150.00], // 1M context tier
-        'claude-opus-4-6'                => ['input' => 15.00, 'output' => 75.00],
-        'claude-sonnet-5'                => ['input' => 3.00,  'output' => 15.00],
-        'claude-fable-5'                 => ['input' => 3.00,  'output' => 15.00],
+        'claude-opus-4-7'                => ['input' => 5.00, 'output' => 25.00],
+        'claude-opus-4-7[1m]'            => ['input' => 5.00, 'output' => 25.00], // standard rate also at 1M context
+        'claude-opus-4-6'                => ['input' => 5.00, 'output' => 25.00],
+        'claude-sonnet-5'                => ['input' => 2.00,  'output' => 10.00],
+        'claude-fable-5'                 => ['input' => 10.00,  'output' => 50.00],
         'claude-sonnet-4-6'              => ['input' => 3.00,  'output' => 15.00],
         'claude-sonnet-4-20250514'       => ['input' => 3.00,  'output' => 15.00],
         'claude-haiku-4-5-20251001'      => ['input' => 1.00,  'output' => 5.00],
@@ -89,7 +89,9 @@ class AiUsageService
     ];
 
     /**
-     * US cents per generated image, by model and size: OpenAI's published
+     * Legacy per-picture rates retained for callers outside Content. Content
+     * canonicalizes old configuration and uses IMAGE_TOKEN_PRICING. No existing
+     * usage rows are changed. US cents per generated image, by model and size:
      * prices at the quality ImageGenerationService asks for — gpt-image-1 at
      * "high" (1024×1024 $0.167, 1024×1536 and 1536×1024 $0.25), dall-e-3 at
      * "hd" (1024×1024 $0.08, 1024×1792 and 1792×1024 $0.12) — rounded up to a
@@ -100,6 +102,43 @@ class AiUsageService
         'gpt-image-1' => ['1024x1024' => 17, '1024x1536' => 25, '1536x1024' => 25],
         'dall-e-3'    => ['1024x1024' => 8, '1024x1792' => 12, '1792x1024' => 12],
     ];
+
+    /** USD per million tokens, verified against the official model cards on 2026-11-13. */
+    public const IMAGE_TOKEN_PRICING = [
+        'gpt-image-2.6-sunburst' => ['text_input' => 5, 'image_input' => 8, 'output' => 30],
+        'gpt-image-2.6-flare' => ['text_input' => 5, 'image_input' => 8, 'output' => 30],
+    ];
+
+    /**
+     * Complete usage wins. Otherwise retain valid counts and use conservative floors:
+     * UTF-8 prompt bytes for input, high-quality calculator tokens for output,
+     * and the image-input rate for any unclassified input. No free successful image.
+     *
+     * @return array{input_tokens:int,output_tokens:int,text_tokens:int,image_tokens:int,unclassified_tokens:int,estimated:bool,cost_usd:float,cost_cents:int}
+     */
+    public function imageCost(string $model, string $size, ?array $usage = null, string $prompt = ''): array
+    {
+        $rates = self::IMAGE_TOKEN_PRICING[$model] ?? null;
+        $valid = static fn ($value): bool => is_int($value) && $value >= 0;
+        $input = $usage['input_tokens'] ?? null;
+        $output = $usage['output_tokens'] ?? null;
+        $text = $usage['input_tokens_details']['text_tokens'] ?? null;
+        $image = $usage['input_tokens_details']['image_tokens'] ?? null;
+        $complete = $valid($input) && $input > 0 && $valid($output) && $output > 0
+            && $valid($text) && $valid($image) && $text + $image === $input
+            && (! isset($usage['total_tokens']) || $usage['total_tokens'] === $input + $output);
+        if (! $complete) {
+            $text = $valid($text) && $text > 0 ? $text : max(1, strlen($prompt));
+            $image = $valid($image) ? $image : 0;
+            $input = max($valid($input) ? $input : 0, $text + $image, strlen($prompt), 1);
+            $output = max($valid($output) ? $output : 0, in_array($size, ['1024x1536', '1536x1024'], true) ? 1372 : 1756);
+        }
+        $unclassified = $input - $text - $image;
+        $usd = $rates ? ($text * $rates['text_input'] + ($image + $unclassified) * $rates['image_input'] + $output * $rates['output']) / 1_000_000 : 0.0;
+        return ['input_tokens' => $input, 'output_tokens' => $output, 'text_tokens' => $text,
+            'image_tokens' => $image, 'unclassified_tokens' => $unclassified, 'estimated' => ! $complete,
+            'cost_usd' => $usd, 'cost_cents' => (int) ceil($usd * 100)];
+    }
 
     /**
      * Record a single AI call. Computes cost_cents from MODEL_PRICING.
@@ -152,13 +191,14 @@ class AiUsageService
     }
 
     /**
-     * Record one generated image (images are priced per picture, not per
-     * token). Safe to call from inside a try/catch — never throws.
+     * Record one generated image using current token usage or its conservative
+     * estimate. Legacy models retain their per-picture rates. Never throws on writes.
      */
-    public function recordImage(int $orgId, string $model, string $size, string $feature): void
+    public function recordImage(int $orgId, string $model, string $size, string $feature, ?array $usage = null, string $prompt = ''): void
     {
+        $tokens = isset(self::IMAGE_TOKEN_PRICING[$model]) ? $this->imageCost($model, $size, $usage, $prompt) : null;
         $prices = self::IMAGE_PRICING[$model] ?? null;
-        if ($prices === null) {
+        if ($prices === null && $tokens === null) {
             Log::info('AI usage: unknown image pricing (cost recorded as 0)', ['model' => $model]);
         }
 
@@ -170,9 +210,9 @@ class AiUsageService
                 'model'           => $model,
                 'kind'            => 'image',
                 'feature'         => mb_substr($feature, 0, 60),
-                'input_tokens'    => 0,
-                'output_tokens'   => 0,
-                'cost_cents'      => $prices === null ? 0 : ($prices[$size] ?? max($prices)),
+                'input_tokens'    => $tokens['input_tokens'] ?? 0,
+                'output_tokens'   => $tokens['output_tokens'] ?? 0,
+                'cost_cents'      => $tokens['cost_cents'] ?? ($prices === null ? 0 : ($prices[$size] ?? max($prices))),
             ]);
 
             Cache::forget("ai_usage:month:{$orgId}:" . now()->format('Y-m'));
@@ -308,22 +348,33 @@ class AiUsageService
 
     private function computeCostCents(string $model, int $input, int $output, string $kind): int
     {
+        return (int) ceil($this->costUsd($model, $input, $output, $kind) * 100);
+    }
+
+    public function costUsd(string $model, int $input, int $output, string $kind = 'chat'): float
+    {
+        $input = max(0, $input);
+        $output = max(0, $output);
         $pricing = self::MODEL_PRICING[$model] ?? null;
         if (!$pricing) {
             Log::info('AI usage: unknown model pricing (cost recorded as 0)', ['model' => $model]);
-            return 0;
+            return 0.0;
+        }
+
+        if ($model === 'claude-haiku-5-5' && $input > 100_000) {
+            $pricing = ['input' => 0.50, 'output' => 2.50];
         }
 
         if ($kind === 'embedding') {
             $perM = (float) ($pricing['total'] ?? 0);
             $usd  = ($input + $output) / 1_000_000 * $perM;
-            return (int) ceil($usd * 100);
+            return $usd;
         }
 
         $usd = (
             ($input  / 1_000_000) * (float) ($pricing['input']  ?? 0)
             + ($output / 1_000_000) * (float) ($pricing['output'] ?? 0)
         );
-        return (int) ceil($usd * 100);
+        return $usd;
     }
 }

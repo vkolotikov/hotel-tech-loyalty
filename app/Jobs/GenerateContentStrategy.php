@@ -57,23 +57,21 @@ class GenerateContentStrategy implements ShouldQueue
         // A queued job runs outside the request that created it, so
         // TenantMiddleware never fires and every scoped query would otherwise
         // fail closed and match nothing.
-        app()->instance('current_organization_id', $this->organizationId);
+        $strategy = ContentPlannerStrategy::withoutGlobalScopes()->where('organization_id', $this->organizationId)->find($this->strategyId);
+        $profile  = ContentPlannerProfile::withoutGlobalScopes()->where('organization_id', $this->organizationId)->find($this->profileId);
 
-        $strategy = ContentPlannerStrategy::withoutGlobalScopes()->find($this->strategyId);
-        $profile  = ContentPlannerProfile::withoutGlobalScopes()->find($this->profileId);
-
-        if (!$strategy || !$profile) {
+        if (!$strategy || !$profile || $strategy->status !== 'generating' || (int)$strategy->brand_id !== (int)$profile->brand_id) {
             return; // deleted while queued
         }
 
         // The AI ledger takes the brand from the container: bind the profile's for the run, then leave it as found
         // (in tests the sync queue runs this inside a request that has its own brand bound).
-        $prior = app()->bound('current_brand_id') ? app('current_brand_id') : null;
-        app()->instance('current_brand_id', (int) $profile->brand_id);
         try {
-            $strategies->generate($profile, $this->params, $strategy);
-        } finally {
-            $prior === null ? app()->forgetInstance('current_brand_id') : app()->instance('current_brand_id', $prior);
+            (new \App\Services\Content\ContentExecution($this->organizationId, (int)$profile->brand_id, (int)$strategy->created_by, true,
+                null, new \App\Services\ContentPlanner\CalendarGenerationBudget(null, 540)))
+                ->run(fn () => $strategies->generate($profile, $this->params, $strategy));
+        } catch (\Throwable $e) {
+            $this->failed($e);
         }
     }
 

@@ -4,7 +4,7 @@ import { Plus, Pencil, Copy, X, Tag, CalendarDays, Trash2, Save, Search, Externa
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { money } from '../lib/money'
-import { duplicatePromotion, filterPromotions, newPromotion, promotionBody, type BookingPromotion } from './bookingPromotions'
+import { duplicatePromotion, filterPromotions, newPromotion, promotionBody, type BookingPromotion } from './bookingPromotionRules'
 
 interface Catalogue { enabled: boolean; timezone: string; currency: string; booking_url?: string | null; rooms: { id: number; name: string; is_active?: boolean }[]; promotions: BookingPromotion[] }
 const input = 'min-w-0 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-hidden focus:ring-2 focus:ring-primary-500'

@@ -14,6 +14,35 @@ class ContentPlannerPost extends Model
 {
     use BelongsToOrganization, BelongsToBrand;
 
+    protected $dateFormat = 'Y-m-d H:i:s.u';
+
+    protected static function booted(): void
+    {
+        static::saving(fn (self $post) => \App\Services\Content\ContentPublication::prepare($post));
+    }
+
+    public function touch($attribute = null)
+    {
+        if ($attribute || !$this->usesTimestamps()) return parent::touch($attribute);
+        $previous = $this->getOriginal('updated_at');
+        $next = $this->freshTimestamp();
+        $this->updated_at = $previous && $next->lte($previous) ? $previous->copy()->addMicrosecond() : $next;
+
+        return $this->save();
+    }
+
+    /** A meaningful save always advances, even when the clock is frozen or moves backwards. */
+    public function updateTimestamps()
+    {
+        if (!$this->exists) return parent::updateTimestamps();
+        if (!$this->isDirty()) return $this;
+        $previous = $this->getOriginal('updated_at');
+        $next = $this->isDirty('updated_at') ? $this->updated_at : $this->freshTimestamp();
+        $this->updated_at = $previous && (!$next || $next->lte($previous)) ? $previous->copy()->addMicrosecond() : $next;
+
+        return $this;
+    }
+
     protected $fillable = [
         'organization_id',
         'brand_id',
@@ -65,6 +94,7 @@ class ContentPlannerPost extends Model
         'engagement_mechanic' => 'array',
     ];
 
+    /** @return BelongsTo<ContentPlannerProfile, $this> */
     public function profile(): BelongsTo
     {
         return $this->belongsTo(ContentPlannerProfile::class, 'planner_profile_id');
@@ -105,7 +135,7 @@ class ContentPlannerPost extends Model
         return $this->hasMany(ContentPlannerPostVariation::class, 'post_id');
     }
 
-    /** Its approval steps (spec 2026-10-16 §6.4). */
+    /** Its approval steps (spec 2026-10-16 §6.4). @return HasMany<ContentPlannerPostEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(ContentPlannerPostEvent::class, 'post_id');
@@ -128,6 +158,7 @@ class ContentPlannerPost extends Model
         return $query->withCount('comments')->addSelect([
             'last_event_kind' => $latest('kind'),
             'last_event_at'   => $latest('created_at'),
+            'last_event_post_updated_at' => $latest('post_updated_at'),
             // Spec 2026-10-19 §3.4: how many posts share its group of versions (none for a post in no group).
             'group_size'      => DB::table('content_planner_posts as same_group')->selectRaw('count(*)')
                 ->whereColumn('same_group.group_id', 'content_planner_posts.group_id'),

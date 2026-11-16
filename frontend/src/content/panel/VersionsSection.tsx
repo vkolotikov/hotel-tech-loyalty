@@ -104,7 +104,7 @@ export function VersionsSection({ post, group, dirty, onPost }: {
       {note?.kind === 'adapting_others' && <p role="status" className="text-xs text-a-text-2">{w('adapting_others', 'The AI is adapting the versions…')}</p>}
       {note?.kind === 'kept' && (
         <Notice tone="warning">
-          {note.reason === 'budget'
+          {note.reason === 'ai_model_unpriced' ? t('content.ai.error.ai_model_unpriced', 'Ask an administrator to check the AI setup before trying again.') : note.reason === 'budget'
             ? w('kept_budget', 'The AI budget ran out; this version keeps the original text.')
             : w('kept_failed', 'The AI could not adapt this version; it keeps the original text.')}
         </Notice>

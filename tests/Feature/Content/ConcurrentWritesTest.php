@@ -163,7 +163,7 @@ class ConcurrentWritesTest extends TestCase
     {
         $post = $this->makePost(['status' => 'approved', 'poster_id' => $this->staffMember->id]);
         $this->afterTheRead($post->id, fn () => $this->savedElsewhere($post, ['status' => 'draft']));
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"))->assertStatus(403)->assertJsonPath('error', 'needs_approval');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['updated_at' => $post->updated_at->toISOString()])->assertStatus(403)->assertJsonPath('error', 'needs_approval');
         $this->assertSame('draft', $post->fresh()->status);
     }
 
@@ -176,7 +176,7 @@ class ConcurrentWritesTest extends TestCase
             $this->savedElsewhere($post, ['status' => 'draft']);
             ContentApproval::record($post, 'sent_back', $this->manager->id, 'Shorter.');
         });
-        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-ready"))->assertOk()->assertJsonPath('post.status', 'ready_to_publish');
+        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-ready"), ['updated_at' => $post->updated_at->toISOString()])->assertStatus(409)->assertJsonPath('error', 'changed_elsewhere')->assertJsonPath('post.status', 'draft');
         $this->assertSame(['sent_back'], ContentPlannerPostEvent::where('post_id', $post->id)->pluck('kind')->all());
     }
 }

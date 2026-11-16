@@ -1,3 +1,4 @@
+import { CampaignSelect } from '../campaigns/CampaignSelect'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -28,6 +29,8 @@ export function GenerateDialog({ today, onClose, onDone }: { today: DateKey; onC
   const locale = i18n.language || 'en'
   const api = useApi()
   const brand = useBrandId()
+  const campaigns = useQuery({ queryKey: ['content', brand, 'campaigns'], queryFn: api.campaigns })
+  const [campaign, setCampaign] = useState('')
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
   const channels = useMemo(() => [...new Set((brandInfo.data?.channels ?? []).filter(c => c.active).map(c => c.platform))], [brandInfo.data])
   const [preset, setPreset] = useState<Preset>('this_week')
@@ -63,6 +66,7 @@ export function GenerateDialog({ today, onClose, onDone }: { today: DateKey; onC
     setError(null)
     try {
       const answer = await api.generate({
+        ...(campaign ? { campaign_id: Number(campaign) } : {}),
         from: range.from, to: range.to, fill_empty_only: emptyOnly,
         ...(chosen.length > 0 && chosen.length < channels.length ? { platforms: chosen } : {}),
         ...(instructions.trim() !== '' ? { instructions: instructions.trim() } : {}),
@@ -127,6 +131,7 @@ export function GenerateDialog({ today, onClose, onDone }: { today: DateKey; onC
   return (
     <Dialog title={t('content.generate.title', 'Generate posts')} onClose={onClose} busy={busy}>
       <p className="mb-4 text-sm text-a-text-2">{t('content.generate.intro', 'The AI writes drafts for the days your channels expect. You can change every one.')}</p>
+      <div className="mb-4"><CampaignSelect value={campaign} onChange={setCampaign} campaigns={campaigns.data?.campaigns ?? []} disabled={busy} /></div>
       <fieldset className="mb-4">
         <legend className="mb-1.5 text-xs font-medium text-a-text-2">{t('content.generate.range', 'Days')}</legend>
         <div className="flex flex-wrap gap-1.5">

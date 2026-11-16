@@ -8,6 +8,7 @@ use App\Models\ContentPlannerPostEvent;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerRead;
 use App\Models\User;
+use App\Models\ContentNotification;
 use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,7 +67,8 @@ final class ContentInbox
             $items[] = self::item("event:{$event->id}", (string) $event->kind, $event->post, $event->user, $event->note, CarbonImmutable::instance($event->created_at), true);
         }
         foreach (self::comments($user, $profile, $since)->with(self::WITH)->orderByDesc('created_at')->orderByDesc('id')->limit(self::LIMIT)->get() as $comment) {
-            $items[] = self::item("comment:{$comment->id}", 'comment', $comment->post, $comment->user, $comment->body, CarbonImmutable::instance($comment->created_at), true);
+            $mentioned = in_array((int) $user->id, array_column($comment->mentions ?? [], 'id'), true);
+            $items[] = self::item("comment:{$comment->id}", $mentioned ? 'mention' : 'comment', $comment->post, $comment->user, $comment->body, CarbonImmutable::instance($comment->created_at), true);
         }
         // Newest first; usort keeps the order above for items of the same second.
         usort($items, fn (array $a, array $b) => $b['at'] <=> $a['at']);
@@ -125,7 +127,7 @@ final class ContentInbox
     private static function approvals(User $user, ContentPlannerProfile $profile, CarbonImmutable $since): Builder
     {
         return ContentPlannerPostEvent::query()->whereIn('kind', ['approved', 'sent_back'])
-            ->where('created_at', '>', $since)
+            ->where('created_at', '>', $since->format('Y-m-d H:i:s.u'))
             ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', '!=', $user->id))
             ->whereIn('post_id', ContentPlannerPost::select('id')->where('planner_profile_id', $profile->id)->where('created_by', $user->id));
     }
@@ -134,11 +136,12 @@ final class ContentInbox
     private static function comments(User $user, ContentPlannerProfile $profile, CarbonImmutable $since): Builder
     {
         return ContentPlannerPostComment::query()
-            ->where('created_at', '>', $since)
+            ->where('created_at', '>', $since->format('Y-m-d H:i:s.u'))
             ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', '!=', $user->id))
             ->whereIn('post_id', ContentPlannerPost::select('id')->where('planner_profile_id', $profile->id))
             ->where(fn ($q) => $q
                 ->whereIn('post_id', ContentPlannerPost::select('id')->where('created_by', $user->id))
+                ->orWhereIn('id', ContentNotification::select('source_id')->where('source_type', 'comment')->where('recipient_id', $user->id))
                 ->orWhereExists(fn ($mine) => $mine->selectRaw('1')->from('content_planner_post_comments as mine')
                     ->whereColumn('mine.post_id', 'content_planner_post_comments.post_id')
                     ->where('mine.user_id', $user->id)

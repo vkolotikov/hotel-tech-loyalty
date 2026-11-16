@@ -43,6 +43,8 @@ final class ContentTimeline
             'id'     => (int) $comment->id,
             'user'   => self::person($comment->user),
             'body'   => (string) $comment->body,
+            'media'  => $comment->media_context,
+            'mentions' => $comment->mentions ?? [],
             'edited' => $comment->edited_at !== null,
             'mine'   => $viewer !== null && $comment->user_id !== null && (int) $comment->user_id === (int) $viewer->id,
             'at'     => $comment->created_at?->toISOString(),

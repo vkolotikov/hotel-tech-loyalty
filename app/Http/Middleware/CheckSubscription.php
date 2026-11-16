@@ -16,9 +16,9 @@ class CheckSubscription
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Super admin bypass — full access without subscription
+        // Only HexaTech operators bypass billing; a customer's owner still needs a subscription.
         $user = $request->user();
-        if ($user && method_exists($user, 'staff') && $user->staff?->isSuperAdmin()) {
+        if ($user?->isPlatformAdmin()) {
             $request->attributes->set('subscription_status', 'ACTIVE');
             $request->attributes->set('subscription_plan', 'enterprise');
             return $next($request);

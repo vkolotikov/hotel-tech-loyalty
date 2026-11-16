@@ -120,7 +120,7 @@ class AiUsageServiceTest extends TestCase
 
         // 1M tokens in + 1M out, in cents: input + output price per MTok × 100.
         $expected = [
-            'claude-haiku-5-5'      => 60,    // $0.10 + $0.50
+            'claude-haiku-5-5'      => 300,   // >100k input tier: $0.50 + $2.50
             'claude-sonnet-5-5'     => 1200,  // $2 + $10
             'gpt-5.6-terra'         => 1400,  // $2 + $12
             'gpt-5.6-luna'          => 140,   // $0.20 + $1.20

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ContentPlannerPost;
 use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentAiGate;
-use App\Services\Content\ContentApproval;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
@@ -40,9 +39,7 @@ class PostAiController extends Controller
         $post = $this->prepare($request, $id);
         // Spec 2026-10-16 §5.3: "Write with AI" from one of this brand's templates; another brand's does not exist here.
         $template = isset($data['template_id']) ? ContentTemplates::find(ContentContext::requireProfile(), (int) $data['template_id']) : null;
-        $before = (string) $post->status;
         $this->run(fn () => $posts->generate($post, $data['instructions'] ?? null, $template));
-        ContentApproval::afterAi($post->fresh(), $before, $request->user(), ContentContext::profile());
 
         return $this->post($post);
     }
@@ -75,7 +72,6 @@ class PostAiController extends Controller
     {
         $post = $this->prepare($request, $id);
         $this->run(fn () => $briefs->generateFor($post));
-        self::worked($post);
 
         return $this->post($post);
     }
@@ -84,22 +80,9 @@ class PostAiController extends Controller
     {
         $data = $request->validate(['instructions' => 'nullable|string|max:1000']);
         $post = $this->prepare($request, $id);
-        $before = (string) $post->status;
         $this->run(fn () => $images->generateForPost($post, $data['instructions'] ?? null));
-        self::worked($post);
-        ContentApproval::afterAi($post->fresh(), $before, $request->user(), ContentContext::profile());
 
         return $this->post($post);
-    }
-
-    /**
-     * A new picture or visual brief is someone working on the post: its version moves on, which also ends "Sent back"
-     * (owner, 2026-10-20; final review). The picture lives on the brief, so the post itself would not change otherwise.
-     */
-    private static function worked(ContentPlannerPost $post): void
-    {
-        $post->refresh();
-        $post->touch();
     }
 
     /** One AI-written post for an open slot (spec §4.2), through the calendar's own one-day generation. */
@@ -117,12 +100,15 @@ class PostAiController extends Controller
             throw new ContentRefused('slot_not_open', 'That day already has a post for this platform, or it is not one of its days.', 422);
         }
 
-        set_time_limit(600);
+        set_time_limit(55);
         $result = $this->gate->oneGenerationAtATime((int) $org->id, (int) $profile->brand_id, fn () => $this->run(
             fn () => $calendar->generate($profile, $data['date'], $data['date'], ['platforms' => [$data['platform']], 'fill_empty_only' => true])
         ));
         $post = collect($result['created'])->first(fn (ContentPlannerPost $p) => $p->platform === $data['platform']);
         if (!$post) {
+            if (($result['failed_windows'][0]['reason'] ?? null) === 'ai_model_unpriced') {
+                \App\Services\ContentPlanner\ContentModels::unpriced();
+            }
             throw new ContentRefused('ai_failed', 'The AI did not write a post for this slot. Please try again.', 502);
         }
 
@@ -133,7 +119,7 @@ class PostAiController extends Controller
     {
         $this->gate->allow($request->attributes->get('workspace_org'));
         $post = PostController::find($id);
-        set_time_limit(600); // one AI call can take a minute or more
+        set_time_limit(55); // legacy transport deadline is 45 s, below Cloud's 60 s limit
 
         return $post;
     }

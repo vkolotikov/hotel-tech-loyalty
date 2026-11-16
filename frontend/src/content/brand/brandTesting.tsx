@@ -31,12 +31,12 @@ export const brandWith = (more: Partial<BrandPayload> = {}): BrandPayload => ({
 })
 
 /** Renders `element` (the Brand page by default) with the brand in the cache, as a manager or as staff. */
-export function renderBrand(payload: BrandPayload, canManage: boolean, element: ReactElement = <BrandPage />) {
+export function renderBrand(payload: BrandPayload, canManage: boolean, element: ReactElement = <BrandPage />, section = 'overview') {
   const client = new QueryClient()
   client.setQueryData(['content', 3, 'brand'], payload)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/content/brand']}>
+      <MemoryRouter initialEntries={['/content/brand?section=' + section]}>
         <ContentContext.Provider value={{ data: bootFor(canManage), isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
           {element}
         </ContentContext.Provider>

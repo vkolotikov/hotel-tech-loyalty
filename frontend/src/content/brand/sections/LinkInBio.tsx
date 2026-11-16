@@ -1,3 +1,4 @@
+import { useRetainedState } from '../../drafts/useRetainedState'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +11,7 @@ import { errorKey } from '../../lib/errors'
 import type { BioPayload } from '../../lib/types'
 import { CopyButton } from '../../ui/CopyButton'
 import { INPUT, ReadRow } from '../inputs'
+import { acknowledgeBio } from '../bioAcknowledgement'
 import {
   MAX_BUTTONS, addButton, addressOf, bioBody, bioFormOf, bioProblems, caretToRestore, focusAfterMove, focusAfterRemove, freshBio, keyedMarks, moveButton,
   problemCodes, refusedFields, removeButton, renamedFrom, slugInput, type BioButtonForm, type BioForm,
@@ -31,8 +33,8 @@ export function LinkInBioSection({ canEdit }: { canEdit: boolean }) {
   const brandId = useBrandId()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['content', brandId, 'bio'], queryFn: api.bio, staleTime: 60_000 })
-  const [draft, setDraft] = useState<BioForm | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [draft, setDraft, retained] = useRetainedState<BioForm | null>('bio', null)
+  const [busy, setBusy] = useRetainedState('bio:busy', false)
   const [opening, setOpening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [invalid, setInvalid] = useState<string[]>([])
@@ -60,7 +62,9 @@ export function LinkInBioSection({ canEdit }: { canEdit: boolean }) {
     focusAfter.current = '[data-bio-editor] [role="switch"]'
     setError(null)
     setInvalid([])
-    setDraft(bioFormOf(from))
+    const form = bioFormOf(from)
+    setDraft(form)
+    retained.acknowledge(form)
   }
   const close = () => {
     focusAfter.current = '[data-bio-edit]'
@@ -84,7 +88,14 @@ export function LinkInBioSection({ canEdit }: { canEdit: boolean }) {
     try {
       const answer = await api.saveBio(bioBody(draft))
       queryClient.setQueryData(['content', brandId, 'bio'], answer)
-      close()
+      if (!retained.acknowledge(draft)) return
+      const latest = retained.current()
+      if (latest === null || JSON.stringify(latest) === JSON.stringify(draft)) close()
+      else {
+        const acknowledged = acknowledgeBio(draft, latest, answer)
+        retained.acknowledge(acknowledged.base)
+        setDraft(acknowledged.draft)
+      }
     } catch (e) {
       const failure = failureOf(e)
       setInvalid(keyedMarks(draft.buttons, refusedFields(failure.code, failure.fields)))
@@ -223,7 +234,8 @@ export function BioEditor({ bio, draft, onChange, invalid, error, busy, brandNam
     set({ buttons: removeButton(draft.buttons, index) })
   }
   const add = () => {
-    const key = `n${counter.current++}`
+    let key = `n${counter.current++}`
+    while (draft.buttons.some(button => button.key === key)) key = `n${counter.current++}`
     onFocus(`[data-bio-row="${key}"] input`)
     set({ buttons: addButton(draft.buttons, key) })
   }

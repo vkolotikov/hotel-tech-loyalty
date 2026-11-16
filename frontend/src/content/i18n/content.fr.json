@@ -1,6 +1,7 @@
 {
   "nav": { "plan": "Planning", "posts": "Publications", "strategy": "Stratégie", "brand": "Marque", "ideas": "Idées", "promote": "Promouvoir" },
   "common": {
+    "discard_drafts": "Abandonner vos modifications non enregistrées ?",
     "page_failed": "Cette page n’a pas pu s’afficher. Ce que vous avez enregistré est en sécurité.",
     "reload": "Recharger la page",
     "loading": "Chargement…",
@@ -14,7 +15,7 @@
     "copy_failed": "Copie impossible. Sélectionnez le texte et copiez-le vous-même."
   },
   "shell": {
-    "new_post": "Nouvelle publication",
+      "new_post": "Nouvelle publication",
     "find": "Trouver une publication ou une action",
     "brand": "Marque",
     "switched_off": "HexaTech Content a été désactivé pour votre organisation. Vos publications sont inchangées.",
@@ -93,6 +94,7 @@
   },
   "fill": {
     "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.",
       "slot_not_open": "Ce créneau a déjà une publication.",
       "ai_budget_used_up": "Le budget IA du mois est épuisé.",
       "already_generating": "L'IA rédige déjà pour cette marque. Réessayez dans un instant.",
@@ -123,6 +125,7 @@
       "past": "Ces jours sont déjà passés."
     },
     "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.",
       "range_in_past": "Ces jours sont déjà passés.",
       "no_channels": "Cette marque n'a aucun canal actif à planifier.",
       "already_generating": "L'IA rédige déjà pour cette marque. Réessayez dans un instant.",
@@ -251,6 +254,7 @@
   },
   "ai": {
     "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.",
       "ai_budget_used_up": "Le budget IA du mois est épuisé. Vous pouvez toujours écrire vous-même.",
       "ai_failed": "L'IA n'a pas pu terminer. Veuillez réessayer.",
       "not_found": "Cette publication n'existe plus.",
@@ -418,17 +422,20 @@
     "section": { "company": "Entreprise et marque", "knowledge": "Connaissances", "audience": "Audiences", "voice": "Voix", "channels": "Canaux", "strategy_inputs": "Bases de la stratégie" },
     "gap": { "company_name": "L’organisation n’a pas encore de nom (administration complète, Paramètres).", "company_industry": "L’organisation n’a pas encore de secteur (administration complète, Paramètres).", "company_website": "L’organisation n’a pas encore de site web (administration complète, Paramètres).", "brand_summary": "Ajoutez une présentation de la marque (ADN de la marque).", "usp": "Dites ce qui distingue la marque (ADN de la marque).", "mission": "Ajoutez la mission (ADN de la marque).", "faq_none": "Ajoutez des questions et réponses à la base de connaissances du chat IA.", "faq_more": "Ajoutez d’autres questions et réponses : {{count}} pour l’instant, 5 ou plus c’est mieux.", "services": "Ajoutez vos services ou produits dans l’administration complète.", "audience_none": "Ajoutez au moins une audience (Audiences).", "audience_pains": "Indiquez les difficultés de chaque audience.", "audience_goals": "Indiquez les objectifs de chaque audience.", "voice_none": "Décrivez la voix de la marque (Voix).", "voice_tone": "Choisissez un ton (Voix).", "voice_emoji": "Choisissez combien d’emoji utiliser (Voix).", "voice_hashtag": "Choisissez combien de hashtags utiliser (Voix).", "channels_none": "Activez au moins un canal (Canaux).", "channels_days": "Choisissez les jours de publication de vos canaux.", "channels_per_week": "Indiquez le nombre de publications par semaine de vos canaux.", "content_mix": "Définissez le mix de contenus (Rythme et objectifs).", "weekly_rhythm": "Définissez le rythme de la semaine (Rythme et objectifs).", "engagement_goals": "Choisissez des objectifs d’engagement (Rythme et objectifs)." },
     "dna": { "title": "ADN de la marque", "intro": "Qui est la marque, avec ses propres mots. L’IA écrit à partir de cela.", "name": "Nom de la marque", "language": "Langue des publications", "language_none": "Choisissez une langue", "goal": "Objectif principal", "summary": "Présentation de la marque", "usp": "Ce qui la distingue", "mission": "Mission", "promise": "Promesse de la marque", "differentiators": "Éléments distinctifs", "values": "Valeurs", "proof": "Preuves", "price": "Positionnement prix", "cta": "Appel à l’action principal", "links": "Liens importants" },
-    "error": { "manager_only": "Seul un propriétaire ou un responsable peut modifier la marque.", "invalid": "Certains champs sont à vérifier.", "not_found": "Cet élément n’existe plus. La page montre la marque telle qu’elle est.", "no_profile": "Cette marque n’est pas encore configurée.", "already_set_up": "Cette marque est déjà configurée.", "already_generating": "La marque est déjà en cours de configuration. Patientez un instant.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "ai_failed": "L’IA n’a pas pu terminer. Veuillez réessayer.", "unknown": "La modification n’a pas pu être enregistrée. Veuillez réessayer." },
+    "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.", "manager_only": "Seul un propriétaire ou un responsable peut modifier la marque.", "invalid": "Certains champs sont à vérifier.", "not_found": "Cet élément n’existe plus. La page montre la marque telle qu’elle est.", "no_profile": "Cette marque n’est pas encore configurée.", "already_set_up": "Cette marque est déjà configurée.", "already_generating": "La marque est déjà en cours de configuration. Patientez un instant.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "ai_failed": "L’IA n’a pas pu terminer. Veuillez réessayer.", "unknown": "La modification n’a pas pu être enregistrée. Veuillez réessayer." },
     "snippets": { "title": "Hashtags et extraits", "intro": "Des groupes de hashtags et des phrases que vous utilisez souvent — un appel à l’action, une formule de fin, une adresse. Le panneau de publication les insère en un clic.", "groups": "Groupes de hashtags", "texts": "Extraits", "add_group": "Ajouter un groupe de hashtags", "add_text": "Ajouter un extrait", "name": "Nom", "tags": "Hashtags", "tags_hint": "Séparez-les par des espaces.", "text": "Texte", "remove": "Supprimer", "remove_confirm": "Supprimer « {{name}} » ?", "none_groups": "Aucun groupe de hashtags pour l’instant.", "none_texts": "Aucun extrait pour l’instant.", "suggest": "Suggérer des groupes de hashtags avec l’IA", "no_suggestions": "Plus de suggestions. Redemandez-en pour en avoir de nouvelles.", "add_suggestion": "Ajouter" },
     "keydates": { "title": "Dates clés", "intro": "Les jours fériés et les journées particulières que le plan affiche. L’équipe ajoute ses propres événements et notes directement dans le plan.", "country": "Jours fériés de", "auto": "Automatique : {{country}}", "auto_none": "Automatique : aucun trouvé", "none": "Pas de jours fériés", "none_line": "Aucun jour férié n’est affiché.", "no_guess": "Pas de jours fériés tant qu’aucun pays n’est choisi.", "guessed": "{{country}} (déduit du fuseau horaire de l’établissement)", "marketing": "Journées marketing et internationales" },
     "templates": { "title": "Modèles", "intro": "Les publications que votre équipe écrit encore et encore, avec des [blancs] à remplir. Utilisez-en un depuis le menu + d’un jour ou depuis le panneau de la publication.", "name": "Nom", "platform": "Plateforme", "any_platform": "Toute plateforme", "pillar": "Pilier", "blanks_hint": "Les mots entre [crochets] sont des blancs à remplir, comme [soin] ou [date].", "add": "Ajouter un modèle", "none": "Aucun modèle pour l’instant.", "remove": "Supprimer", "remove_confirm": "Supprimer « {{name}} » ?", "suggest": "Proposer des modèles avec l’IA", "no_suggestions": "Plus de propositions. Redemandez-en de nouvelles.", "add_suggestion": "Ajouter" },
     "approvals": { "title": "Validation", "intro": "Indique si les publications attendent l’approbation d’un responsable avant d’être prêtes.", "switch": "Les publications doivent être approuvées par un responsable", "on_line": "Actif : l’équipe rédige, modifie et soumet les publications à validation ; seuls les responsables approuvent, marquent prêtes et publient.", "off_line": "Inactif : tout le monde peut marquer les publications prêtes et publiées." }
   },
   "repeat": { "error": { "already_repeating": "Cette publication se répète déjà.", "no_day": "Donnez d’abord un jour à la publication : elle se répète à partir de ce jour.", "no_dates": "Il n’y a aucun jour de répétition avant cette date.", "too_many_copies": "Une publication se répète au plus 26 fois. Choisissez une date de fin plus proche.", "until_too_far": "Une publication se répète au plus 12 mois après son jour.", "too_many_ai": "L’IA réécrit au plus 12 copies. Choisissez une date de fin plus proche, ou répétez les copies telles quelles.", "ai_budget_used_up": "Le budget IA du mois est épuisé. Les copies peuvent quand même se répéter sans reformulation.", "not_found": "Cette publication n'existe plus.", "invalid": "Vérifiez la répétition : à quelle fréquence et jusqu’à quand.", "unknown": "La publication n’a pas pu être répétée. Veuillez réessayer." } },
-  "snippet": { "error": { "manager_only": "Seul un propriétaire ou un responsable peut modifier les hashtags et les extraits.", "too_many_snippets": "Une marque en garde au plus 50 de chaque. Supprimez-en un d’abord.", "invalid": "Donnez-lui un nom et un texte.", "not_found": "Cet élément n’existe plus. La page montre la marque telle qu’elle est.", "no_profile": "Cette marque n’est pas encore configurée.", "ai_budget_used_up": "Le budget IA du mois est épuisé.", "ai_failed": "L’IA n’a pas pu proposer de hashtags. Veuillez réessayer.", "unknown": "La modification n’a pas pu être enregistrée. Veuillez réessayer." } },
+  "snippet": { "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.", "manager_only": "Seul un propriétaire ou un responsable peut modifier les hashtags et les extraits.", "too_many_snippets": "Une marque en garde au plus 50 de chaque. Supprimez-en un d’abord.", "invalid": "Donnez-lui un nom et un texte.", "not_found": "Cet élément n’existe plus. La page montre la marque telle qu’elle est.", "no_profile": "Cette marque n’est pas encore configurée.", "ai_budget_used_up": "Le budget IA du mois est épuisé.", "ai_failed": "L’IA n’a pas pu proposer de hashtags. Veuillez réessayer.", "unknown": "La modification n’a pas pu être enregistrée. Veuillez réessayer." } },
   "keydate": { "error": { "invalid": "Indiquez un titre et un premier jour.", "end_before_start": "Le dernier jour ne peut pas précéder le premier.", "too_long": "Un événement dure au plus 31 jours.", "too_many_key_dates": "Une marque garde au plus 1 000 événements et notes. Supprimez-en un d’abord.", "not_found": "Cette date n’existe plus.", "no_profile": "Cette marque n’est pas encore configurée.", "unknown": "La date n’a pas pu être enregistrée. Veuillez réessayer." } },
   "idea": { "error": { "invalid": "Écrivez d’abord l’idée.", "changed_elsewhere": "Quelqu’un d’autre a modifié cette publication. Le tableau affiche maintenant sa version.", "not_found": "Cette publication n’existe plus.", "no_profile": "Cette marque n’est pas encore configurée.", "unknown": "L’idée n’a pas pu être enregistrée. Veuillez réessayer.", "needs_approval": "Tant que la validation est activée pour cette marque, seul un responsable peut approuver les publications." } },
-  "template": { "error": { "manager_only": "Seul un propriétaire ou un responsable peut modifier les modèles.", "invalid": "Donnez un nom au modèle.", "too_many_tags": "Un modèle garde au plus 30 hashtags.", "too_many_templates": "Une marque garde au plus 100 modèles. Supprimez-en un d’abord.", "not_found": "Ce modèle n’existe plus.", "no_profile": "Cette marque n’est pas encore configurée.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "ai_failed": "L’IA n’a pas pu proposer de modèles. Veuillez réessayer.", "unknown": "Le modèle n’a pas pu être enregistré. Veuillez réessayer." } },
+  "template": { "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.", "manager_only": "Seul un propriétaire ou un responsable peut modifier les modèles.", "invalid": "Donnez un nom au modèle.", "too_many_tags": "Un modèle garde au plus 30 hashtags.", "too_many_templates": "Une marque garde au plus 100 modèles. Supprimez-en un d’abord.", "not_found": "Ce modèle n’existe plus.", "no_profile": "Cette marque n’est pas encore configurée.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "ai_failed": "L’IA n’a pas pu proposer de modèles. Veuillez réessayer.", "unknown": "Le modèle n’a pas pu être enregistré. Veuillez réessayer." } },
   "keydates": { "kind": { "holiday": "Jour férié", "marketing": "Journée marketing", "industry": "Journée internationale", "event": "Événement", "note": "Note" }, "substitute": "{{name}} (jour férié reporté)", "observed": "{{name}} (jour férié observé)", "day": { "new_year": "Jour de l’an", "good_friday": "Vendredi saint", "easter_sunday": "Dimanche de Pâques", "easter_monday": "Lundi de Pâques", "labour_day": "Fête du Travail", "ascension": "Ascension", "whit_monday": "Lundi de Pentecôte", "pentecost": "Dimanche de Pentecôte", "assumption": "Assomption", "all_saints": "Toussaint", "all_souls": "Jour des défunts", "midsummer": "Jour de la Saint-Jean", "christmas_eve": "Réveillon de Noël", "christmas": "Noël", "christmas_second": "Lendemain de Noël", "new_years_eve": "Saint-Sylvestre", "mothers_day": "Fête des mères", "fathers_day": "Fête des pères", "gb": { "early_may": "Jour férié de début mai", "spring": "Jour férié de printemps", "summer": "Jour férié d’été", "boxing_day": "Boxing Day" }, "ie": { "st_brigid": "Fête de sainte Brigitte", "st_patrick": "Saint-Patrick", "may": "Jour férié de mai", "june": "Jour férié de juin", "august": "Jour férié d’août", "october": "Jour férié d’octobre", "st_stephen": "Saint-Étienne" }, "de": { "unity": "Jour de l’Unité allemande" }, "fr": { "victory": "Victoire 1945", "bastille": "Fête nationale", "armistice": "Armistice 1918" }, "es": { "epiphany": "Épiphanie", "national": "Fête nationale espagnole", "constitution": "Jour de la Constitution", "immaculate": "Immaculée Conception" }, "lv": { "independence": "Jour de la restauration de l’indépendance", "ligo": "Veille de la Saint-Jean (Līgo)", "proclamation": "Proclamation de la République de Lettonie" }, "lt": { "state": "Jour de la restauration de l’État", "independence": "Jour de la restauration de l’indépendance", "st_johns": "Saint-Jean", "statehood": "Jour de l’État" }, "ee": { "independence": "Jour de l’indépendance", "spring_day": "Fête du printemps", "victory": "Jour de la Victoire", "restoration": "Jour de la restauration de l’indépendance" }, "us": { "mlk": "Journée de Martin Luther King", "washington": "Anniversaire de Washington", "memorial": "Memorial Day", "juneteenth": "Juneteenth", "independence": "Jour de l’Indépendance", "labor": "Fête du Travail (États-Unis)", "columbus": "Jour de Christophe Colomb", "veterans": "Journée des anciens combattants", "thanksgiving": "Thanksgiving" }, "valentines": "Saint-Valentin", "womens_day": "Journée internationale des femmes", "halloween": "Halloween", "black_friday": "Black Friday", "world_health": "Journée mondiale de la santé", "world_heart": "Journée mondiale du cœur", "world_mental_health": "Journée mondiale de la santé mentale", "yoga": "Journée internationale du yoga", "global_wellness": "Journée mondiale du bien-être", "global_running": "Journée mondiale de la course à pied", "world_tourism": "Journée mondiale du tourisme", "world_food": "Journée mondiale de l’alimentation", "world_book": "Journée mondiale du livre et du droit d’auteur", "literacy": "Journée internationale de l’alphabétisation", "teachers": "Journée mondiale des enseignants", "world_ip": "Journée mondiale de la propriété intellectuelle", "human_rights": "Journée des droits de l’homme", "world_habitat": "Journée mondiale de l’habitat", "msme": "Journée des micro, petites et moyennes entreprises" }, "write_for": "Écrire une publication pour ce jour", "gone": "Ce jour est passé ; les nouvelles publications commencent aujourd’hui.", "new_event": "Nouvel événement", "new_note": "Nouvelle note", "edit_event": "Événement", "edit_note": "Note", "title_field": "Titre", "details": "Détails (facultatif)", "first_day": "Premier jour", "on_day": "Jour", "last_day": "Dernier jour (facultatif)", "note_hint": "Les notes sont pour l’équipe : l’IA ne les voit jamais.", "delete": "Supprimer", "delete_confirm": "Supprimer pour toute l’équipe ?", "delete_yes": "Supprimer" },
   "ideas": { "title": "Idées", "intro": "Les publications sans jour, par étape. Déplacez une carte vers une autre étape ou programmez-la dans le plan.", "column": { "idea": "Idée", "draft": "Brouillon", "review": "En relecture", "ready": "Prêt" }, "empty": "Rien ici pour l’instant.", "see_all": "Tout voir : {{count}}", "schedule": "Programmer", "move_to": "Déplacer vers…", "move_hint": "Maj + ← ou → déplace la carte vers l’étape voisine.", "stage": "Étape", "scheduled": "Programmé pour le {{day}}.", "undo": "Annuler", "schedule_title": "Programmer cette publication", "day": "Jour", "time": "Heure", "schedule_yes": "Programmer", "capture": "Ajouter une idée…", "added": "Idée ajoutée.", "capture_title": "Ajouter une idée", "capture_hint": "Appuyez sur Entrée pour l’ajouter à la page Idées. Ajoutez-en autant que vous voulez." },
   "templates": { "pick_title": "Choisir un modèle", "use": "Utiliser", "write_ai": "Écrire avec l’IA" },
@@ -439,7 +446,7 @@
   "flags": { "waiting": "En attente d’approbation", "sent_back": "Renvoyée", "comments": "Commentaires : {{count}}", "versions": "Versions : {{count}}", "clicks": "Clics : {{count}}" },
   "timeline": { "title": "Commentaires et historique", "empty": "Aucun commentaire pour l’instant.", "box": "Écrire un commentaire", "hint": "Entrée envoie · Maj + Entrée ajoute une ligne", "send": "Commenter", "edited": "modifié", "edit": "Modifier", "save": "Enregistrer", "delete": "Supprimer", "delete_confirm": "Supprimer ce commentaire ?", "delete_yes": "Supprimer le commentaire", "event": { "sent_for_approval": "{{name}} l’a soumise à validation", "approved": "{{name}} l’a approuvée", "sent_back": "{{name}} l’a renvoyée", "changed_after_approval": "{{name}} l’a modifiée après approbation : elle doit être approuvée à nouveau" } },
   "people": { "former": "Ancien membre de l’équipe" },
-  "bell": { "label": "Pour vous", "label_count": "Pour vous ({{count}})", "empty": "Rien de nouveau pour vous.", "new": "Nouveau", "kind": { "waiting": "En attente d’approbation : {{post}}", "approved": "{{name}} a approuvé : {{post}}", "sent_back": "{{name}} a renvoyé : {{post}}", "comment": "{{name}} a commenté : {{post}}", "to_post": "À publier aujourd’hui : {{post}}", "not_posted": "Pas marquée comme publiée : {{post}}" }, "at": "à {{time}}", "due": "Prévue le {{day}}", "morning": "E-mail du matin : publications du jour", "morning_hint": "À 8 h, les publications que vous publiez aujourd’hui.", "morning_failed": "Le réglage n’a pas pu être enregistré. Veuillez réessayer.", "morning_hint_manager": "À 8 h, les publications que vous publiez aujourd’hui et celles sans personne désignée." },
+  "bell": { "label": "Pour vous", "label_count": "Pour vous ({{count}})", "empty": "Rien de nouveau pour vous.", "new": "Nouveau", "kind": { "waiting": "En attente d’approbation : {{post}}", "approved": "{{name}} a approuvé : {{post}}", "sent_back": "{{name}} a renvoyé : {{post}}", "comment": "{{name}} a commenté : {{post}}", "mention": "{{name}} vous a mentionné : {{post}}", "to_post": "À publier aujourd’hui : {{post}}", "not_posted": "Pas marquée comme publiée : {{post}}" }, "at": "à {{time}}", "due": "Prévue le {{day}}", "morning": "E-mail du matin : publications du jour", "morning_hint": "À 8 h, les publications que vous publiez aujourd’hui.", "morning_failed": "Le réglage n’a pas pu être enregistré. Veuillez réessayer.", "morning_hint_manager": "À 8 h, les publications que vous publiez aujourd’hui et celles sans personne désignée." },
   "version": { "error": { "version_exists": "Cette publication a déjà une version pour cette plateforme.", "ai_budget_used_up": "Le budget IA du mois est épuisé. Choisissez « Copier tel quel ».", "invalid": "Choisissez au moins une plateforme.", "not_found": "Cette publication n'existe plus.", "unknown": "Les versions n'ont pas pu être créées. Veuillez réessayer." } },
   "versions": { "title": "Versions", "intro": "La même publication pour d’autres plateformes. Chaque version est une publication à part entière.", "make": "Créer des versions…", "platforms": "Pour quelles plateformes", "how": "Comment", "ai": "Adapter avec l’IA", "copy": "Copier tel quel", "ai_paused": "Le budget IA du mois est épuisé : les versions reprennent le texte tel quel.", "submit": "Créer les versions", "none_left": "Cette publication a une version pour chaque plateforme.", "this_one": "Cette publication", "no_day": "Sans jour", "unlink": "Détacher cette publication", "adapting": "Adaptation pour {{platform}}…", "adapting_others": "L’IA adapte les versions…", "kept_budget": "Le budget IA est épuisé ; cette version garde le texte d’origine.", "kept_failed": "L’IA n’a pas pu adapter cette version ; elle garde le texte d’origine.", "made": "Versions créées : {{count}}" },
   "link": { "error": { "bad_link": "Le lien doit être une adresse web commençant par http:// ou https://.", "unknown": "Le lien n’a pas pu être enregistré. Veuillez réessayer." } },
@@ -449,7 +456,211 @@
   "unlink": { "error": { "not_found": "Cette publication n'existe plus.", "unknown": "La publication n’a pas pu être détachée du groupe. Veuillez réessayer." } },
   "site": { "error": { "bad_address": "Saisissez l’adresse du site, en commençant par https:// — un site public.", "already_scanning": "Le site est déjà en cours de lecture.", "too_many_scans": "Un site peut être lu au plus 20 fois par jour. Réessayez demain.", "scan_running": "Le site est en cours de lecture. Réessayez quand ce sera terminé.", "site_unreachable": "Le site est injoignable. Vérifiez l’adresse et réessayez.", "site_blocked": "Le fichier robots.txt du site ne permet pas à Content de le lire.", "nothing_found": "Rien n’a pu être lu sur ce site. Vérifiez l’adresse et réessayez.", "scan_failed": "La lecture du site s’est arrêtée de façon inattendue. Veuillez réessayer.", "manager_only": "Seul un propriétaire ou un responsable peut modifier le site.", "no_profile": "Cette marque n’est pas encore configurée.", "invalid": "Certains champs sont à vérifier.", "unknown": "Cela n’a pas fonctionné. Veuillez réessayer.", "robots_unreachable": "Le fichier robots.txt du site n’a pas pu être lu (erreur ou absence de réponse) : Content n’a rien lu. Réessayez plus tard." }, "scanned": "Lu le {{date}}. Articles : {{articles}} · Pages : {{pages}}", "scanning": "Lecture de votre site… Cela prend une minute ou deux. Vous pouvez quitter cette page.", "title": "Site web", "intro": "Content lit votre site pour connaître l’entreprise et trouver des articles et des pages à promouvoir.", "address": "Adresse du site", "address_hint": "Par exemple https://example.com. Un blog avec sa propre adresse peut être saisi tel quel, par exemple https://example.com/blog.", "scan": "Lire le site", "scan_again": "Relire", "update_summary": "Mettre à jour le résumé de l’entreprise", "replaces": "Une nouvelle lecture remplace le résumé de l’entreprise.", "none_staff": "Votre responsable n’a pas encore ajouté le site.", "empty": "Ajoutez l’adresse de votre site pour trouver vos articles de blog et vos pages.", "open_promote": "Promouvoir vos articles et pages", "summary_title": "Résumé de l’entreprise", "summary_intro": "Ce que l’IA sait de votre entreprise grâce à votre site. L’IA s’en sert pour chaque publication qu’elle rédige.", "summary_none": "Pas encore de résumé. Lisez le site pour en rédiger un.", "summary_edited": "Modifié à la main", "summary_edit": "Modifier le résumé", "summary_save": "Enregistrer le résumé" },
   "promote": { "error": { "already_promoting": "Une promotion est déjà en cours de rédaction pour cette marque.", "period_too_short": "Toutes les publications ne tiennent pas dans ces jours : choisissez une période plus longue, un rythme plus soutenu ou moins de publications.", "too_many_posts": "Une promotion rédige au plus 200 publications.", "no_channels": "Aucun de ces canaux n’est actif pour cette marque.", "page_not_found": "Une de ces pages n’est plus dans la liste. Rechargez la page.", "scan_running": "Le site est en cours de lecture. Lancez la promotion quand ce sera terminé.", "range_in_past": "Ces jours sont déjà passés.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "promotion_failed": "La promotion n’a pas pu démarrer. Veuillez réessayer.", "manager_only": "Seul un propriétaire ou un responsable peut promouvoir des pages.", "no_profile": "Cette marque n’est pas encore configurée.", "invalid": "Vérifiez les pages, les canaux, les jours et les nombres.", "unknown": "La promotion n’a pas pu démarrer. Veuillez réessayer." }, "dialog": { "fits": "Publications : {{count}} · {{from}} – {{to}}", "short": "Publications qui tiennent dans ces jours : {{fit}} sur {{wanted}}. Choisissez une période plus longue, un rythme plus soutenu ou moins de publications.", "title": "Promouvoir des pages", "pages": "Pages choisies : {{count}}", "more": "Autres : {{count}}", "per_page": "Publications par page", "channels": "Canaux", "no_channels": "Cette marque n’a aucun canal actif où publier. Ajoutez-en un sur la page Marque.", "from": "Du", "to": "Au", "per_week": "Au plus par semaine", "picture": "Utiliser l’image de la page", "instructions": "Consignes pour l’IA (facultatif)", "checking": "Vérification des jours…", "drafts_note": "Les publications arrivent dans votre plan en brouillon. Vous pouvez modifier, déplacer ou supprimer chacune.", "submit": "Promouvoir", "problem": { "no_pages": "Choisissez au moins une page.", "too_many_pages": "Choisissez au plus 20 pages.", "no_channels": "Choisissez au moins un canal.", "per_page": "Publications par page : de 1 à 15.", "per_week": "Au plus par semaine : de 1 à 21.", "too_many_posts": "Une promotion rédige au plus 200 publications.", "order": "Le dernier jour ne peut pas précéder le premier.", "too_long": "La période peut durer au plus 183 jours.", "past": "Ces jours sont déjà passés." }, "bio_note": "Instagram et TikTok n’ouvrent pas les liens des publications : ces publications indiquent « lien en bio ». Sur la page Marque, activez « Lien en bio » avec « Afficher les dernières publications qui ont un lien » : le lien de chaque publication y apparaît dès qu’elle est publiée." }, "not_promoted": "Aucune promotion pour l’instant", "numbers": "Publications : {{posts}} · Publiées : {{published}} · Clics : {{clicks}}", "run": { "done": "Publications de promotion ajoutées à votre plan en brouillon : {{count}}", "none": "Aucune publication de promotion n’a été rédigée.", "page_failed": "{{title}} : {{reason}}", "stopped": "Pages non rédigées après l’arrêt : {{count}}", "writing": "L’IA rédige les publications de promotion. Pages terminées : {{done}} sur {{count}}", "stop": "Arrêter", "open_plan": "Ouvrir le plan" }, "title": "Promouvoir", "intro": "Transformez vos articles de blog et vos pages en publications qui renvoient vers eux.", "staff_note": "Seul un propriétaire ou un responsable peut lire le site ou promouvoir des pages.", "tabs": "Types de pages", "tab_articles": "Articles de blog ({{count}})", "tab_pages": "Autres pages ({{count}})", "no_articles": "Aucun article de blog trouvé. Si votre blog a sa propre adresse, saisissez-la — par exemple https://example.com/blog — et relisez le site.", "no_pages": "Aucune autre page trouvée.", "choose": "Choisir « {{title}} »", "not_seen": "Introuvable lors de la dernière lecture", "show_posts": "Voir les publications", "hide_posts": "Masquer les publications", "no_posts": "Il ne reste aucune publication pour cette page.", "remove": "Supprimer les brouillons", "remove_confirm": "Supprimer les publications de cette page encore en brouillon ? Les publications approuvées et publiées restent.", "remove_yes": "Supprimer", "removed": "Brouillons supprimés : {{count}}", "selected": "Sélection : {{count}}", "clear": "Effacer", "start": "Promouvoir…", "limit": "Vous pouvez choisir jusqu’à 20 pages à la fois." },
-  "promotion": { "error": { "ai_failed": "L’IA n’a pas pu rédiger ces publications.", "ai_incomplete": "L’IA a rédigé moins de publications que demandé.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "page_gone": "Cette page n’est plus dans la liste.", "promotion_failed": "La rédaction s’est arrêtée de façon inattendue.", "unknown": "Ces publications n’ont pas pu être rédigées." } },
-  "summary": { "error": { "ai_budget_used_up": "Le budget IA de ce mois est épuisé : le résumé de l’entreprise n’a pas été mis à jour.", "ai_failed": "L’IA n’a pas pu rédiger le résumé de l’entreprise cette fois ; la liste des pages est à jour.", "unknown": "Le résumé de l’entreprise n’a pas été mis à jour." } },
-  "drafts": { "error": { "already_promoting": "Attendez la fin de la promotion en cours de rédaction.", "not_found": "Cette page n’est plus dans la liste.", "manager_only": "Seul un propriétaire ou un responsable peut supprimer des publications.", "unknown": "Les publications n’ont pas pu être supprimées. Veuillez réessayer.", "no_profile": "Cette marque n’est pas encore configurée." } }
+  "promotion": { "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.", "ai_failed": "L’IA n’a pas pu rédiger ces publications.", "ai_incomplete": "L’IA a rédigé moins de publications que demandé.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé.", "page_gone": "Cette page n’est plus dans la liste.", "promotion_failed": "La rédaction s’est arrêtée de façon inattendue.", "unknown": "Ces publications n’ont pas pu être rédigées." } },
+  "summary": { "error": {
+      "ai_model_unpriced": "Demandez à un administrateur de vérifier la configuration de l’IA avant de réessayer.", "ai_budget_used_up": "Le budget IA de ce mois est épuisé : le résumé de l’entreprise n’a pas été mis à jour.", "ai_failed": "L’IA n’a pas pu rédiger le résumé de l’entreprise cette fois ; la liste des pages est à jour.", "unknown": "Le résumé de l’entreprise n’a pas été mis à jour." } },
+  "drafts": { "error": { "already_promoting": "Attendez la fin de la promotion en cours de rédaction.", "not_found": "Cette page n’est plus dans la liste.", "manager_only": "Seul un propriétaire ou un responsable peut supprimer des publications.", "unknown": "Les publications n’ont pas pu être supprimées. Veuillez réessayer.", "no_profile": "Cette marque n’est pas encore configurée." } },
+  "launch": {
+    "manual_handoff": "Publiez cette publication manuellement sur votre canal. Copiez le texte et ouvrez les médias lorsque vous êtes prêt.",
+    "publishing_details": "Détails de publication",
+  "save_published": "Enregistrer et marquer comme publié",
+  "manual_record": "Ceci enregistre votre publication manuelle. HexaTech n’envoie pas cette publication à un réseau social.",
+  "media": "Médiathèque",
+  "search_media": "Rechercher des médias",
+  "archived": "Archivés",
+  "upload": "Importer un fichier",
+  "upload_limit": "JPEG, PNG, WebP, MP4, WebM ou PDF. Jusqu’à {{mb}} Mo par fichier.",
+  "media_failed": "Impossible de charger ou d’enregistrer le fichier. Vérifiez son format et sa taille, puis réessayez.",
+  "media_usage": "Utilisé dans {{count}} publications",
+  "detach": "Détacher",
+  "attach": "Joindre",
+  "open_asset": "Ouvrir le fichier",
+  "restore": "Restaurer",
+  "archive": "Archiver",
+  "no_media": "Aucun fichier pour le moment. Importez-en un pour le réutiliser dans vos publications.",
+  "attachments": "Fichiers de la publication",
+  "choose_media": "Choisir des médias",
+  "move_up": "Monter",
+  "move_down": "Descendre",
+  "full_editor": "Éditeur complet",
+  "open_panel": "Ouvrir dans le panneau",
+  "editor_view": "Vue de l’éditeur",
+  "preview": "Aperçu",
+  "preview_empty": "Votre légende apparaîtra ici.",
+  "characters": "{{count}} caractères",
+  "caption_long": "Cette légende dépasse la limite de la plateforme. Vous pouvez enregistrer le brouillon.",
+  "include_destination": "Inclure l’URL de destination",
+  "bio_hint": "Pour Instagram et TikTok, placez la destination sur votre page de liens de profil.",
+  "copy_caption": "Copier la légende finale",
+  "open_channel": "Ouvrir le canal",
+  "settings": "Paramètres Content",
+  "planning_zone": "Fuseau horaire de planification",
+  "zone_consequence": "Cette horloge est commune au compte : plans Content, rappels et courriels du matin, rendez-vous, portail des membres et tableaux de bord. Les dates et heures existantes conservent leurs valeurs sans décalage.",
+  "zone_unset": "La planification utilise UTC. Choisissez le fuseau horaire de votre compte.",
+  "choose_zone": "Choisir un fuseau horaire",
+  "save_zone": "Enregistrer le fuseau du compte",
+  "planning_clock": "Heure de planification : {{zone}}",
+  "locations": "Lieux",
+  "add_location": "Ajouter un lieu",
+  "location_count": "{{used}} lieux dans ce compte",
+  "location_name": "Nom",
+  "location_address": "Adresse",
+  "location_city": "Ville",
+  "location_country": "Pays",
+  "location_email": "Courriel",
+  "location_phone": "Téléphone",
+  "location_website": "Site web",
+  "location_zone": "Fuseau horaire du lieu",
+  "location_clock": "Modifier un lieu ne change pas l’horloge de planification du compte. Les lieux inactifs comptent dans votre forfait.",
+  "location_failed": "Impossible d’enregistrer le lieu. Vérifiez les champs et le nombre de lieux autorisé par votre forfait.",
+  "active": "Actif",
+  "inactive": "Inactif",
+  "sections": "Sections",
+  "section_overview": "Vue d’ensemble",
+  "section_website": "Site web",
+  "section_identity": "Identité",
+  "section_audiences": "Publics",
+  "section_voice": "Voix",
+  "section_positioning": "Positionnement",
+  "section_channels": "Canaux",
+  "section_locations": "Lieux",
+  "section_links": "Liens",
+  "section_dates": "Dates et validations",
+  "section_reusable": "Contenus réutilisables",
+  "section_rhythm": "Rythme",
+  "work_running": "L’IA travaille. Vous pouvez quitter cette page et revenir.",
+  "work_cancelled": "Travail de l’IA annulé. Les modifications déjà enregistrées sont conservées.",
+  "work_uncertain": "La réponse au démarrage a été interrompue. Reconnectez-vous à cette demande avant d’en lancer une autre.",
+  "reconnect": "Reconnecter",
+  "cancel_work": "Annuler le travail de l’IA"
+},
+  "collaboration": {
+    "asset": "Pièce jointe",
+    "mentions": "Personnes mentionnées",
+    "media_select": "Discuter d’une pièce jointe",
+    "whole_post": "Publication entière",
+    "detached": "Pièce jointe détachée — choisissez à nouveau",
+    "mention_select": "Mentionner des collègues",
+    "clear_mentions": "Effacer les mentions sélectionnées",
+    "selection_failed": "La pièce jointe ou l’équipe a changé. Choisissez à nouveau ci-dessous ; votre commentaire est conservé.",
+    "email": "Recevoir les validations et mentions par e-mail",
+    "email_hint": "Désactivé sans votre accord. Informe des validations et mentions explicites dans Content. L’e-mail du matin se règle séparément."
+  },
+  "guide": {
+    "title": "Guide Content",
+    "heading": "De la première idée à la publication",
+    "intro": "Choisissez une tâche, suivez les étapes puis poursuivez dans votre espace. Ouvrir ce guide ne lance aucun travail d’IA ni aucune analyse de site.",
+    "search": "Trouver une tâche",
+    "filter": "Filtrer les tâches",
+    "empty": "Aucune tâche trouvée. Essayez un autre mot ou choisissez Tout.",
+    "setup_manager": "Commencez par la marque, puis choisissez le fuseau du compte et le rythme des canaux.",
+    "setup_staff": "Demandez à un responsable de compléter la marque, de choisir le fuseau et d’activer vos canaux.",
+    "media_limit": "Le formulaire indique la limite actuelle du serveur avant de choisir un fichier.",
+    "groups": {
+      "all": "Tout",
+      "start": "Démarrer",
+      "create": "Créer",
+      "collaborate": "Collaborer",
+      "share": "Partager"
+    },
+    "actions": {
+      "brand": "Configurer la marque",
+      "settings": "Paramètres Content",
+      "channels": "Canaux",
+      "rhythm": "Rythme",
+      "write": "Rédiger une publication",
+      "plan": "Ouvrir le planning",
+      "review": "À valider",
+      "approval_settings": "Régler les validations",
+      "media": "Médiathèque",
+      "posts": "Ouvrir les publications",
+      "website": "Configurer le site",
+      "promote": "Promouvoir des pages",
+      "links": "Lien en bio",
+      "ready": "Publications prêtes"
+    },
+    "tasks": {
+      "setup": {
+        "title": "Configurer la marque et le fuseau",
+        "body": "Dans Marque, renseignez identité, audience et ton. La configuration guidée enregistre chaque étape ; vérifiez les propositions de l’IA avant de les garder.\nChoisissez explicitement le fuseau du compte dans les paramètres Content. Il concerne aussi les rappels, rendez-vous, portail membre et tableaux de bord ; les dates et heures enregistrées ne sont pas déplacées. Les lieux et la météo ne choisissent pas le fuseau du planning.\nActivez les canaux et choisissez les jours et horaires habituels. Définissez les objectifs hebdomadaires dans Rythme."
+      },
+      "week": {
+        "title": "Planifier votre première semaine",
+        "body": "Ouvrez le planning et choisissez la semaine. Les créneaux libres suivent les canaux actifs ; s’ils manquent, demandez leur configuration à un responsable.\nRédigez vous-même ou remplissez un créneau avec l’IA. Les responsables peuvent générer une semaine. Suivez l’avancement, relisez chaque brouillon puis choisissez qui publie et quand. Rien n’est publié automatiquement."
+      },
+      "approvals": {
+        "title": "Valider, commenter et mentionner l’équipe",
+        "body": "Les responsables activent les validations dans Marque → Dates et validations. Les collaborateurs soumettent leurs brouillons ; les responsables approuvent ou renvoient avec une note. Modifier un texte ou des pièces jointes approuvés exige une nouvelle validation pour un collaborateur.\nDans Commentaires et historique, sélectionnez explicitement les collègues à mentionner. Un @nom saisi seul ne prévient personne. Choisissez une pièce jointe enregistrée ; son contexte reste après détachement ou archivage. Une modification ne change que le texte du commentaire.\nLa cloche affiche vos nouvelles. Les e-mails de validation et mention restent désactivés jusqu’à votre accord dans les paramètres Content ; l’e-mail du matin est séparé."
+      },
+      "media": {
+        "title": "Importer, réutiliser et commenter des médias",
+        "body": "Importez des fichiers JPEG, PNG, WebP, MP4, WebM ou PDF vérifiés dans la médiathèque. Vérifiez la limite actuelle du serveur affichée avant de choisir un fichier.\nJoignez jusqu’à dix fichiers enregistrés dans l’éditeur, réordonnez-les et enregistrez. Ouvrir le fichier ouvre le fichier stocké ; la prise en charge des vidéos et PDF dépend du navigateur. Les responsables peuvent archiver et restaurer sans supprimer les fichiers ni les discussions passées.\nPour commenter un fichier précis, enregistrez d’abord la pièce jointe puis sélectionnez-la dans les commentaires."
+      },
+      "versions": {
+        "title": "Créer des versions et des répétitions",
+        "body": "Ouvrez une publication enregistrée et créez ses versions pour d’autres plateformes. Copiez à l’identique ou demandez explicitement une adaptation par l’IA ; vérifiez le résultat. En cas d’échec, les mots d’origine restent avec une explication.\nUne publication datée peut se répéter chaque semaine ou chaque mois dans les limites du formulaire. Vérifiez chaque copie et sa date. Arrêter une série supprime les copies futures non publiées ; l’historique publié reste."
+      },
+      "links": {
+        "title": "Promouvoir votre site et suivre les liens",
+        "body": "Un responsable ajoute le site dans Marque → Site et lance explicitement l’analyse. Si aucune page n’est connue, analysez d’abord ; vérifiez les pages trouvées et les erreurs.\nDans Promouvoir, choisissez pages, canaux et dates, prévisualisez puis lancez. Vous pouvez arrêter ; les brouillons déjà créés restent.\nAjoutez une destination dans le champ Lien d’une publication et enregistrez pour créer le lien court suivi. Les responsables configurent le lien en bio dans Marque → Liens. Vérifiez les destinations avant de partager."
+      },
+      "publish": {
+        "title": "Publier manuellement puis l’enregistrer",
+        "body": "Enregistrez la publication et vérifiez le texte final et les médias dans l’aperçu. Copiez le texte, ouvrez les fichiers et le canal. Collez et publiez vous-même sur la plateforme sociale.\nRevenez dans Content et marquez la publication comme publiée, avec son adresse publique si souhaité. Enregistrer et marquer comme publié consigne votre choix explicite ; copier, prévisualiser et enregistrer normalement ne publient rien sur le réseau.\nAvec les validations activées, seules les personnes autorisées peuvent consigner la publication ; la personne désignée peut marquer un contenu approuvé ou prêt."
+      },
+      "ai": {
+        "title": "Comprendre les limites, erreurs et annulations de l’IA",
+        "body": "L’IA utilise l’allocation mensuelle commune de l’organisation. Au plafond, l’IA s’arrête ; la rédaction manuelle continue. Si le modèle est indisponible ou sans tarif configuré, demandez à un administrateur de vérifier la configuration.\nUne tâche en file affiche sa progression. Annulez tant que le contrôle est disponible ; les changements déjà enregistrés restent. Après une coupure, reconnectez-vous à la même demande. Après un échec confirmé, lisez l’explication avant de réessayer volontairement.\nUne modification humaine plus récente prime sur un ancien résultat d’IA. Les suggestions de réécriture nécessitent Utiliser ce texte pour remplacer le brouillon."
+      },
+      "exports": {
+        "title": "Exporter le planning",
+        "body": "Dans Publications, choisissez les filtres d’export. Le CSV inclut les publications sans date avec des champs date et heure vides. Le calendrier ICS inclut uniquement les publications planifiées ; une date sans heure devient un événement sur la journée.\nLes événements horaires utilisent le fuseau enregistré du planning. Affinez les filtres si la sélection est vide ou dépasse 5 000 publications ; aucun export n’est tronqué silencieusement."
+      }
+    },
+    "next_channels": "Aucun canal actif ? Configurez le rythme",
+    "next_manual": "Aucun canal actif ? Rédigez un brouillon",
+    "next_scan": "Aucune page analysée ? Configurez le site"
+  },
+  "campaigns": {
+    "title": "Campagnes",
+    "campaign": "Campagne",
+    "all": "Toutes les campagnes",
+    "none": "Aucune campagne",
+    "unavailable": "Campagne enregistrée",
+    "add": "Ajouter une campagne",
+    "edit": "Modifier la campagne",
+    "name": "Nom",
+    "goal": "Objectif",
+    "brief": "Brief",
+    "start_date": "Date de début",
+    "end_date": "Date de fin",
+    "draft": "Brouillon",
+    "active": "Active",
+    "paused": "En pause",
+    "completed": "Terminée",
+    "archived": "Archivée",
+    "history": "L’archivage conserve les publications associées et les liens suivis existants. Les dates précisent le brief sans déplacer les publications.",
+    "save_failed": "Impossible d’enregistrer la campagne. Vérifiez le nom et les dates, puis réessayez.",
+    "intro": "Regroupez un objectif, des dates et un brief, puis associez des publications ou sélectionnez la campagne lors de la génération de brouillons.",
+    "setup": "Configurez cette marque avant de créer une campagne.",
+    "no_match": "Aucune campagne avec ce statut.",
+    "empty": "Aucune campagne pour le moment. Un responsable peut ajouter le premier brief.",
+    "posts": "Voir les publications"
+  },
+  "exports": {
+    "title": "Exporter les publications filtrées",
+    "plan": "Exporte la période affichée, les plateformes et le statut choisis. Les publications sans date sont séparées ; exportez-les depuis Publications.",
+    "selection": "Exporte toutes les publications correspondantes, sur toutes les pages, jusqu’à 5 000. Affinez les filtres pour les sélections plus grandes.",
+    "schedule": "Le CSV peut inclure les publications sans date. L’ICS inclut uniquement celles planifiées ; sans heure, elles deviennent des événements sur la journée entière. Les événements avec heure utilisent le fuseau de planification enregistré.",
+    "csv_note": "Pour la lecture dans un tableur, les cellules ressemblant à des formules reçoivent une tabulation initiale. Les imports programmatiques peuvent la conserver ; la sécurité peut changer après enregistrement et réimport dans un tableur.",
+    "csv": "Télécharger le CSV",
+    "ics": "Télécharger le calendrier (ICS)",
+    "preparing": "Préparation du fichier…",
+    "done": "Fichier préparé.",
+    "empty": "Aucune publication exportable ne correspond. L’ICS nécessite une date ; modifiez les filtres ou choisissez CSV.",
+    "too_many": "Plus de 5 000 publications correspondent. Affinez les filtres et relancez l’export.",
+    "failed": "Impossible de préparer l’export. Veuillez réessayer."
+  }
+
 }

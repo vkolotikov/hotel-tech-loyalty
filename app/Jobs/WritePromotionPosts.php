@@ -61,7 +61,8 @@ class WritePromotionPosts implements ShouldQueue
 
                 return;
             }
-            $posts->write($row);
+            (new \App\Services\Content\ContentExecution((int)$row->organization_id, (int)$row->brand_id, (int)$row->created_by, true,
+                null, new \App\Services\ContentPlanner\CalendarGenerationBudget(null, 540)))->run(fn () => $posts->write($row));
         } catch (\Throwable $e) {
             report($e);
             self::end($row->id);

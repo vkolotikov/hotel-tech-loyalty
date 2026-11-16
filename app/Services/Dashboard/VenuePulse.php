@@ -45,9 +45,12 @@ final class VenuePulse
     private const MISS_TTL = 3600;       // 1 hour: a city the provider does not know (perhaps a typo, fixed soon)
 
     /**
+     * Content supplies its saved planning clock explicitly, including UTC; place/weather can still be resolved.
+     * Other dashboards retain their existing location fallback when no clock override is supplied.
+     *
      * @return array<string, mixed>
      */
-    public function for(Organization $org): array
+    public function for(Organization $org, ?string $clockZone = null): array
     {
         $venueZone = AppointmentClock::zoneFor((int) $org->id);
         $place = $this->place($org, $venueZone);
@@ -64,12 +67,15 @@ final class VenuePulse
         // The clock's zone: the venue's; a venue on UTC (no zone named) reads the place's own.
         $zone = $venueZone;
         $zoneSource = 'venue';
-        if ($venueZone === 'UTC') {
+        if ($clockZone === null && $venueZone === 'UTC') {
             if (($place['timezone'] ?? null) !== null) {
                 [$zone, $zoneSource] = [$place['timezone'], 'location'];
             } elseif (is_array($coords) && $coords['timezone'] !== null) {
                 [$zone, $zoneSource] = [$coords['timezone'], 'place'];
             }
+        }
+        if ($clockZone !== null) {
+            $zone = $clockZone;
         }
         $now = CarbonImmutable::now($zone);
 

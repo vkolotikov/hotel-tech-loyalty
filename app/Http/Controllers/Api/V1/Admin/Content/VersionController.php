@@ -36,7 +36,7 @@ class VersionController extends Controller
             $ids = $versions->pluck('id')->map(fn ($versionId) => (int) $versionId)->all();
             // The panel shows "Adapting…" on these until the job is done with them (or 15 minutes pass).
             ContentVersions::stillAdapting($groupId, array_merge((array) SharedCache::store()->get(ContentVersions::adaptingKey($groupId), []), $ids));
-            AdaptPostVersions::dispatch($groupId, ContentContext::orgId(), ContentContext::brandId(), (string) $post->platform, $ids);
+            AdaptPostVersions::dispatch($groupId, ContentContext::orgId(), ContentContext::brandId(), (string) $post->platform, $ids, (int)$request->user()->id);
         }
 
         return response()->json([

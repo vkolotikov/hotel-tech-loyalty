@@ -30,9 +30,13 @@ class RewriteRepeatCopies implements ShouldQueue
     /** One AI call per run: a short run hands the rest on, well under every queue connection's retry_after. */
     public int $timeout = 80;
 
+    /** A declared default also applies to jobs serialized before requester tracking. */
+    public ?int $userId = null;
+
     /** @param list<int> $copyIds */
-    public function __construct(public int $seriesId, public int $organizationId, public int $brandId, public array $copyIds)
+    public function __construct(public int $seriesId, public int $organizationId, public int $brandId, public array $copyIds, ?int $userId = null)
     {
+        $this->userId = $userId;
         // The long AI jobs have their own queue and worker: mail never waits behind them (queue review).
         $this->onQueue('ai');
     }
@@ -52,7 +56,7 @@ class RewriteRepeatCopies implements ShouldQueue
                 // The rest in the next run; the panel keeps showing "rewording…" meanwhile.
                 ContentRepeat::markRewriting($this->seriesId, true);
                 $handedOn = true;
-                self::dispatch($this->seriesId, $this->organizationId, $this->brandId, $ids);
+                self::dispatch($this->seriesId, $this->organizationId, $this->brandId, $ids, $this->userId);
             }
         } finally {
             if (!$handedOn) {
@@ -81,14 +85,18 @@ class RewriteRepeatCopies implements ShouldQueue
             return false; // the month's AI budget is used up: keep what is done
         }
         try {
-            $words = $rewriter->rewrite($copy);
+            $context = new \App\Services\Content\ContentExecution($this->organizationId, $this->brandId, $this->userId ?? (int)$copy->created_by);
+            $words = $context->run(fn () => $rewriter->rewrite($copy));
         } catch (\Throwable $e) {
             report($e);
 
             return false;
         }
-        // Written only if nobody saved the copy while the AI wrote: a person's words win.
-        ContentPlannerPost::whereKey($copy->id)->where('updated_at', $copy->getRawOriginal('updated_at'))->update($words);
+        try {
+            $context->run(fn () => app(\App\Services\Content\ContentPostWrites::class)->apply($copy, fn (ContentPlannerPost $current) => $current->update($words)));
+        } catch (ContentRefused $e) {
+            if (!in_array($e->errorCode, ['changed_elsewhere', 'not_found'], true)) throw $e;
+        }
 
         return true;
     }

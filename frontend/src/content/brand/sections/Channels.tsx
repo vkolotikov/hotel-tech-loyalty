@@ -1,3 +1,4 @@
+import { useRetainedState } from '../../drafts/useRetainedState'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -33,12 +34,12 @@ function ChannelEditor({ channel, onDone, onCancel }: { channel: Channel | null;
   const { brand, adopt } = useBrand()
   // The form as it was opened: Save sends only what changed since (not what someone else changed meanwhile).
   // A new channel is named after its platform in the reader's words ("LinkedIn", not "linkedin").
-  const [base] = useState<ChannelForm>(() => {
+  const [base, , retainedBase] = useRetainedState<ChannelForm>(`channel-base:${channel?.id ?? 'new'}`, () => {
     const first = boot.platforms[0] ?? 'instagram'
     return channelForm(channel, first, t(`content.platform.${first}`, first))
-  })
-  const [form, setForm] = useState<ChannelForm>(base)
-  const [busy, setBusy] = useState(false)
+  }, false)
+  const [form, setForm, retained] = useRetainedState<ChannelForm>(`channel:${channel?.id ?? 'new'}`, base)
+  const [busy, setBusy] = useRetainedState(`channel-busy:${channel?.id ?? 'new'}`, false)
   const [error, setError] = useState<string | null>(null)
   const w = (key: string, english: string) => t(`content.brand.channels.${key}`, english)
   const set = (part: Partial<ChannelForm>) => setForm({ ...form, ...part })
@@ -53,6 +54,8 @@ function ChannelEditor({ channel, onDone, onCancel }: { channel: Channel | null;
     setError(null)
     try {
       await saveChannel({ api, adopt, refresh: () => { void refreshLists(queryClient, brandId) } }, channel, form, base)
+      retained.clear()
+      retainedBase.clear()
       onDone()
     } catch (e) {
       const [key, text] = errorKey('brand', failureOf(e).code)
@@ -63,7 +66,7 @@ function ChannelEditor({ channel, onDone, onCancel }: { channel: Channel | null;
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-a-border p-3">
+    <fieldset disabled={busy} className="space-y-4 rounded-lg border border-a-border p-3">
       <div className="grid gap-3 md:grid-cols-2">
         {channel === null
           ? <SelectField label={w('platform', 'Platform')} value={form.platform} empty="—" options={boot.platforms.map(p => [p, t(`content.platform.${p}`, p)])}
@@ -128,9 +131,9 @@ function ChannelEditor({ channel, onDone, onCancel }: { channel: Channel | null;
       {error && <Notice tone="danger">{error}</Notice>}
       <div className="flex gap-2">
         <Button onClick={() => { void save() }} loading={busy}>{t('content.brand.save', 'Save')}</Button>
-        {onCancel && <Button variant="secondary" disabled={busy} onClick={onCancel}>{t('content.common.cancel', 'Cancel')}</Button>}
+        {onCancel && <Button variant="secondary" disabled={busy} onClick={() => { retained.clear(); retainedBase.clear(); onCancel() }}>{t('content.common.cancel', 'Cancel')}</Button>}
       </div>
-    </div>
+    </fieldset>
   )
 }
 
@@ -147,7 +150,7 @@ export function ChannelsSection({ brand, canEdit, startOpen = false, onSaved }: 
   const brandId = useBrandId()
   const queryClient = useQueryClient()
   const { adopt } = useBrand()
-  const [open, setOpen] = useState<number | 'new' | null>(() => (startOpen && canEdit && brand.channels.length === 0 ? 'new' : null))
+  const [open, setOpen] = useRetainedState<number | 'new' | null>('channel-open', () => (startOpen && canEdit && brand.channels.length === 0 ? 'new' : null), false)
   const [note, setNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
   const w = (key: string, english: string) => t(`content.brand.channels.${key}`, english)
   const deps = { api, adopt, refresh: () => { void refreshLists(queryClient, brandId) } }

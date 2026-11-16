@@ -162,7 +162,7 @@ class StrategyTest extends TestCase
 
     public function test_the_strategy_job_counts_its_ai_use_for_its_brand(): void
     {
-        $strategy = ContentPlannerStrategy::create(['brand_id' => $this->brandId, 'planner_profile_id' => $this->profile->id, 'title' => 'Generating strategy…', 'status' => 'generating']);
+        $strategy = ContentPlannerStrategy::create(['brand_id' => $this->brandId, 'planner_profile_id' => $this->profile->id, 'title' => 'Generating strategy…', 'status' => 'generating', 'created_by' => $this->manager->id]);
         $service = Mockery::mock(ContentPlannerStrategyService::class);
         $service->shouldReceive('generate')->once()->andReturnUsing(function () {
             app(AiUsageService::class)->recordUsage((int) $this->org->id, 'claude-sonnet-5', 10, 10, 'content');

@@ -1,3 +1,4 @@
+import { useRetainedState } from '../drafts/useRetainedState'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -28,8 +29,8 @@ export function WebsiteScan({ payload, canManage }: { payload: SitePayload; canM
   const site = payload.site
   // Both follow what is stored until the manager changes them (final review, 6-2): a summary edited by hand meanwhile
   // unticks "Update", and the address shows its cleaned form after a scan.
-  const [typed, setTyped] = useState<string | null>(null)
-  const [choice, setChoice] = useState<boolean | null>(null)
+  const [typed, setTyped] = useRetainedState<string | null>('website-address', null)
+  const [choice, setChoice] = useRetainedState<boolean | null>('website-update', null)
   const address = typed ?? startAddress(payload)
   const update = choice ?? updateDefault(site)
   const editedAt = site?.summary_updated_at ?? null

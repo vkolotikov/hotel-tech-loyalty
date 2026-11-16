@@ -1,3 +1,6 @@
+import { submitWork, type WorkAttempt } from '../work/submitWork'
+import { contentDrafts } from '../drafts/registry'
+import { ownerOf } from '../panel/kept'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -49,6 +52,14 @@ export function TemplatePicker({ day, templates, slots, channels, onClose }: {
     const flow: TemplateFlow = {
       api,
       panel,
+      queue: async (postId, templateId) => {
+        const key = `${ownerOf(brand)}::work:post:${postId}`
+        contentDrafts.read<WorkAttempt | null>(key, () => null)
+        const ticket = contentDrafts.ticket(key)
+        await submitWork(api, { action: 'write', post_id: postId, template_id: templateId, request_key: crypto.randomUUID() }, attempt => {
+          if (contentDrafts.owns(key, ticket)) contentDrafts.write(key, attempt, false)
+        })
+      },
       keep: (post: PostDetail) => {
         queryClient.setQueryData(['content', brand, 'post', post.id], post)
         void refreshLists(queryClient, brand)

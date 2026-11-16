@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import BookingPromotions from './BookingPromotions'
-import { duplicatePromotion, filterPromotions, newPromotion, promotionBody } from './bookingPromotions'
+import { duplicatePromotion, filterPromotions, newPromotion, promotionBody } from './bookingPromotionRules'
 import { initialStayState, stayQuoteBody } from '../portal/pages/stay/staySteps'
 
 vi.mock('../lib/api', () => ({ api: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }))

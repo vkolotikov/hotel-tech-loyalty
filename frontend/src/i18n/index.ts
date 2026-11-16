@@ -77,4 +77,8 @@ export function applyServerLanguage(lang?: string | null) {
   }
 }
 
+const updateDocumentLanguage = (language: string) => { if (typeof document !== 'undefined') document.documentElement.lang = language }
+updateDocumentLanguage(i18n.resolvedLanguage ?? i18n.language ?? 'en')
+i18n.on('languageChanged', updateDocumentLanguage)
+
 export default i18n

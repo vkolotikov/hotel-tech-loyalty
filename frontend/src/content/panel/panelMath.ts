@@ -30,7 +30,8 @@ export function tabAfter(tab: PanelTab, key: string): PanelTab | null {
 }
 
 /** The footer's button (spec 2026-10-21 §7.6): Create post before the post exists, Save draft for a draft, else Save. */
-export function saveLabelKey(created: boolean, status: string): [string, string] {
+export function saveLabelKey(created: boolean, status: string, previous = ''): [string, string] {
+  if (status === 'published' && previous !== 'published') return ['content.launch.save_published', 'Save and mark published']
   if (!created) return ['content.panel.create', 'Create post']
   return status === 'draft' ? ['content.panel.save_draft', 'Save draft'] : ['content.panel.save', 'Save']
 }

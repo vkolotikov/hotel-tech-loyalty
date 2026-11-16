@@ -11,12 +11,13 @@ use App\Services\ContentPostGenerationService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Mockery;
 use Tests\Concerns\SetsUpContentSchema;
+use Tests\Concerns\StubsContentPostProviders;
 use Tests\TestCase;
 
 /** What staff may not do while approvals are on, and the history it leaves (spec 2026-10-16 §6.2, §6.4). */
 class ApprovalRuleTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpContentSchema;
+    use DatabaseTransactions, SetsUpContentSchema, StubsContentPostProviders;
 
     protected function setUp(): void
     {
@@ -44,8 +45,8 @@ class ApprovalRuleTest extends TestCase
             $this->save($post, ['status' => $status])->assertStatus(403)->assertJsonPath('error', 'needs_approval')
                 ->assertJsonPath('message', 'Only a manager can approve posts while approvals are on for this brand.');
         }
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-ready"))->assertStatus(403)->assertJsonPath('error', 'needs_approval');
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), [])->assertStatus(403)->assertJsonPath('error', 'needs_approval');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-ready"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertStatus(403)->assertJsonPath('error', 'needs_approval');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertStatus(403)->assertJsonPath('error', 'needs_approval');
         $this->asStaffMember()->postJson($this->api('posts'), ['platform' => 'instagram', 'status' => 'approved'])->assertStatus(403)->assertJsonPath('error', 'needs_approval');
         $this->assertSame('needs_review', $post->fresh()->status);
         $this->assertSame(1, ContentPlannerPost::count());
@@ -65,8 +66,8 @@ class ApprovalRuleTest extends TestCase
         $post = $this->makePost(['status' => 'needs_review']);
         $this->asManager();
         $this->save($post, ['status' => 'approved'])->assertOk()->assertJsonPath('post.status', 'approved');
-        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-ready"))->assertOk()->assertJsonPath('post.status', 'ready_to_publish');
-        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-published"), [])->assertOk()->assertJsonPath('post.status', 'published');
+        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-ready"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertOk()->assertJsonPath('post.status', 'ready_to_publish');
+        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-published"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertOk()->assertJsonPath('post.status', 'published');
 
         $this->profile->forceFill(['requires_approval' => false])->save();
         $other = $this->makePost(['status' => 'draft']);
@@ -139,26 +140,13 @@ class ApprovalRuleTest extends TestCase
     // Final review: Write with AI and a new image put a post into review "another way" (spec §6.2); the step is recorded.
     public function test_an_ai_write_or_image_that_puts_a_staff_post_into_review_records_the_step(): void
     {
-        $posts = Mockery::mock(ContentPostGenerationService::class);
-        $posts->shouldReceive('generate')->andReturnUsing(function (ContentPlannerPost $post) {
-            $post->update(['hook' => 'AI hook', 'status' => 'needs_review']);
-
-            return ['post' => $post->fresh(['visualBrief']), 'ai_response' => []];
-        });
-        $this->app->instance(ContentPostGenerationService::class, $posts);
-        $images = Mockery::mock(ImageGenerationService::class);
-        $images->shouldReceive('generateForPost')->andReturnUsing(function (ContentPlannerPost $post) {
-            if ($post->status === 'needs_visual') {
-                $post->update(['status' => 'needs_review']);
-            }
-
-            return new ContentPlannerVisualBrief();
-        });
-        $this->app->instance(ImageGenerationService::class, $images);
+        $this->stubContentAi(['hook' => 'AI hook', 'main_copy' => 'AI body']);
+        $this->stubContentImage();
 
         $approved = $this->makePost(['status' => 'approved']);
         $draft = $this->makePost(['status' => 'draft']);
         $visual = $this->makePost(['status' => 'needs_visual']);
+        ContentPlannerVisualBrief::create(['post_id' => $visual->id, 'scene' => 'Old visual']);
         $this->asStaffMember()->postJson($this->api("posts/{$approved->id}/write"))->assertOk()->assertJsonPath('post.status', 'needs_review');
         $this->asStaffMember()->postJson($this->api("posts/{$draft->id}/write"))->assertOk();
         $this->asStaffMember()->postJson($this->api("posts/{$visual->id}/image"))->assertOk();
@@ -179,8 +167,8 @@ class ApprovalRuleTest extends TestCase
         $ready = $this->makePost(['status' => 'needs_review', 'created_by' => $this->staffMember->id]);
         $published = $this->makePost(['status' => 'needs_review']);
         $listed = $this->makePost(['status' => 'needs_review']);
-        $this->asManager()->postJson($this->api("posts/{$ready->id}/mark-ready"))->assertOk();
-        $this->asManager()->postJson($this->api("posts/{$published->id}/mark-published"), [])->assertOk();
+        $this->asManager()->postJson($this->api("posts/{$ready->id}/mark-ready"), ['updated_at' => $ready->fresh()->updated_at->toISOString()])->assertOk();
+        $this->asManager()->postJson($this->api("posts/{$published->id}/mark-published"), ['updated_at' => $published->fresh()->updated_at->toISOString()])->assertOk();
         $this->asManager();
         $this->save($listed, ['status' => 'ready_to_publish'])->assertOk();
 
@@ -190,7 +178,7 @@ class ApprovalRuleTest extends TestCase
         $this->asStaffMember()->getJson($this->api('inbox/count'))->assertOk()->assertJsonPath('count', 1);
 
         // Already past review: no further step.
-        $this->asManager()->postJson($this->api("posts/{$ready->id}/mark-published"), [])->assertOk();
+        $this->asManager()->postJson($this->api("posts/{$ready->id}/mark-published"), ['updated_at' => $ready->fresh()->updated_at->toISOString()])->assertOk();
         $this->assertSame(['approved'], $this->kinds($ready));
     }
 }

@@ -15,9 +15,11 @@ class ContentPlannerPostComment extends Model
     /** A comment holds 1–2,000 characters. */
     public const MAX_LENGTH = 2000;
 
-    protected $fillable = ['post_id', 'brand_id', 'user_id', 'body', 'edited_at'];
+    protected $dateFormat = 'Y-m-d H:i:s.u';
 
-    protected $casts = ['edited_at' => 'datetime'];
+    protected $fillable = ['post_id', 'brand_id', 'user_id', 'body', 'edited_at', 'media_id', 'media_context', 'mentions'];
+
+    protected $casts = ['edited_at' => 'datetime', 'media_context' => 'array', 'mentions' => 'array'];
 
     public function user(): BelongsTo
     {

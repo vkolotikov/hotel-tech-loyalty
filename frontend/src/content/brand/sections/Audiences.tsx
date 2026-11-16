@@ -1,3 +1,4 @@
+import { useRetainedState } from '../../drafts/useRetainedState'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -21,9 +22,9 @@ function AudienceEditor({ audience, onDone, onCancel }: { audience: Audience | n
   const boot = useBoot()
   const { adopt } = useBrand()
   // The form as it was opened: Save sends only what changed since (not what someone else changed meanwhile).
-  const [base] = useState<AudienceForm>(() => audienceForm(audience))
-  const [form, setForm] = useState<AudienceForm>(base)
-  const [busy, setBusy] = useState(false)
+  const [base, , retainedBase] = useRetainedState<AudienceForm>(`audience-base:${audience?.id ?? 'new'}`, () => audienceForm(audience), false)
+  const [form, setForm, retained] = useRetainedState<AudienceForm>(`audience:${audience?.id ?? 'new'}`, base)
+  const [busy, setBusy] = useRetainedState(`audience-busy:${audience?.id ?? 'new'}`, false)
   const [error, setError] = useState<string | null>(null)
   const w = (key: string, english: string) => t(`content.brand.audiences.${key}`, english)
   const set = (part: Partial<AudienceForm>) => setForm({ ...form, ...part })
@@ -37,6 +38,8 @@ function AudienceEditor({ audience, onDone, onCancel }: { audience: Audience | n
     setError(null)
     try {
       await saveAudience({ api, adopt }, audience, form, base)
+      retained.clear()
+      retainedBase.clear()
       onDone()
     } catch (e) {
       const [key, text] = errorKey('brand', failureOf(e).code)
@@ -47,7 +50,7 @@ function AudienceEditor({ audience, onDone, onCancel }: { audience: Audience | n
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-a-border p-3">
+    <fieldset disabled={busy} className="space-y-4 rounded-lg border border-a-border p-3">
       <div className="grid gap-3 md:grid-cols-2">
         <TextField label={w('name', 'Name')} value={form.name} maxLength={255} required onChange={(name) => set({ name })} />
         <TextField label={w('job_role', 'Job or role')} value={form.job_role} onChange={(job_role) => set({ job_role })} />
@@ -80,9 +83,9 @@ function AudienceEditor({ audience, onDone, onCancel }: { audience: Audience | n
       {error && <Notice tone="danger">{error}</Notice>}
       <div className="flex gap-2">
         <Button onClick={() => { void save() }} loading={busy}>{t('content.brand.save', 'Save')}</Button>
-        {onCancel && <Button variant="secondary" disabled={busy} onClick={onCancel}>{t('content.common.cancel', 'Cancel')}</Button>}
+        {onCancel && <Button variant="secondary" disabled={busy} onClick={() => { retained.clear(); retainedBase.clear(); onCancel() }}>{t('content.common.cancel', 'Cancel')}</Button>}
       </div>
-    </div>
+    </fieldset>
   )
 }
 
@@ -96,7 +99,7 @@ export function AudiencesSection({ brand, canEdit, startOpen = false, onSaved }:
   const brandId = useBrandId()
   const queryClient = useQueryClient()
   const { adopt } = useBrand()
-  const [open, setOpen] = useState<number | 'new' | null>(() => (startOpen && canEdit && brand.audiences.length === 0 ? 'new' : null))
+  const [open, setOpen] = useRetainedState<number | 'new' | null>('audience-open', () => (startOpen && canEdit && brand.audiences.length === 0 ? 'new' : null), false)
   const [note, setNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
   const w = (key: string, english: string) => t(`content.brand.audiences.${key}`, english)
 

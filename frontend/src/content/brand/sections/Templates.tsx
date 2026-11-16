@@ -1,3 +1,4 @@
+import { useRetainedState } from '../../drafts/useRetainedState'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Sparkles } from 'lucide-react'
@@ -23,8 +24,8 @@ export function TemplateEditor({ template, initial, onDone }: { template: Templa
   const { setTemplates } = useBrand()
   const { strategy } = useActiveStrategy()
   const pillars = (strategy?.pillars ?? []).filter(p => p.active).map(p => p.name)
-  const [form, setForm] = useState<TemplateForm>(() => initial ?? templateForm(template))
-  const [busy, setBusy] = useState(false)
+  const [form, setForm, retained] = useRetainedState<TemplateForm>(`template:${template?.id ?? 'new'}:${initial ? JSON.stringify(initial) : ''}`, () => initial ?? templateForm(template))
+  const [busy, setBusy] = useRetainedState(`template-busy:${template?.id ?? 'new'}:${initial ? JSON.stringify(initial) : ''}`, false)
   const [error, setError] = useState<string | null>(null)
   const w = (key: string, english: string) => t(`content.brand.templates.${key}`, english)
   const set = <K extends keyof TemplateForm>(key: K, value: TemplateForm[K]) => setForm({ ...form, [key]: value })
@@ -43,6 +44,8 @@ export function TemplateEditor({ template, initial, onDone }: { template: Templa
     setError(null)
     try {
       await saveTemplate({ api, setTemplates }, template, form)
+      retained.clear()
+      setBusy(false)
       onDone()
     } catch (e) {
       fail(failureOf(e).code)
@@ -51,7 +54,7 @@ export function TemplateEditor({ template, initial, onDone }: { template: Templa
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-a-border p-3">
+    <fieldset disabled={busy} className="space-y-3 rounded-lg border border-a-border p-3">
       <TextField label={w('name', 'Name')} value={form.name} maxLength={TEMPLATE_MAX.name} required onChange={(name) => set('name', name)} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block min-w-0">
@@ -80,9 +83,9 @@ export function TemplateEditor({ template, initial, onDone }: { template: Templa
       {error && <Notice tone="danger">{error}</Notice>}
       <div className="flex gap-2">
         <Button size="sm" onClick={() => { void save() }} loading={busy}>{t('content.brand.save', 'Save')}</Button>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={onDone}>{t('content.common.cancel', 'Cancel')}</Button>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => { retained.clear(); onDone() }}>{t('content.common.cancel', 'Cancel')}</Button>
       </div>
-    </div>
+    </fieldset>
   )
 }
 
@@ -160,7 +163,7 @@ export function TemplatesSection({ brand, canEdit }: { brand: BrandPayload; canE
   const { t } = useTranslation()
   const api = useApi()
   const { setTemplates } = useBrand()
-  const [open, setOpen] = useState<number | 'new' | null>(null)
+  const [open, setOpen] = useRetainedState<number | 'new' | null>('templates-open', null, false)
   const [error, setError] = useState<string | null>(null)
   const list = templatesOf(brand)
   const full = list.length >= MAX_TEMPLATES
@@ -193,13 +196,13 @@ export function TemplatesSection({ brand, canEdit }: { brand: BrandPayload; canE
         )}
       </div>
       {canEdit && full && <p className="text-xs text-a-text-2">{t('content.template.error.too_many_templates', 'A brand keeps at most 100 templates. Remove one first.')}</p>}
-      {open === 'new' && <TemplateEditor template={null} onDone={() => setOpen(null)} />}
+      {open === 'new' && <TemplateEditor template={null} onDone={() => setOpen(current => current === 'new' ? null : current)} />}
       {list.length === 0 && open !== 'new' && <p className="text-sm text-a-text-2">{w('none', 'No templates yet.')}</p>}
       <ul className="space-y-2">
         {list.map(tpl => (
           <li key={tpl.id}>
             {open === tpl.id
-              ? <TemplateEditor template={tpl} onDone={() => setOpen(null)} />
+              ? <TemplateEditor template={tpl} onDone={() => setOpen(current => current === tpl.id ? null : current)} />
               : (
                 <div className="flex flex-wrap items-start gap-3 rounded-lg border border-a-border p-3">
                   <div className="min-w-0 grow basis-48">

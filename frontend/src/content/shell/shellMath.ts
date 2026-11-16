@@ -6,8 +6,8 @@ export function brandInitials(name: string): string {
   return Array.from(words[0]).slice(0, 2).join('').toUpperCase()
 }
 
-export type PageKey = 'plan' | 'ideas' | 'posts' | 'promote' | 'strategy' | 'brand' | 'write'
-const PAGES: PageKey[] = ['ideas', 'posts', 'promote', 'strategy', 'brand', 'write']
+export type PageKey = 'plan' | 'ideas' | 'posts' | 'promote' | 'strategy' | 'brand' | 'write' | 'media' | 'settings' | 'guide' | 'campaigns'
+const PAGES: PageKey[] = ['ideas', 'posts', 'promote', 'strategy', 'brand', 'write', 'media', 'settings', 'guide', 'campaigns']
 
 /** The page a Content address shows, for the breadcrumb; the Plan for /content and anything unknown. */
 export function pageKeyOf(pathname: string): PageKey {

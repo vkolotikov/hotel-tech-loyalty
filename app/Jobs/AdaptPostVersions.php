@@ -30,9 +30,13 @@ class AdaptPostVersions implements ShouldQueue
     /** One AI call per run: a short run hands the rest on, well under every queue connection's retry_after. */
     public int $timeout = 80;
 
+    /** A declared default also applies to jobs serialized before requester tracking. */
+    public ?int $userId = null;
+
     /** @param list<int> $versionIds */
-    public function __construct(public int $groupId, public int $organizationId, public int $brandId, public string $from, public array $versionIds)
+    public function __construct(public int $groupId, public int $organizationId, public int $brandId, public string $from, public array $versionIds, ?int $userId = null)
     {
+        $this->userId = $userId;
         // The long AI jobs have their own queue and worker: mail never waits behind them (queue review).
         $this->onQueue('ai');
     }
@@ -59,7 +63,7 @@ class AdaptPostVersions implements ShouldQueue
                 // The rest in the next run; the panel keeps showing "Adapting…" for them meanwhile.
                 ContentVersions::stillAdapting($this->groupId, $ids);
                 $handedOn = true;
-                self::dispatch($this->groupId, $this->organizationId, $this->brandId, $this->from, $ids);
+                self::dispatch($this->groupId, $this->organizationId, $this->brandId, $this->from, $ids, $this->userId);
             }
         } finally {
             if (!$handedOn) {
@@ -88,16 +92,19 @@ class AdaptPostVersions implements ShouldQueue
             return 'budget';
         }
         try {
-            $words = $adapter->adapt($version, $this->from);
+            $context = new \App\Services\Content\ContentExecution($this->organizationId, $this->brandId, $this->userId ?? (int)$version->created_by);
+            $words = $context->run(fn () => $adapter->adapt($version, $this->from));
         } catch (\Throwable $e) {
             report($e);
 
-            return 'ai_failed';
+            if ($e instanceof ContentRefused && $e->errorCode === 'ai_model_unpriced') return 'ai_model_unpriced';
+            return $e instanceof ContentRefused && $e->errorCode === 'ai_budget_used_up' ? 'budget' : 'ai_failed';
         }
-        // A query update skips the model's casts: the hashtags go in as the JSON the column holds.
-        $words['hashtags'] = json_encode(array_values($words['hashtags']));
-        // Written only if nobody saved the version while the AI wrote: a person's words win.
-        ContentPlannerPost::whereKey($version->id)->where('updated_at', $version->getRawOriginal('updated_at'))->update($words);
+        try {
+            $context->run(fn () => app(\App\Services\Content\ContentPostWrites::class)->apply($version, fn (ContentPlannerPost $current) => $current->update($words)));
+        } catch (ContentRefused $e) {
+            if (!in_array($e->errorCode, ['changed_elsewhere', 'not_found'], true)) throw $e;
+        }
 
         return null;
     }

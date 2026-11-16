@@ -78,17 +78,17 @@ final class ContentPostPresenter
         }
         if (array_key_exists('last_event_kind', $post->getAttributes())) {
             $kind = $post->getAttribute('last_event_kind');
-            $at = $post->getAttribute('last_event_at');
+            $at = $post->getAttribute('last_event_post_updated_at') ?? $post->getAttribute('last_event_at');
         } else {
             $last = $post->events()->orderByDesc('id')->first();
             $kind = $last?->kind;
-            $at = $last?->created_at;
+            $at = $last->post_updated_at ?? $last?->created_at;
         }
         if ($kind !== 'sent_back' || $at === null || $post->updated_at === null) {
             return false;
         }
 
-        return $post->updated_at->getTimestamp() <= CarbonImmutable::parse($at)->getTimestamp();
+        return $post->updated_at->lte(CarbonImmutable::parse($at));
     }
 
     /** Everything the post panel shows and edits. @return array<string, mixed> */
@@ -101,6 +101,7 @@ final class ContentPostPresenter
             // Generate in created_by, a repeat copy who repeated it: neither wrote it, so they show none (final review).
             'author'            => $post->generated_by === 'manual' && $post->created_by ? $post->createdBy?->name : null,
             'language'          => $post->language,
+            'media'             => ContentMediaLibrary::describe($post),
             'goal'              => $post->goal,
             'format'            => $post->format,
             'main_copy'         => $post->main_copy,
@@ -141,7 +142,8 @@ final class ContentPostPresenter
                 'avoid'        => $brief->avoid,
                 'image_url'    => $brief->image_url,
                 'image_status' => $brief->image_status,
-                'image_error'  => $brief->image_error,
+                // Old rows may contain raw provider exceptions. Never expose their contents.
+                'image_error'  => $brief->image_error ? 'ai_failed' : null,
             ] : null,
         ];
     }

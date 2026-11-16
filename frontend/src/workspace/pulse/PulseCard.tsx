@@ -21,7 +21,8 @@ function wallTime(wall: string | null | undefined, lang: string, opts: Intl.Date
  * arrives, or without a place, the clock stands alone. `children` are the workspace's own figures for today, shown
  * along the bottom. The `strip` variant is one line, for a page whose work starts at the top (Content's plan).
  */
-export function PulseCard({ pulse, name, variant = 'hero', greet = true, children }: {
+export function PulseCard({ pulse, name, variant = 'hero', greet = true, clockLabel, children }: {
+  clockLabel?: string
   pulse: Pulse | undefined
   name?: string | null
   variant?: 'hero' | 'strip'
@@ -55,9 +56,9 @@ export function PulseCard({ pulse, name, variant = 'hero', greet = true, childre
   const night = weather ? !weather.current.is_day : phase === 'night'
   const unit = weather?.units.temp === 'F' ? 'F' : 'C'
   const zoneCity = zone && zone.includes('/') ? zone.split('/').pop()!.replace(/_/g, ' ') : zone
-  const placeLine = pulse?.place
+  const placeLine = clockLabel ?? (pulse?.place
     ? t('workspace.pulse.place_time', '{{place}} · venue time', { place: pulse.place.name })
-    : zoneCity ? t('workspace.pulse.zone_time', 'Venue time ({{zone}})', { zone: zoneCity }) : null
+    : zoneCity ? t('workspace.pulse.zone_time', 'Venue time ({{zone}})', { zone: zoneCity }) : null)
   const greeting = name ? t('workspace.pulse.hello_name', '{{greeting}}, {{name}}', { greeting: hello, name }) : hello
 
   if (variant === 'strip') {

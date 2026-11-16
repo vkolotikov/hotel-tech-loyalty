@@ -38,10 +38,10 @@ const render = (payload: SitePayload, canManage: boolean) => {
 }
 
 describe('the Website section (spec 2026-10-20 §5)', () => {
-  it('sits on the Brand page right after Readiness, before Brand DNA', () => {
-    const html = renderBrand(brandWith(), true)
+  it('is reachable in its Website section', () => {
+    const html = renderBrand(brandWith(), true, undefined, 'website')
     expect(html.indexOf('id="content-website"')).toBeGreaterThan(-1)
-    expect(html.indexOf('id="content-website"')).toBeLessThan(html.indexOf('id="content-dna"'))
+    expect(html).toContain('value="website" selected=""')
   })
 
   it('gives managers the address, Scan again, Update the company summary (ticked) and the status line', () => {

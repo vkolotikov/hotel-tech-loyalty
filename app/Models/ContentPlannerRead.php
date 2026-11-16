@@ -13,6 +13,8 @@ class ContentPlannerRead extends Model
 
     public $timestamps = false;
 
+    protected $dateFormat = 'Y-m-d H:i:s.u';
+
     protected $fillable = ['user_id', 'planner_profile_id', 'brand_id', 'seen_at'];
 
     protected $casts = ['seen_at' => 'datetime'];

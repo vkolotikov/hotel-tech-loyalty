@@ -8,13 +8,14 @@ use App\Models\ContentPlannerVisualBrief;
 use App\Services\AiUsageService;
 use App\Services\ContentVisualBriefService;
 use App\Services\MediaService;
+use App\Services\Content\ContentPostWrites;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Log;
 use OpenAI\Contracts\ClientContract;
 
 /**
- * Generates an actual image per post using OpenAI (gpt-image-1, with an
- * automatic fall back to dall-e-3 on an access/verification error). The
+ * Generates a PNG using the current OpenAI model, with an optional configured
+ * alternative only after a definite model-access/verification refusal. The
  * prompt comes from the post's visual brief (image_prompt_future) plus the
  * brand's visual style; the resulting image is stored via MediaService and
  * its URL saved on the visual brief.
@@ -23,6 +24,8 @@ class ImageGenerationService
 {
     public function __construct(
         protected ContentVisualBriefService $visualBriefService,
+        private ?ClientContract $client = null,
+        private ?\Psr\Http\Client\ClientInterface $http = null,
     ) {
     }
 
@@ -32,6 +35,8 @@ class ImageGenerationService
      */
     public function generateForPost(ContentPlannerPost $post, ?string $instructions = null): ContentPlannerVisualBrief
     {
+        // Refuse unusable image configuration before spending on a missing brief.
+        ContentModels::assertImage($this->model());
         $profile = $post->profile;
         if (!$profile) {
             throw new \RuntimeException('Post has no planner profile.');
@@ -51,40 +56,35 @@ class ImageGenerationService
         $size = $this->sizeForModel($this->model(), $brief->aspect_ratio);
 
         try {
-            [$bytes, $modelUsed] = $this->createImage($this->model(), $prompt, $size, $brief->aspect_ratio);
+            [$bytes, $modelUsed, $cost, $usage] = $this->createImage($this->model(), $prompt, $size, $brief->aspect_ratio, (int)$profile->organization_id);
+        } catch (\App\Services\Content\ContentRefused $e) {
+            throw $e;
         } catch (\Throwable $e) {
-            $brief->update([
-                'image_status' => 'failed',
-                'image_error' => mb_substr($e->getMessage(), 0, 1000),
-            ]);
             $this->logGeneration($post, null, 'error', $e->getMessage());
-            throw new \RuntimeException($this->friendlyError($e->getMessage()));
+            app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $current) {
+                $current->visualBrief()->firstOrFail()->update([
+                    'image_status' => 'failed',
+                    'image_error' => 'ai_failed',
+                ]);
+            });
+            throw new \RuntimeException($this->friendlyError($e->getMessage()), previous: $e);
         }
 
+        // The paid picture counts even if its commit loses a race or storage fails.
+        $this->logGeneration($post, $modelUsed, 'success', null, $cost, $usage);
         $url = MediaService::putRaw($bytes, 'content-planner/images', 'png');
 
-        $brief->update([
-            'image_url' => $url,
-            'image_status' => 'ready',
-            'image_model' => $modelUsed,
-            'image_error' => null,
-            'image_generated_at' => now(),
-        ]);
-
-        // A post with a fresh visual is no longer "needs_visual".
-        if ($post->status === 'needs_visual') {
-            $post->update(['status' => 'needs_review']);
-        }
-
-        $this->logGeneration($post, $modelUsed, 'success', null);
-
-        // Images are priced per picture in the shared AI ledger (spec 2026-10-14 §5.2).
-        app(AiUsageService::class)->recordImage(
-            (int) $profile->organization_id,
-            (string) $modelUsed,
-            $this->sizeForModel((string) $modelUsed, $brief->aspect_ratio),
-            AiClient::USAGE_FEATURE,
-        );
+        app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $current) use ($url, $modelUsed, &$brief) {
+            $brief = $current->visualBrief()->firstOrFail();
+            $brief->update([
+                'image_url' => $url,
+                'image_status' => 'ready',
+                'image_model' => $modelUsed,
+                'image_error' => null,
+                'image_generated_at' => now(),
+            ]);
+            ContentPostWrites::visualChanged($current);
+        });
 
         return $brief->fresh();
     }
@@ -93,45 +93,53 @@ class ImageGenerationService
      * Call OpenAI images, trying the primary model then the fallback on an
      * access/verification error. Returns [rawBytes, modelUsed].
      */
-    private function createImage(string $model, string $prompt, string $size, ?string $aspect): array
+    private function createImage(string $model, string $prompt, string $size, ?string $aspect, int $orgId): array
     {
         try {
-            return [$this->requestImage($model, $prompt, $size), $model];
+            [$bytes, $cost, $usage] = $this->paidImage($orgId, $model, $prompt, $size);
+            return [$bytes, $model, $cost, $usage];
         } catch (\Throwable $e) {
-            $fallback = (string) config('openai.image_fallback_model', '');
-            if ($fallback && $fallback !== $model && $this->isAccessError($e->getMessage())) {
+            $fallback = ContentModels::image((string) config('openai.image_fallback_model', ''), true);
+            if ($e instanceof \OpenAI\Exceptions\ErrorException && in_array($e->getStatusCode(), [400,403,404], true)
+                && $fallback && $fallback !== $model && $this->isModelAccessError($e)) {
                 Log::warning("Content Planner image: {$model} unavailable, falling back to {$fallback}", [
                     'error' => $e->getMessage(),
                 ]);
                 $fbSize = $this->sizeForModel($fallback, $aspect);
-                return [$this->requestImage($fallback, $prompt, $fbSize), $fallback];
+                [$bytes, $cost, $usage] = $this->paidImage($orgId, $fallback, $prompt, $fbSize);
+                return [$bytes, $fallback, $cost, $usage];
             }
             throw $e;
         }
     }
 
+    private function paidImage(int $orgId, string $model, string $prompt, string $size): array
+    {
+        ContentModels::assertImage($model);
+        return app(\App\Services\Content\ContentAiGate::class)->attempt($orgId, function () use ($orgId, $model, $prompt, $size) {
+            return $this->requestImage($model, $prompt, $size, $orgId);
+        });
+    }
+
     /**
-     * Single OpenAI image request. gpt-image-1 always returns b64_json and
-     * rejects response_format; dall-e-* accepts response_format=b64_json.
+     * One high-quality PNG. Current GPT Image models return base64 without response_format.
      */
-    private function requestImage(string $model, string $prompt, string $size): string
+    private function requestImage(string $model, string $prompt, string $size, int $orgId): array
     {
         $params = [
             'model' => $model,
             'prompt' => $prompt,
             'n' => 1,
             'size' => $size,
+            'quality' => 'high',
+            'output_format' => 'png',
         ];
 
-        if (str_starts_with($model, 'dall-e')) {
-            $params['response_format'] = 'b64_json';
-            $params['quality'] = 'hd';
-        } else {
-            // gpt-image-1
-            $params['quality'] = 'high';
-        }
-
         $response = $this->client()->images()->create($params);
+        $usage = $response->usage?->toArray();
+        $ledger = app(AiUsageService::class);
+        $cost = $ledger->imageCost($model, $size, $usage, $prompt);
+        $ledger->recordImage($orgId, $model, $size, AiClient::USAGE_FEATURE, $usage, $prompt);
         $first = $response->data[0] ?? null;
 
         if ($first && !empty($first->b64_json)) {
@@ -139,15 +147,12 @@ class ImageGenerationService
             if ($decoded === false) {
                 throw new \RuntimeException('OpenAI returned an image that could not be decoded.');
             }
-            return $decoded;
+            return [$decoded, $cost, $usage];
         }
 
         if ($first && !empty($first->url)) {
-            $bytes = @file_get_contents($first->url);
-            if ($bytes === false) {
-                throw new \RuntimeException('Could not download the generated image from OpenAI.');
-            }
-            return $bytes;
+            $timeout = \App\Services\Content\ContentExecution::budget()->requestTimeout();
+            return [(string) (new GuzzleClient(['timeout'=>$timeout,'connect_timeout'=>min(5,$timeout)]))->get($first->url)->getBody(), $cost, $usage];
         }
 
         throw new \RuntimeException('OpenAI returned no image data.');
@@ -210,15 +215,6 @@ class ImageGenerationService
     {
         $orientation = $this->orientation($aspect);
 
-        if (str_starts_with($model, 'dall-e')) {
-            return match ($orientation) {
-                'portrait' => '1024x1792',
-                'landscape' => '1792x1024',
-                default => '1024x1024',
-            };
-        }
-
-        // gpt-image-1
         return match ($orientation) {
             'portrait' => '1024x1536',
             'landscape' => '1536x1024',
@@ -241,7 +237,9 @@ class ImageGenerationService
     private function isAccessError(string $message): bool
     {
         $m = strtolower($message);
-        foreach (['verif', 'must be verified', 'not have access', 'does not have access', 'unsupported', 'gpt-image', 'model_not_found', 'not allowed', 'permission'] as $needle) {
+        foreach (['organization must be verified', 'organisation must be verified', 'verify your organization',
+            'verify your organisation', 'does not have access to model', 'do not have access to model',
+            'does not have access for this project', 'model_not_found'] as $needle) {
             if (str_contains($m, $needle)) {
                 return true;
             }
@@ -249,38 +247,47 @@ class ImageGenerationService
         return false;
     }
 
+    private function isModelAccessError(\OpenAI\Exceptions\ErrorException $error): bool
+    {
+        // A specific provider code wins over incidental words in its message.
+        $code = $error->getErrorCode();
+        if ($code !== null && ! in_array($code, ['model_not_found', 'model_access_denied', 'organization_verification_required'], true)) {
+            return false;
+        }
+        return $code !== null || $this->isAccessError($error->getMessage());
+    }
+
     private function friendlyError(string $message): string
     {
         if ($this->isAccessError($message)) {
-            return 'Image generation failed: your OpenAI account may not have access to the image model. OpenAI\'s image models can require a verified organisation (OpenAI platform settings, Organization, Verify). (' . mb_substr($message, 0, 160) . ')';
+            return 'Image generation failed: the image model may require a verified organisation.';
         }
         if (str_contains(strtolower($message), 'billing') || str_contains(strtolower($message), 'quota')) {
-            return 'Image generation failed: OpenAI billing/quota issue. Check your OpenAI account. (' . mb_substr($message, 0, 160) . ')';
+            return 'Image generation failed: the provider reported a billing or quota issue.';
         }
-        return 'Image generation failed: ' . mb_substr($message, 0, 220);
+        return 'Image generation failed. Please try again.';
     }
 
     /**
-     * A dedicated OpenAI client with a long timeout — image generation far
-     * exceeds the app-wide 30s default used by the facade.
+     * A dedicated client bounded by this execution's remaining deadline: 45 s total
+     * on legacy web requests, up to 90 s per attempt within queued work's 100 s.
      */
-    private ?ClientContract $client = null;
-
     private function client(): ClientContract
     {
         if ($this->client === null) {
-            $timeout = (int) config('openai.image_timeout', 120);
-            $http = new GuzzleClient([
+            $timeout = min((int) config('openai.image_timeout', 120), \App\Services\Content\ContentExecution::budget()->requestTimeout());
+            $http = $this->http ?? new GuzzleClient([
                 'timeout' => $timeout,
-                'connect_timeout' => 15,
+                'connect_timeout' => min(5, $timeout),
             ]);
             $factory = \OpenAI::factory()
                 ->withApiKey((string) config('openai.api_key'))
-                ->withHttpClient($http);
+                ->withHttpClient(new ImageUsageTransport($http));
             if ($org = config('openai.organization')) {
                 $factory = $factory->withOrganization((string) $org);
             }
-            $this->client = $factory->make();
+            // Rebuild for each attempt: fallback gets only the time still remaining.
+            return $factory->make();
         }
 
         return $this->client;
@@ -288,7 +295,7 @@ class ImageGenerationService
 
     private function model(): string
     {
-        return (string) config('openai.image_model', 'gpt-image-1');
+        return ContentModels::image((string) config('openai.image_model', ContentModels::IMAGE_DEFAULT));
     }
 
     private function apiKey(): ?string
@@ -297,7 +304,7 @@ class ImageGenerationService
         return $key ? (string) $key : null;
     }
 
-    private function logGeneration(ContentPlannerPost $post, ?string $model, string $status, ?string $error): void
+    private function logGeneration(ContentPlannerPost $post, ?string $model, string $status, ?string $error, ?array $cost = null, ?array $usage = null): void
     {
         try {
             ContentPlannerAiGeneration::create([
@@ -309,8 +316,10 @@ class ImageGenerationService
                 'model' => $model ?? $this->model(),
                 'status' => $status,
                 'error_message' => $error ? mb_substr($error, 0, 2000) : null,
-                // Flat per-image cost estimate (high quality ≈ $0.04-0.19).
-                'cost_estimate' => $status === 'success' ? 0.08 : null,
+                'tokens_input' => $cost['input_tokens'] ?? null,
+                'tokens_output' => $cost['output_tokens'] ?? null,
+                'response_json' => $cost === null ? null : ['usage' => $usage, 'accounted_usage' => $cost],
+                'cost_estimate' => $cost['cost_usd'] ?? null,
             ]);
         } catch (\Throwable $e) {
             Log::warning('Image generation log failed: ' . $e->getMessage());

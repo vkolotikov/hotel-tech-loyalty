@@ -9,6 +9,9 @@ use App\Models\ContentPlannerVisualBrief;
 use App\Models\Organization;
 use App\Services\Content\ContentKeyDates;
 use App\Services\Content\ContentPlatformRules;
+use App\Services\Content\ContentPostWrites;
+use App\Services\Content\ContentApproval;
+use App\Services\Content\ContentVersionAdapter;
 use App\Services\ContentPlanner\AiClient;
 use App\Services\ContentPlanner\ContextBuilder;
 
@@ -41,22 +44,21 @@ class ContentPostGenerationService
             ? $data['hook_alternatives']
             : [];
 
-        $post->update([
-            'topic' => self::topicAfterWrite($template, $post->topic, $data),
-            'hook' => isset($data['hook']) ? mb_substr((string) $data['hook'], 0, 500) : $post->hook,
-            'main_copy' => $data['main_copy'] ?? $post->main_copy,
-            'short_copy' => $data['short_copy'] ?? $post->short_copy,
-            'cta' => $data['cta'] ?? $post->cta,
-            'hashtags' => is_array($data['hashtags'] ?? null) ? $data['hashtags'] : [],
-            'engagement_mechanic' => is_array($data['engagement_mechanic'] ?? null) ? $data['engagement_mechanic'] : null,
-            'status' => 'needs_review',
-            'source_context' => $sourceContext,
-        ]);
-
-        $this->upsertVisualBrief($post, is_array($data['visual_brief'] ?? null) ? $data['visual_brief'] : null);
+        $current = app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $post) use ($data, $template, $sourceContext, $profile) {
+            $before = (string) $post->status;
+            $post->fill(ContentVersionAdapter::words($data, $post->only(['hook', 'main_copy', 'short_copy', 'cta', 'hashtags'])) + [
+                'topic' => self::topicAfterWrite($template, $post->topic, $data),
+                'engagement_mechanic' => is_array($data['engagement_mechanic'] ?? null) ? $data['engagement_mechanic'] : null,
+                'status' => 'needs_review',
+                'source_context' => $sourceContext,
+            ]);
+            $post->touch();
+            $this->upsertVisualBrief($post, is_array($data['visual_brief'] ?? null) ? $data['visual_brief'] : null);
+            if ($user = auth()->user()) ContentApproval::afterAi($post, $before, $user, $profile);
+        });
 
         return [
-            'post' => $post->fresh(['visualBrief']),
+            'post' => $current->fresh(['visualBrief']),
             'ai_response' => $data,
         ];
     }
@@ -110,11 +112,14 @@ class ContentPostGenerationService
             2000
         );
 
-        $variationModel = $post->variations()->create([
-            'variation_type' => $variation,
-            'copy' => trim($aiOutput),
-            'ai_output' => ['raw' => $aiOutput],
-        ]);
+        $variationModel = null;
+        app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $post) use (&$variationModel, $variation, $aiOutput) {
+            $variationModel = $post->variations()->create([
+                'variation_type' => $variation,
+                'copy' => trim($aiOutput),
+                'ai_output' => ['raw' => $aiOutput],
+            ]);
+        });
 
         return [
             'variation' => $variationModel,
@@ -129,7 +134,7 @@ class ContentPostGenerationService
      */
     protected function buildPostPrompt(ContentPlannerPost $post, ContentPlannerProfile $profile, ?string $instructions = null, ?ContentPlannerTemplate $template = null): string
     {
-        $context = $this->context->build($profile);
+        $context = $this->context->build($profile)."\n\n".$this->context->campaign($profile, $post->campaign_id ? (int) $post->campaign_id : null);
         $recentDigest = $this->context->recentPostsDigest($profile, 30, $post->id);
         $platformRules = ContentPlatformRules::for((string) $post->platform);
         $engagementGuidance = $this->engagementGuidance(
@@ -345,7 +350,7 @@ PROMPT;
 
         ContentPlannerVisualBrief::updateOrCreate(
             ['post_id' => $post->id],
-            [
+            ContentVisualBriefService::normalize([
                 'visual_type' => $this->briefText($brief['visual_type'] ?? null),
                 'aspect_ratio' => $this->briefText($brief['aspect_ratio'] ?? null),
                 'style' => $this->briefText($brief['style'] ?? null),
@@ -356,7 +361,7 @@ PROMPT;
                 'text_overlay' => $this->briefText($brief['text_overlay'] ?? null),
                 'avoid' => $this->briefText($brief['avoid'] ?? null),
                 'video_script' => $this->briefText($brief['video_script'] ?? null),
-            ]
+            ])
         );
     }
 

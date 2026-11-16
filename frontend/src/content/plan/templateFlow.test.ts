@@ -35,8 +35,9 @@ describe('Write with AI from a template', () => {
     const flow = {
       api: {
         createPost: vi.fn(async () => { calls.push('create'); return { post } }),
-        write: vi.fn(async (...args: unknown[]) => { calls.push(`write ${JSON.stringify(args)}`); return write() }),
+
       },
+      queue: vi.fn(async (...args: unknown[]) => { calls.push(`queue ${JSON.stringify(args)}`); await write() }),
       keep: vi.fn((p: PostDetail) => { calls.push(`keep ${p.updated_at}`) }),
       panel: {
         guard: vi.fn(() => !keepsEdits),
@@ -47,12 +48,12 @@ describe('Write with AI from a template', () => {
     return { flow, calls }
   }
 
-  it('makes the post, keeps it, marks it as being written and opens it; then keeps what the AI wrote', async () => {
+  it('makes and opens the post, then submits template work to the retained queue', async () => {
     const { flow, calls } = flowWith(async () => ({ post: written }))
     expect(await startPost(flow, { platform: 'linkedin', topic: 'x' })).toBe(post)
     await writeInto(flow, 41, 3)
     // Final review: the note is per post, so ending this write leaves another post's write as it is.
-    expect(calls).toEqual(['create', 'keep a', 'writing 41 {"failed":null}', 'open 41', 'write [41,null,3]', 'keep b', 'writing 41 null'])
+    expect(calls).toEqual(['create', 'keep a', 'open 41', 'queue [41,3]'])
   })
 
   // Final review: declining to discard the panel's edits still made the post and set the AI writing it, unseen.
@@ -62,9 +63,17 @@ describe('Write with AI from a template', () => {
     expect(calls).toEqual([])
   })
 
-  it('tells the panel why the AI stopped', async () => {
-    const { flow, calls } = flowWith(async () => { throw Object.assign(new Error('refused'), { response: { status: 502, data: { code: 'ai_failed' } } }) })
-    await writeInto(flow, 41, 3)
-    expect(calls[calls.length - 1]).toBe('writing 41 {"failed":"ai_failed"}')
+  it('keeps a late created post in its cache without opening it over a newer editor', async () => {
+    const { flow } = flowWith(async () => ({ post: written }))
+    let current = true
+    let finish!: (value: { post: PostDetail }) => void
+    flow.api.createPost = vi.fn(() => new Promise(resolve => { finish = resolve }))
+    const waiting = startPost({ ...flow, panel: { ...flow.panel, capture: () => () => current } }, { platform: 'linkedin' })
+    current = false
+    finish({ post })
+    expect(await waiting).toBe(post)
+    expect(flow.keep).toHaveBeenCalledWith(post)
+    expect(flow.panel.open).not.toHaveBeenCalled()
+    expect(flow.panel.noteWriting).not.toHaveBeenCalled()
   })
 })

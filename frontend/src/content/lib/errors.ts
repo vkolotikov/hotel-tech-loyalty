@@ -21,6 +21,7 @@ export const ERRORS = {
     unknown: 'The post could not be moved. Please try again.',
   },
   fill: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     slot_not_open: 'That slot already has a post.',
     ai_budget_used_up: "This month's AI budget is used up.",
     already_generating: 'AI is already writing for this brand. Try again in a moment.',
@@ -29,6 +30,7 @@ export const ERRORS = {
     unknown: 'The slot could not be filled. Please try again.',
   },
   generate: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     range_in_past: 'These days are already over.',
     no_channels: 'This brand has no active channel to plan for.',
     already_generating: 'AI is already writing for this brand. Try again in a moment.',
@@ -48,6 +50,7 @@ export const ERRORS = {
     unknown: 'The post could not be saved. Please try again.',
   },
   ai: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     ai_budget_used_up: "This month's AI budget is used up. Writing by hand still works.",
     ai_failed: 'The AI could not finish this. Please try again.',
     not_found: 'This post no longer exists.',
@@ -73,6 +76,7 @@ export const ERRORS = {
     unknown: 'That did not work. Please try again.',
   },
   brand: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     manager_only: 'Only an owner or a manager can change the brand.',
     invalid: 'Some fields need attention.',
     not_found: 'This item no longer exists. The page now shows the brand as it is.',
@@ -96,6 +100,7 @@ export const ERRORS = {
     unknown: 'The post could not be repeated. Please try again.',
   },
   snippet: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     manager_only: 'Only an owner or a manager can change hashtags and snippets.',
     too_many_snippets: 'A brand keeps at most 50 of each. Remove one first.',
     invalid: 'Give it a name and some text.',
@@ -125,6 +130,7 @@ export const ERRORS = {
     unknown: 'The idea could not be saved. Please try again.',
   },
   template: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     manager_only: 'Only an owner or a manager can change templates.',
     invalid: 'Give the template a name.',
     too_many_tags: 'A template keeps at most 30 hashtags.',
@@ -220,6 +226,7 @@ export const ERRORS = {
   },
   // A page of a promotion that did not get all its posts (spec §4.5).
   promotion: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     ai_failed: 'The AI could not write these posts.',
     ai_incomplete: 'The AI wrote fewer posts than asked.',
     ai_budget_used_up: "This month's AI budget ran out.",
@@ -229,6 +236,7 @@ export const ERRORS = {
   },
   // Why the last scan did not update the company summary (spec §3.6).
   summary: {
+    ai_model_unpriced: 'Ask an administrator to check the AI setup before trying again.',
     ai_budget_used_up: "This month's AI budget is used up, so the company summary was not updated.",
     ai_failed: 'The AI could not write the company summary this time; the list of pages is up to date.',
     unknown: 'The company summary was not updated.',

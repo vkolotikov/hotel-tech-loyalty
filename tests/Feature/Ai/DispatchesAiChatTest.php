@@ -282,8 +282,8 @@ class DispatchesAiChatTest extends TestCase
         $this->assertSame('website_chatbot', $row->feature);
         $this->assertSame(1_000_000, (int) $row->input_tokens);
         $this->assertSame(200_000, (int) $row->output_tokens);
-        // $0.10 per MTok in + $0.50 per MTok out → $0.10 + $0.10 = 20 cents.
-        $this->assertSame(20, (int) $row->cost_cents);
+        // Above 100k input: $0.50 per MTok in + $2.50 per MTok out → $0.50 + $0.50 = 100 cents.
+        $this->assertSame(100, (int) $row->cost_cents);
     }
 
     // ── OpenAI ──────────────────────────────────────────────────────────

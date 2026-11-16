@@ -1,6 +1,7 @@
 {
   "nav": { "plan": "Plan", "posts": "Posts", "strategy": "Strategy", "brand": "Brand", "ideas": "Ideas", "promote": "Promote" },
   "common": {
+    "discard_drafts": "Discard your unsaved changes?",
     "page_failed": "This page could not be shown. What you saved is safe.",
     "reload": "Reload the page",
     "loading": "Loading…",
@@ -14,7 +15,7 @@
     "copy_failed": "Could not copy. Select the text and copy it yourself."
   },
   "shell": {
-    "new_post": "New post",
+      "new_post": "New post",
     "find": "Find a post or action",
     "brand": "Brand",
     "switched_off": "HexaTech Content has been switched off for your organisation. Your posts are unchanged.",
@@ -93,6 +94,7 @@
   },
   "fill": {
     "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.",
       "slot_not_open": "That slot already has a post.",
       "ai_budget_used_up": "This month's AI budget is used up.",
       "already_generating": "AI is already writing for this brand. Try again in a moment.",
@@ -123,6 +125,7 @@
       "past": "These days are already over."
     },
     "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.",
       "range_in_past": "These days are already over.",
       "no_channels": "This brand has no active channel to plan for.",
       "already_generating": "AI is already writing for this brand. Try again in a moment.",
@@ -251,6 +254,7 @@
   },
   "ai": {
     "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.",
       "ai_budget_used_up": "This month's AI budget is used up. Writing by hand still works.",
       "ai_failed": "The AI could not finish this. Please try again.",
       "not_found": "This post no longer exists.",
@@ -418,17 +422,20 @@
     "section": { "company": "Company and brand", "knowledge": "Knowledge", "audience": "Audiences", "voice": "Voice", "channels": "Channels", "strategy_inputs": "Strategy inputs" },
     "gap": { "company_name": "The organisation has no name yet (full admin, Settings).", "company_industry": "The organisation has no industry yet (full admin, Settings).", "company_website": "The organisation has no website yet (full admin, Settings).", "brand_summary": "Add a brand summary (Brand DNA).", "usp": "Say what makes the brand different (Brand DNA).", "mission": "Add the mission (Brand DNA).", "faq_none": "Add questions and answers to the knowledge base of the AI chat widget.", "faq_more": "Add more questions and answers to the knowledge base: {{count}} so far, 5 or more work best.", "services": "Add your services or products in the full admin.", "audience_none": "Add at least one audience (Audiences).", "audience_pains": "Give every audience its pain points.", "audience_goals": "Give every audience its goals.", "voice_none": "Describe the brand voice (Voice).", "voice_tone": "Choose a tone (Voice).", "voice_emoji": "Choose how many emoji to use (Voice).", "voice_hashtag": "Choose how many hashtags to use (Voice).", "channels_none": "Switch on at least one channel (Channels).", "channels_days": "Choose posting days on your channels.", "channels_per_week": "Set posts per week on your channels.", "content_mix": "Set the content mix (Rhythm and goals).", "weekly_rhythm": "Set the weekly rhythm (Rhythm and goals).", "engagement_goals": "Choose engagement goals (Rhythm and goals)." },
     "dna": { "title": "Brand DNA", "intro": "Who the brand is, in its own words. The AI writes from this.", "name": "Brand name", "language": "Language of the posts", "language_none": "Choose a language", "goal": "Main goal", "summary": "Brand summary", "usp": "What makes it different", "mission": "Mission", "promise": "Brand promise", "differentiators": "Differentiators", "values": "Values", "proof": "Proof points", "price": "Price position", "cta": "Main call to action", "links": "Important links" },
-    "error": { "manager_only": "Only an owner or a manager can change the brand.", "invalid": "Some fields need attention.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "already_set_up": "This brand is already set up.", "already_generating": "The brand is already being set up. Please wait a moment.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not finish. Please try again.", "unknown": "The change could not be saved. Please try again." },
+    "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.", "manager_only": "Only an owner or a manager can change the brand.", "invalid": "Some fields need attention.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "already_set_up": "This brand is already set up.", "already_generating": "The brand is already being set up. Please wait a moment.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not finish. Please try again.", "unknown": "The change could not be saved. Please try again." },
     "snippets": { "title": "Hashtags and snippets", "intro": "Hashtag groups and lines you use often — a call to action, a sign-off, an address. The post panel puts them in with one click.", "groups": "Hashtag groups", "texts": "Snippets", "add_group": "Add a hashtag group", "add_text": "Add a snippet", "name": "Name", "tags": "Hashtags", "tags_hint": "Separate them with spaces.", "text": "Text", "remove": "Remove", "remove_confirm": "Remove “{{name}}”?", "none_groups": "No hashtag groups yet.", "none_texts": "No snippets yet.", "suggest": "Suggest hashtag groups with AI", "no_suggestions": "No more suggestions. Ask again for new ones.", "add_suggestion": "Add" },
     "keydates": { "title": "Key dates", "intro": "The holidays and special days the Plan shows. The team adds its own events and notes on the Plan itself.", "country": "Public holidays of", "auto": "Automatic: {{country}}", "auto_none": "Automatic: none found", "none": "No public holidays", "none_line": "No public holidays are shown.", "no_guess": "No public holidays until a country is chosen.", "guessed": "{{country}} (guessed from the venue’s time zone)", "marketing": "Marketing and international days" },
     "templates": { "title": "Templates", "intro": "Posts your team writes again and again, with [blanks] to fill. Use one from a day’s + menu or from the post panel.", "name": "Name", "platform": "Platform", "any_platform": "Any platform", "pillar": "Pillar", "blanks_hint": "Words in [square brackets] are blanks to fill, such as [treatment] or [date].", "add": "Add a template", "none": "No templates yet.", "remove": "Remove", "remove_confirm": "Remove “{{name}}”?", "suggest": "Suggest templates with AI", "no_suggestions": "No more suggestions. Ask again for new ones.", "add_suggestion": "Add" },
     "approvals": { "title": "Approvals", "intro": "Whether posts wait for a manager’s approval before they are ready.", "switch": "Posts need a manager’s approval", "on_line": "On: staff write, edit and send posts for approval; only managers approve, mark ready and publish.", "off_line": "Off: everyone can mark posts ready and published." }
   },
   "repeat": { "error": { "already_repeating": "This post already repeats.", "no_day": "Give the post a day first: a post repeats from its day.", "no_dates": "There is no day to repeat on before that date.", "too_many_copies": "A post repeats at most 26 times. Choose an earlier end date.", "until_too_far": "A post repeats for at most 12 months after its day.", "too_many_ai": "The AI rewrites at most 12 copies. Choose an earlier end date, or repeat the copies as they are.", "ai_budget_used_up": "This month's AI budget is used up. The copies can still repeat without rewording.", "not_found": "This post no longer exists.", "invalid": "Check the repeat: how often, and until when.", "unknown": "The post could not be repeated. Please try again." } },
-  "snippet": { "error": { "manager_only": "Only an owner or a manager can change hashtags and snippets.", "too_many_snippets": "A brand keeps at most 50 of each. Remove one first.", "invalid": "Give it a name and some text.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not suggest hashtags. Please try again.", "unknown": "The change could not be saved. Please try again." } },
+  "snippet": { "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.", "manager_only": "Only an owner or a manager can change hashtags and snippets.", "too_many_snippets": "A brand keeps at most 50 of each. Remove one first.", "invalid": "Give it a name and some text.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not suggest hashtags. Please try again.", "unknown": "The change could not be saved. Please try again." } },
   "keydate": { "error": { "invalid": "Give it a title and a first day.", "end_before_start": "The last day cannot be before the first.", "too_long": "An event lasts at most 31 days.", "too_many_key_dates": "A brand keeps at most 1,000 events and notes. Remove one first.", "not_found": "This key date no longer exists.", "no_profile": "This brand is not set up yet.", "unknown": "The key date could not be saved. Please try again." } },
   "idea": { "error": { "invalid": "Write the idea first.", "changed_elsewhere": "Someone else changed this post. The board now shows their version.", "not_found": "This post no longer exists.", "no_profile": "This brand is not set up yet.", "unknown": "The idea could not be saved. Please try again.", "needs_approval": "Only a manager can approve posts while approvals are on for this brand." } },
-  "template": { "error": { "manager_only": "Only an owner or a manager can change templates.", "invalid": "Give the template a name.", "too_many_tags": "A template keeps at most 30 hashtags.", "too_many_templates": "A brand keeps at most 100 templates. Remove one first.", "not_found": "This template no longer exists.", "no_profile": "This brand is not set up yet.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not suggest templates. Please try again.", "unknown": "The template could not be saved. Please try again." } },
+  "template": { "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.", "manager_only": "Only an owner or a manager can change templates.", "invalid": "Give the template a name.", "too_many_tags": "A template keeps at most 30 hashtags.", "too_many_templates": "A brand keeps at most 100 templates. Remove one first.", "not_found": "This template no longer exists.", "no_profile": "This brand is not set up yet.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not suggest templates. Please try again.", "unknown": "The template could not be saved. Please try again." } },
   "keydates": { "kind": { "holiday": "Public holiday", "marketing": "Marketing day", "industry": "International day", "event": "Event", "note": "Note" }, "substitute": "{{name}} (day off in lieu)", "observed": "{{name}} (observed)", "day": { "new_year": "New Year's Day", "good_friday": "Good Friday", "easter_sunday": "Easter Sunday", "easter_monday": "Easter Monday", "labour_day": "Labour Day", "ascension": "Ascension Day", "whit_monday": "Whit Monday", "pentecost": "Whitsunday (Pentecost)", "assumption": "Assumption Day", "all_saints": "All Saints' Day", "all_souls": "All Souls' Day", "midsummer": "Midsummer Day", "christmas_eve": "Christmas Eve", "christmas": "Christmas Day", "christmas_second": "Second Day of Christmas", "new_years_eve": "New Year's Eve", "mothers_day": "Mother's Day", "fathers_day": "Father's Day", "gb": { "early_may": "Early May bank holiday", "spring": "Spring bank holiday", "summer": "Summer bank holiday", "boxing_day": "Boxing Day" }, "ie": { "st_brigid": "St Brigid's Day", "st_patrick": "St Patrick's Day", "may": "May bank holiday", "june": "June bank holiday", "august": "August bank holiday", "october": "October bank holiday", "st_stephen": "St Stephen's Day" }, "de": { "unity": "Day of German Unity" }, "fr": { "victory": "Victory in Europe Day", "bastille": "Bastille Day", "armistice": "Armistice Day" }, "es": { "epiphany": "Epiphany", "national": "National Day of Spain", "constitution": "Constitution Day", "immaculate": "Immaculate Conception" }, "lv": { "independence": "Restoration of Independence Day", "ligo": "Midsummer Eve (Līgo Day)", "proclamation": "Proclamation Day of the Republic of Latvia" }, "lt": { "state": "Day of Restoration of the State", "independence": "Day of Restoration of Independence", "st_johns": "St John's Day", "statehood": "Statehood Day" }, "ee": { "independence": "Independence Day", "spring_day": "Spring Day", "victory": "Victory Day", "restoration": "Day of Restoration of Independence" }, "us": { "mlk": "Martin Luther King Jr. Day", "washington": "Washington's Birthday", "memorial": "Memorial Day", "juneteenth": "Juneteenth", "independence": "Independence Day", "labor": "Labor Day", "columbus": "Columbus Day", "veterans": "Veterans Day", "thanksgiving": "Thanksgiving Day" }, "valentines": "Valentine's Day", "womens_day": "International Women's Day", "halloween": "Halloween", "black_friday": "Black Friday", "world_health": "World Health Day", "world_heart": "World Heart Day", "world_mental_health": "World Mental Health Day", "yoga": "International Day of Yoga", "global_wellness": "Global Wellness Day", "global_running": "Global Running Day", "world_tourism": "World Tourism Day", "world_food": "World Food Day", "world_book": "World Book and Copyright Day", "literacy": "International Literacy Day", "teachers": "World Teachers' Day", "world_ip": "World Intellectual Property Day", "human_rights": "Human Rights Day", "world_habitat": "World Habitat Day", "msme": "Micro, Small and Medium-sized Enterprises Day" }, "write_for": "Write a post for it", "gone": "This day has gone; new posts start from today.", "new_event": "New event", "new_note": "New note", "edit_event": "Event", "edit_note": "Note", "title_field": "Title", "details": "Details (optional)", "first_day": "First day", "on_day": "Day", "last_day": "Last day (optional)", "note_hint": "Notes are for the team: the AI never sees them.", "delete": "Delete", "delete_confirm": "Delete this for everyone on the team?", "delete_yes": "Delete" },
   "ideas": { "title": "Ideas", "intro": "Posts without a day, by stage. Move a card to another stage, or schedule it onto the Plan.", "column": { "idea": "Idea", "draft": "Draft", "review": "In review", "ready": "Ready" }, "empty": "Nothing here yet.", "see_all": "See all: {{count}}", "schedule": "Schedule", "move_to": "Move to…", "move_hint": "Shift + ← or → moves the card to the stage beside it.", "stage": "Stage", "scheduled": "Scheduled for {{day}}.", "undo": "Undo", "schedule_title": "Schedule this post", "day": "Day", "time": "Time", "schedule_yes": "Schedule", "capture": "Add an idea…", "added": "Idea added.", "capture_title": "Add an idea", "capture_hint": "Press Enter to add it to the Ideas page. Add as many as you like." },
   "templates": { "pick_title": "Choose a template", "use": "Use", "write_ai": "Write with AI" },
@@ -439,7 +446,7 @@
   "flags": { "waiting": "Waiting for approval", "sent_back": "Sent back", "comments": "Comments: {{count}}", "versions": "Versions: {{count}}", "clicks": "Clicks: {{count}}" },
   "timeline": { "title": "Comments and history", "empty": "No comments yet.", "box": "Write a comment", "hint": "Enter sends · Shift + Enter adds a line", "send": "Comment", "edited": "edited", "edit": "Edit", "save": "Save", "delete": "Delete", "delete_confirm": "Delete this comment?", "delete_yes": "Delete comment", "event": { "sent_for_approval": "{{name}} sent it for approval", "approved": "{{name}} approved it", "sent_back": "{{name}} sent it back", "changed_after_approval": "{{name}} changed it after approval, so it needs approval again" } },
   "people": { "former": "Former team member" },
-  "bell": { "label": "For you", "label_count": "For you ({{count}})", "empty": "Nothing new for you.", "new": "New", "kind": { "waiting": "Waiting for approval: {{post}}", "approved": "{{name}} approved: {{post}}", "sent_back": "{{name}} sent back: {{post}}", "comment": "{{name}} commented: {{post}}", "to_post": "To post today: {{post}}", "not_posted": "Not marked as posted: {{post}}" }, "at": "at {{time}}", "due": "Due {{day}}", "morning": "Morning email: today’s posts", "morning_hint": "At 8 am, the posts you post today.", "morning_failed": "The setting could not be saved. Please try again.", "morning_hint_manager": "At 8 am, the posts you post today and those nobody is set to post." },
+  "bell": { "label": "For you", "label_count": "For you ({{count}})", "empty": "Nothing new for you.", "new": "New", "kind": { "waiting": "Waiting for approval: {{post}}", "approved": "{{name}} approved: {{post}}", "sent_back": "{{name}} sent back: {{post}}", "comment": "{{name}} commented: {{post}}", "mention": "{{name}} mentioned you: {{post}}", "to_post": "To post today: {{post}}", "not_posted": "Not marked as posted: {{post}}" }, "at": "at {{time}}", "due": "Due {{day}}", "morning": "Morning email: today’s posts", "morning_hint": "At 8 am, the posts you post today.", "morning_failed": "The setting could not be saved. Please try again.", "morning_hint_manager": "At 8 am, the posts you post today and those nobody is set to post." },
   "version": { "error": { "version_exists": "This post already has a version for that platform.", "ai_budget_used_up": "This month's AI budget is used up. Choose Copy as is.", "invalid": "Choose at least one platform.", "not_found": "This post no longer exists.", "unknown": "The versions could not be made. Please try again." } },
   "versions": { "title": "Versions", "intro": "The same post for other platforms. Each version is a post of its own.", "make": "Make versions…", "platforms": "For which platforms", "how": "How", "ai": "Adapt with AI", "copy": "Copy as is", "ai_paused": "This month’s AI budget is used up: the versions copy the text as it is.", "submit": "Make versions", "none_left": "This post has a version for every platform.", "this_one": "This post", "no_day": "No day", "unlink": "Unlink this post", "adapting": "Adapting for {{platform}}…", "adapting_others": "The AI is adapting the versions…", "kept_budget": "The AI budget ran out; this version keeps the original text.", "kept_failed": "The AI could not adapt this version; it keeps the original text.", "made": "Versions made: {{count}}" },
   "link": { "error": { "bad_link": "The link must be a web address that starts with http:// or https://.", "unknown": "The link could not be saved. Please try again." } },
@@ -449,7 +456,211 @@
   "unlink": { "error": { "not_found": "This post no longer exists.", "unknown": "The post could not be unlinked. Please try again." } },
   "site": { "error": { "bad_address": "Enter the website address, starting with https:// — a public site.", "already_scanning": "The website is already being read.", "too_many_scans": "A website can be read at most 20 times a day. Try again tomorrow.", "scan_running": "The website is being read. Try again when it is done.", "site_unreachable": "The website could not be reached. Check the address and try again.", "site_blocked": "The website's robots.txt does not let Content read it.", "nothing_found": "Nothing could be read on this website. Check the address and try again.", "scan_failed": "Reading the website stopped unexpectedly. Please try again.", "manager_only": "Only an owner or a manager can change the website.", "no_profile": "This brand is not set up yet.", "invalid": "Some fields need attention.", "unknown": "That did not work. Please try again.", "robots_unreachable": "The website's robots.txt could not be read (an error or no answer), so Content read nothing. Try again later." }, "scanned": "Scanned {{date}}. Articles: {{articles}} · Pages: {{pages}}", "scanning": "Reading your website… This takes a minute or two. You can leave this page.", "title": "Website", "intro": "Content reads your website to learn about the company and to find articles and pages to promote.", "address": "Website address", "address_hint": "For example https://example.com. A blog with its own address can be entered as it is, for example https://example.com/blog.", "scan": "Scan website", "scan_again": "Scan again", "update_summary": "Update the company summary", "replaces": "Scanning again replaces the company summary.", "none_staff": "Your manager has not added the website yet.", "empty": "Add your website address to find your blog articles and pages.", "open_promote": "Promote your articles and pages", "summary_title": "Company summary", "summary_intro": "What the AI knows about your company from your website. The AI reads it for every post it writes.", "summary_none": "No summary yet. Scan the website to write one.", "summary_edited": "Edited by hand", "summary_edit": "Edit summary", "summary_save": "Save summary" },
   "promote": { "error": { "already_promoting": "A promotion is already being written for this brand.", "period_too_short": "Not every post fits in these days: choose a longer period, a higher pace or fewer posts.", "too_many_posts": "One promotion writes at most 200 posts.", "no_channels": "None of these channels is active for this brand.", "page_not_found": "One of these pages is no longer in the list. Reload the page.", "scan_running": "The website is being read. Promote when it is done.", "range_in_past": "These days are already over.", "ai_budget_used_up": "This month's AI budget is used up.", "promotion_failed": "The promotion could not start. Please try again.", "manager_only": "Only an owner or a manager can promote pages.", "no_profile": "This brand is not set up yet.", "invalid": "Check the pages, channels, days and numbers.", "unknown": "The promotion could not start. Please try again." }, "dialog": { "fits": "Posts: {{count}} · {{from}} – {{to}}", "short": "Posts that fit in these days: {{fit}} of {{wanted}}. Choose a longer period, a higher pace or fewer posts.", "title": "Promote pages", "pages": "Pages chosen: {{count}}", "more": "More: {{count}}", "per_page": "Posts per page", "channels": "Channels", "no_channels": "This brand has no active channel to post on. Add one on the Brand page.", "from": "From", "to": "To", "per_week": "At most per week", "picture": "Use the page’s picture", "instructions": "Instructions for the AI (optional)", "checking": "Checking the days…", "drafts_note": "The posts land on your plan as drafts. You can change, move or delete each one.", "submit": "Promote", "problem": { "no_pages": "Choose at least one page.", "too_many_pages": "Choose at most 20 pages.", "no_channels": "Choose at least one channel.", "per_page": "Posts per page: from 1 to 15.", "per_week": "At most per week: from 1 to 21.", "too_many_posts": "One promotion writes at most 200 posts.", "order": "The last day cannot be before the first.", "too_long": "The period can be at most 183 days.", "past": "These days are already over." }, "bio_note": "Instagram and TikTok can’t open links in posts, so these posts say “link in bio”. On the Brand page, turn on Link-in-bio with “Show the latest posts that have a link”: each post’s link appears there once it is published." }, "not_promoted": "Not promoted yet", "numbers": "Posts: {{posts}} · Published: {{published}} · Clicks: {{clicks}}", "run": { "done": "Promotion posts added to your plan as drafts: {{count}}", "none": "No promotion posts were written.", "page_failed": "{{title}}: {{reason}}", "stopped": "Pages not written after Stop: {{count}}", "writing": "The AI is writing promotion posts. Pages done: {{done}} of {{count}}", "stop": "Stop", "open_plan": "Open the Plan" }, "title": "Promote", "intro": "Turn your blog articles and pages into posts that link to them.", "staff_note": "Only an owner or a manager can scan the website or promote pages.", "tabs": "Kinds of pages", "tab_articles": "Blog articles ({{count}})", "tab_pages": "Other pages ({{count}})", "no_articles": "No blog articles were found. If your blog has its own address, enter it — for example https://example.com/blog — and scan again.", "no_pages": "No other pages were found.", "choose": "Choose {{title}}", "not_seen": "Not found on the last scan", "show_posts": "Show posts", "hide_posts": "Hide posts", "no_posts": "No posts left for this page.", "remove": "Remove draft posts", "remove_confirm": "Remove this page's posts that are still drafts? Approved and published posts stay.", "remove_yes": "Remove", "removed": "Draft posts removed: {{count}}", "selected": "Selected: {{count}}", "clear": "Clear", "start": "Promote…", "limit": "You can choose up to 20 pages at a time." },
-  "promotion": { "error": { "ai_failed": "The AI could not write these posts.", "ai_incomplete": "The AI wrote fewer posts than asked.", "ai_budget_used_up": "This month's AI budget ran out.", "page_gone": "This page is no longer in the list.", "promotion_failed": "Writing stopped unexpectedly.", "unknown": "These posts could not be written." } },
-  "summary": { "error": { "ai_budget_used_up": "This month's AI budget is used up, so the company summary was not updated.", "ai_failed": "The AI could not write the company summary this time; the list of pages is up to date.", "unknown": "The company summary was not updated." } },
-  "drafts": { "error": { "already_promoting": "Wait until the promotion being written is done.", "not_found": "This page is no longer in the list.", "manager_only": "Only an owner or a manager can remove posts.", "unknown": "The posts could not be removed. Please try again.", "no_profile": "This brand is not set up yet." } }
+  "promotion": { "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.", "ai_failed": "The AI could not write these posts.", "ai_incomplete": "The AI wrote fewer posts than asked.", "ai_budget_used_up": "This month's AI budget ran out.", "page_gone": "This page is no longer in the list.", "promotion_failed": "Writing stopped unexpectedly.", "unknown": "These posts could not be written." } },
+  "summary": { "error": {
+      "ai_model_unpriced": "Ask an administrator to check the AI setup before trying again.", "ai_budget_used_up": "This month's AI budget is used up, so the company summary was not updated.", "ai_failed": "The AI could not write the company summary this time; the list of pages is up to date.", "unknown": "The company summary was not updated." } },
+  "drafts": { "error": { "already_promoting": "Wait until the promotion being written is done.", "not_found": "This page is no longer in the list.", "manager_only": "Only an owner or a manager can remove posts.", "unknown": "The posts could not be removed. Please try again.", "no_profile": "This brand is not set up yet." } },
+  "launch": {
+    "manual_handoff": "Publish this post manually on your channel. Copy the caption and open the assets when you are ready.",
+  "publishing_details": "Publishing details",
+  "save_published": "Save and mark published",
+  "manual_record": "This records that you published manually. HexaTech does not send this post to a social network.",
+  "media": "Media library",
+  "search_media": "Search media",
+  "archived": "Archived",
+  "upload": "Upload asset",
+  "upload_limit": "JPEG, PNG, WebP, MP4, WebM or PDF. Up to {{mb}} MB per file.",
+  "media_failed": "The asset could not be loaded or saved. Check its type and size, then try again.",
+  "media_usage": "Used in {{count}} posts",
+  "detach": "Detach",
+  "attach": "Attach",
+  "open_asset": "Open asset",
+  "restore": "Restore",
+  "archive": "Archive",
+  "no_media": "No assets here yet. Upload one to reuse in your posts.",
+  "attachments": "Post assets",
+  "choose_media": "Choose media",
+  "move_up": "Move up",
+  "move_down": "Move down",
+  "full_editor": "Full editor",
+  "open_panel": "Open in panel",
+  "editor_view": "Editor view",
+  "preview": "Preview",
+  "preview_empty": "Your caption will appear here.",
+  "characters": "{{count}} characters",
+  "caption_long": "This caption exceeds the platform limit. You can still save your draft.",
+  "include_destination": "Include destination URL",
+  "bio_hint": "For Instagram and TikTok, place the destination in your link-in-bio page.",
+  "copy_caption": "Copy final caption",
+  "open_channel": "Open channel",
+  "settings": "Content settings",
+  "planning_zone": "Planning time zone",
+  "zone_consequence": "This is the shared account clock for Content plans, reminders and morning emails, appointments, the member portal and dashboards. Existing dates and times keep their written digits; they are not moved.",
+  "zone_unset": "The planning clock uses UTC. Choose a time zone for your account.",
+  "choose_zone": "Choose a time zone",
+  "save_zone": "Save account time zone",
+  "planning_clock": "Planning time: {{zone}}",
+  "locations": "Locations",
+  "add_location": "Add location",
+  "location_count": "{{used}} locations across this account",
+  "location_name": "Name",
+  "location_address": "Address",
+  "location_city": "City",
+  "location_country": "Country",
+  "location_email": "Email",
+  "location_phone": "Phone",
+  "location_website": "Website",
+  "location_zone": "Location time zone",
+  "location_clock": "Location changes do not change the account planning clock. Inactive locations still count toward your plan.",
+  "location_failed": "The location could not be saved. Check the fields and your plan’s location allowance.",
+  "active": "Active",
+  "inactive": "Inactive",
+  "sections": "Sections",
+  "section_overview": "Overview",
+  "section_website": "Website",
+  "section_identity": "Identity",
+  "section_audiences": "Audiences",
+  "section_voice": "Voice",
+  "section_positioning": "Positioning",
+  "section_channels": "Channels",
+  "section_locations": "Locations",
+  "section_links": "Links",
+  "section_dates": "Dates & approvals",
+  "section_reusable": "Reusable content",
+  "section_rhythm": "Rhythm",
+  "work_running": "AI work is in progress. You can leave and return.",
+  "work_cancelled": "AI work cancelled. Earlier saved changes remain.",
+  "work_uncertain": "The start response was interrupted. Reconnect to this same request before starting another.",
+  "reconnect": "Reconnect",
+  "cancel_work": "Cancel AI work"
+},
+  "collaboration": {
+    "asset": "Attachment",
+    "mentions": "Mentioned",
+    "media_select": "Discuss an attachment",
+    "whole_post": "Whole post",
+    "detached": "Attachment no longer attached — choose again",
+    "mention_select": "Mention teammates",
+    "clear_mentions": "Clear selected mentions",
+    "selection_failed": "The attachment or team selection changed. Choose again below; your comment is kept.",
+    "email": "Email me about reviews and mentions",
+    "email_hint": "Off until you choose it. Sends review updates and explicit mentions you receive in Content. Morning email is a separate setting."
+  },
+  "guide": {
+    "title": "Content guide",
+    "heading": "From first idea to published post",
+    "intro": "Choose a task for a short walkthrough, then continue in your workspace. Opening this guide never starts AI work or a website scan.",
+    "search": "Find a task",
+    "filter": "Filter tasks",
+    "empty": "No matching tasks. Try a different word or choose All.",
+    "setup_manager": "Start with Brand setup, then choose your account time zone and channel rhythm.",
+    "setup_staff": "Ask a manager to finish the brand profile, choose a planning time zone and enable your channels.",
+    "media_limit": "The uploader shows the current server limit before you choose a file.",
+    "groups": {
+      "all": "All",
+      "start": "Get started",
+      "create": "Create",
+      "collaborate": "Collaborate",
+      "share": "Share"
+    },
+    "actions": {
+      "brand": "Set up brand",
+      "settings": "Content settings",
+      "channels": "Channels",
+      "rhythm": "Rhythm",
+      "write": "Write a post",
+      "plan": "Open plan",
+      "review": "Posts in review",
+      "approval_settings": "Approval settings",
+      "media": "Media library",
+      "posts": "Open posts",
+      "website": "Website setup",
+      "promote": "Promote pages",
+      "links": "Link-in-bio",
+      "ready": "Ready posts"
+    },
+    "tasks": {
+      "setup": {
+        "title": "Set up your brand and planning clock",
+        "body": "In Brand, add identity, audience and voice. Guided setup saves each step; review AI suggestions before keeping them.\nIn Content settings, explicitly choose the account time zone. It also affects reminders, appointments, the member portal and dashboards; stored dates and times keep their written digits. Locations and weather do not choose the planning clock.\nEnable channels and choose weekdays and usual times. Set weekly goals in Rhythm."
+      },
+      "week": {
+        "title": "Plan your first week",
+        "body": "Open Plan and choose the week. Empty slots follow your active channels; if none appear, ask a manager to configure Channels.\nWrite a post yourself or use Fill with AI. Managers can Generate a week. Watch progress, review every draft, then choose who posts it and when. Nothing is published automatically."
+      },
+      "approvals": {
+        "title": "Review, comment and mention your team",
+        "body": "Managers enable approvals in Brand → Dates & approvals. Staff send drafts for approval; managers approve or send back with a note. Changing approved words or attachments as staff requires a new review.\nIn Comments and history, select teammates explicitly to mention them. Typed @names alone notify nobody. Choose a saved attachment to discuss it; that context remains after detach or archive. Edits change comment text only.\nThe bell shows your news. Review and mention email is off until you enable it in Content settings; morning email is separate."
+      },
+      "media": {
+        "title": "Upload, reuse and discuss media",
+        "body": "Upload verified JPEG, PNG, WebP, MP4, WebM or PDF files in Media library. The uploader shows the current server size limit; check it before choosing a file.\nAttach up to ten saved assets in the composer, reorder them and save. Open asset opens the stored file; video and PDF support depends on your browser. Managers can archive and restore assets without deleting files or past discussion.\nTo leave feedback on one asset, save the attachment first, then select it under Comments and history."
+      },
+      "versions": {
+        "title": "Make platform versions and repeat posts",
+        "body": "Open a saved post and choose Make versions for its other platforms. Copy as is or deliberately request AI adaptation; inspect the result before publishing. If AI cannot finish, the original words remain with an explanation.\nA dated post can repeat weekly or monthly within the form’s limits. Review each copy and its date. Stopping a series removes future unpublished copies; published history remains."
+      },
+      "links": {
+        "title": "Promote your website and track links",
+        "body": "A manager adds the website in Brand → Website and explicitly starts Scan. With no scanned pages, scan first; check the found pages and any failures before promoting them.\nIn Promote, choose pages, channels and dates, preview the plan and start it. You can stop work; drafts already made remain.\nAdd a destination in a post’s Link field and save to create its tracked short link. Managers can configure Link-in-bio in Brand → Links. Review destinations before sharing."
+      },
+      "publish": {
+        "title": "Publish manually, then record it",
+        "body": "Save the post and review its final caption and media in Preview. Copy the caption, open each asset and open the channel. Paste and publish in the social platform yourself.\nReturn to Content and mark the post published, optionally adding its public URL. Save and mark published records your explicit choice; copying, previewing and ordinary saves do not publish to a network.\nWhen approvals are on, only permitted staff can record publication; the assigned poster may mark an approved or ready post published."
+      },
+      "ai": {
+        "title": "Handle AI limits, failures and cancellation",
+        "body": "AI uses the organisation’s shared monthly allowance. At the cap, AI pauses; manual writing and editing continue. Ask an administrator to check configuration if the selected model is unavailable or unpriced.\nA queued action shows its progress. Cancel while the control is available; changes already committed remain. If a connection drops, reconnect to the same request. After a definite failure, read the explanation before deliberately retrying.\nA newer human edit wins over an older AI result. Rewrite suggestions need Use this text before they replace your draft."
+      },
+      "exports": {
+        "title": "Export your plan",
+        "body": "On Posts, select the filters for your export. CSV includes matching undated posts with empty date and time. Calendar (ICS) includes scheduled posts only; a dated post without a time is an all-day event.\nTimed calendar entries use your saved planning time zone. Refine the filters if the selection is empty or exceeds 5,000 posts; exports never silently truncate."
+      }
+    },
+    "next_channels": "No active channels? Set up your rhythm",
+    "next_manual": "No active channels? Start a manual draft",
+    "next_scan": "No scanned pages? Set up your website"
+  },
+  "campaigns": {
+    "title": "Campaigns",
+    "campaign": "Campaign",
+    "all": "All campaigns",
+    "none": "No campaign",
+    "unavailable": "Saved campaign",
+    "add": "Add campaign",
+    "edit": "Edit campaign",
+    "name": "Name",
+    "goal": "Goal",
+    "brief": "Brief",
+    "start_date": "Start date",
+    "end_date": "End date",
+    "draft": "Draft",
+    "active": "Active",
+    "paused": "Paused",
+    "completed": "Completed",
+    "archived": "Archived",
+    "history": "Archiving keeps associated posts and existing tracked links. Dates guide the brief; they do not move posts.",
+    "save_failed": "The campaign could not be saved. Check its name and date range, then try again.",
+    "intro": "Keep a goal, dates and brief together, then assign posts or select the campaign when generating drafts.",
+    "setup": "Set up this brand before creating a campaign.",
+    "no_match": "No campaigns match this status.",
+    "empty": "No campaigns yet. A manager can add the first brief.",
+    "posts": "View posts"
+  },
+  "exports": {
+    "title": "Export filtered posts",
+    "plan": "Exports the displayed date range and chosen platforms/status. The undated tray is separate; use Posts to export it.",
+    "selection": "Exports all matching posts, across every page, up to 5,000. Refine the filters for larger selections.",
+    "schedule": "CSV can include undated posts. ICS includes scheduled posts only; dates without a time become all-day events. Timed events use the saved planning time zone.",
+    "csv_note": "For spreadsheet viewing, formula-like cells receive a leading tab. Programmatic imports may retain it; safety can change after saving and re-importing in a spreadsheet.",
+    "csv": "Download CSV",
+    "ics": "Download calendar (ICS)",
+    "preparing": "Preparing download…",
+    "done": "Download prepared.",
+    "empty": "No exportable posts match. ICS needs a scheduled date; adjust the filters or choose CSV.",
+    "too_many": "More than 5,000 posts match. Refine the filters and export again.",
+    "failed": "The export could not be prepared. Please try again."
+  }
+
 }

@@ -95,7 +95,10 @@ final class ContentBrandEditor
     public function deleteAudience(ContentPlannerProfile $profile, ContentPlannerAudience $audience): void
     {
         DB::transaction(function () use ($audience) {
-            ContentPlannerPost::where('audience_id', $audience->id)->update(['audience_id' => null]);
+            // Clearing the predicate shrinks the result set: advance by id, never by an offset into the remaining rows.
+            ContentPlannerPost::where('audience_id', $audience->id)->orderBy('id')->lockForUpdate()->eachById(
+                fn (ContentPlannerPost $post) => $post->update(['audience_id' => null])
+            );
             ContentPlannerChannel::where('audience_id', $audience->id)->update(['audience_id' => null]);
             $audience->delete();
         });

@@ -8,8 +8,10 @@ use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentApproval;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentLinks;
+use App\Services\Content\ContentMediaLibrary;
 use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
+use App\Services\Content\ContentPostWrites;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
 use App\Services\Content\ContentTeam;
@@ -32,36 +34,11 @@ class PostController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'q'           => 'nullable|string|max:100',
-            'status'      => ['nullable', Rule::in(ContentRules::STATUSES)],
-            'platform'    => ['nullable', Rule::in(ContentRules::PLATFORMS)],
-            'pillar_id'   => 'nullable|integer',
-            'from'        => 'nullable|date_format:Y-m-d',
-            'to'          => 'nullable|date_format:Y-m-d|after_or_equal:from',
-            'unscheduled' => 'nullable|boolean',
-            'page'        => 'nullable|integer|min:1',
-        ]);
-        $profile = ContentContext::profile();
-        if (!$profile) {
+        $data = \App\Services\Content\ContentPostQuery::filters($request, true);
+        if (!ContentContext::profile()) {
             return response()->json(['data' => [], 'meta' => ['page' => 1, 'pages' => 0, 'total' => 0]]);
         }
-
-        $query = ContentPlannerPost::with(self::WITH)->withReview()
-            ->where('planner_profile_id', $profile->id)
-            // Archived posts are put away: listed only when asked for by their status.
-            ->when($data['status'] ?? null, fn ($q, $status) => $q->where('status', $status), fn ($q) => $q->where('status', '!=', 'archived'))
-            ->when($data['platform'] ?? null, fn ($q, $platform) => $q->where('platform', $platform))
-            ->when($data['pillar_id'] ?? null, fn ($q, $pillar) => $q->where('pillar_id', $pillar))
-            ->when($data['from'] ?? null, fn ($q, $from) => $q->whereDate('scheduled_date', '>=', $from))
-            ->when($data['to'] ?? null, fn ($q, $to) => $q->whereDate('scheduled_date', '<=', $to))
-            ->when($request->boolean('unscheduled'), fn ($q) => $q->whereNull('scheduled_date'))
-            ->when(trim((string) ($data['q'] ?? '')) !== '', fn ($q) => ContentPlan::search($q, $data['q']))
-            // Newest scheduled first; untimed after timed within a day; posts without a date last (PostgreSQL sorts NULL first).
-            ->orderByRaw('CASE WHEN scheduled_date IS NULL THEN 1 ELSE 0 END')
-            ->orderByDesc('scheduled_date')
-            ->orderByRaw('CASE WHEN scheduled_time IS NULL THEN 1 ELSE 0 END')
-            ->orderByDesc('scheduled_time')->orderByDesc('id');
+        $query = \App\Services\Content\ContentPostQuery::query($data)->with(self::WITH)->withReview();
 
         $page = $query->paginate(50, ['*'], 'page', (int) ($data['page'] ?? 1));
 
@@ -107,9 +84,10 @@ class PostController extends Controller
         // The post, its short link and its approval step are one write (5B-1 review): a Link that cannot be written
         // leaves no post behind.
         $post = DB::transaction(function () use ($data, $profile, $request, $link) {
+            ContentMediaLibrary::assertSelectable($data['media_ids'] ?? []);
             $post = ContentPlannerPost::create(array_merge(
                 ['status' => 'draft', 'language' => $profile->default_language ?: 'en'],
-                $data,
+                Arr::except($data, ['media_ids']),
                 [
                     'planner_profile_id' => $profile->id,
                     'brand_id'           => $profile->brand_id,
@@ -120,6 +98,7 @@ class PostController extends Controller
             if ($link !== null) {
                 ContentLinks::set($post, $link);
             }
+            ContentMediaLibrary::set($post, $data['media_ids'] ?? []);
             if ($kind = ContentApproval::onCreate($post, $request->user(), $profile)) {
                 ContentApproval::record($post, $kind, $request->user()->id);
             }
@@ -144,7 +123,8 @@ class PostController extends Controller
         $link = $request->has('link') ? ContentLinks::clean($request->input('link')) : null;
         $linkChanges = $request->has('link') && ContentLinks::changes($post, $link);
 
-        $fields = Arr::except($data, ['updated_at']);
+        $fields = Arr::except($data, ['updated_at', 'media_ids']);
+        $mediaIds = isset($data['media_ids']) ? array_map('intval', $data['media_ids']) : null;
         ContentTeam::assertPoster($fields['poster_id'] ?? null, $post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id);
         if ($post->status === 'published' && array_key_exists('scheduled_date', $fields)
             && $fields['scheduled_date'] !== $post->scheduled_date?->format('Y-m-d')) {
@@ -157,8 +137,7 @@ class PostController extends Controller
         // The save, its short link and its approval step are one write (5B-1 review); a post keeps one post per platform in
         // its group (5A-1 review) — checked under the group's lock, also for a post that had no group when it was read.
         $platformChanges = array_key_exists('platform', $fields) && $fields['platform'] !== $post->platform;
-        DB::transaction(function () use ($post, $fields, $linkChanges, $link, $before, $request, $profile, $platformChanges, $data) {
-            self::lockForWrite($post, $platformChanges, $data['updated_at']);
+        $post = self::write($post, $platformChanges, function (ContentPlannerPost $post) use ($fields, $linkChanges, $link, $before, $request, $profile, $platformChanges, $mediaIds) {
             if ($platformChanges) {
                 ContentVersions::assertPlatformFree($post, (string) $fields['platform']);
             }
@@ -167,12 +146,13 @@ class PostController extends Controller
             if ($post->scheduled_date === null) {
                 $post->scheduled_time = null;
             }
-            if ($linkChanges) {
-                // Its version moves on, so a panel still holding the old Link cannot save it back (F3).
-                $post->updated_at = $post->freshTimestamp();
-            }
-            $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile, $linkChanges);
-            $post->save();
+            $existingMedia = ContentMediaLibrary::ids($post);
+            if ($mediaIds !== null) ContentMediaLibrary::assertSelectable($mediaIds, $existingMedia);
+            $mediaChanges = $mediaIds !== null && $mediaIds !== $existingMedia;
+            $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile, $linkChanges || $mediaChanges);
+            // The link lives on a separate row but still changes this revision, including under a frozen clock.
+            ($linkChanges || $mediaChanges) ? $post->touch() : $post->save();
+            if ($mediaChanges) ContentMediaLibrary::set($post, $mediaIds);
             if ($linkChanges) {
                 ContentLinks::set($post, $link);
             } elseif ($post->wasChanged(['platform', 'campaign_id'])) {
@@ -181,7 +161,7 @@ class PostController extends Controller
             if ($kind) {
                 ContentApproval::record($post, $kind, $request->user()->id);
             }
-        }, self::ATTEMPTS);
+        });
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -203,8 +183,7 @@ class PostController extends Controller
         }
         ContentTeam::assertPoster($data['poster_id'] ?? null, $post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id);
 
-        DB::transaction(function () use ($post, $data) {
-            self::lockForWrite($post, false, $data['updated_at']);
+        $post = app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $post) use ($data) {
             $post->scheduled_date = $data['scheduled_date'];
             if (array_key_exists('scheduled_time', $data)) {
                 $post->scheduled_time = $data['scheduled_time'];
@@ -217,7 +196,7 @@ class PostController extends Controller
                 $post->scheduled_time = null;
             }
             $post->save();
-        }, self::ATTEMPTS);
+        });
 
         return response()->json(['post' => ContentPostPresenter::card($post->fresh(self::WITH))]);
     }
@@ -233,18 +212,21 @@ class PostController extends Controller
         $copy->save();
         // Its own short link to the same address (spec 2026-10-19 §5.1).
         ContentLinks::copyTo($original, [$copy]);
+        ContentMediaLibrary::copyTo($original, [$copy]);
 
         return response()->json(['post' => ContentPostPresenter::detail($copy->fresh(self::WITH))], 201);
     }
 
     public function markReady(Request $request, int $id): JsonResponse
     {
+        $data = $request->validate(['updated_at' => 'required|string']);
         $post = self::find($id);
         // Under the post's lock, from its status as it is now: a post sent back meanwhile is not recorded as approved.
-        DB::transaction(function () use ($post, $request) {
+        DB::transaction(function () use ($post, $request, $data) {
             self::lockRow($post);
             $before = (string) $post->status;
             ContentApproval::guardStatus('ready_to_publish', $before, $request->user(), ContentContext::profile());
+            ContentPostWrites::assertFresh($post, $data['updated_at']);
             $post->update(['status' => 'ready_to_publish']);
             ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
         }, self::ATTEMPTS);
@@ -254,14 +236,15 @@ class PostController extends Controller
 
     public function markPublished(Request $request, int $id): JsonResponse
     {
-        $data = $request->validate(['published_url' => 'nullable|url|max:255']);
+        $data = $request->validate(['updated_at' => 'required|string', 'published_url' => 'nullable|url|max:255']);
         $post = self::find($id);
         // Under the post's lock, from its status as it is now: the poster cannot publish a post taken back meanwhile.
         DB::transaction(function () use ($post, $request, $data) {
             self::lockRow($post);
             $before = (string) $post->status;
             ContentApproval::guardPublish($post, $request->user(), ContentContext::profile());
-            $post->update(['status' => 'published', 'published_at' => now(), 'published_url' => $data['published_url'] ?? null]);
+            ContentPostWrites::assertFresh($post, $data['updated_at']);
+            $post->update(['status' => 'published'] + (array_key_exists('published_url', $data) ? ['published_url' => $data['published_url']] : []));
             ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
         }, self::ATTEMPTS);
 
@@ -302,19 +285,11 @@ class PostController extends Controller
     /**
      * A save or a move made from a copy someone else has changed since is
      * refused, with the post as it is now (spec 2026-10-14 §7, F3). Versions
-     * compare to the second, the precision the column keeps.
+     * compare the complete instant, including all six fractional digits.
      */
     public static function assertFresh(ContentPlannerPost $post, string $seen): void
     {
-        $sent = rescue(fn () => CarbonImmutable::parse($seen), null, false);
-        if ($sent === null || $post->updated_at === null || $sent->getTimestamp() !== $post->updated_at->getTimestamp()) {
-            throw new ContentRefused(
-                'changed_elsewhere',
-                'Someone else changed this post — reload to see their version.',
-                409,
-                ['post' => ContentPostPresenter::detail($post->fresh(self::WITH))],
-            );
-        }
+        ContentPostWrites::assertFresh($post, $seen);
     }
 
     /**
@@ -323,17 +298,19 @@ class PostController extends Controller
      * post — and the post read again, still the version the panel saw. A write that passed its check just before someone
      * else's landed would otherwise overwrite it (F3; owner, 2026-10-20).
      */
-    private static function lockForWrite(ContentPlannerPost $post, bool $platformChanges, string $seen): void
+    private static function write(ContentPlannerPost $post, bool $platformChanges, callable $write): ContentPlannerPost
     {
-        if ($platformChanges) {
-            try {
-                ContentVersions::lockGroup($post);
-            } catch (ModelNotFoundException) {
-                throw self::gone();
+        $snapshot = clone $post;
+        return DB::transaction(function () use ($post, $snapshot, $platformChanges, $write) {
+            if ($platformChanges) {
+                try {
+                    ContentVersions::lockGroup($post);
+                } catch (ModelNotFoundException) {
+                    throw self::gone();
+                }
             }
-        }
-        self::lockRow($post);
-        self::assertFresh($post, $seen);
+            return app(ContentPostWrites::class)->apply($snapshot, $write);
+        }, self::ATTEMPTS);
     }
 
     private static function refusePublishedMove(): never

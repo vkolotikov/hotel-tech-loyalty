@@ -61,6 +61,9 @@ to its own area; the Time Planner's also behind the plan's `time_management`, li
 Reads only:
 
 - `timezone`, `now`, `today`: the venue's (`AppointmentClock::zoneFor()`), never the browser's.
+  Content alone pins these to its saved planning zone, including unset UTC, to match its bootstrap and reminders;
+  its pulse also answers `timezone_named`. Its weather remains available and uses that planning clock. See
+  `docs/content-workspace.md` "Launch: planning settings and purchased locations".
 - `currency`: `PortalBootstrap::currency()`.
 - `place`: the first location (`properties`) with a city, active ones first; otherwise the city a named zone carries
   (`Europe/Riga` → Riga, `source: timezone`); UTC names no place.

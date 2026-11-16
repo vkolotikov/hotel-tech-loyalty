@@ -32,9 +32,11 @@ class CalendarGenerationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-07 06:00:00'));
         Http::preventStrayRequests();
         config(['services.anthropic.api_key' => 'calendar-test-key']);
         $this->setUpKnowledgeSchema();
+        $this->setUpPropertySchema();
         // Each migration only where the database lacks what it makes: a database built from
         // every migration (PostgreSQL) has them all already.
         if (!Schema::hasTable('content_planner_profiles')) {

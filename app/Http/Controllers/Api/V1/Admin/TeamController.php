@@ -197,22 +197,18 @@ class TeamController extends Controller
             return response()->json(['error' => 'Only super-admins can invite super-admins.'], 403);
         }
 
-        // Plan-cap check. Skip when the email already maps to an existing
-        // staff record in this org — re-inviting an existing teammate
-        // doesn't add to the count and shouldn't be blocked.
-        $existingStaff = Staff::withoutGlobalScopes()
-            ->whereHas('user', fn ($q) => $q->where('email', $email))
-            ->where('organization_id', $orgId)
-            ->exists();
-        if (!$existingStaff) {
-            if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM)) {
-                return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
-            }
-        }
-
         try {
             $result = DB::transaction(function () use ($validated, $email, $orgId) {
                 Organization::whereKey($orgId)->lockForUpdate()->firstOrFail();
+                // Read seats only after locking: invitations and reactivations compete
+                // for the same quota. A resend preserves existing access/active status.
+                $existingStaff = Staff::withoutGlobalScopes()
+                    ->whereHas('user', fn ($q) => $q->where('email', $email)->where('user_type', 'staff'))
+                    ->where('organization_id', $orgId)
+                    ->exists();
+                if (!$existingStaff && ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM))) {
+                    return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
+                }
                 // Reuse an existing user in THIS org with THIS email.
                 // Migration `2026_05_25_120000_users_email_unique_per_org_for_staff`
                 // replaced the global users.email unique with two partial
@@ -292,6 +288,7 @@ class TeamController extends Controller
             Log::error('Team invite failed', ['error' => $e->getMessage(), 'email' => $email]);
             return response()->json(['error' => 'Could not create the invite: ' . $e->getMessage()], 500);
         }
+        if ($result instanceof JsonResponse) return $result;
 
         // Send the invite email outside the transaction so an SMTP hiccup
         // doesn't roll back the user creation. Admin can always Resend.
@@ -480,9 +477,20 @@ class TeamController extends Controller
      */
     public function reactivate(Request $request, int $id): JsonResponse
     {
+        return DB::transaction(function () use ($request, $id) {
+            Organization::whereKey(app('current_organization_id'))->lockForUpdate()->firstOrFail();
+            return $this->reactivateLocked($request, $id);
+        });
+    }
+
+    private function reactivateLocked(Request $request, int $id): JsonResponse
+    {
         $staff = Staff::findOrFail($id);
         if ($staff->role === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {
             return response()->json(['error' => 'Only super-admins can change a super-admin.'], 403);
+        }
+        if (!$staff->is_active && ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM))) {
+            return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
         }
         $staff->update(['is_active' => true]);
 

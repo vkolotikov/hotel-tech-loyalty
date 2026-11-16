@@ -59,7 +59,7 @@ class RepeatController extends Controller
         if ($request->boolean('ai_rewrite')) {
             // The panel shows "rewording…" until the job forgets this (or 15 minutes pass).
             ContentRepeat::markRewriting((int) $post->id, true);
-            RewriteRepeatCopies::dispatch((int) $post->id, ContentContext::orgId(), ContentContext::brandId(), $copies->pluck('id')->map(fn ($copyId) => (int) $copyId)->all());
+            RewriteRepeatCopies::dispatch((int) $post->id, ContentContext::orgId(), ContentContext::brandId(), $copies->pluck('id')->map(fn ($copyId) => (int) $copyId)->all(), (int)$request->user()->id);
         }
 
         return response()->json([

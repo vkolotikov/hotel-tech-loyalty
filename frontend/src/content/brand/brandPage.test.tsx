@@ -24,14 +24,14 @@ describe('BrandPage', () => {
     expect(html).not.toContain('Company info') // the server's English label is never shown
   })
 
-  it('reads Brand DNA to everyone, and offers Edit and Refresh knowledge only to managers', () => {
-    const staff = renderBrand(brandWith(), false)
+  it('reads Identity, Voice and Positioning through their sections; only managers can edit and refresh', () => {
+    const staff = ['identity', 'voice', 'positioning'].map(section => renderBrand(brandWith(), false, undefined, section)).join('')
     expect(staff).toContain('Organic colour only')
     expect(staff).toContain('Calm')
     expect(staff).toContain('Premium')
     expect(staff).not.toContain('>Edit<')
     expect(staff).not.toContain('Refresh knowledge')
-    const manager = renderBrand(brandWith(), true)
+    const manager = renderBrand(brandWith(), true, undefined, 'identity') + renderBrand(brandWith(), true)
     expect(manager).toContain('>Edit<')
     expect(manager).toContain('Refresh knowledge')
   })

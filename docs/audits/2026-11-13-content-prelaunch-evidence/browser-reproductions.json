@@ -1,0 +1,320 @@
+{
+  "createdAt": "2026-11-13T08:53:11.407Z",
+  "scope": "Production React components; fake in-memory API, no production network or data",
+  "checks": [
+    {
+      "name": "Create drops newer typing",
+      "before": {
+        "target": {
+          "kind": "new",
+          "draft": {
+            "date": "2026-11-13",
+            "platform": "linkedin"
+          },
+          "seq": 1
+        },
+        "dirty": true,
+        "pending": [
+          {
+            "method": "POST",
+            "url": "/v1/admin/content/posts?brand_id=3",
+            "body": {
+              "platform": "linkedin",
+              "scheduled_date": "2026-11-13",
+              "scheduled_time": "09:00",
+              "status": "draft",
+              "hook": "Submitted hook"
+            }
+          }
+        ],
+        "saved": {},
+        "hook": "Typed after clicking Create",
+        "brand": "{\"brand\":3,\"target\":{\"kind\":\"new\",\"draft\":{\"date\":\"2026-11-13\",\"platform\":\"linkedin\"},\"seq\":1},\"dirty\":false}"
+      },
+      "after": {
+        "target": {
+          "kind": "post",
+          "id": 101,
+          "seq": 2
+        },
+        "dirty": false,
+        "pending": [],
+        "saved": {
+          "101": {
+            "id": 101,
+            "platform": "linkedin",
+            "scheduled_date": "2026-11-13",
+            "scheduled_time": "09:00",
+            "status": "draft",
+            "title": null,
+            "hook": "Submitted hook",
+            "topic": "",
+            "pillar_id": null,
+            "image_url": null,
+            "updated_at": "2026-11-13T06:00:00Z",
+            "language": "en",
+            "goal": null,
+            "format": null,
+            "main_copy": "",
+            "short_copy": null,
+            "cta": null,
+            "hashtags": [],
+            "audience_id": null,
+            "campaign_id": null,
+            "weekday_role": null,
+            "funnel_stage": null,
+            "post_type": null,
+            "strategic_reason": null,
+            "quality": null,
+            "published_url": null,
+            "published_at": null,
+            "generated_by": "manual",
+            "hook_alternatives": [],
+            "visual_brief": null,
+            "poster": null,
+            "group": null,
+            "series": null,
+            "timeline": []
+          }
+        },
+        "hook": "Submitted hook",
+        "brand": "{\"brand\":3,\"target\":{\"kind\":\"post\",\"id\":101,\"seq\":2},\"dirty\":false}"
+      },
+      "reproduced": true
+    },
+    {
+      "name": "Saved-post undo during Save is overwritten",
+      "before": {
+        "target": {
+          "kind": "post",
+          "id": 101,
+          "seq": 2
+        },
+        "dirty": false,
+        "pending": [
+          {
+            "method": "PUT",
+            "url": "/v1/admin/content/posts/101?brand_id=3",
+            "body": {
+              "hook": "Replacement sent with Save",
+              "updated_at": "2026-11-13T06:00:00Z"
+            }
+          }
+        ],
+        "saved": {
+          "101": {
+            "id": 101,
+            "platform": "linkedin",
+            "scheduled_date": "2026-11-13",
+            "scheduled_time": "09:00",
+            "status": "draft",
+            "title": null,
+            "hook": "Submitted hook",
+            "topic": "",
+            "pillar_id": null,
+            "image_url": null,
+            "updated_at": "2026-11-13T06:00:00Z",
+            "language": "en",
+            "goal": null,
+            "format": null,
+            "main_copy": "",
+            "short_copy": null,
+            "cta": null,
+            "hashtags": [],
+            "audience_id": null,
+            "campaign_id": null,
+            "weekday_role": null,
+            "funnel_stage": null,
+            "post_type": null,
+            "strategic_reason": null,
+            "quality": null,
+            "published_url": null,
+            "published_at": null,
+            "generated_by": "manual",
+            "hook_alternatives": [],
+            "visual_brief": null,
+            "poster": null,
+            "group": null,
+            "series": null,
+            "timeline": []
+          }
+        },
+        "hook": "Submitted hook",
+        "brand": "{\"brand\":3,\"target\":{\"kind\":\"post\",\"id\":101,\"seq\":2},\"dirty\":false}"
+      },
+      "after": {
+        "target": {
+          "kind": "post",
+          "id": 101,
+          "seq": 2
+        },
+        "dirty": false,
+        "pending": [],
+        "saved": {
+          "101": {
+            "id": 101,
+            "platform": "linkedin",
+            "scheduled_date": "2026-11-13",
+            "scheduled_time": "09:00",
+            "status": "draft",
+            "title": null,
+            "hook": "Replacement sent with Save",
+            "topic": "",
+            "pillar_id": null,
+            "image_url": null,
+            "updated_at": "2026-11-13T06:00:00Z",
+            "language": "en",
+            "goal": null,
+            "format": null,
+            "main_copy": "",
+            "short_copy": null,
+            "cta": null,
+            "hashtags": [],
+            "audience_id": null,
+            "campaign_id": null,
+            "weekday_role": null,
+            "funnel_stage": null,
+            "post_type": null,
+            "strategic_reason": null,
+            "quality": null,
+            "published_url": null,
+            "published_at": null,
+            "generated_by": "manual",
+            "hook_alternatives": [],
+            "visual_brief": null,
+            "poster": null,
+            "group": null,
+            "series": null,
+            "timeline": []
+          }
+        },
+        "hook": "Replacement sent with Save",
+        "brand": "{\"brand\":3,\"target\":{\"kind\":\"post\",\"id\":101,\"seq\":2},\"dirty\":false}"
+      },
+      "reproduced": true
+    },
+    {
+      "name": "Old-brand create steals new-brand panel",
+      "before": {
+        "target": {
+          "kind": "new",
+          "draft": {
+            "date": "2026-11-13",
+            "platform": "linkedin"
+          },
+          "seq": 2
+        },
+        "dirty": true,
+        "pending": [
+          {
+            "method": "POST",
+            "url": "/v1/admin/content/posts?brand_id=3",
+            "body": {
+              "platform": "linkedin",
+              "scheduled_date": "2026-11-13",
+              "scheduled_time": "09:00",
+              "status": "draft",
+              "hook": "Brand A request"
+            }
+          }
+        ],
+        "saved": {},
+        "hook": "Brand B unsaved work",
+        "brand": "{\"brand\":4,\"target\":{\"kind\":\"new\",\"draft\":{\"date\":\"2026-11-13\",\"platform\":\"linkedin\"},\"seq\":2},\"dirty\":false}"
+      },
+      "after": {
+        "target": {
+          "kind": "post",
+          "id": 101,
+          "seq": 3
+        },
+        "dirty": false,
+        "pending": [],
+        "saved": {
+          "101": {
+            "id": 101,
+            "platform": "linkedin",
+            "scheduled_date": "2026-11-13",
+            "scheduled_time": "09:00",
+            "status": "draft",
+            "title": null,
+            "hook": "Brand A request",
+            "topic": "",
+            "pillar_id": null,
+            "image_url": null,
+            "updated_at": "2026-11-13T06:00:00Z",
+            "language": "en",
+            "goal": null,
+            "format": null,
+            "main_copy": "",
+            "short_copy": null,
+            "cta": null,
+            "hashtags": [],
+            "audience_id": null,
+            "campaign_id": null,
+            "weekday_role": null,
+            "funnel_stage": null,
+            "post_type": null,
+            "strategic_reason": null,
+            "quality": null,
+            "published_url": null,
+            "published_at": null,
+            "generated_by": "manual",
+            "hook_alternatives": [],
+            "visual_brief": null,
+            "poster": null,
+            "group": null,
+            "series": null,
+            "timeline": []
+          }
+        },
+        "brand": "{\"brand\":4,\"target\":{\"kind\":\"post\",\"id\":101,\"seq\":3},\"dirty\":false}"
+      },
+      "reproduced": true
+    },
+    {
+      "name": "Brand section draft not registered with navigation guard",
+      "settingsDirty": {
+        "target": null,
+        "dirty": false,
+        "pending": [],
+        "saved": {},
+        "hook": "More bookings",
+        "brand": "{\"brand\":3,\"target\":null,\"dirty\":false}"
+      },
+      "reopened": "Audit brand DNA",
+      "reproduced": true
+    },
+    {
+      "name": "Brand section Save drops pending edits",
+      "before": "Typed while brand Save pending",
+      "after": "Submitted brand name",
+      "reproduced": true
+    },
+    {
+      "name": "Posts placeholder preserves previous brand rows",
+      "after": {
+        "brand": "{\"brand\":4,\"target\":null,\"dirty\":false}",
+        "oldPostVisible": true,
+        "pending": [
+          {
+            "method": "GET",
+            "url": "/v1/admin/content/posts?brand_id=4"
+          }
+        ]
+      },
+      "reproduced": true
+    },
+    {
+      "name": "Phone post panel permits focus onto covered page",
+      "after": {
+        "active": "Audit full admin guard",
+        "withinPanel": false,
+        "role": "dialog",
+        "ariaModal": "false"
+      },
+      "reproduced": true
+    }
+  ],
+  "errors": []
+}
