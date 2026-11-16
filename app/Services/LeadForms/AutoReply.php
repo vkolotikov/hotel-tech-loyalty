@@ -157,9 +157,9 @@ final class AutoReply
     private function template(LeadForm $form, array $config): ?EmailTemplate
     {
         $template = EmailTemplate::find((int) ($config['template_id'] ?? 0));
-        if (!$template || !$template->is_active || (int) $template->organization_id !== (int) $form->organization_id) return null;
+        if (!$template || !$template->is_active || (int) $template->getAttribute('organization_id') !== (int) $form->organization_id) return null;
         $brandId = $form->brand_id ?? Brand::withoutGlobalScopes()->where('organization_id', $form->organization_id)->where('is_default', true)->value('id');
-        if ((int) $template->brand_id !== (int) $brandId) return null;
+        if ((int) $template->getAttribute('brand_id') !== (int) $brandId) return null;
         return $template;
     }
 
