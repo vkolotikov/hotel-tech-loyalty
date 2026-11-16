@@ -50,3 +50,10 @@ Blade, with desktop/mobile released-payment screenshots inspected. Initial files
 were resolved by running the full suite with two workers, without changing timeouts or assertions. Fresh build
 and all 515 public-asset hashes match, with shell/stats excluded and no browser fixture markers. Private logs
 retain earlier red tests and interrupted/failing attempts; none is treated as a passing gate.
+
+The pre-push guard stopped that initial artifact when production advanced. The final combined source preserves
+`130872409fdb6946d34588b4b3d2cf657d3b567e` and its independent form-reply release. Fresh artifact gates pass
+1,316 combined Booking/Stripe/Widget/member-portal/LeadForm/AdminAccess SQLite tests (13 inherited skips), 2,069
+Landing SQLite tests, 148 PostgreSQL tests, 7,275 Vitest tests, TypeScript, lint regression, Larastan, 18 browser
+scenarios and fresh-build asset parity. Booking application blobs are unchanged from the independently reviewed
+fix; only the shared historical handoff needed composition. See the final handoff for source/deploy receipts.

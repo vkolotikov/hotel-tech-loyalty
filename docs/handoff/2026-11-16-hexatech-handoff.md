@@ -105,3 +105,17 @@ sessions, using the actual array mail transport and a real failing transport. Th
 were corrected without changing application behaviour. The scoped LeadForm/AdminAccess gate passed 141 tests before
 the final two operator tests were added. Release-artifact gates and live controlled delivery must precede activation;
 this section records source work, not a production-send claim.
+
+## Combined booking recovery release candidate
+
+The booking fix now preserves production `130872409fdb6946d34588b4b3d2cf657d3b567e`, including the form-reply
+source, migration and handoff above. Source `151eda59f4a3a47131ed1c72c52b222b28b5d297` and the isolated artifact
+`f159d1eed` have exact whole-source parity for the 15 booking patch paths. Booking application blobs remain
+identical to the reviewed `715bf3ccc`.
+
+Combined artifact reruns pass: Booking/Stripe/Widget/member-portal plus LeadForm/AdminAccess SQLite 1,316 tests /
+12,667 assertions / 13 inherited skips; required Landing scopes 2,069 / 12,909; fully migrated PostgreSQL 18
+booking scopes 148 / 1,407; forced TypeScript; all 491 Vitest files / 7,275 tests with two workers; lint regression;
+three application paths on Larastan; 18 rendered-Blade browser scenarios; fresh production build and all 515
+published asset hashes. Local PostgreSQL and the earlier fixture preview are stopped. Private final rerun logs
+use `C:/wamp64/tmp/booking-recovery-latest-*`. Live deployment receipts follow on the retained source branch.
