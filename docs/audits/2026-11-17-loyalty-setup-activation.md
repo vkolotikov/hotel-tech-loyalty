@@ -60,9 +60,34 @@ limit; final artifact gates run separate directory scopes. Failed/interrupted lo
 rerun passed492 frontend files/7290 tests with a15000ms runner budget for source scans; assertions and test source
 were not edited. Final artifact gates and deployment counts are recorded below when complete.
 
+The first artifact backend pass exposed seven Windows certificate-fixture failures without `OPENSSL_CONF` and
+one old stamp-card fixture that selected an already exhausted reward. With the workstation's bundled OpenSSL
+configuration, the certificate cases pass. The stamp test now configures an obtainable reward and exhausts stock
+after the first stamp; its original fallback points/redemption/audit assertions remain. Focused32/343 and the
+full corrected LoyaltyWorkspace745/6838 pass. The first artifact frontend pass hit a cold source scan's15000ms
+runner deadline; the full rerun and the final post-adjustment suite pass, without editing the scanner assertions.
+
 Compiled source browser acceptance passed196 checks with zero runtime errors:170 setup/reward cases across
 1440/390px, both themes and five locales;11 hosted claim cases, including staff-created member, real local queued
 mail, wrong code, successful activation of the original identity and a fresh-session sign-in;15 unavailable reward
 cases across both themes/sizes, with native disabled option property/markup and backend422 refusal. Screenshots
 were visually reviewed. The validation-error correction test found and fixed Advanced settings collapsing while
 the user continued editing. Test data, credentials, codes and tokens remain private.
+
+## Final release candidate
+
+Application source and tests: `a38bd0b5df1f6a020d43c8dab3a3eae524546a7e`; isolated release worktree
+`E:/Hexa-Tech-loyalty-release-20261117`, source patch from production `cfc08ce6e`,65 explicit source paths and no
+source deletions. Whole-source parity excludes only generated `frontend/dist`, `public/spa` and `resources/spa-shell`.
+Physical vendor and a fresh production build are used; final built candidate `476b323a34133cf8a9266532e7ca77b520981059`.
+
+Artifact gates pass:4272 PHP tests/33891 assertions across11 scoped SQLite directories, seven existing skips;
+fully migrated PostgreSQL18,110 tests/860 assertions across setup/auth/appointment and stamp-card scopes;
+forced TypeScript,492 Vitest files/7290 tests, lint regression with1381 inherited diagnostics, Larastan on all11
+changed application paths, and fresh production build. All515 published asset hashes match the build, the shell
+matches its private resource copy, no shell/stats are in the docroot, and no browser-fixture markers are bundled.
+An off-rate control regression additionally keeps quick rate buttons disabled with the input, so a switched-off
+rule cannot display unsaved rate edits. Its final-build browser supplement passed49 checks with zero runtime
+errors across both themes and1440/390px, covering off/on input and presets, zero preview, saved rate and retention
+after reload. Combined browser acceptance is245 checks.57 main artifact screenshots and12 supplement screenshots
+were saved; key desktop/mobile states were visually reviewed. Live and CI receipts follow after deployment.

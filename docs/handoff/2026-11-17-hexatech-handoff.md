@@ -22,3 +22,16 @@ Read [the audit](../audits/2026-11-17-loyalty-setup-activation.md), [Loyalty run
 [member portal](../member-portal.md). The new option has no migration. Existing callers omitting the template
 reference or auth purpose retain their request/outcome contracts. Update this handoff with final source-patch,
 artifact, browser, deployment and CI receipts before describing the release as live.
+
+## Verified release candidate
+
+Application/test source `a38bd0b5d`; separate artifact `476b323a34133cf8a9266532e7ca77b520981059`, built on unchanged
+production `cfc08ce6e`.65 explicit source paths, whole-source parity, physical vendor and515 matching published
+assets. Artifact:4272 SQLite tests/33891 assertions/seven existing skips across11 scopes;110 PostgreSQL18 tests/860
+assertions; forced TypeScript;492 frontend files/7290 tests; lint1381 inherited
+diagnostics;11 application paths clean on Larastan; fresh build. The196 artifact browser checks pass across both
+themes, desktop/phone, five languages and the hosted claim handoff. A final quick-rate disabled-control correction
+was independently reviewed, received a failing regression, and is included in the final full frontend/build pass.
+Its focused final-build supplement passed49 checks, giving245 combined browser checks with zero runtime errors.
+Deployment receipts follow. All local data/mail remain disposable; no production
+account or payment was changed. Private evidence prefix `C:/wamp64/tmp/loyalty-setup-`.
