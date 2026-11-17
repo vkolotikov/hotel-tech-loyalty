@@ -59,3 +59,19 @@ its existing confirmation, and text-only purchase calculation guidance stays vis
 custom category labels are readable; arbitrary custom text bypasses translation resource lookup. Five locales
 updated. APIs, business rules, dependencies and migrations are unchanged. See
 [the audit](../audits/2026-11-17-loyalty-open-details.md) for review and verification; release receipts follow.
+
+The follow-up is deployed as code release `6c05e8339`, using source tip `2fec6f8fb3` and an exact 21-path
+source patch from `70cf9eed7`. Artifact checks pass forced TypeScript, 7,296 frontend tests, the lint regression
+gate, 2,069 required PHP tests / 12,909 assertions, fresh build and 515-asset parity. Independent review closed
+all Important findings, including safe custom category rendering. Source and packaged-release browser runs each
+pass 283 checks, zero runtime errors and 80 screenshots, covering desktop/phone, both themes, five locales,
+assignment actions and read-only staff permissions. The phone tier picker now shows its full selected label.
+The live rollout passes 39 content/CSS/boundary checks; entry `index-9Hr8KJH0.js`, earning
+`EarningPage-BlbK_t6d.js`, rewards `RewardsPage-9l8PkeMp.js`. No production account changes or messages were
+performed. [CI 44068295916](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/44068295916)
+ran on this exact code release: all eight jobs passed, including full PostgreSQL 18 with only the pre-existing
+known failures allowed, all three SQLite shards, Node 24/26, dependency audit and Larastan. This final receipt
+is documentation only; application and generated assets remain identical to `6c05e8339`. Local fixture
+HTTP/database services are stopped and evidence retained. The temporary release worktree is removed after
+publishing this receipt; the source branch and dependencies remain. The original C: checkout stays on
+`audit/content-prelaunch-20261113` at `175ea36d7` with no tracked changes.
