@@ -76,4 +76,4 @@ SetupPreview/parts, setupJourney, their translations; OptionsSetupTest and setup
 - [x] Browser screenshot/review the requested flows and update runbooks/handoff.
 - [x] Apply an exact allowlisted source patch onto current main in a separate worktree; verify whole-source parity.
 - [x] Run artifact gates, build fresh assets, push the verified deployment branch to main and verify live content/protection.
-- [ ] Record release/CI receipts, retain source and clean only owned temporary release resources.
+- [x] Record release/CI receipts, retain source and clean only owned temporary release resources.
