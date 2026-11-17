@@ -90,4 +90,25 @@ An off-rate control regression additionally keeps quick rate buttons disabled wi
 rule cannot display unsaved rate edits. Its final-build browser supplement passed49 checks with zero runtime
 errors across both themes and1440/390px, covering off/on input and presets, zero preview, saved rate and retention
 after reload. Combined browser acceptance is245 checks.57 main artifact screenshots and12 supplement screenshots
-were saved; key desktop/mobile states were visually reviewed. Live and CI receipts follow after deployment.
+were saved; key desktop/mobile states were visually reviewed.
+
+## Production receipt
+
+Code release `12a038b70e9e4f71d9270009f52c8af1f4959022` deployed through the verified source-patch branch.
+Live verification passed37 checks on17 November at11:39 Europe/Riga: entry `/spa/assets/index-DNvgSQ17.js`,
+setup `SetupWizard-Cawwfwaz.js`, earning `EarningPage-CUwnIM9s.js`, rewards `RewardsPage-DV7OvCbF.js` and hosted
+claim `Claim-BYzLfUKl.js`. Published content contains the spending switch, template reference, programme-rule
+markup, unified Advanced settings and availability checks; Claim requests purpose-bound proof. A request with
+both invalid email and invalid purpose confirms backend validation before issuance, without sending mail or
+changing an account. Protected member/admin APIs remain401, private shell/stats remain404, the landing host
+refuses the activation shell, and Academy's original kit stylesheet is retained with the retired sheet absent.
+
+CI: [run44056903877](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/44056903877), on the exact code
+release. All eight jobs passed, including the full PostgreSQL18 regression under its existing known-failure
+allowance, all three SQLite shards, Node24/26, dependency audit and Larastan. The user can reopen the Android activation
+page and request a fresh code; no store update is needed for the documented current release.
+
+The original C: checkout remains on `audit/content-prelaunch-20261113` at `175ea36d7` with no tracked changes.
+The source feature branch and private receipts/screenshots are retained. Both owned local PostgreSQL clusters,
+fixture backends and proxies are stopped. This final receipt changes documentation only; application and
+generated-asset trees remain identical to code release `12a038b70`.
