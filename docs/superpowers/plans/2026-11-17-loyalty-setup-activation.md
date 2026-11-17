@@ -1,6 +1,6 @@
 # Loyalty Setup and Activation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make earning optional, business suggestions current, reward settings coherent and portal-to-Android activation reliable.
 
@@ -35,39 +35,39 @@ tasks run in parallel under the dispatching-parallel-agents workflow; root owns 
 **Files:** ProgrammeOptions, ProgrammeAdvice, LoyaltyService, Portal/MemberProgramme; loyalty options/earn helpers,
 setup chooser, preview and their area translations; OptionsTest, real earning/visit tests and helper tests.
 
-- [ ] Add failing controller/earning tests for default-on, manager off/on, preserved rate, zero spend award and retained bonuses/visits.
-- [ ] Run the scoped tests and inspect the failure before implementation.
-- [ ] Add `spend_points_enabled` (bool, default true), expose the earn-rate switch and enforce it in the shared spending formula.
-- [ ] Update advice, member-facing effective rates and previews; show tier progress as a required rule, not an untickable earning option.
-- [ ] Run focused tests, then commit only this task's paths.
+- [x] Add failing controller/earning tests for default-on, manager off/on, preserved rate, zero spend award and retained bonuses/visits.
+- [x] Run the scoped tests and inspect the failure before implementation.
+- [x] Add `spend_points_enabled` (bool, default true), expose the earn-rate switch and enforce it in the shared spending formula.
+- [x] Update advice, member-facing effective rates and previews; show tier progress as a required rule, not an untickable earning option.
+- [x] Run focused tests, then commit only this task's paths.
 
 ### Task 2: Business-specific draft rewards
 
 **Files:** LoyaltyPresetService, ProgrammeOverview, ProgrammeSetup, OptionsController; options types/math/SetupWizard,
 SetupPreview/parts, setupJourney, their translations; OptionsSetupTest and setup browser/helper tests.
 
-- [ ] Reproduce hotel-to-restaurant retained reward selection and stale preview with literal expected examples.
-- [ ] Describe template reward choices on the server and project draft choices in the wizard, grouped separately from saved rewards.
-- [ ] Accept an optional wizard-only template reward reference; resolve and validate it under the setup transaction and idempotency key.
-- [ ] Preserve existing catalogue rows; create/reuse only the selected own-organisation reward and invalidate catalogue reads after Apply.
-- [ ] Test rollback, tenant binding, invalid selection, same-key replay, preserved tiers/history and updated preview; commit.
+- [x] Reproduce hotel-to-restaurant retained reward selection and stale preview with literal expected examples.
+- [x] Describe template reward choices on the server and project draft choices in the wizard, grouped separately from saved rewards.
+- [x] Accept an optional wizard-only template reward reference; resolve and validate it under the setup transaction and idempotency key.
+- [x] Preserve existing catalogue rows; create/reuse only the selected own-organisation reward and invalidate catalogue reads after Apply.
+- [x] Test rollback, tenant binding, invalid selection, same-key replay, preserved tiers/history and updated preview; commit.
 
 ### Task 3: Unified reward advanced settings
 
 **Files:** reward selected panel/editor, scoped rewardAdvanced.css, rewarddesign five locales, reward UI tests.
 
-- [ ] Use one Advanced settings section with visible Terms and meaningful groups.
-- [ ] Preserve all fields, validation, rights and API payloads; open on any advanced validation error.
-- [ ] Verify desktop/phone, both themes, keyboard and no duplicate disclosures; commit after integration review.
+- [x] Use one Advanced settings section with visible Terms and meaningful groups.
+- [x] Preserve all fields, validation, rights and API payloads; open on any advanced validation error.
+- [x] Verify desktop/phone, both themes, keyboard and no duplicate disclosures; commit after integration review.
 
 ### Task 4: Activation handoff
 
 **Files:** AuthController, relevant AccountRecovery/model/mail services, portal Claim if required and Auth regression tests.
 
-- [ ] Reproduce the actual portal-created-member/Android activation path and the claim-purpose mismatch.
-- [ ] Repair issuance/purpose and resend/counter lifecycle with failing tests first; preserve original expiry and purpose isolation.
-- [ ] Check code normalization/leading zeros, repeated sends, throttling, unknown/staff/foreign identities and successful retries.
-- [ ] Report any installed-native update requirement; do not import unrelated app source or publish a store build.
+- [x] Reproduce the actual portal-created-member/Android activation path and the claim-purpose mismatch.
+- [x] Repair issuance/purpose and resend/counter lifecycle with failing tests first; preserve original expiry and purpose isolation.
+- [x] Check code normalization/leading zeros, repeated sends, throttling, unknown/staff/foreign identities and successful retries.
+- [x] Report any installed-native update requirement; do not import unrelated app source or publish a store build.
 
 ### Task 5: Integrate and release
 

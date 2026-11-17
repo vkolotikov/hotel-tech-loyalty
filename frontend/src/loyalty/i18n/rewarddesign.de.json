@@ -1,4 +1,9 @@
 {
+  "keyConditions": "Wichtige Bedingungen",
+  "availabilityLimits": "Verfügbarkeit und Limits",
+  "advancedDetailsSummary": "Bedingungen, Mitgliederbeschreibung und Prämienverwaltung",
+  "advancedEditorSummary": "Bedingungen, Verfügbarkeit und Mitgliederdetails",
+  "termsHint": "Ergänzen Sie die Bedingungen, die Mitglieder vor dem Einlösen kennen sollten.",
   "pointsRewards": "Punkteprämien",
   "benefits": "Mitgliedschaftsvorteile",
   "offers": "Angebote",

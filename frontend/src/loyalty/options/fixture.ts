@@ -7,6 +7,7 @@ import type { OptionsAnswer, Preset } from './types'
 export function answerFixture(more: Partial<OptionsAnswer> = {}): OptionsAnswer {
   return {
     options: {
+      spend_points_enabled: true,
       points_on_bookings: true, points_per_currency: 1, points_expiry_months: 24, welcome_bonus_points: 500, birthday_bonus_points: 500,
       referral_enabled: true, referrer_bonus_points: 250, referee_bonus_points: 250, referral_reward_on: 'first_visit',
       stamps_enabled: false, stamps_per_card: 10, stamp_reward_kind: 'points', stamp_reward_points: 100, stamp_reward_id: null,
@@ -14,7 +15,7 @@ export function answerFixture(more: Partial<OptionsAnswer> = {}): OptionsAnswer 
       programme_setup_completed_at: null,
     },
     ways: [
-      { key: 'earn_rate', switch: null, zero_off: null, fields: ['points_per_currency'] },
+      { key: 'earn_rate', switch: 'spend_points_enabled', zero_off: null, fields: ['points_per_currency'] },
       { key: 'points_on_spend', switch: 'points_on_bookings', zero_off: null, fields: [] },
       { key: 'points_expiry', switch: null, zero_off: 'points_expiry_months', fields: ['points_expiry_months'] },
       { key: 'welcome_bonus', switch: null, zero_off: 'welcome_bonus_points', fields: ['welcome_bonus_points'] },
@@ -26,6 +27,7 @@ export function answerFixture(more: Partial<OptionsAnswer> = {}): OptionsAnswer 
       { key: 'cashback', switch: 'cashback_enabled', zero_off: null, fields: ['cashback_percent'] },
     ],
     fields: {
+      spend_points_enabled: { type: 'bool', default: true, min: null, max: null, choices: null, when: null },
       points_on_bookings: { type: 'bool', default: true, min: null, max: null, choices: null, when: null },
       points_per_currency: { type: 'decimal', default: 1, min: 0.01, max: 1000, choices: null, when: null },
       points_expiry_months: { type: 'int', default: 24, min: 0, max: 120, choices: null, when: null },

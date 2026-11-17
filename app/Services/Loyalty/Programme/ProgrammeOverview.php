@@ -29,7 +29,7 @@ final class ProgrammeOverview
         $options = ProgrammeOptions::for($orgId);
         $catalogue = $this->catalogue();
         // Owner 2026-10-26: what does not work together, and the ways that do nothing at this venue (ProgrammeAdvice).
-        $checks = $this->advice->for($orgId, $options, array_column($catalogue['rewards'], 'id'));
+        $checks = $this->advice->for($orgId, $options, array_column(array_filter($catalogue['rewards'], fn (array $reward) => $reward['is_redeemable']), 'id'));
 
         return [
             'options'    => $options,
@@ -50,14 +50,14 @@ final class ProgrammeOverview
      * are switched on (a boost that has ended no longer counts), and the active rewards, cheapest first, for the stamp
      * card's reward picker.
      *
-     * @return array{tiers: int, rewards: list<array{id: int, name: string, points_cost: int}>, offers: int, boosts: int}
+     * @return array{tiers: int, rewards: list<array{id: int, name: string, points_cost: int, is_redeemable: bool}>, offers: int, boosts: int}
      */
     public function catalogue(): array
     {
         return [
             'tiers'   => LoyaltyTier::query()->count(),
-            'rewards' => Reward::query()->where('is_active', true)->orderBy('points_cost')->orderBy('name')->get(['id', 'name', 'points_cost'])
-                ->map(fn (Reward $r) => ['id' => (int) $r->id, 'name' => (string) $r->name, 'points_cost' => (int) $r->points_cost])
+            'rewards' => Reward::query()->where('is_active', true)->orderBy('points_cost')->orderBy('name')->get(['id', 'name', 'points_cost', 'is_active', 'stock', 'expires_at'])
+                ->map(fn (Reward $r) => ['id' => (int) $r->id, 'name' => (string) $r->name, 'points_cost' => (int) $r->points_cost, 'is_redeemable' => $r->isRedeemable()])
                 ->values()->all(),
             'offers'  => SpecialOffer::query()->where('is_active', true)->count(),
             'boosts'  => EarnRateEvent::query()->where('is_active', true)->where('ends_at', '>=', now())->count(),
@@ -66,7 +66,8 @@ final class ProgrammeOverview
 
     /**
      * LoyaltyPresetService's list, the organisation's industry's own first (the rest in their order), each with the
-     * options it recommends.
+     * options it recommends and its indexed draft stamp rewards. These suggestions stay separate from the saved
+     * catalogue: choosing a different business never presents its old rewards as the new template's suggestions.
      *
      * @return list<array<string, mixed>>
      */

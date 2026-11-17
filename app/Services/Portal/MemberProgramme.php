@@ -19,9 +19,9 @@ final class MemberProgramme
 
         return [
             'earning' => $on ? [
-                'bookings' => $options['points_on_bookings'],
-                'desk' => $options['desk_earn_enabled'],
-                'base_rate' => $options['points_per_currency'],
+                'bookings' => $options['spend_points_enabled'] && $options['points_on_bookings'],
+                'desk' => $options['spend_points_enabled'] && $options['desk_earn_enabled'],
+                'base_rate' => $options['spend_points_enabled'] ? $options['points_per_currency'] : 0,
                 'checkin' => $options['checkin_enabled'],
                 'checkin_points' => $options['checkin_points'],
                 'expiry_months' => $options['points_expiry_months'],

@@ -93,6 +93,18 @@ class PointsPreviewTest extends TestCase
         );
     }
 
+    public function test_a_paid_visit_with_spending_points_off_reports_the_switch_rather_than_no_charge(): void
+    {
+        $f = $this->seedPointsFixture();
+        \App\Services\Loyalty\Programme\ProgrammeOptions::save($f['orgId'], ['spend_points_enabled' => false], null);
+        $booking = $this->pointsBooking($f['orgId'], $f['member'], ['status' => 'confirmed', 'total_amount' => 50]);
+        $service = app(BookingPointsService::class);
+        $this->assertSame(['points' => 0, 'reason' => 'points_on_bookings_off'], $service->previewForServiceBooking($booking));
+        $booking->update(['status' => 'completed']);
+        $this->assertNull($service->awardForServiceBooking($booking->fresh()));
+        $this->assertSame(50.0, (float) $booking->fresh()->total_amount);
+    }
+
     public function test_the_preview_writes_nothing(): void
     {
         $f = $this->seedPointsFixture();

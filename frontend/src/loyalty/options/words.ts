@@ -89,6 +89,7 @@ export const AMOUNT_WORDS: Record<string, string> = {
 export const SENTENCE_WORDS: Record<string, string> = {
   earn_rate: 'Members get {{points}} for every {{money}} they spend.',
   earn_rate_none: 'Spending earns nothing yet: switch on Points on bookings or Earn at the desk.',
+  earn_rate_off: 'Spending does not earn points. Visits and bonuses can still reward members.',
   points_on_spend: 'Completed bookings earn points at your earn rate.',
   points_on_spend_off: 'Bookings earn no points.',
   points_expiry: 'Points expire {{months}} after they are earned.',

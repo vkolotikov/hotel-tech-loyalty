@@ -156,7 +156,8 @@
     "tier_progress_visits": "Los miembros suben según cuánto vienen: cuenta una visita al día, gasten lo que gasten. Ven «3 visitas más para Gold».",
     "tier_progress_spend": "Los miembros suben según lo que gastan en sus visitas. Ven «120 € más para Gold».",
     "earn_rate": "Los miembros reciben {{points}} por cada {{money}} que gastan.",
-    "earn_rate_none": "El gasto aún no da nada: active «Puntos por reservas» o «Ganar en el mostrador»."
+    "earn_rate_none": "El gasto aún no da nada: active «Puntos por reservas» o «Ganar en el mostrador».",
+    "earn_rate_off": "El gasto no da puntos. Las visitas y los bonos pueden seguir recompensando a los miembros."
   },
   "setup": {
     "error": {
@@ -252,7 +253,15 @@
     "title": "Configurar su programa",
     "to_configure": "Volver a ajustar",
     "to_members": "Ir a Miembros",
-    "to_options": "Ir a «Formas de ganar»"
+    "to_options": "Ir a «Formas de ganar»",
+    "programme_rule": "Regla del programa",
+    "programme_rule_line": "Configure esta regla del programa en el siguiente paso.",
+    "suggested_rewards": "Recompensas sugeridas para {{preset}}",
+    "suggested_rewards_line": "Elija una recompensa para la tarjeta de sellos y se añadirá al aplicar los cambios. Sus recompensas actuales seguirán disponibles.",
+    "saved_rewards": "Sus recompensas guardadas",
+    "template_reward_added": "Sus reglas de acumulación se han guardado. La recompensa elegida está lista para la tarjeta de sellos.",
+    "current_catalogue": "Catálogo actual",
+    "reward_unavailable": "No disponible"
   },
   "group": {
     "earn": "Ganar puntos",

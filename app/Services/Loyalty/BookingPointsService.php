@@ -162,7 +162,7 @@ final class BookingPointsService
         if (!PortalBootstrap::loyaltyOn($orgId)) {
             return $none('programme_off');
         }
-        if (!$this->pointsOnBookingsEnabled($orgId)) {
+        if (!$this->pointsOnBookingsEnabled($orgId) || !ProgrammeOptions::perRequest($orgId, 'spend_points_enabled')) {
             return $none('points_on_bookings_off');
         }
 

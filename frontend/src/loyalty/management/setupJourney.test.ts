@@ -3,6 +3,11 @@ import { answerFixture } from '../options/fixture'
 import { formOf } from '../options/optionsMath'
 import { setupJourney } from './setupJourney'
 describe('guided setup member journey from the real draft', () => {
+  it('shows zero spending points when the programme has disabled them', () => {
+    const answer = answerFixture()
+    answer.options = { ...answer.options, spend_points_enabled: false, desk_earn_enabled: true, points_per_currency: 5 }
+    expect(setupJourney(answer, formOf(answer, answer.options)).spend).toBe(0)
+  })
   it('uses the draft rate and welcome points with an actual reward cost', () => {
     const answer = answerFixture()
     answer.options = { ...answer.options, points_per_currency: 3, points_on_bookings: true, desk_earn_enabled: false, welcome_bonus_points: 100 }

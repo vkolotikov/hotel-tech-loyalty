@@ -26,7 +26,7 @@ export function Claim() {
   const emailInputRef = useRef<HTMLInputElement>(null)
 
   const sendCode = useMutation({
-    mutationFn: (address: string) => api.post('/v1/auth/send-code', { email: address }).then(r => r.data),
+    mutationFn: (address: string) => api.post('/v1/auth/send-code', { email: address, purpose: 'claim' }).then(r => r.data),
     onSuccess: () => { setError(null); setCodeSource('sent'); setStep('code') },
     onError: e => {
       const status = (e as { response?: { status?: number } })?.response?.status

@@ -20,7 +20,8 @@ use Illuminate\Validation\Rule;
  * - `PUT options` `{options: {<option>: value, …}}` — a partial change through ProgrammeOptions::save (422 with field
  *   errors keyed by option; the wizard's own stamp is not writable here). Setting a value it already holds writes and
  *   audits nothing, so a retry is harmless.
- * - `POST options/setup` `{preset?, options, idempotency_key?}` (or an `Idempotency-Key` header) — ProgrammeSetup::apply.
+ * - `POST options/setup` `{preset?, options, idempotency_key?, stamp_reward_template_index?}` (or an `Idempotency-Key`
+ *   header) — ProgrammeSetup::apply. A template reward reference belongs to setup, never a general option save.
  * - `POST options/setup/skip` — stamps the wizard as done, nothing else.
  */
 class OptionsController extends Controller
@@ -47,10 +48,14 @@ class OptionsController extends Controller
             'preset'          => ['nullable', 'string', Rule::in(array_keys(LoyaltyPresetService::PRESETS))],
             'options'         => 'present|array',
             'idempotency_key' => 'nullable|string|max:64',
+            'stamp_reward_template_index' => 'sometimes|nullable|integer|min:0',
         ]);
         $key = $data['idempotency_key'] ?? (trim((string) $request->header('Idempotency-Key')) ?: null);
 
-        $outcome = $setup->apply(self::orgId(), $data['preset'] ?? null, $data['options'], $request->user(), $key);
+        $outcome = $setup->apply(
+            self::orgId(), $data['preset'] ?? null, $data['options'], $request->user(), $key,
+            isset($data['stamp_reward_template_index']) ? (int) $data['stamp_reward_template_index'] : null,
+        );
 
         return response()->json($overview->for(self::orgId(), $request->user()) + ['setup' => $outcome]);
     }

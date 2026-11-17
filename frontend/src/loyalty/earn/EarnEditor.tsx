@@ -31,7 +31,7 @@ export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; an
   const editor = useEditorWords(), admin = useAdminWords()
   const unit = money(1, currency, locale)
   const rate = form.values.points_per_currency ?? String(answer.options.points_per_currency ?? '')
-  const example = purchase && draft.valid ? baseExample(amount, rate) : null
+  const example = purchase && draft.valid ? form.on ? baseExample(amount, rate) : 0 : null
   const text = sentenceOf(way.key, previewOptions(way, form, answer.options, answer.fields), { say: oldSay, currency, locale, rewards: answer.catalogue.rewards })
   const disabled = !answer.can_change || draft.busy
   const status = !alwaysOn(way) && <EditorSwitch label={title} checked={form.on} disabled={disabled} onChange={on => draft.edit(way.key, { on })} />
@@ -50,7 +50,7 @@ export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; an
       {!purchase && !bonus && <EditorNote title={say('memberSees')}>{text}{(answer.not_used ?? []).includes(way.key) && <p>{t('loyalty.options.card.not_used', 'Your venue takes no bookings, so this gives nothing.')}</p>}</EditorNote>}
       {bonus && <>{memberPreview}<small>{say('messageNote')}</small></>}
       {message}
-    </div>{!bonus && <EditorPreview><EditorArt kind="earnArt" label={say('baseRate')} title={purchase ? example === null ? say('invalidExample') : say('points', { n: points(example, locale) }) : title} line={purchase ? say('equation', { amount: money(Number(amount.replace(',', '.')), currency, locale), rate, unit }) : text} />
+    </div>{!bonus && <EditorPreview><EditorArt kind="earnArt" label={say('baseRate')} title={purchase ? example === null ? say('invalidExample') : say('points', { n: points(example, locale) }) : title} line={purchase && form.on ? say('equation', { amount: money(Number(amount.replace(',', '.')), currency, locale), rate, unit }) : text} />
       <ManagementFact icon="people" label={admin('whoEarn')}>{say('allLevels')}</ManagementFact><ManagementFact icon="purchase" label={editor('calculation')}>{admin('basePoints')}</ManagementFact>
       {purchase && <EditorDisclosure title={say('amount')}><FormField label={say('amount')}><input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></FormField></EditorDisclosure>}
       <small>{say('illustrative')}</small>

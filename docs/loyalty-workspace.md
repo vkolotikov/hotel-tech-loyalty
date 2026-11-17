@@ -1,5 +1,25 @@
 # HexaTech Loyalty — runbook
 
+Setup and activation improvements (17 November 2026): Earn rate can be switched off using
+`spend_points_enabled` (default true). This preserves its saved rate and all existing balances; visits, stamps,
+cashback, check-in and other bonuses keep their own switches. The member programme reports an effective spending
+rate of zero while off. Tier progression is displayed as a programme rule rather than a locked checkbox.
+
+Choosing another business template clears the old stamp reward selection. The preview and reward selector show
+the selected business's suggestions separately from the saved catalogue. Presets expose `stamp_rewards` with
+`index`, `name` and `points_cost`. `POST options/setup` optionally accepts `stamp_reward_template_index`, only with
+a named preset and a stamp card giving a reward, without a simultaneous saved reward id. Apply resolves that
+trusted reference under the existing setup lock/transaction: an existing programme creates or reuses only the
+chosen redeemable reward, retaining its tiers, members and saved catalogue. Unavailable saved matches never hide
+a fresh suggestion; direct saved selections are rechecked on save/Apply. The reference participates in the
+idempotency hash; the outcome adds `stamp_reward_id` and `stamp_reward_created`. General option saves accept only
+real own-organisation reward ids. Invalid setup fields roll all catalogue changes back.
+
+Reward details have one initially open Advanced settings section containing Terms & conditions and management
+details. Key conditions remain visible. The editor puts Terms first within one Advanced settings section and
+opens it for any validation error in its fields. All five language bundles and both themes are covered.
+See [the implementation audit](audits/2026-11-17-loyalty-setup-activation.md).
+
 Events simplification (10 November 2026): one sidebar Events button; Upcoming, Past and Drafts are page filters.
 The compact directory groups search/location/level filters with date rows and selected details, and add/edit
 uses the common staff popup with a live member preview. Attendance uses matching rows, summary icons and ten
@@ -672,7 +692,7 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   sweep in `tokens.test.ts` refuses one), and the timeline of those steps with their ways (Off, Not used here,
   Recommended with Turn on) and the parts they lead to (boosts, tiers, rewards, offers, each opening its page).
   Every server way has a step (`journey.test.ts` fails until a new one is placed). The **earn rate**
-  is a card of its own, always on (`earn_rate`, `points_per_currency`): it serves completed bookings and purchases at
+  is a card of its own (`earn_rate`, `points_per_currency`, switched by `spend_points_enabled` since 17 November): it serves completed bookings and purchases at
   the desk alike, while "Points on bookings" (`points_on_bookings`) only switches the bookings — so a venue without
   bookings still sets its desk rate. `not_used` names the ways that do nothing at this venue (points on bookings where
   nothing can be booked: no bookable service and no room), and their card says so. A new check is a code in

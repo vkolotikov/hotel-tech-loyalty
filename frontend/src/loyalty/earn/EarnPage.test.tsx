@@ -30,6 +30,14 @@ function page(search = '', answer: OptionsAnswer | null = answerFixture({ setup_
 }
 
 describe('WE01–03 server integration', () => {
+  it('shows zero spending points while the saved purchase rate is switched off', () => {
+    const data = answerFixture(); data.options.spend_points_enabled = false; data.options.points_per_currency = 2.25
+    const html = page('?way=earn_rate', data)
+    expect(html).toContain('value="2.25"')
+    expect(html).toContain('0 points')
+    expect(html).not.toContain('112 points')
+    expect(html).toContain('Spending does not earn points.')
+  })
   it('retains all six existing earning methods, setup and checks on the new root', () => {
     const html = page()
     for (const key of ['earn_rate', 'points_on_spend', 'stamp_card', 'check_in', 'desk_earn', 'cashback']) expect(html).toContain(`data-record="way-${key}"`)
@@ -65,6 +73,11 @@ describe('WE01–03 server integration', () => {
     expect(html).toContain('Spa ritual')
     expect(html).toContain('value="9" selected=""')
     expect(html).not.toContain('data-field="stamp_reward_points"')
+  })
+  it('labels unavailable saved stamp rewards and prevents selecting them', () => {
+    const data = answerFixture(); data.options.stamps_enabled = true; data.options.stamp_reward_kind = 'reward'
+    data.catalogue.rewards[0].is_redeemable = false
+    expect(page('?way=stamp_card', data)).toMatch(/<option value="7" disabled="">Free coffee — Unavailable<\/option>/)
   })
   it('keeps arbitrary valid expiry months and only server qualification choices', () => {
     const data = answerFixture(); data.options.points_expiry_months = 7; data.options.tier_progress_by = 'visits'

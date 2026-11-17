@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-16-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-17-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -273,8 +273,11 @@ or add the next dated one, at the end of a session.
 - Ways to earn (owner 2026-10-26, `docs/loyalty-workspace.md` "Ways to earn, tabs and checks"): what the page warns
   about is decided only by `Loyalty\Programme\ProgrammeAdvice` (reads only; a new check is a code there with its words
   in all five bundles), never computed in the workspace, and so is each check's one-press `fix` (options the server
-  has; saved as sent, it clears its own check); the earn rate is its own always-on card (`earn_rate`) because
-  `points_per_currency` serves bookings and the desk alike. No `#…` link in the workspace (`<base href="/">` sends it
+  has; saved as sent, it clears its own check); the earn rate is its own card (`earn_rate`) because
+  `points_per_currency` serves bookings and the desk alike. Owner 2026-11-17: `spend_points_enabled` (default true)
+  switches spending points off without losing the saved rate or stopping visits, stamps, credit or bonuses. Tier
+  progression remains a programme rule, shown without a disabled earning checkbox. A template's indexed stamp reward
+  is resolved only by ProgrammeSetup on Apply; existing members, tiers and catalogue rows stay in place. No `#…` link in the workspace (`<base href="/">` sends it
   to the site root); jump within a page with a button that scrolls.
 - Release 10 (owner 2026-10-26, from the owner's Figma; `docs/loyalty-workspace.md` "Release 10, the frame"): a page's
   sections are `loyalty/ui/SectionCards` (filters stay pills), an empty list is a `GetStarted` panel holding the one

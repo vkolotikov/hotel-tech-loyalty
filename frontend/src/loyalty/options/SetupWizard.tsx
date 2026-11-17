@@ -33,6 +33,7 @@ import './setup.css'
 import { useRedesignWords } from '../redesign/words'
 import { programAssets } from '../program/design/assets'
 import './setup-simplified.css'
+import { setupRewardChoices } from './setupRewards'
 
 /**
  * The setup wizard (release 7, spec 2026-10-25 §1), at /loyalty/program/setup: 1. your business — a starting programme,
@@ -92,7 +93,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
 
   const apply = useMutation({
     mutationFn: () => optionsApi.setup(setupBody(answer, choice, form, key)),
-    onSuccess: (next) => { afterOptionsChange(client, next, next.setup.preset_applied); setDone(next.setup) },
+    onSuccess: (next) => { afterOptionsChange(client, next, next.setup.preset_applied || !!next.setup.stamp_reward_id); setDone(next.setup) },
     onSettled: guard.end,
   })
   const skip = useMutation({
@@ -113,8 +114,9 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
     heading.current?.focus()
   }, [step, done])
 
-  const rewards = answer.catalogue.rewards
-  const ctx = { say, currency, locale, rewards }
+  const rewards = setupRewardChoices(answer, choice)
+  const selectedPreset = presetOf(answer, choice)
+  const ctx = { say, currency, locale, rewards, suggestedRewardLabel: selectedPreset ? t('loyalty.options.wizard.suggested_rewards', 'Suggested rewards for {{preset}}', { preset: presetName(t, selectedPreset) }) : undefined }
   const local = formProblems(answer, form, rewards)
   const applyFailure = apply.isError ? failureOf(apply.error) : null
   const problems: Problems = { ...serverProblems(applyFailure, answer), ...(tried ? local : {}) }
@@ -327,8 +329,17 @@ export function Choose({ answer, form, choice, ctx, onChange }: {
           const wf = form[way.key]
           if (!wf) return null
           const title = wayTitle(ctx.say, way.key)
-          // Release 8: a card that is always on (how members move up) is ticked and stays ticked.
+          // Tier progression is a programme rule, rather than an optional earning source.
           const fixed = alwaysOn(way)
+          if (fixed) return <section key={way.key} data-programme-rule={way.key} className="flex gap-3 rounded-2xl border border-a-border bg-a-surface p-4">
+            <WayIcon way={way.key} on />
+            <div className="min-w-0 space-y-1">
+              <p className="text-xs font-medium text-a-text-2">{t('loyalty.options.wizard.programme_rule', 'Programme rule')}</p>
+              <h3 className="font-medium text-a-text">{title}</h3>
+              <p className="text-sm text-a-text-2">{t('loyalty.options.wizard.programme_rule_line', 'Configure this programme rule in the next step.')}</p>
+              <p className="text-sm text-a-text">{sentenceOf(way.key, previewOptions(way, wf, answer.options, answer.fields), ctx)}</p>
+            </div>
+          </section>
           return (
             <label key={way.key} data-tick={way.key} data-checked={wf.on ? '' : undefined}
               className={`flex gap-3 rounded-2xl border p-4 has-focus-visible:ring-2 has-focus-visible:ring-a-accent-text ${fixed ? '' : 'cursor-pointer'} ${wf.on ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
@@ -373,7 +384,7 @@ export function Configure({ answer, form, problems, ctx, onChange }: {
             <WayIcon way={way.key} on />
             <SectionTitle><span id={`configure-${way.key}`}>{wayTitle(ctx.say, way.key)}</span></SectionTitle>
           </div>
-          <WayFields way={way} form={form[way.key]} fields={answer.fields} rewards={answer.catalogue.rewards} problems={problems}
+          <WayFields way={way} form={form[way.key]} fields={answer.fields} rewards={ctx.rewards} suggestedRewardLabel={ctx.suggestedRewardLabel} problems={problems}
             disabled={false} currency={ctx.currency} locale={ctx.locale} onChange={(key, value) => onChange(way.key, key, value)} />
           <Sentence>{sentenceOf(way.key, previewOptions(way, form[way.key], answer.options, answer.fields), ctx)}</Sentence>
         </section>
@@ -431,6 +442,8 @@ function Done({ outcome, headingRef }: { outcome: SetupOutcome; headingRef: RefO
   let line: ReactNode = t('loyalty.options.wizard.done_kept', 'Your tiers and rewards stayed as they were; the ways to earn are set.')
   if (outcome.preset_applied) {
     line = t('loyalty.options.wizard.done_built', 'Tiers added: {{tiers}}. Rewards added: {{rewards}}. The ways to earn are set.', { tiers: n('tiers_added'), rewards: n('rewards_added') })
+  } else if (outcome.stamp_reward_id) {
+    line = t('loyalty.options.wizard.template_reward_added', 'Your earning rules are saved. The selected reward is ready for the stamp card.')
   }
   return (
     <div data-setup-done="" className="max-w-2xl space-y-4">
