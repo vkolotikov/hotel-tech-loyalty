@@ -15,10 +15,13 @@ a fresh suggestion; direct saved selections are rechecked on save/Apply. The ref
 idempotency hash; the outcome adds `stamp_reward_id` and `stamp_reward_created`. General option saves accept only
 real own-organisation reward ids. Invalid setup fields roll all catalogue changes back.
 
-Reward details have one initially open Advanced settings section containing Terms & conditions and management
-details. Key conditions remain visible. The editor puts Terms first within one Advanced settings section and
+Reward details originally combined Terms & conditions and management in an open disclosure. The later17 November
+simplification replaces generic read-view Advanced settings disclosures with always-visible named sections in
+Ways to earn, Tier perks, Offers and Points rewards. Links/actions have separate, wrapping rows. Legacy category
+labels are translated; custom categories render as plain text. Key conditions remain visible. The editor puts Terms first within one Advanced settings section and
 opens it for any validation error in its fields. All five language bundles and both themes are covered.
-See [the implementation audit](audits/2026-11-17-loyalty-setup-activation.md).
+See [the implementation audit](audits/2026-11-17-loyalty-setup-activation.md) and
+[open-details follow-up](audits/2026-11-17-loyalty-open-details.md).
 
 Events simplification (10 November 2026): one sidebar Events button; Upcoming, Past and Drafts are page filters.
 The compact directory groups search/location/level filters with date rows and selected details, and add/edit

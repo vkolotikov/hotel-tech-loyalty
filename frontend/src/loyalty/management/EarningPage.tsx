@@ -22,7 +22,7 @@ import { useLeaveGuard } from '../earn/useLeaveGuard'
 import { useEarnWords } from '../earn/words'
 import { ProgrammeSettings } from './ProgrammeSettings'
 import { BonusBoostsPage } from './BonusBoostsPage'
-import { ManagementColumns, ManagementFact, ManagementHeading, ManagementIcon, ManagementLabels, ManagementPanel, ManagementRow, ManagementSelection, ManagementStatus, ManagementVisual, ManagementOutcome } from './ManagementUI'
+import { ManagementColumns, ManagementDetails, ManagementFact, ManagementHeading, ManagementIcon, ManagementLabels, ManagementPanel, ManagementRow, ManagementSelection, ManagementStatus, ManagementVisual, ManagementOutcome } from './ManagementUI'
 import { useAdminWords } from './words'
 import { BONUSES, EARNING, POINTS_SETTINGS, QUALIFICATION } from './navigation'
 import { earningIcon } from './earningIcon'
@@ -33,7 +33,7 @@ import '../earn/clean.css'
 
 export function EarningPage() {
   const query = useQuery({ queryKey: OPTIONS_KEY, queryFn: optionsApi.options, refetchOnWindowFocus: false })
-  const location = useLocation(), say = useEarnWords(), admin = useAdminWords(), rd = useRedesignWords(), { t, i18n } = useTranslation(), oldSay = useSay()
+  const location = useLocation(), say = useEarnWords(), admin = useAdminWords(), rd = useRedesignWords(), { i18n } = useTranslation(), oldSay = useSay()
   const editorWords = useEditorWords(), [adding, setAdding] = useState(false), [method, setMethod] = useState('')
   const boot = useBoot(), guard = useLeaveGuard(), data = query.data
   const state = earnLocation(location.search, data?.ways ?? [])
@@ -65,13 +65,15 @@ export function EarningPage() {
       <ManagementLabels first={admin('method')} value={admin('earnRate')} status={say('status')} /><ul className="l-ad-list">{visible.map(w => <ManagementRow key={w.key} record={`way-${w.key}`} icon={earningIcon(w.key)} tone={w.key === 'cashback' ? 'gold' : ['points_on_spend', 'stamp_card'].includes(w.key) ? 'violet' : w.key === 'check_in' ? 'green' : 'cyan'} title={title(w)} caption={caption(w)} value={rate(w)} status={badge(w)} selected={selected?.key === w.key} onSelect={() => go({ selected: w.key })} />)}</ul>
       {!visible.length && <p>{say(data.ways.some(w => groupOf(w.key) === 'earn') ? 'noResults' : 'noMethods')}</p>}{!visible.length && <OverviewButton onClick={() => go({ q: '', status: 'all' })}>{say('clear')}</OverviewButton>}
     </ManagementPanel>
-      {data.ways.some(w => groupOf(w.key) === 'more') && <details className="l-ad-more"><summary>{admin('advanced')}</summary><Link className="l-ov-link" to="/loyalty/options?tab=more">{t('loyalty.options.group.more', 'More')}</Link></details>}
+      {data.ways.some(w => groupOf(w.key) === 'more') && <Link className="l-ov-link" to="/loyalty/options?tab=more">{admin('moreEarningRules')}</Link>}
     </div>{selected && <ManagementSelection title={title(selected)} heading={admin('selectedRule')} status={badge(selected)} onEdit={data.can_change ? () => guard.go(earningUrl('earn', { way: selected.key })) : undefined}>
       <ManagementVisual art="earnArt" tone="cyan" label={title(selected)} title={selected.key === 'earn_rate' || inherited ? admin('rateCompact', { n: decimal(Number(data.options.points_per_currency), i18n.language), unit }) : rate(selected)} line={inherited ? admin('inheritsPurchase') : selected.key === 'earn_rate' ? admin('baseEarning') : caption(selected)} />
       {(selected.key === 'earn_rate' || inherited) && <><ManagementOutcome label={admin('baseExample')} from={money(50, boot.venue.currency, i18n.language)} to={example === null ? say('invalidExample') : admin('pointsShort', { n: points(example, i18n.language) })} /><small>{admin('basePoints')}</small>{inherited && <Link className="l-ov-link" to={`${EARNING}&way=earn_rate`}>{admin('sharedRate')}</Link>}</>}
       <ManagementFact icon="people" label={admin('whoEarn')}>{say('allLevels')}</ManagementFact>
       {(selected.key === 'earn_rate' || inherited) && <div className="l-ad-inset"><h3>{admin('alsoRate')}</h3><div className="l-ad-trigger-grid">{['points_on_spend', 'desk_earn'].map(key => { const w = methods.find(w => w.key === key); return w && <Link key={key} to={`${EARNING}&selected=${key}`}><ManagementIcon kind={key === 'points_on_spend' ? 'bookingSmall' : 'receipt'} /><span>{admin(key === 'points_on_spend' ? 'bookings' : 'deskPurchases')}<small>{say(status(w))}</small></span></Link> })}</div></div>}
-      <details className="l-ad-more"><summary>{admin('advanced')}</summary><p>{sentence(selected)}</p><p>{wayLine(oldSay, selected.key)}</p><Link className="l-ov-link" to={BONUSES}>{admin('bonuses')}</Link><Link className="l-ov-link" to={QUALIFICATION}>{admin('qualification')}</Link></details>
+      <ManagementDetails title={admin('howItWorks')} actions={<><Link className="l-ov-link" to={BONUSES}>{admin('bonuses')}</Link><Link className="l-ov-link" to={QUALIFICATION}>{admin('qualification')}</Link></>}>
+        <p>{sentence(selected)}</p><p className="l-ad-muted">{wayLine(oldSay, selected.key)}</p>
+      </ManagementDetails>
       {!data.can_change && <Link className="l-ov-link" to={earningUrl('earn', { way: selected.key })}>{say('viewSettings')}</Link>}
     </ManagementSelection>}</ManagementColumns>{adding && <EditorDialog area="options" title={editorWords('earningAdd')} section={admin('earning')} icon="coin" onClose={() => setAdding(false)}><form className="l-editor-form" onSubmit={e => { e.preventDefault(); if (!available.some(w => w.key === method)) return; setAdding(false); guard.go(earningUrl('earn', { way: method })) }}><div className="l-editor-body l-editor-stack"><EditorSection icon="coin" title={editorWords('chooseMethod')}><div className="l-editor-stack">{available.map(w => <label key={w.key} className="l-editor-choice"><input type="radio" name="earning-method" value={w.key} checked={method === w.key} onChange={() => setMethod(w.key)} /><span>{title(w)}<small>{caption(w)}</small></span></label>)}</div></EditorSection><small>{editorWords('nextStep')}</small></div><EditorFooter creating onCancel={() => setAdding(false)} save={editorWords('continue')} disabled={!method} /></form></EditorDialog>}{popup}{new URLSearchParams(location.search).get('settings') === 'points' && <ProgrammeSettings kind="points" />}{discard}
   </div>

@@ -93,5 +93,11 @@
   "memberAccess": "Acceso de miembros",
   "activePlaces": "{{n}} activos",
   "baseEarning": "Tasa base de puntos",
-  "method": "Método"
+  "method": "Método",
+  "howItWorks": "Cómo funciona",
+  "perkDetails": "Detalles del beneficio",
+  "rewardDetails": "Detalles de la recompensa",
+  "offerDetails": "Detalles de la oferta",
+  "moreEarningRules": "Más reglas para ganar puntos",
+  "foodAndDrink": "Comida y bebida"
 }

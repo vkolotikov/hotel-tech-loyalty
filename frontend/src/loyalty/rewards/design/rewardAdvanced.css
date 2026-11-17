@@ -13,9 +13,9 @@
 [data-loyalty] .l-rb-advanced > .l-rb-advanced-content { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 [data-loyalty] .l-rb-advanced-section { display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
 [data-loyalty] .l-rb-advanced-section p, [data-loyalty] .l-rb-advanced-meta p { margin: 0; }
-[data-loyalty] .l-rb-terms-view { padding: 12px; border: 1px solid var(--l-rb-advanced-edge); border-radius: 9px; background: var(--l-ov-recessed); }
+[data-loyalty] .l-rb-terms-view { padding: 12px; border: 1px solid var(--l-rb-advanced-edge, var(--l-ad-edge)); border-radius: 9px; background: var(--l-ov-recessed); }
 [data-loyalty] .l-rb-advanced-meta { display: flex; flex-direction: column; gap: 4px; color: var(--l-ov-secondary); font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
-[data-loyalty] .l-rb-advanced .l-rb-management { padding-top: 12px; }
+[data-loyalty] .l-ad-info .l-rb-management { padding-top: 12px; }
 [data-loyalty] .l-rb-advanced-editor { --l-rb-advanced-edge: var(--le-border); }
 [data-loyalty] .l-rb-advanced-editor > summary { padding: 13px 14px; }
 [data-loyalty] .l-rb-advanced-editor > summary strong { color: inherit; }
@@ -28,6 +28,6 @@
 @media (max-width: 420px) {
   [data-loyalty] .l-rb-advanced-editor > summary { padding: 12px; }
   [data-loyalty] .l-rb-advanced-editor > .l-rb-advanced-content { padding-inline: 12px; }
-  [data-loyalty] .l-rb-advanced .l-rb-detail-actions { flex-wrap: wrap; }
-  [data-loyalty] .l-rb-advanced .l-rb-detail-actions > .l-ov-button { flex-basis: 100%; }
+  [data-loyalty] .l-ad-info .l-rb-detail-actions { flex-wrap: wrap; }
+  [data-loyalty] .l-ad-info .l-rb-detail-actions > .l-ov-button { flex-basis: 100%; }
 }

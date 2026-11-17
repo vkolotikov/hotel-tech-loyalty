@@ -48,3 +48,14 @@ known failures allowed, three SQLite shards, Node24/26, dependency audit and Lar
 documentation only; application and generated assets remain identical to that code release. The original C:
 checkout remains on `audit/content-prelaunch-20261113` at `175ea36d7`, with no tracked changes. Source feature
 branch, logs and private browser evidence are retained; all task-owned local database/fixture services are stopped.
+
+## Open details follow-up
+
+Owner requested visible, simpler information below the grid in Ways to earn and Tier perks, plus an audit of
+similar pages. Source `feature/loyalty-detail-sections-20261117` starts from production `70cf9eed7` in its own E:
+worktree. Generic read-view Advanced settings disclosures become named open sections on earning, perks, offers
+and points rewards. Related links/actions wrap with clear gaps, boost removal stays directly available behind
+its existing confirmation, and text-only purchase calculation guidance stays visible. Legacy food/beverage and
+custom category labels are readable; arbitrary custom text bypasses translation resource lookup. Five locales
+updated. APIs, business rules, dependencies and migrations are unchanged. See
+[the audit](../audits/2026-11-17-loyalty-open-details.md) for review and verification; release receipts follow.

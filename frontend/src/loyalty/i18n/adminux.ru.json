@@ -93,5 +93,11 @@
   "memberAccess": "Доступ участников",
   "activePlaces": "{{n}} активных",
   "baseEarning": "Базовая ставка начисления",
-  "method": "Способ"
+  "method": "Способ",
+  "howItWorks": "Как это работает",
+  "perkDetails": "О привилегии",
+  "rewardDetails": "О награде",
+  "offerDetails": "Об акции",
+  "moreEarningRules": "Другие правила начисления",
+  "foodAndDrink": "Еда и напитки"
 }

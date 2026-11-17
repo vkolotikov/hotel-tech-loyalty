@@ -11,13 +11,14 @@ import { refusalKey } from '../../lib/errors'
 import { OverviewButton } from '../../overview/OverviewUI'
 import { TierAssignmentEditor } from '../../management/TierAssignmentEditor'
 import { useAdminWords } from '../../management/words'
-import { ManagementVisual, ManagementFact } from '../../management/ManagementUI'
+import { ManagementVisual, ManagementFact, ManagementDetails } from '../../management/ManagementUI'
+import { categoryLabel } from '../../management/category'
 import { PROGRAM_KEY, afterProgramChange, programApi } from '../../program/api'
 import { BenefitDialog } from '../../program/BenefitDialog'
 import { RemoveBenefit, RenameDialog } from '../../program/RemoveDialogs'
 import { ERRORS } from '../../program/errors'
 import type { Benefit, Tier, TierBenefit } from '../../program/types'
-import { APPLIES_TO_WORDS, CATEGORY_WORDS, FULFILLMENT_WORDS, VALUE_PHRASE_WORDS } from '../../program/words'
+import { APPLIES_TO_WORDS, FULFILLMENT_WORDS, VALUE_PHRASE_WORDS } from '../../program/words'
 import { LoadFailed, Loading } from '../parts'
 import { RewardColumns, RewardEmpty, RewardEyebrow, RewardHeading, RewardRow } from './RewardUI'
 import { RewardIcon, RewardStatus } from './presentation'
@@ -60,8 +61,12 @@ export function MembershipBenefitsPage() {
         <div className="l-ad-assignment">{assignments.length > 0 && <label><span>{say('level')}</span><select value={preview?.tier.id ?? ''} onChange={e => setPreviewTier({ benefit: selected.id, tier: Number(e.target.value) })}>{!preview && <option value="">{admin('chooseTier')}</option>}{assignments.map(a => <option key={a.tier.id} value={a.tier.id}>{a.tier.name}{!a.tier.is_active && ` · ${say('off')}`}</option>)}</select></label>}{manage && <OverviewButton disabled={(!preview && !selected.is_active) || flip.isPending} onClick={() => preview ? setOpen({ kind: 'assignment', tier: preview.tier, current: preview.value, benefit: selected }) : setOpen({ kind: 'assign', benefit: selected })}>{admin('manageAssignment')}</OverviewButton>}</div>
         <ManagementFact icon="delivery" label={say('delivery')}>{mode(selected.fulfillment_mode)}</ManagementFact>
         {preview && <ManagementFact icon="bookingSmall" label={t('loyalty.program.tier_benefit.applies_to', 'Applies to')}>{t(`loyalty.program.applies_to.${preview.value.applies_to}`, APPLIES_TO_WORDS[preview.value.applies_to] ?? preview.value.applies_to)}</ManagementFact>}
-        <details className="l-ad-more"><summary>{admin('advanced')}</summary><p>{selected.description}</p><dl className="l-rb-facts"><dt>{say('assigned')}</dt><dd>{assignments.map(a => `${a.tier.name}${a.tier.is_active ? '' : ` (${say('off')})`}`).join(' · ') || say('noLevels')}</dd><dt>{t('loyalty.program.benefit.category', 'Category')}</dt><dd>{selected.category ? t(`loyalty.program.category.${selected.category}`, CATEGORY_WORDS[selected.category] ?? selected.category) : '—'}</dd></dl><p>{preview ? manage ? say('assignmentNote', { level: preview.tier.name }) : say('valuesPerLevel') : say('noLevels')}</p>
-        {manage && <div className="l-rb-detail-actions"><SideMenu kind="menu" place="down-right" named label={t('loyalty.membership.more.label', 'More')} face="…" buttonClassName="l-ov-button" listClassName="w-56"><button role="menuitem" className="l-rd-menu-item" onClick={() => setOpen({ kind: 'rename', benefit: selected })}>{t('loyalty.program.rename.action', 'Rename')}</button><button role="menuitem" disabled={flip.isPending} className="l-rd-menu-item" onClick={() => flip.mutate(selected)}>{selected.is_active ? t('loyalty.program.benefits.switch_off', 'Switch off') : t('loyalty.program.benefits.switch_on', 'Switch on')}</button><button role="menuitem" className="l-rd-menu-item" onClick={() => setOpen({ kind: 'remove', benefit: selected })}>{t('loyalty.program.remove_benefit.action', 'Delete')}</button></SideMenu><OverviewButton disabled={!selected.is_active || flip.isPending} onClick={() => setOpen({ kind: 'assign', benefit: selected })}>{say('assign')}</OverviewButton></div>}</details>
+        <ManagementDetails title={admin('perkDetails')}>
+          {selected.description && <p>{selected.description}</p>}
+          <dl className="l-rb-facts"><dt>{say('assigned')}</dt><dd>{assignments.map(a => `${a.tier.name}${a.tier.is_active ? '' : ` (${say('off')})`}`).join(' · ') || say('noLevels')}</dd><dt>{t('loyalty.program.benefit.category', 'Category')}</dt><dd>{categoryLabel(selected.category, t)}</dd></dl>
+          <p className="l-ad-muted">{preview ? manage ? say('assignmentNote', { level: preview.tier.name }) : say('valuesPerLevel') : say('noLevels')}</p>
+          {manage && <div className="l-ad-info-actions"><SideMenu kind="menu" place="down-right" named label={t('loyalty.membership.more.label', 'More')} face="…" buttonClassName="l-ov-button" listClassName="w-56"><button role="menuitem" className="l-rd-menu-item" onClick={() => setOpen({ kind: 'rename', benefit: selected })}>{t('loyalty.program.rename.action', 'Rename')}</button><button role="menuitem" disabled={flip.isPending} className="l-rd-menu-item" onClick={() => flip.mutate(selected)}>{selected.is_active ? t('loyalty.program.benefits.switch_off', 'Switch off') : t('loyalty.program.benefits.switch_on', 'Switch on')}</button><button role="menuitem" className="l-rd-menu-item" onClick={() => setOpen({ kind: 'remove', benefit: selected })}>{t('loyalty.program.remove_benefit.action', 'Delete')}</button></SideMenu><OverviewButton disabled={!selected.is_active || flip.isPending} onClick={() => setOpen({ kind: 'assign', benefit: selected })}>{say('assign')}</OverviewButton></div>}
+        </ManagementDetails>
         {flip.isError && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'benefit', failureOf(flip.error)))}</Notice>}
       </aside>}</div></>}
     {data && manage && open?.kind === 'edit' && <BenefitDialog benefit={open.benefit} options={data.options} onClose={close} />}
