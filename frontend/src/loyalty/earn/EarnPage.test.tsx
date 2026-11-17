@@ -37,6 +37,7 @@ describe('WE01–03 server integration', () => {
     expect(html).toContain('0 points')
     expect(html).not.toContain('112 points')
     expect(html).toContain('Spending does not earn points.')
+    expect(html).toMatch(/<button(?=[^>]*disabled="")[^>]*>1 point<\/button>/)
   })
   it('retains all six existing earning methods, setup and checks on the new root', () => {
     const html = page()
