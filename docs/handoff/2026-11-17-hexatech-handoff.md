@@ -35,3 +35,16 @@ was independently reviewed, received a failing regression, and is included in th
 Its focused final-build supplement passed49 checks, giving245 combined browser checks with zero runtime errors.
 Deployment receipts follow. All local data/mail remain disposable; no production
 account or payment was changed. Private evidence prefix `C:/wamp64/tmp/loyalty-setup-`.
+
+## Live code release
+
+Production code `12a038b70e9e4f71d9270009f52c8af1f4959022`, verified17 November11:39 Europe/Riga by37 content,
+validation and boundary checks. Entry `index-DNvgSQ17.js`; setup `SetupWizard-Cawwfwaz.js`; earning
+`EarningPage-CUwnIM9s.js`; rewards `RewardsPage-DV7OvCbF.js`; claim `Claim-BYzLfUKl.js`. The explicit claim-purpose
+backend validation, protected APIs and private-shell/landing boundaries pass. No live activation message or account
+mutation was performed. [CI44056903877](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/44056903877)
+runs on that exact code release: all eight jobs passed, including full PostgreSQL18 with only the pre-existing
+known failures allowed, three SQLite shards, Node24/26, dependency audit and Larastan. This final receipt is
+documentation only; application and generated assets remain identical to that code release. The original C:
+checkout remains on `audit/content-prelaunch-20261113` at `175ea36d7`, with no tracked changes. Source feature
+branch, logs and private browser evidence are retained; all task-owned local database/fixture services are stopped.
