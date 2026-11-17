@@ -45,7 +45,8 @@ user's physical phone remain unverified.
 ## Review and verification
 
 Independent review found two Important issues: unavailable matching reward reuse and an incorrect paid-appointment
-explanation. Both received failing regressions and implementation corrections before release review.
+explanation. Both received failing regressions and implementation corrections; re-review closed both with no
+Critical/Important findings remaining. Saved reward availability is rechecked on Apply and ordinary option saves.
 
 Initial focused evidence: 34 backend tests/301 assertions for corrected setup/options/appointment cases, 96
 frontend earning/setup cases, 470 reward-focused tests, Auth69/376 with six existing PostgreSQL-only skips.
@@ -58,3 +59,10 @@ runner limit, including a focused rerun. No assertion failed. The first combined
 limit; final artifact gates run separate directory scopes. Failed/interrupted logs are retained. The complete
 rerun passed492 frontend files/7290 tests with a15000ms runner budget for source scans; assertions and test source
 were not edited. Final artifact gates and deployment counts are recorded below when complete.
+
+Compiled source browser acceptance passed196 checks with zero runtime errors:170 setup/reward cases across
+1440/390px, both themes and five locales;11 hosted claim cases, including staff-created member, real local queued
+mail, wrong code, successful activation of the original identity and a fresh-session sign-in;15 unavailable reward
+cases across both themes/sizes, with native disabled option property/markup and backend422 refusal. Screenshots
+were visually reviewed. The validation-error correction test found and fixed Advanced settings collapsing while
+the user continued editing. Test data, credentials, codes and tokens remain private.
