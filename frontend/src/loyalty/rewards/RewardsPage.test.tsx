@@ -129,16 +129,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(manager).toContain('href="/loyalty/rewards?reward=4"')
   })
 
-  it('keeps the claim conditions visible and opens terms within the single advanced settings area', () => {
+  it('keeps claim conditions and terms visible in the reward details section', () => {
     const saved = { ...catalogue, rewards: [{ ...catalogue.rewards[0], description: 'Breakfast in the garden.', terms: 'Show your code.\nAvailable until 11:00.' }] }
     const html = render('?selected=4', can(), saved)
     const panel = html.slice(html.indexOf('id="management-detail"'))
-    const advanced = panel.indexOf('<details')
-    expect(text(panel.slice(0, advanced))).toContain('Key conditions Availability 0 remaining Member limit No limit Valid until')
-    expect(text(panel.slice(0, advanced))).toContain('How to claim')
-    expect(panel.match(/<details\b/g)).toHaveLength(1)
-    expect(panel.slice(advanced, panel.indexOf('>', advanced))).toContain('open=""')
-    expect(text(panel.slice(advanced))).toContain('Advanced settings Terms, member description and reward management Terms &amp; conditions Show your code.')
+    expect(text(panel)).toContain('Key conditions Availability 0 remaining Member limit No limit Valid until')
+    expect(text(panel)).toContain('How to claim')
+    expect(panel).not.toContain('<details')
+    expect(text(panel)).toContain('Reward details Terms &amp; conditions Show your code.')
     expect(panel).toContain('Show your code.\nAvailable until 11:00.')
     expect(text(panel)).toContain('Member description Breakfast in the garden.')
     expect(text(panel)).toContain('Category: Dining')

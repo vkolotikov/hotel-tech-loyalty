@@ -57,7 +57,7 @@ export function BonusBoostsPage({ answer, guard }: { answer: OptionsAnswer; guar
       <ManagementFact icon="people" label={admin('who')}>{chosenBoost.tier_ids?.length ? program?.tiers.filter(t => chosenBoost.tier_ids?.includes(t.id)).map(t => t.name).join(' · ') : say('allLevels')}</ManagementFact>
       <ManagementFact icon="bonusCalendar" label={admin('when')}>{when(chosenBoost.starts_at, i18n.language, boot.venue.timezone)} – {when(chosenBoost.ends_at, i18n.language, boot.venue.timezone)}<p>{weekdaysText(chosenBoost.days_of_week, i18n.language) || t('loyalty.program.boosts.every_day', 'Every day')}</p></ManagementFact>
       <p className="l-ad-muted">{admin('highestWins')}</p>{needsTimeCheck(chosenBoost) && <p>{t('loyalty.program.time_check.all_line', 'Some boosts ask for their times to be checked. If the times shown are right, confirm them together.')}</p>}
-      {answer.can_change && <details className="l-ad-more"><summary>{admin('advanced')}</summary><OverviewButton onClick={() => setOpen({ kind: 'remove', boost: chosenBoost })}>{t('loyalty.program.boosts.remove', 'Remove')}</OverviewButton></details>}
+      {answer.can_change && <div className="l-ad-detail-actions"><OverviewButton onClick={() => setOpen({ kind: 'remove', boost: chosenBoost })}>{t('loyalty.program.boosts.remove', 'Remove')}</OverviewButton></div>}
     </ManagementSelection>}
   </ManagementColumns>
     {answer.can_change && program && (open?.kind === 'edit' || boostId === 'new') && <BoostDialog boost={open?.kind === 'edit' ? open.boost : null} tiers={program.tiers} brands={program.options.brands} onClose={close} />}

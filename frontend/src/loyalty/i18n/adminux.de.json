@@ -93,5 +93,11 @@
   "memberAccess": "Mitgliederzugang",
   "activePlaces": "{{n}} aktiv",
   "baseEarning": "Basis-Sammelrate",
-  "method": "Methode"
+  "method": "Methode",
+  "howItWorks": "Funktionsweise",
+  "perkDetails": "Details zum Vorteil",
+  "rewardDetails": "Prämiendetails",
+  "offerDetails": "Angebotsdetails",
+  "moreEarningRules": "Weitere Sammelregeln",
+  "foodAndDrink": "Speisen & Getränke"
 }

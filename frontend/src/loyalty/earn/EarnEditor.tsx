@@ -18,7 +18,7 @@ import { useEarnWords } from './words'
 import { EditorDialog, EditorFooter, EditorSection, EditorPreview, EditorArt, EditorNote, EditorDisclosure, EditorSwitch } from '../editors/EditorUI'
 import { useEditorWords } from '../editors/words'
 import { useAdminWords } from '../management/words'
-import { ManagementFact } from '../management/ManagementUI'
+import { ManagementDetails, ManagementFact } from '../management/ManagementUI'
 
 export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; answer: OptionsAnswer; guard: EarnGuard; bonus?: boolean }) {
   const { t, i18n } = useTranslation(), say = useEarnWords(), oldSay = useSay(), boot = useBoot()
@@ -46,7 +46,7 @@ export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; an
         {purchase ? <><div className="l-editor-two"><FormField label={say('ruleName')}><input value={title} readOnly /></FormField>{fields}</div><div className="l-earn-quick">{[1, 5, 10].filter(n => n >= (answer.fields.points_per_currency.min ?? 0) && n <= (answer.fields.points_per_currency.max ?? Infinity)).map(n => <OverviewButton key={n} type="button" aria-pressed={Number(rate) === n} disabled={disabled || !form.on} onClick={() => draft.edit(way.key, { values: { ...form.values, points_per_currency: String(n) } })}>{say(n === 1 ? 'onePoint' : 'points', { n })}</OverviewButton>)}</div></> : fields}
         {status}
       </EditorSection>
-      {purchase && <><EditorSection icon="people" title={say('levels')}><div className="l-editor-two"><FormField label={say('levels')}><input value={say('allLevels')} readOnly /></FormField><FormField label={editor('currency')}><input value={say('currency', { currency })} readOnly /></FormField></div><EditorNote title={editor('sharedRate')}>{say('sharedRate')} {say('eligible')}</EditorNote></EditorSection><EditorDisclosure title={say('advanced')}><p>{say('calculation')}</p><p>{say('deskLine')}</p></EditorDisclosure></>}
+      {purchase && <><EditorSection icon="people" title={say('levels')}><div className="l-editor-two"><FormField label={say('levels')}><input value={say('allLevels')} readOnly /></FormField><FormField label={editor('currency')}><input value={say('currency', { currency })} readOnly /></FormField></div><EditorNote title={editor('sharedRate')}>{say('sharedRate')} {say('eligible')}</EditorNote></EditorSection><ManagementDetails title={editor('calculation')}><p>{say('calculation')}</p><p>{say('deskLine')}</p></ManagementDetails></>}
       {!purchase && !bonus && <EditorNote title={say('memberSees')}>{text}{(answer.not_used ?? []).includes(way.key) && <p>{t('loyalty.options.card.not_used', 'Your venue takes no bookings, so this gives nothing.')}</p>}</EditorNote>}
       {bonus && <>{memberPreview}<small>{say('messageNote')}</small></>}
       {message}

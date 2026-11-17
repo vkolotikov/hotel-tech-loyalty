@@ -1,4 +1,5 @@
-import { ManagementVisual, ManagementFact } from '../../management/ManagementUI'
+import { ManagementVisual, ManagementFact, ManagementDetails } from '../../management/ManagementUI'
+import { categoryLabel } from '../../management/category'
 import { adminAssets } from '../../management/assets'
 import { useAdminWords } from '../../management/words'
 import { useState } from 'react'
@@ -46,12 +47,12 @@ export function PointsRewardsPage() {
       <ManagementFact icon="people" label={say('who')}>{say('allMembers')}</ManagementFact>
       <section className="l-rb-key-conditions"><h3>{say('keyConditions')}</h3><dl className="l-rb-facts"><dt>{say('availability')}</dt><dd>{selected.stock === null ? say('unlimited') : say('stockLeft', { n: points(selected.stock, i18n.language) })}</dd><dt>{say('memberLimit')}</dt><dd>{selected.per_member_limit === null ? say('noLimit') : selected.per_member_limit === 1 ? say('once') : say('limit', { n: selected.per_member_limit })}</dd><dt>{say('validUntil')}</dt><dd>{selected.expires_at ? when(selected.expires_at, i18n.language, boot.venue.timezone) : say('noEnd')}</dd></dl></section>
       <div className="l-rb-divider"><strong>{say('claimSteps')}</strong><ol className="l-ad-claim-steps"><li><img src={adminAssets.redeemCoin.src} width={19} height={19} alt="" /><span>{say('claimCost', { n: points(selected.points_cost, i18n.language) })}</span></li><li><img src={adminAssets.qr.src} width={14} height={14} alt="" /><span>{say('claimCode')}</span></li></ol></div>
-      <details key={selected.id} className="l-ad-more l-rb-advanced" open><summary><span><strong>{admin('advanced')}</strong><small>{say('advancedDetailsSummary')}</small></span></summary><div className="l-rb-advanced-content">
-        <section className="l-rb-advanced-section l-rb-terms-view"><h3>{say('terms')}</h3><p className="l-rb-prewrap">{selected.terms || say('noTerms')}</p></section>
-        {selected.description && <section className="l-rb-advanced-section"><h3>{say('description')}</h3><p className="l-rb-prewrap">{selected.description}</p></section>}
-        <div className="l-rb-advanced-meta">{selected.category && <p>{t('loyalty.rewards.reward.category', 'Category')}: {selected.category}</p>}<small>{t('loyalty.rewards.catalogue.redeemed', 'Redeemed')}: {points(selected.redeemed, i18n.language)} · {t('loyalty.rewards.catalogue.fulfilled', 'Fulfilled')}: {points(selected.fulfilled, i18n.language)}</small></div>
+      <ManagementDetails key={selected.id} title={admin('rewardDetails')}>
+        <section className="l-rb-advanced-section l-rb-terms-view"><h4>{say('terms')}</h4><p className="l-rb-prewrap">{selected.terms || say('noTerms')}</p></section>
+        {selected.description && <section className="l-rb-advanced-section"><h4>{say('description')}</h4><p className="l-rb-prewrap">{selected.description}</p></section>}
+        <div className="l-rb-advanced-meta">{selected.category && <p>{t('loyalty.rewards.reward.category', 'Category')}: {categoryLabel(selected.category, t)}</p>}<small>{t('loyalty.rewards.catalogue.redeemed', 'Redeemed')}: {points(selected.redeemed, i18n.language)} · {t('loyalty.rewards.catalogue.fulfilled', 'Fulfilled')}: {points(selected.fulfilled, i18n.language)}</small></div>
         {manage && <RewardActions key={selected.id} reward={selected} onRemoved={() => go({ selected: null })} />}
-      </div></details></section></aside>}
+      </ManagementDetails></section></aside>}
       </div></>}
     {editor && data && <RewardEditorPage key={editor} id={editor} catalogue={data} />}
   </div>

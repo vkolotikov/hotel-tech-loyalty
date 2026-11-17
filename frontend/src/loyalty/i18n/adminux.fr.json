@@ -93,5 +93,11 @@
   "memberAccess": "Accès des membres",
   "activePlaces": "{{n}} actifs",
   "baseEarning": "Taux de gain de base",
-  "method": "Méthode"
+  "method": "Méthode",
+  "howItWorks": "Fonctionnement",
+  "perkDetails": "Détails de l’avantage",
+  "rewardDetails": "Détails de la récompense",
+  "offerDetails": "Détails de l’offre",
+  "moreEarningRules": "Autres règles de cumul",
+  "foodAndDrink": "Restauration et boissons"
 }

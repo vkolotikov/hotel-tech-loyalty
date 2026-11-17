@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { OverviewButton } from '../overview/OverviewUI'
 import { overviewAssets } from '../overview/assets'
@@ -14,6 +14,15 @@ export function ManagementHeading({ title, line, children }: { title: string; li
   return <header className="l-ad-heading"><div><h1>{title}</h1><p>{line}</p></div><div className="l-ad-actions">{children}</div></header>
 }
 export function ManagementColumns({ children }: { children: ReactNode }) { return <div className="l-ad-columns">{children}</div> }
+/** Supporting facts stay in the page flow, with a distinct row for the related actions. */
+export function ManagementDetails({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
+  const heading = useId()
+  return <section className="l-ad-info" aria-labelledby={heading}>
+    <h3 id={heading}>{title}</h3>
+    <div className="l-ad-info-body">{children}</div>
+    {actions && <div className="l-ad-info-actions">{actions}</div>}
+  </section>
+}
 export function ManagementPanel({ title, count, children, className = '' }: { title: string; count?: ReactNode; children: ReactNode; className?: string }) {
   return <section className={`l-ad-panel ${className}`}><header className="l-ad-panel-head"><h2>{title}</h2>{count != null && <small>{count}</small>}</header>{children}</section>
 }

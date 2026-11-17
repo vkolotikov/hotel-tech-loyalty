@@ -93,5 +93,11 @@
   "memberAccess": "Member access",
   "activePlaces": "{{n}} active",
   "baseEarning": "Base earning rate",
-  "method": "Method"
+  "method": "Method",
+  "howItWorks": "How it works",
+  "perkDetails": "Perk details",
+  "rewardDetails": "Reward details",
+  "offerDetails": "Offer details",
+  "moreEarningRules": "More earning rules",
+  "foodAndDrink": "Food & drink"
 }
