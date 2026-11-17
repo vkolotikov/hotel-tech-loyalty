@@ -13,6 +13,26 @@ const way = (key: string): Way => answer.ways.find(w => w.key === key)!
 const ctx = { say, currency: 'EUR', locale: 'en', rewards: answer.catalogue.rewards }
 const sentence = (key: string, more: Options = {}) => sentenceOf(key, { ...answer.options, ...more }, ctx)
 
+it('clears the previous catalogue choice when a different business template is chosen', () => {
+  const saved = { ...answer.options, stamp_reward_id: 9, stamp_reward_kind: 'reward' }
+  expect(recommendedForm(answer, presetFixture('beauty', true), saved).stamp_card.values.stamp_reward_id).toBe('')
+})
+
+it('sends a suggested stamp reward as a template reference, never as a catalogue id', () => {
+  const data = answerFixture()
+  Object.assign(data.presets[0], { stamp_rewards: [{ index: 0, name: 'Brow Tidy', points_cost: 400 }] })
+  const form = recommendedForm(data, data.presets[0], data.options)
+  form.stamp_card.values.stamp_reward_kind = 'reward'; form.stamp_card.values.stamp_reward_id = '-1'
+  const body = setupBody(data, 'beauty', form, 'suggestion-press')
+  expect(body).toHaveProperty('stamp_reward_template_index', 0)
+  expect(body.options).not.toHaveProperty('stamp_reward_id')
+})
+
+it('explains that spending points are off even when booking and desk activity remain enabled', () => {
+  expect(sentence('earn_rate', { spend_points_enabled: false, points_on_bookings: true, desk_earn_enabled: true }))
+    .toBe('Spending does not earn points. Visits and bonuses can still reward members.')
+})
+
 describe('a card’s form and its options (release 7 §1)', () => {
   it('reads a switch, or a number whose 0 is off, and shows each field as text', () => {
     expect(isOn(way('points_on_spend'), answer.options)).toBe(true)

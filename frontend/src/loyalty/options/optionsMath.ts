@@ -41,6 +41,7 @@ export interface SayContext {
   currency: string
   locale: string
   rewards: CatalogueReward[]
+  suggestedRewardLabel?: string
 }
 
 // ─── Form ↔ options ───────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ export function typedValue(text: string, def: FieldDef | undefined): OptionValue
     case 'enum':
       return def.choices?.includes(v) ? v : undefined
     case 'reward':
-      return v === '' ? null : /^\d+$/.test(v) ? Number(v) : undefined
+      return v === '' ? null : /^-?\d+$/.test(v) ? Number(v) : undefined
     case 'bool':
       return v === 'true' ? true : v === 'false' ? false : undefined
     default:
@@ -186,7 +187,7 @@ function fieldProblem(key: string, way: Way, form: WayForm, def: FieldDef | unde
     case 'enum':
       return def.choices?.includes(text) ? null : { code: 'choice' }
     case 'reward':
-      return rewards.some(r => String(r.id) === text) ? null : { code: 'reward' }
+      return rewards.some(r => String(r.id) === text && r.is_redeemable !== false) ? null : { code: 'reward' }
     default:
       return null
   }
@@ -217,7 +218,7 @@ export function formProblems(d: Described, form: OptionsForm, rewards: Catalogue
 export function serverProblems(failure: ApiFailure | null, d: Described): Problems {
   const out: Problems = {}
   for (const name of Object.keys(failure?.fields ?? {})) {
-    const key = name.split('.').pop() ?? name
+    const key = name === 'stamp_reward_template_index' ? 'stamp_reward_id' : name.split('.').pop() ?? name
     const def = d.fields[key]
     const way = d.ways.find(w => w.fields.includes(key))
     if (!def || !way || key in out) continue
@@ -276,10 +277,12 @@ export function sentenceOf(wayKey: string, o: Options, ctx: SayContext): string 
   switch (wayKey) {
     // Owner 2026-10-26: the rate serves bookings and the desk alike; each of them has its own switch.
     case 'earn_rate':
+      if (o.spend_points_enabled === false) return sentence('earn_rate_off', ctx)
       return o.points_on_bookings === true || o.desk_earn_enabled === true
         ? sentence('earn_rate', ctx, { points: pts(o.points_per_currency), money: money(1, ctx.currency, locale) })
         : sentence('earn_rate_none', ctx)
     case 'points_on_spend':
+      if (o.spend_points_enabled === false) return sentence('earn_rate_off', ctx)
       return o.points_on_bookings === true ? sentence('points_on_spend', ctx) : sentence('points_on_spend_off', ctx)
     case 'points_expiry':
       return num(o.points_expiry_months) > 0
@@ -307,6 +310,7 @@ export function sentenceOf(wayKey: string, o: Options, ctx: SayContext): string 
       if (o.checkin_enabled !== true) return sentence('check_in_off', ctx)
       return num(o.checkin_points) > 0 ? sentence('check_in_points', ctx, { points: pts(o.checkin_points) }) : sentence('check_in_visit', ctx)
     case 'desk_earn':
+      if (o.spend_points_enabled === false) return sentence('earn_rate_off', ctx)
       return o.desk_earn_enabled === true ? sentence('desk_earn', ctx) : sentence('desk_earn_off', ctx)
     case 'cashback':
       return o.cashback_enabled === true ? sentence('cashback', ctx, { percent: decimal(num(o.cashback_percent), locale) }) : sentence('cashback_off', ctx)
@@ -359,10 +363,10 @@ export function presetOf(answer: Pick<OptionsAnswer, 'presets'>, choice: string)
 
 /**
  * A preset's recommendation as the wizard's form: its switches and numbers over the venue's options (a full card's
- * reward stays the venue's own). Keeping the tiers starts from today's options.
+ * reward is chosen again for the selected business). Keeping the tiers starts from today's options.
  */
 export function recommendedForm(d: Described, preset: Preset | null, options: Options): OptionsForm {
-  return formOf(d, preset ? { ...options, ...preset.recommends } : options)
+  return formOf(d, preset ? { ...options, ...preset.recommends, stamp_reward_id: null } : options)
 }
 
 /** The ways that have something to set while on (the configure step lists them). */
@@ -371,8 +375,14 @@ export function configurable(d: Described, form: OptionsForm): Way[] {
 }
 
 /** What Apply sends: the preset unless the tiers are kept, every card's options, and this press's key. */
-export function setupBody(d: Described, choice: string, form: OptionsForm, key: string): SetupBody {
-  return { ...(choice === KEEP ? {} : { preset: choice }), options: optionsOfForm(d, form), idempotency_key: key }
+export function setupBody(d: Described & Partial<Pick<OptionsAnswer, 'presets'>>, choice: string, form: OptionsForm, key: string): SetupBody {
+  const options = optionsOfForm(d, form)
+  const id = Number(options.stamp_reward_id)
+  const index = -id - 1
+  const suggestion = d.presets?.find(p => p.key === choice)?.stamp_rewards?.find(r => r.index === index)
+  const template = options.stamps_enabled === true && options.stamp_reward_kind === 'reward' && id < 0 && suggestion
+  if (template) delete options.stamp_reward_id
+  return { ...(choice === KEEP ? {} : { preset: choice }), options, ...(template ? { stamp_reward_template_index: index } : {}), idempotency_key: key }
 }
 
 /** The banner's question: a manager, at a venue whose wizard was neither applied nor skipped. */

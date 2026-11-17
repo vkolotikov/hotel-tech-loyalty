@@ -9,6 +9,14 @@ use PHPUnit\Framework\TestCase;
 /** "Ways to earn"'s checks (owner 2026-10-26): every rule, by value. */
 class ProgrammeAdviceTest extends TestCase
 {
+    public function test_disabled_spend_points_do_not_count_as_an_earning_source(): void
+    {
+        $answer = ProgrammeAdvice::read(['spend_points_enabled' => false, 'points_on_bookings' => true, 'desk_earn_enabled' => true],
+            ['bookings' => true, 'visit_events' => false], [1]);
+        $warning = array_values(array_filter($answer['advice'], fn ($row) => $row['code'] === 'nothing_earns'));
+        $this->assertCount(1, $warning);
+        $this->assertTrue($warning[0]['fix']['spend_points_enabled']);
+    }
     /** The defaults, as a venue that never set anything reads them. */
     private function options(array $more = []): array
     {

@@ -74,11 +74,12 @@ export function Sentence({ children, tinted, muted }: { children: ReactNode; tin
  * a reward from the catalogue. A field that counts only with another's value (a full card's points or reward) shows
  * only then. Each field says what is wrong with it under it.
  */
-export function WayFields({ way, form, fields, rewards, problems, disabled, currency, locale, onChange }: {
+export function WayFields({ way, form, fields, rewards, suggestedRewardLabel, problems, disabled, currency, locale, onChange }: {
   way: Way
   form: WayForm
   fields: Record<string, FieldDef>
   rewards: CatalogueReward[]
+  suggestedRewardLabel?: string
   problems: Problems
   disabled: boolean
   currency: string
@@ -108,7 +109,7 @@ export function WayFields({ way, form, fields, rewards, problems, disabled, curr
           <div key={key} data-field={key} className={def?.type === 'reward' ? 'sm:col-span-2' : undefined}>
             <FormField label={labelText} hint={hint ? t(...hint) : undefined} problem={problem}>
               {def?.type === 'reward'
-                ? <RewardSelect value={form.values[key] ?? ''} rewards={rewards} disabled={disabled} onChange={(value) => onChange(key, value)} />
+                ? <RewardSelect value={form.values[key] ?? ''} rewards={rewards} suggestedRewardLabel={suggestedRewardLabel} disabled={disabled} onChange={(value) => onChange(key, value)} />
                 : (
                   <input type="text" inputMode={def?.type === 'decimal' ? 'decimal' : 'numeric'} value={form.values[key] ?? ''} disabled={disabled}
                     autoComplete="off" onChange={(e) => onChange(key, e.target.value)} className={`${INPUT} tabular-nums`} />
@@ -158,9 +159,10 @@ function ChoiceField({ name, label, choices, value, problem, hint, disabled, onC
 }
 
 /** The rewards a full card may give (the catalogue's active ones); none yet says where to add one. */
-function RewardSelect({ value, rewards, disabled, onChange, ...aria }: {
+function RewardSelect({ value, rewards, suggestedRewardLabel, disabled, onChange, ...aria }: {
   value: string
   rewards: CatalogueReward[]
+  suggestedRewardLabel?: string
   disabled: boolean
   onChange: (value: string) => void
   /** What FormField puts on its control. */
@@ -168,6 +170,9 @@ function RewardSelect({ value, rewards, disabled, onChange, ...aria }: {
   'aria-describedby'?: string
 }) {
   const { t } = useTranslation()
+  const suggested = rewards.filter(r => r.template_index !== undefined)
+  const saved = rewards.filter(r => r.template_index === undefined)
+  const options = (rows: CatalogueReward[]) => rows.map(r => <option key={r.id} value={String(r.id)} disabled={r.is_redeemable === false}>{r.name}{r.is_redeemable === false ? ` — ${t('loyalty.options.wizard.reward_unavailable', 'Unavailable')}` : ''}</option>)
   if (rewards.length === 0) {
     return (
       <p data-no-rewards="" className="rounded-lg border border-dashed border-a-border px-3 py-2 text-sm text-a-text-2" {...aria}>
@@ -179,7 +184,10 @@ function RewardSelect({ value, rewards, disabled, onChange, ...aria }: {
   return (
     <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} className={INPUT} {...aria}>
       <option value="">{t('loyalty.options.choose_reward', 'Choose a reward…')}</option>
-      {rewards.map(r => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
+      {suggested.length > 0 ? <>
+        <optgroup label={suggestedRewardLabel}>{options(suggested)}</optgroup>
+        {saved.length > 0 && <optgroup label={t('loyalty.options.wizard.saved_rewards', 'Your saved rewards')}>{options(saved)}</optgroup>}
+      </> : options(saved)}
     </select>
   )
 }

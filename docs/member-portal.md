@@ -12,6 +12,16 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 
 ## Backend
 
+Member activation (17 November 2026): `/portal/claim` requests `POST auth/send-code` with `purpose=claim`.
+The server issues an account-bound member grant, retaining the same generic response for staff, ambiguous or
+unknown addresses. Omitting purpose retains signup verification; that proof cannot claim an account or reset
+its password. Resends within the original fifteen-minute window reuse the code without extending expiry;
+the shared send throttle permits one request per address/purpose per minute. Successful verification clears
+the same shared attempt counter that failed entries increment. Expired, used and wrong-purpose grants remain
+refused. Published Android2.1.0/build31 opens this hosted claim page; the exact release runtime was checked.
+The physical user device and live email delivery remain separate checks, recorded in the
+[activation audit](audits/2026-11-17-loyalty-setup-activation.md).
+
 Personal offers (11 November 2026): `member/offers` adds optional `attachment: {name, mime, bytes}` metadata. The Rewards cards and expanded new-offer Inbox messages download authenticated blobs from `GET member/portal/offers/{id}/attachment`. Current tenant, active member, offer expiry and recipient eligibility are rechecked for every download. Individually targeted offers remain absent for other members, including guessed codes. Delivery writes the portal inbox through `NotificationService::keep` with offer preferences, and never claims the offer or awards points automatically. See the personal-offers audit and loyalty runbook for the staff workflow and immutable email outbox.
 
 - `GET /api/v1/member/portal` (`Member\Portal\PortalController`) is the shell's one startup call:

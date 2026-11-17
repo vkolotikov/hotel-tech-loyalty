@@ -32,7 +32,10 @@ export function SetupPreview({ answer, choice, form, ctx }: { answer: OptionsAns
   const review = reviewOf(answer, form, answer.options, ctx)
   const effective = { ...answer.options, ...optionsOfForm(answer, form) }
   const catalogue = useQuery({ queryKey: CATALOGUE_KEY, queryFn: rewardsApi.catalogue })
-  const journey = setupJourney(answer, form, catalogue.data?.rewards.filter(r => rewardStatus(r) === 'active') ?? [])
+  const selectedReward = effective.stamps_enabled === true && effective.stamp_reward_kind === 'reward' ? ctx.rewards.find(r => r.id === Number(effective.stamp_reward_id)) : undefined
+  const available = !preserved && preset ? (preset.stamp_rewards ?? []).map(r => ({ ...r, id: -(r.index + 1) })) : catalogue.data?.rewards.filter(r => rewardStatus(r) === 'active') ?? []
+  const journey = setupJourney(answer, form, selectedReward ? [selectedReward] : available)
+  const suggestedNames = preset ? (preset.stamp_rewards?.map(r => r.name) ?? preset.sample_rewards) : []
   const levels = preserved ? answer.catalogue.tiers : preset.tier_count
   const rewards = preserved ? answer.catalogue.rewards.length : preset.reward_count
   const examples = preserved ? answer.catalogue.rewards.slice(0, 2).map(reward => reward.name) : preset.sample_rewards
@@ -40,6 +43,11 @@ export function SetupPreview({ answer, choice, form, ctx }: { answer: OptionsAns
     <h2>{say('title')}</h2>
     <div ref={body} className="l-gs-preview-content" key={choice} data-preview-template={preset?.key ?? 'keep'}>
       <ManagementVisual art="setupArt" label={admin('programGlance')} title={preset ? presetName(ctx.say, preset) : say('current')} line={preset ? preserved ? say('templateLine') : presetLine(ctx.say, preset) : say('currentLine')} />
+      {preset && suggestedNames.length > 0 && <section className="l-gs-preview-section" data-template-rewards={preset.key}>
+        <h3><Gift size={19} aria-hidden />{t('loyalty.options.wizard.suggested_rewards', 'Suggested rewards for {{preset}}', { preset: presetName(t, preset) })}</h3>
+        <p>{t('loyalty.options.wizard.suggested_rewards_line', 'Choose one as the stamp-card reward to add it when you apply. Your existing rewards stay available.')}</p>
+        <ul className="l-gs-preview-levels">{suggestedNames.map(name => <li key={name}>{name}</li>)}</ul>
+      </section>}
       <ol className="l-gs-preview-journey" data-member-journey="" aria-label={say('journey')}>
         {([{ key: 'join', Icon: UserRoundPlus, hue: 'tier' }, { key: 'earn', Icon: Coins, hue: 'earn' }, { key: 'use', Icon: Gift, hue: 'gift' }] as const).map(({ key, Icon, hue }, index) => <li key={key}>
           <span className="l-hue-tile" data-hue={hue} aria-hidden><Icon size={19} /></span><span>{say(key)}</span><strong>{key === 'join' ? `+${points(journey.welcome, ctx.locale)}` : key === 'earn' ? `+${points(journey.spend, ctx.locale)}` : journey.reward ? points(journey.reward.points_cost, ctx.locale) : '—'}</strong>{index < 2 && <ArrowRight className="l-gs-journey-arrow" size={14} aria-hidden />}
@@ -48,7 +56,7 @@ export function SetupPreview({ answer, choice, form, ctx }: { answer: OptionsAns
       <p className="l-ad-muted">{admin('baseExample')} · {money(50, ctx.currency, ctx.locale)} · {admin('basePoints')}</p>
       {journey.reward ? <div className="l-ad-inset"><strong>{admin('firstReward')}</strong><ManagementOutcome label={journey.reward.name} from={admin('pointsShort', { n: points(journey.reward.points_cost, ctx.locale) })} to={admin('pointsLeft', { n: points(journey.remaining ?? 0, ctx.locale) })} /></div> : preserved && catalogue.isSuccess ? <p>{admin('noReward')}</p> : null}
       <section className="l-gs-preview-section" data-preview-group="membership" data-catalogue={preserved ? 'preserved' : 'suggested'}>
-        <h3><Gift size={19} aria-hidden />{say('catalogue')}</h3>
+        <h3><Gift size={19} aria-hidden />{preserved ? t('loyalty.options.wizard.current_catalogue', 'Current catalogue') : say('catalogue')}</h3>
         <p>{say(preserved ? 'kept' : 'starting')}</p>
         <div className="l-gs-preview-counts"><span><Crown size={16} aria-hidden />{say('levels', { n: String(levels) })}</span><span><Gift size={16} aria-hidden />{say('rewards', { n: String(rewards) })}</span></div>
         {!preserved && preset.tier_names.length > 0 && <ul className="l-gs-preview-levels" aria-label={say('levels', { n: String(levels) })}>{preset.tier_names.map(name => <li key={name}>{name}</li>)}</ul>}

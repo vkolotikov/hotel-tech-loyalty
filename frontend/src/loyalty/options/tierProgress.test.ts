@@ -22,8 +22,8 @@ const ctx = { say, currency: 'EUR', locale: 'en', rewards: base.catalogue.reward
 describe('how members move up (release 8)', () => {
   it('is always on, so its choice always shows and is always sent', () => {
     expect(alwaysOn(tierProgress)).toBe(true)
-    // The earn rate is always on too (owner 2026-10-26); points on bookings has its switch.
-    expect(alwaysOn(answer.ways[0])).toBe(true)
+    // Spending points and points on bookings are optional; tier progression remains a programme rule.
+    expect(alwaysOn(answer.ways[0])).toBe(false)
     expect(alwaysOn(answer.ways[1])).toBe(false)
     expect(isOn(tierProgress, answer.options)).toBe(true)
     const form = wayFormOf(tierProgress, answer.options, answer.fields)

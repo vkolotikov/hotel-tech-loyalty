@@ -1,4 +1,9 @@
 {
+  "keyConditions": "Condiciones principales",
+  "availabilityLimits": "Disponibilidad y límites",
+  "advancedDetailsSummary": "Condiciones, descripción para miembros y gestión de la recompensa",
+  "advancedEditorSummary": "Condiciones, disponibilidad y detalles para miembros",
+  "termsHint": "Añada las condiciones que los miembros deben conocer antes de solicitar la recompensa.",
   "pointsRewards": "Recompensas por puntos",
   "benefits": "Beneficios de membresía",
   "offers": "Ofertas",

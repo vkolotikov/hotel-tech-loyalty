@@ -6,6 +6,11 @@ import en from '../i18n/earn.en.json'
 
 describe('Ways to earn navigation and illustrative amounts', () => {
   const answer = answerFixture()
+  it('never illustrates spending points while the shared earning switch is off', () => {
+    const data = answerFixture(); data.options.spend_points_enabled = false; data.options.desk_earn_enabled = true
+    expect(ruleExample('points_on_spend', data, '50')).toBe(0)
+    expect(ruleExample('desk_earn', data, '50')).toBe(0)
+  })
   it('defaults to earning and preserves direct method links and group boundaries', () => {
     expect(earnLocation('', answer.ways).tab).toBe('earn')
     expect(earnLocation('?way=referrals', answer.ways)).toMatchObject({ tab: 'bonus', way: 'referrals', selected: 'referrals' })

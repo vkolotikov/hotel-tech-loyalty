@@ -62,6 +62,13 @@ class LoyaltyPresetService
                 // the picker shows the count and a couple of examples.
                 'reward_count'   => count($p['rewards'] ?? []),
                 'sample_rewards' => array_slice(array_column($p['rewards'] ?? [], 'name'), 0, 3),
+                // Draft choices are references into this trusted preset, never catalogue ids. Only final setup
+                // materialises a selected choice; changing the template or previewing it writes nothing.
+                'stamp_rewards' => array_map(
+                    fn (array $reward, int $index) => ['index' => $index, 'name' => $reward['name'], 'points_cost' => $reward['points_cost']],
+                    $p['rewards'] ?? [],
+                    array_keys($p['rewards'] ?? []),
+                ),
                 'points_per_currency' => $p['points_per_currency'] ?? null,
                 'referrer_bonus'      => $p['referrer_bonus'] ?? null,
                 // The cheapest reward is what makes the programme concrete:

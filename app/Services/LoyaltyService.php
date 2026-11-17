@@ -438,6 +438,9 @@ class LoyaltyService
      */
     public function pointsForSpend(LoyaltyMember $member, float $amount, ?int $propertyId = null, ?int $outletId = null): int
     {
+        if (!ProgrammeOptions::perRequest((int) $member->getAttribute('organization_id'), 'spend_points_enabled')) {
+            return 0;
+        }
         $base = (float) $this->option((int) $member->organization_id, 'points_per_currency');
         if ($base <= 0) {
             $base = 1.0;

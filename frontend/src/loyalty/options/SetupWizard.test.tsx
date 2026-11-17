@@ -50,6 +50,28 @@ function render(answer: OptionsAnswer, start?: WizardStart) {
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the setup wizard (release 7 §1)', () => {
+  it('shows required programme rules without a disabled earning checkbox', () => {
+    const data = answerFixture()
+    data.ways.push({ key: 'tier_progress', switch: null, zero_off: null, fields: ['tier_progress_by'] })
+    data.fields.tier_progress_by = { type: 'enum', default: 'points', min: null, max: null, choices: ['points', 'visits', 'spend'], when: null }
+    data.options.tier_progress_by = 'points'
+    const html = render(data, { step: 'choose' })
+    const rule = html.match(/<section[^>]+data-programme-rule="tier_progress"[\s\S]*?<\/section>/)?.[0]
+    expect(rule).toBeDefined()
+    expect(rule).not.toContain('type="checkbox"')
+    expect(text(rule!)).toContain('Programme rule')
+  })
+
+  it('offers the selected business template rewards separately from the saved catalogue', () => {
+    const data = answerFixture()
+    Object.assign(data.presets[0], { stamp_rewards: [{ index: 0, name: 'Brow Tidy', points_cost: 400 }] })
+    const form = recommendedForm(data, data.presets[0], data.options)
+    form.stamp_card.values.stamp_reward_kind = 'reward'
+    const html = render(data, { step: 'configure', choice: 'beauty', form })
+    expect(html).toContain('<optgroup label="Suggested rewards for Beauty and spa">')
+    expect(html).toContain('value="-1">Brow Tidy</option>')
+    expect(html).toContain('<optgroup label="Your saved rewards">')
+  })
   it('shows four steps, the first current, with Next and Skip but no Back', () => {
     const html = render(fresh)
     const words = text(html)
@@ -109,7 +131,9 @@ describe('the setup wizard (release 7 §1)', () => {
     expect(preview).toContain('data-catalogue="preserved"')
     expect(text(preview)).toContain('Your existing levels and rewards stay in place.')
     expect(text(preview)).toContain('Free coffee')
-    expect(text(preview)).not.toContain('Brow Tidy')
+    expect(preview).toContain('data-template-rewards="beauty"')
+    expect(text(preview)).toContain('Suggested rewards for Beauty and spa')
+    expect(text(preview)).toContain('Brow Tidy')
     expect(text(preview)).not.toContain('Inner Circle')
   })
 

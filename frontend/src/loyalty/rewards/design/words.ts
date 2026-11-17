@@ -1,6 +1,11 @@
 import { useTranslation } from 'react-i18next'
 
 export const REWARD_DESIGN_WORDS = {
+  keyConditions: 'Key conditions',
+  availabilityLimits: 'Availability & limits',
+  advancedDetailsSummary: 'Terms, member description and reward management',
+  advancedEditorSummary: 'Terms, availability and member details',
+  termsHint: 'Add the conditions members should know before claiming.',
   liveUpcoming: "Live & upcoming",
   unsavedTitle: "Unsaved changes",
   reviewOffer: "Review dates, eligibility and limits.",

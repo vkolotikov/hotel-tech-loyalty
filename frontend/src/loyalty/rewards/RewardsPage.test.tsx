@@ -67,9 +67,9 @@ const referrals: ReferralsPage = {
   referrals: [{ id: 1, referrer: { id: 30, name: 'Grace Hopper' }, referee: { id: 31, name: 'Alan Turing' }, state: 'rewarded', points: { referrer: 200, referee: 100 }, at: '2026-10-01T10:00:00+00:00' }],
 }
 
-const render = (search: string, c: Can) => {
+const render = (search: string, c: Can, rewardCatalogue = catalogue) => {
   const client = new QueryClient()
-  client.setQueryData(CATALOGUE_KEY, catalogue)
+  client.setQueryData(CATALOGUE_KEY, rewardCatalogue)
   client.setQueryData(redemptionsKey('pending', 1), redemptions)
   client.setQueryData(OFFERS_KEY, offers)
   client.setQueryData(referralsKey(1), referrals)
@@ -127,6 +127,36 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     const manager = render('', can({ manage_rewards: true }))
     expect(text(manager)).toContain('+ Add reward')
     expect(manager).toContain('href="/loyalty/rewards?reward=4"')
+  })
+
+  it('keeps the claim conditions visible and opens terms within the single advanced settings area', () => {
+    const saved = { ...catalogue, rewards: [{ ...catalogue.rewards[0], description: 'Breakfast in the garden.', terms: 'Show your code.\nAvailable until 11:00.' }] }
+    const html = render('?selected=4', can(), saved)
+    const panel = html.slice(html.indexOf('id="management-detail"'))
+    const advanced = panel.indexOf('<details')
+    expect(text(panel.slice(0, advanced))).toContain('Key conditions Availability 0 remaining Member limit No limit Valid until')
+    expect(text(panel.slice(0, advanced))).toContain('How to claim')
+    expect(panel.match(/<details\b/g)).toHaveLength(1)
+    expect(panel.slice(advanced, panel.indexOf('>', advanced))).toContain('open=""')
+    expect(text(panel.slice(advanced))).toContain('Advanced settings Terms, member description and reward management Terms &amp; conditions Show your code.')
+    expect(panel).toContain('Show your code.\nAvailable until 11:00.')
+    expect(text(panel)).toContain('Member description Breakfast in the garden.')
+    expect(text(panel)).toContain('Category: Dining')
+    expect(text(panel)).toContain('Redeemed: 10')
+    expect(text(panel)).not.toContain('loyalty.launchpolish.deleteReward')
+  })
+
+  it('keeps all optional reward fields together in the editor with terms first', () => {
+    const html = render('?reward=4', can({ manage_rewards: true }))
+    const form = html.slice(html.indexOf('<form'), html.indexOf('</form>'))
+    expect(form.match(/<details\b/g)).toHaveLength(1)
+    const advanced = form.slice(form.indexOf('<details'))
+    expect(text(advanced)).toContain('Terms &amp; conditions')
+    expect(advanced.indexOf('Terms &amp; conditions')).toBeLessThan(advanced.indexOf('Availability &amp; limits'))
+    for (const label of ['Availability', 'Claims per member', 'Valid until', 'Offered until', 'Member description', 'Replace picture', 'Category']) expect(text(advanced)).toContain(label)
+    expect(advanced).toContain('type="datetime-local"')
+    expect(form).toContain('value="1500"')
+    expect(form).toContain('value="percent_discount"')
   })
 
   it('offers Mark fulfilled and Cancel on a pending redemption, to whoever may redeem, and links the member', () => {
