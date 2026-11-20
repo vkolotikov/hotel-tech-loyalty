@@ -8,8 +8,10 @@ import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { MemberPicker } from '../events/MemberPicker'
 import { useFirstFocus } from '../lib/useFirstFocus'
-import { hexWithColons } from '../scan/scanMath'
+import { detectEnv, hexWithColons, modeState } from '../scan/scanMath'
+import { useScanWords } from '../scan/design/words'
 import { UsbReader } from '../scan/UsbReader'
+import { WindowsReader } from '../scan/WindowsReader'
 import { physicalCardsApi, physicalCardsKey, type BatchRange, type CardBatch, type PhysicalCard } from './api'
 import { physicalCardError, usePhysicalCardWords } from './words'
 
@@ -63,10 +65,12 @@ export function BatchDialog({ limit, onClose, onCreated }: { limit: number; onCl
 
 export function PairCardDialog({ initial, onClose, onPaired }: { initial: PhysicalCard; onClose: () => void; onPaired: (card: PhysicalCard) => void }) {
   const say = usePhysicalCardWords()
+  const scanWords = useScanWords()
   const client = useQueryClient()
   const [card, setCard] = useState(initial)
   const [uid, setUid] = useState('')
   const [usb, setUsb] = useState(false)
+  const windows = modeState('windows', detectEnv()) === 'ready'
   const [lastPaired, setLastPaired] = useState<string | null>(null)
   const field = useRef<HTMLInputElement>(null)
   const pair = useMutation({
@@ -105,6 +109,10 @@ export function PairCardDialog({ initial, onClose, onPaired }: { initial: Physic
     <div className="space-y-4">
       {lastPaired !== null && <Notice tone="success">{say('paired', { number: lastPaired })}</Notice>}
       {initial.uid !== null && <p className="text-sm text-a-text-2">{say('currentUid', { uid: hexWithColons(initial.uid) })}</p>}
+      {windows && !usb && <WindowsReader onUid={value => {
+        if (pair.isPending) return false
+        change(hexWithColons(value))
+      }} />}
       <form onSubmit={submit} className="space-y-4">
         <Field label={say('uid')} hint={say('readerHint')}>
           <input ref={field} className={INPUT} value={uid} onChange={event => change(event.target.value)} maxLength={100}
@@ -117,7 +125,7 @@ export function PairCardDialog({ initial, onClose, onPaired }: { initial: Physic
         </div>
       </form>
       <Button type="button" variant="ghost" onClick={() => setUsb(value => !value)} aria-expanded={usb}>
-        <Usb size={16} aria-hidden />{say('readerOptions')}
+        <Usb size={16} aria-hidden />{windows && usb ? scanWords('windowsUse') : say('readerOptions')}
       </Button>
       {usb && <UsbReader onUid={value => { if (!pair.isPending) change(hexWithColons(value)) }} />}
     </div>

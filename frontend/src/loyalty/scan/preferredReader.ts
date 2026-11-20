@@ -1,6 +1,8 @@
-import type { Attempt, ScanEnv, ScanMode } from './scanMath'
-export function firstReader(env: ScanEnv, asked?: string | null): ScanMode {
+import { modeState, type Attempt, type ScanEnv, type ScanMode } from './scanMath'
+export function firstReader(env: ScanEnv, asked?: string | null, usedWindowsReader = false): ScanMode {
   if (asked === 'camera' || (asked === 'usb' && env.secure && env.webHid)) return asked
+  if (asked === 'nfc' && env.secure && env.webNfc) return asked
+  if ((asked === 'windows' || (!asked && usedWindowsReader)) && modeState('windows', env) === 'ready') return 'windows'
   return env.secure && env.webNfc ? 'nfc' : 'camera'
 }
 export function physicalCardAttempt(attempt: Attempt): Attempt {

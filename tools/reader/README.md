@@ -1,19 +1,9 @@
-# Windows ACR122U helper (preview)
+# HexaTech Windows NFC reader
 
-Portable Windows/.NET Framework helper. No installation, account credentials, browser extension, local server,
-card writes or keyboard injection. It reads the public UID through Windows PC/SC, displays it, and copies it only
-when the operator presses **Copy UID**. Paste into the existing Scan a member or Link card field. Reads are manual;
-continuous door scanning still uses the existing camera/HID transport.
+Download **Windows reader** from Loyalty, open it on the PC with the ACR122U and keep its window open. On **Scan a member** select **Use Windows NFC reader**. The **Pair NFC** and member card-link dialogs show the Windows reader directly. Press **Connect Windows reader** and allow local or loopback access for Loyalty if the browser prompts. Tap the card once. In the pairing dialog check the printed number and press **Save NFC** before moving to the next card. The **Read card** and **Copy UID** buttons in the Windows app are available for manual entry.
 
-Build with `powershell -File tools/reader/build.ps1` on Windows. The build runs protocol self-tests and prints the
-binary SHA-256. `hexatech-reader-preview.exe --probe` reports reader count without reading a card. The source is
-included here; the downloadable binary is unsigned. Do not bypass an organisation's software policy or Windows
-security controls to run it. A signed distribution can follow physical acceptance.
+The portable .NET Framework app uses the installed Windows Smart Card driver. It reads the UID on demand and detects removal and re-presentation through PC/SC. The read-only connection listens on the PC's loopback interface at `127.0.0.1:17432` only while the app is open. It accepts browser requests from `https://loyalty.hotel-tech.ai` and `https://app.hexa-tech.uk`. The browser asks for readings while the reader panel is open in the active window. The app keeps the current presentation in memory. Loyalty checks membership and handles all assignments through its normal signed-in workflows.
 
-The self-tests cover successful 4/7/8/10-byte UID replies, status-word rejection and truncated/invalid replies.
-They do not replace an actual ACR122U/card test. Acceptance: refresh readers, read the same card twice, copy and
-look up/link it in the correct organisation, try an unknown/deactivated card, unplug/reconnect, and confirm the
-failure message after removing a card. No identifier is saved in a file or sent to a server by this helper.
+Build with `powershell -File tools/reader/build.ps1` on Windows. It builds the portable `public/downloads/hexatech-reader.exe`, runs self-tests and prints its SHA-256. The download is unsigned. The tests cover 4-, 7-, 8- and 10-byte UID replies, status-word and response-length rejection, allowed browser origins, and one new reading per card presentation.
 
-Protocol sources: [Microsoft PC/SC functions](https://learn.microsoft.com/en-us/windows/win32/secauthn/smart-card-and-reader-access-functions)
-and [ACS ACR122U API](https://www.acs.com.hk/cn/download-manual/933/API-ACR122U-CN-2.04.pdf).
+See the [Microsoft PC/SC functions](https://learn.microsoft.com/en-us/windows/win32/secauthn/smart-card-and-reader-access-functions), [ACS ACR122U API](https://www.acs.com.hk/en/download-manual/419/API-ACR122U-2.04.pdf) and [Chrome loopback permission guide](https://developer.chrome.com/docs/modern-web-guidance/guides/security/local-network-access).

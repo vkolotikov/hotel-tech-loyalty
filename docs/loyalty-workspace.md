@@ -88,7 +88,7 @@ empty levels remain in an expandable list. Long lists are bounded and keyboard-s
 no longer stretches with them. All report data, routes and interactions are retained. See
 `loyalty-redesign/20-INSIGHTS-LAYOUT-REPORT.md` for Figma comparison, responsive checks and release evidence.
 
-Numbered physical cards (20 November 2026): **Members → Physical cards** creates ranges and exports a ZIP of named QR SVGs and a CSV manifest. Pair tags in order through the focused reader field or the existing USB options. Staff assign each printed card to an active member. Creation and export are manager actions. The [card preparation runbook](loyalty-memberships-and-partners.md#prepare-and-issue-a-numbered-card-batch) documents the desk flow.
+Numbered physical cards (20 November 2026): **Members → Physical cards** creates ranges and exports a ZIP of named QR SVGs and a CSV manifest. Pair tags in order through the Windows NFC reader, a USB HID reader or the focused reader field. Staff assign each printed card to an active member. Creation and export are manager actions. The [card preparation runbook](loyalty-memberships-and-partners.md#prepare-and-issue-a-numbered-card-batch) documents the desk flow.
 
 ## Who has it, and the ways in and back
 
@@ -620,7 +620,7 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   **Requests**: Waiting, Approved, Done, read every 60 s. **Program** and **Rewards**: §4.5 and §4.6 of the spec.
   **Scan**: the field for a keyboard-style reader or a typed code (Enter sends; the field keeps the focus); since release 5
   also "Scan with camera" (any modern browser over https; the decoder loads only when used), "Tap NFC card" (Chrome on
-  Android; elsewhere the page says so) and "USB reader" (Chrome or Edge on a desk computer, the full admin's WebHID hook).
+  Android; elsewhere the page says so), **Windows NFC reader** for ACR122U through the [desktop app](../tools/reader/README.md) and **USB reader** for compatible HID card readers.
   A card no member has offers "Link this card". **A member's page** lists their NFC cards: link (tap, USB reader or
   typed ID), switch off.
 - **Find** (Ctrl/⌘ K or "/") searches members on the server from two letters; S opens Scan; ? lists the shortcuts.
@@ -933,8 +933,9 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   deleted; an import previewed but never run or cancelled keeps its file in its row.
 - **Finding duplicates**: a phone written with characters outside the separators the `REPLACE` chain strips (letters,
   `#`, …) is compared in PHP; if nearly every phone is written that way, that step loads them all.
-- **Scan** (release 5): NFC in a web page works only in Chrome on Android (an iPhone scans the QR code with the camera or
-  types the number); a USB NFC reader needs Chrome or Edge on a desk computer. Keyboard layouts other than German, Russian,
+- **Scan** (release 5): phone NFC in a web page works in Chrome on Android (an iPhone scans the QR code with the camera or
+  types the number). The ACR122U connects through the Windows reader app; the site may ask for local or loopback access.
+  Compatible USB HID readers use Chrome or Edge. Keyboard layouts other than German, Russian,
   French AZERTY and Spanish are not typed back key for key; the generic member-number reading covers most of them. Decimal reader formats other than 4- and 7-byte IDs (e.g. Wiegand) are not
   read. The normalised and digits-alone lookups read the organisation's members without an index.
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin

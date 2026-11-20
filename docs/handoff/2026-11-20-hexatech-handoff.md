@@ -16,4 +16,10 @@ To verify in production, select the intended company in SaaS and use **Apps → 
 
 The migration adds organisation-owned batch records and extends `nfc_cards` for stock without a recipient or tag. `NfcCards` owns pairing and assignment. Printed QR identity survives tag registration, switch-off and reassignment. Member erasure releases a numbered card; legacy single-card erasure retains its prior behaviour.
 
-The feature branch starts from `93921dc0f`. Tests build a disposable `AF 10001–AF 10100` batch and cover archive output, tenant boundaries, UID overlap, repeat range requests, existing assignments, atomic enrolment and erasure. Browser checks use keyboard-style reader input. Hardware compatibility is verified separately on the venue's reader.
+The feature branch starts from `93921dc0f`. Tests build a disposable `AF 10001–AF 10100` batch and cover archive output, tenant boundaries, UID overlap, repeat range requests, existing assignments, atomic enrolment and erasure. Browser checks use keyboard-style reader input.
+
+## Windows NFC reader for ACR122U
+
+On the owner's Windows PC, PC/SC enumerated the ACR122U and read the same seven-byte card ID twice. A browser permission for a device called **USB Receiver** previously let HID reports appear as card IDs in Loyalty even though the ACR122U uses the Windows Smart Card interface.
+
+**Scan a member** offers **Use Windows NFC reader**. **Pair NFC** and member card linking show the Windows connection in their dialogs. The reader app identifies card presentations through PC/SC and makes them available through a read-only loopback endpoint while it is open. The browser uses a physical card code for lookup. Pairing fills the field and waits for **Save NFC** before moving to the next printed number. The HID option rejects unrelated receivers before opening them. See the [Windows reader runbook](../../tools/reader/README.md).

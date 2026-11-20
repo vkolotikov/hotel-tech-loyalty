@@ -11,8 +11,9 @@ import { ERRORS, errorKey, refusalKey } from '../lib/errors'
 import { day } from '../lib/format'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { afterCardChange, cardsApi, cardsKey, type NfcCardRow } from '../scan/cardsApi'
-import { detectEnv, hexWithColons, shortUid } from '../scan/scanMath'
+import { detectEnv, hexWithColons, modeState, shortUid } from '../scan/scanMath'
 import { UsbReader } from '../scan/UsbReader'
+import { WindowsReader } from '../scan/WindowsReader'
 import { useWebNfc } from '../scan/useWebNfc'
 import { CARD, CardHead } from './CardHead'
 import { cardActions } from './memberMath'
@@ -103,6 +104,7 @@ function LinkNfcDialog({ memberId, name, onClose, onDone }: { memberId: number; 
   const { t } = useTranslation()
   const client = useQueryClient()
   const env = useMemo(() => detectEnv(), [])
+  const windows = modeState('windows', env) === 'ready'
   const field = useFirstFocus<HTMLInputElement>()
   const [typed, setTyped] = useState('')
   const [usb, setUsb] = useState(false)
@@ -129,11 +131,16 @@ function LinkNfcDialog({ memberId, name, onClose, onDone }: { memberId: number; 
               </div>
             )
             : <Button full className="py-3 text-base" onClick={nfc.start}><Nfc size={18} aria-hidden />{t('loyalty.member.cards_tap', 'Tap the card')}</Button>
-        ) : <p className="text-sm text-a-text-2">{t('loyalty.scan.nfc_unsupported', 'NFC works in Chrome on Android phones and tablets; on this device scan the QR code or type the number.')}</p>}
+        ) : !windows && <p className="text-sm text-a-text-2">{t('loyalty.scan.nfc_unsupported', 'NFC works in Chrome on Android phones and tablets; on this device scan the QR code or type the number.')}</p>}
         {nfc.trouble && nfc.trouble !== 'unsupported' && <Notice tone="warning">{t('loyalty.member.cards_tap_failed', 'The card could not be read here. Try again, or type its ID.')}</Notice>}
 
+        {windows && !usb && <WindowsReader onUid={value => {
+          if (link.isPending) return false
+          setTyped(hexWithColons(value))
+        }} />}
         {env.webHid && (usb
-          ? <UsbReader onUid={(uid) => { if (!link.isPending) link.mutate(hexWithColons(uid)) }} />
+          ? <><UsbReader onUid={(uid) => { if (!link.isPending) link.mutate(hexWithColons(uid)) }} />
+              {windows && <Button variant="ghost" onClick={() => setUsb(false)}>{t('loyalty.scandesign.windowsUse')}</Button>}</>
           : <Button full variant="secondary" className="py-3 text-base" onClick={() => setUsb(true)}><Usb size={18} aria-hidden />{t('loyalty.member.cards_usb', 'Use a USB reader')}</Button>)}
 
         <form className="space-y-1.5" onSubmit={submit}>

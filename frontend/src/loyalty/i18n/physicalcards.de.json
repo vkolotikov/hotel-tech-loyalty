@@ -24,7 +24,7 @@
   "pairTitle": "NFC für {{number}}",
   "uid": "NFC-Karten-ID",
   "currentUid": "Aktuelle ID · {{uid}}",
-  "readerHint": "Verwenden Sie ein USB-Lesegerät mit Tastatureingabe oder geben Sie die ID hexadezimal oder dezimal ein.",
+  "readerHint": "Lesen Sie die Karte oder geben Sie ihre NFC-ID hexadezimal oder dezimal ein.",
   "readerOptions": "USB-Lesegeräteoptionen",
   "saveNfc": "NFC speichern",
   "paired": "NFC mit {{number}} verknüpft.",

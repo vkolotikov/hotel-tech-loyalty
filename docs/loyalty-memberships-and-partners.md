@@ -58,10 +58,12 @@ or pair specialist USB hardware. See [Chrome's NFC documentation](https://develo
 
 1. Open **Members → Physical cards → New batch** as an owner or manager. For cards marked AF 10001 through AF 10100, enter prefix `AF`, first number `10001` and last number `10100`. The range includes both ends, retains leading zeros, and accepts up to 500 cards. Submitting the same range again opens its existing batch.
 2. Select the batch and use **Download batch QRs**. The ZIP contains a named SVG for each printed number and a `cards.csv` manifest with the QR payload and file name. You can also open a single card’s **QR** and download its SVG. This is the card's permanent QR.
-3. Open **Pair NFC** at the first card. With the NFC card ID field focused, tap the card on a USB reader that types its ID. A reader that sends Enter saves the entry. You can also type or paste the ID and use **Save NFC**. The form advances to the next unpaired number. **USB reader options** opens the existing WebHID controls and the Windows helper instructions.
+3. Open **Pair NFC** at the first card. To use an ACR122U, open the **Windows NFC reader** app and press **Connect Windows reader** in Loyalty. Place the card on the reader, check the printed number and press **Save NFC**. Lift it and continue with the next number. A keyboard-style reader can still type the ID into the field and submit it with Enter.
 4. When handing the card out, find the printed number and choose **Assign member**. Select an existing member or use **Add new member** to enrol and assign in one action. Once assigned, the printed QR works with the staff scanner. A paired tag identifies the same member.
 
 A batch can be prepared before any recipients are known. It uses the selected organisation's card stock. Managers create batches and download the ZIP. Active staff can find, pair and assign the cards. The stored NFC ID can be corrected while the card is unassigned or switched off.
+
+To look up someone with the ACR122U, open **Scan a member**, choose **Use Windows NFC reader** and place their card on the reader. A paired card awaiting a member offers **Link this card**, which assigns the same card row and preserves its printed number and QR. See the [Windows reader setup](../tools/reader/README.md).
 
 ## Reuse a returned physical card
 

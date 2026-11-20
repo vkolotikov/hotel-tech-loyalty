@@ -24,7 +24,7 @@
   "pairTitle": "NFC for {{number}}",
   "uid": "NFC card ID",
   "currentUid": "Current ID · {{uid}}",
-  "readerHint": "Use a USB reader that types the ID, or enter it in hex or decimal.",
+  "readerHint": "Read the card or enter its NFC ID in hex or decimal.",
   "readerOptions": "USB reader options",
   "saveNfc": "Save NFC",
   "paired": "NFC linked to {{number}}.",

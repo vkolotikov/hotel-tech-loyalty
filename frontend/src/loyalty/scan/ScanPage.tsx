@@ -26,6 +26,8 @@ import {
 import { TodayHere } from './TodayHere'
 import { useToday } from './useToday'
 import { UsbReader } from './UsbReader'
+import { WindowsReader } from './WindowsReader'
+import { usedWindowsReader } from '../../lib/windowsNfcReader'
 import { useWebNfc } from './useWebNfc'
 import { answerVerdict, failureVerdict, goneContext, renewable, showsToday, type VerdictFacts } from './verdict'
 import { Announcer } from './VerdictCard'
@@ -53,7 +55,7 @@ type Shown =
  * Scan (spec 2026-10-21 §4.7; release 5, spec 2026-10-23 §3; release 8, spec 2026-10-25 §2). "Scanning for" at the
  * top: the desk, a place or an event, remembered on this device (scanContext.ts); an address that names one
  * (`?event=5`, an event's Start check-in) chooses it. Four ways in, one endpoint (`POST scan`), which reads whatever
- * it is given (CardLookup): the camera, NFC (Chrome on Android), a USB reader (WebHID), and the field, for a reader
+ * it is given (CardLookup): the camera, NFC (Chrome on Android), Windows PC/SC, USB HID, and the field, for a reader
  * that types (Enter sends) or a person; the field keeps the focus after the field's and the USB reader's scans.
  *
  * At the desk: the member's card (Award, Redeem, Check in, credit, requests); a card nobody has offers "Link this
@@ -65,13 +67,16 @@ export function ScanPage() {
   const [options, setOptions] = useState(false)
   const location = useLocation()
   const [manual, setManual] = useState(() => new URLSearchParams(location.search).get('method') === 'lookup')
-  const [reader, setReader] = useState<ScanMode>(() => firstReader(detectEnv(), new URLSearchParams(location.search).get('method')))
+  const [reader, setReader] = useState<ScanMode>(() => firstReader(detectEnv(), new URLSearchParams(location.search).get('method'), usedWindowsReader()))
   const sending = useRef(false)
+  const lastWindowsPresentation = useRef<string | null>(null)
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const client = useQueryClient()
   const navigate = useNavigate()
   const env = useMemo(() => detectEnv(), [])
+  const windows = modeState('windows', env) === 'ready'
+  const readers: ScanMode[] = ['camera', ...(windows ? ['windows' as const] : []), 'nfc', 'usb']
   const named = contextFromSearch(location.search)
   const [wanted, setWanted] = useState<ScanContext>(() => {
     const first = named ?? loadContext()
@@ -196,6 +201,7 @@ export function ScanPage() {
 
   const contextName = context.kind === 'desk' ? words('desk') : resolved.place?.name ?? resolved.event?.title ?? words(context.kind === 'event' ? 'event' : 'door')
   const nextMember = () => { stopMode(); setShown(null); scan.reset(); renew.reset(); choose(reader) }
+  const showWindowsReader = reader === 'windows' && !options && !manual && linking === null && !scan.isPending
   const codeField = <form className="l-sc-code" onSubmit={e => { e.preventDefault(); send(fieldAttempt(code)) }}><label>{words('rawCode')}<input ref={field} value={code} onChange={e => setCode(e.target.value)} autoComplete="off" spellCheck={false} /></label><OverviewButton type="submit" disabled={scan.isPending || !code.trim()}>{words('find')}</OverviewButton></form>
   return (
     <div className="l-sc-page">
@@ -230,14 +236,21 @@ export function ScanPage() {
             )}
 
       </div>
-      {(!shown || shown.kind === 'linked') && <ScanReader reader={reader} active={mode !== null} busy={scan.isPending} contextName={contextName} event={context.kind === 'event'}
-        onStart={() => choose(reader)} onOptions={() => { stopMode(); setOptions(true) }} onManual={() => { stopMode(); setManual(true) }} onCamera={() => { stopMode(); setReader('camera'); choose('camera') }}>
+      {(!shown || shown.kind === 'linked') && <ScanReader reader={reader} active={mode !== null || showWindowsReader} busy={scan.isPending} contextName={contextName} event={context.kind === 'event'}
+        onStart={() => choose(reader)} onOptions={() => { stopMode(); setOptions(true) }} onManual={() => { stopMode(); setManual(true) }} onCamera={() => { stopMode(); setReader('camera'); choose('camera') }}
+        onWindows={windows ? () => { stopMode(); setReader('windows') } : undefined}>
         {mode === 'camera' && <CameraPanel env={env} onCode={text => send(cameraAttempt(text))} onStop={stopMode} />}
         {mode === 'nfc' && <NfcDesign state={nfcState(env, nfc.listening, nfc.trouble)} onStart={nfc.start} onStop={stopMode} />}
         {mode === 'usb' && <div className="l-sc-panel"><UsbReader onUid={uid => send(usbAttempt(uid))} />{codeField}</div>}
+        {showWindowsReader && <div className="l-sc-panel">
+          <WindowsReader showTitle={false} lastPresentation={lastWindowsPresentation} onUid={uid => {
+            if (sending.current) return false
+            send(usbAttempt(uid))
+          }} />
+        </div>}
       </ScanReader>}
       {showsToday(context) && <details className="l-sc-today"><summary>{t('loyalty.door.today_title', 'Today here')}</summary><TodayHere today={today} locale={locale} /></details>}
-      {options && <DesignDialog title={words('options')} onClose={() => setOptions(false)}><div className="l-sc-options l-rd-form"><fieldset><legend>{words('reader')}</legend><div className="l-sc-segments">{(['camera', 'nfc', 'usb'] as const).map(r => <OverviewButton key={r} aria-pressed={reader === r} onClick={() => { stopMode(); setReader(r) }}>{words(r)}</OverviewButton>)}</div></fieldset><ContextPicker resolved={resolved} onChoose={chooseContext} choices={{ places: placeList, events: eventList, loading: places.isPending || events.isPending, failed: places.isError || events.isError, canSetUp: places.data?.can_change ?? false }} /><small>{words(context.kind === 'event' ? 'eventEffects' : context.kind === 'place' ? 'noCheckin' : 'deskEffects')}</small><Link className="l-ov-link" to="/loyalty/guide">{words('readerHelp')}</Link><OverviewButton primary onClick={() => setOptions(false)}>{words('done')}</OverviewButton></div></DesignDialog>}
+      {options && <DesignDialog title={words('options')} onClose={() => setOptions(false)}><div className="l-sc-options l-rd-form"><fieldset><legend>{words('reader')}</legend><div className="l-sc-segments">{readers.map(r => <OverviewButton key={r} aria-pressed={reader === r} onClick={() => { stopMode(); setReader(r) }}>{words(r)}</OverviewButton>)}</div></fieldset><ContextPicker resolved={resolved} onChoose={chooseContext} choices={{ places: placeList, events: eventList, loading: places.isPending || events.isPending, failed: places.isError || events.isError, canSetUp: places.data?.can_change ?? false }} /><small>{words(context.kind === 'event' ? 'eventEffects' : context.kind === 'place' ? 'noCheckin' : 'deskEffects')}</small><Link className="l-ov-link" to="/loyalty/guide">{words('readerHelp')}</Link><OverviewButton primary onClick={() => setOptions(false)}>{words('done')}</OverviewButton></div></DesignDialog>}
       {manual && <ManualLookup context={context} onClose={() => setManual(false)} codeField={codeField} onMember={member => { setManual(false); if (context.kind === 'desk') { scan.reset(); setShown({ kind: 'desk', member, key: Date.now(), linked: false }) } else if (member.member_number) send(fieldAttempt(member.member_number)) }} />}
       {linking !== null && (
         <LinkCardDialog uid={linking} onClose={() => setLinking(null)}

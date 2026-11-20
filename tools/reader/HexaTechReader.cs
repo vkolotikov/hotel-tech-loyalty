@@ -5,15 +5,57 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+internal sealed class PcscException : InvalidOperationException
+{
+    public readonly uint Code;
+
+    public PcscException(uint code, string message) : base(message) { Code = code; }
+}
+
 // Windows PC/SC helper. Reads only the public card UID with FF CA 00 00 00.
-// No network listener, credentials, card writes, keyboard injection or background service.
 internal static class Pcsc
 {
+    internal const uint NoCard = 0x8010000C;
+    internal const uint CardRemoved = 0x80100069;
+    internal const uint NoReader = 0x8010002E;
+    internal const uint ReaderUnavailable = 0x80100017;
+    internal const uint ServiceUnavailable = 0x8010001D;
+    internal const uint ServiceStopped = 0x8010001E;
+    internal const uint SharingViolation = 0x8010000B;
+    private const uint CardPresent = 0x0020;
+    private const uint ReaderUnavailableFlags = 0x0004 | 0x0008;
+
     [StructLayout(LayoutKind.Sequential)] private struct IoRequest { public uint Protocol; public uint Length; }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct ReaderState
+    {
+        [MarshalAs(UnmanagedType.LPWStr)] public string Reader;
+        public IntPtr UserData;
+        public uint CurrentState;
+        public uint EventState;
+        public uint AtrLength;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 36)] public byte[] Atr;
+    }
+
+    internal sealed class ContactlessReader
+    {
+        public readonly string Name;
+        public readonly bool Present;
+        public readonly uint CardChanges;
+
+        public ContactlessReader(string name, uint eventState)
+        {
+            Name = name;
+            Present = (eventState & CardPresent) != 0;
+            CardChanges = eventState >> 16;
+        }
+    }
+
     [DllImport("winscard.dll")] private static extern int SCardEstablishContext(uint scope, IntPtr r1, IntPtr r2, out IntPtr context);
     [DllImport("winscard.dll")] private static extern int SCardReleaseContext(IntPtr context);
     [DllImport("winscard.dll", CharSet = CharSet.Unicode)] private static extern int SCardListReadersW(IntPtr context, string groups, [Out] char[] readers, ref uint length);
     [DllImport("winscard.dll", CharSet = CharSet.Unicode)] private static extern int SCardConnectW(IntPtr context, string reader, uint share, uint protocols, out IntPtr card, out uint active);
+    [DllImport("winscard.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int SCardGetStatusChangeW(IntPtr context, uint timeout, [In, Out] ReaderState[] states, uint count);
     [DllImport("winscard.dll")] private static extern int SCardDisconnect(IntPtr card, uint disposition);
     [DllImport("winscard.dll")] private static extern int SCardTransmit(IntPtr card, ref IoRequest sendPci, byte[] send, uint length, IntPtr recvPci, [Out] byte[] recv, ref uint recvLength);
 
@@ -21,23 +63,43 @@ internal static class Pcsc
     {
         if (result == 0) return;
         uint code = unchecked((uint)result);
-        if (code == 0x8010000C || code == 0x80100069) throw new InvalidOperationException("Place a card on the selected reader, then press Read card.");
-        if (code == 0x8010002E) throw new InvalidOperationException("No PC/SC reader found. Connect the ACR122U and press Refresh readers.");
-        if (code == 0x8010001D) throw new InvalidOperationException("Windows Smart Card service is unavailable. Check the reader driver with your administrator.");
-        if (code == 0x8010000B) throw new InvalidOperationException("The reader is busy. Close other card applications and try again.");
-        throw new InvalidOperationException("The reader could not complete the request. Reconnect it and try again. (" + code.ToString("X8") + ")");
+        if (code == NoCard || code == CardRemoved) throw new PcscException(code, "Place a card on the selected reader, then press Read card.");
+        if (code == NoReader || code == ReaderUnavailable) throw new PcscException(code, "Connect the ACR122U and press Refresh readers.");
+        if (code == ServiceUnavailable || code == ServiceStopped) throw new PcscException(code, "Windows Smart Card service is unavailable. Check the reader driver with your administrator.");
+        if (code == SharingViolation) throw new PcscException(code, "The reader is busy. Close other card applications and try again.");
+        throw new PcscException(code, "The reader could not complete the request. Reconnect it and try again. (" + code.ToString("X8") + ")");
     }
 
     public static string[] Readers()
     {
         IntPtr context; Check(SCardEstablishContext(0, IntPtr.Zero, IntPtr.Zero, out context));
+        try { return Readers(context); }
+        finally { SCardReleaseContext(context); }
+    }
+
+    private static string[] Readers(IntPtr context)
+    {
+        uint length = 0;
+        int result = SCardListReadersW(context, null, null, ref length);
+        if (unchecked((uint)result) == NoReader) return new string[0];
+        Check(result);
+        if (length == 0 || length > 65536) return new string[0];
+        char[] names = new char[length];
+        Check(SCardListReadersW(context, null, names, ref length));
+        return new string(names).Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    internal static ContactlessReader Acr122()
+    {
+        IntPtr context;
+        Check(SCardEstablishContext(0, IntPtr.Zero, IntPtr.Zero, out context));
         try {
-            uint length = 0; int result = SCardListReadersW(context, null, null, ref length);
-            if (unchecked((uint)result) == 0x8010002E) return new string[0];
-            Check(result);
-            if (length == 0 || length > 65536) return new string[0];
-            char[] names = new char[length]; Check(SCardListReadersW(context, null, names, ref length));
-            return new string(names).Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
+            string reader = Readers(context).FirstOrDefault(name => name.IndexOf("ACR122", StringComparison.OrdinalIgnoreCase) >= 0);
+            if (reader == null) return null;
+            var states = new[] { new ReaderState { Reader = reader, Atr = new byte[36] } };
+            Check(SCardGetStatusChangeW(context, 0, states, 1));
+            uint flags = states[0].EventState;
+            return (flags & ReaderUnavailableFlags) != 0 ? null : new ContactlessReader(reader, flags);
         } finally { SCardReleaseContext(context); }
     }
 
@@ -77,7 +139,6 @@ internal static class Pcsc
             try { ParseUid(bad, (uint)bad.Length); return 3; } catch (InvalidOperationException) { }
         }
         try { ParseUid(new byte[6], 999); return 4; } catch (InvalidOperationException) { }
-        Console.WriteLine("Reader protocol self-tests passed. Physical reader not tested.");
         return 0;
     }
 }
@@ -86,31 +147,36 @@ internal sealed class ReaderForm : Form
 {
     private readonly ComboBox readers = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
     private readonly TextBox uid = new TextBox { ReadOnly = true, Dock = DockStyle.Fill, Font = new Font("Consolas", 16) };
-    private readonly Label status = new Label { AutoSize = true, MaximumSize = new Size(510, 0), Text = "Connect your ACR122U, then refresh readers." };
+    private readonly Label status = new Label { AutoSize = true, MaximumSize = new Size(500, 0) };
     private readonly Button refresh = new Button { Text = "Refresh readers", AutoSize = true };
     private readonly Button read = new Button { Text = "Read card", AutoSize = true };
     private readonly Button copy = new Button { Text = "Copy UID", AutoSize = true, Enabled = false };
 
-    public ReaderForm()
+    public ReaderForm(bool connected)
     {
-        Text = "HexaTech - PC/SC reader preview"; StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(550, 350); MinimumSize = new Size(500, 390); Font = new Font("Segoe UI", 10);
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 8 };
-        layout.Controls.Add(new Label { Text = "Scan a membership card", Font = new Font("Segoe UI", 17, FontStyle.Bold), AutoSize = true });
-        layout.Controls.Add(new Label { Text = "1. Select your reader and place a card on it.", AutoSize = true });
+        Text = "HexaTech Windows NFC reader"; StartPosition = FormStartPosition.CenterScreen;
+        ClientSize = new Size(560, 330); MinimumSize = new Size(510, 370); Font = new Font("Segoe UI", 10);
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 7, AutoScroll = true };
+        layout.Controls.Add(new Label { Text = "Windows NFC reader", Font = new Font("Segoe UI", 17, FontStyle.Bold), AutoSize = true });
+        layout.Controls.Add(new Label {
+            Text = connected
+                ? "Keep this window open. In Loyalty, choose Windows NFC reader\nand tap a card on the ACR122U."
+                : "Loyalty could not connect to this window. Close other reader windows\nand reopen this one, or copy the card ID below.",
+            AutoSize = true, ForeColor = connected ? Color.DarkGreen : Color.Firebrick,
+        });
         layout.Controls.Add(readers);
         var actions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill }; actions.Controls.Add(refresh); actions.Controls.Add(read); actions.Controls.Add(copy); layout.Controls.Add(actions);
         layout.Controls.Add(uid);
-        layout.Controls.Add(new Label { Text = "2. Copy the UID. In HexaTech, paste it into Scan a member\nand press Find member, or use it when linking a card.", AutoSize = true });
+        layout.Controls.Add(new Label { Text = "For manual entry, read and copy the card ID.", AutoSize = true });
         layout.Controls.Add(status);
-        layout.Controls.Add(new Label { Text = "Windows preview - physical ACR122U acceptance is still required.\nReads the card identifier only. Nothing is sent automatically.", AutoSize = true, ForeColor = Color.DimGray });
         Controls.Add(layout);
+        Shown += async (s, e) => await RefreshReaders();
         refresh.Click += async (s, e) => await RefreshReaders();
         read.Click += async (s, e) => await ReadCard();
         copy.Click += (s, e) => {
             if (uid.Text.Length == 0) return;
-            try { Clipboard.SetText(uid.Text); status.Text = "UID copied. Paste it into HexaTech's scan field."; }
-            catch (ExternalException) { status.Text = "Clipboard is busy. Select the UID and copy it manually."; }
+            try { Clipboard.SetText(uid.Text); status.Text = "Card ID copied."; }
+            catch (ExternalException) { status.Text = "Clipboard is busy. Select the card ID and copy it manually."; }
         };
         readers.SelectedIndexChanged += (s, e) => { uid.Clear(); copy.Enabled = false; };
     }
@@ -131,7 +197,10 @@ internal sealed class ReaderForm : Form
     private async Task ReadCard()
     {
         string selected = readers.SelectedItem as string; Busy(true); uid.Clear(); status.Text = "Reading...";
-        try { string value = await Task.Run(() => Pcsc.Read(selected)); if (!IsDisposed) { uid.Text = value; status.Text = "Card read. Copy the UID to continue in HexaTech."; } }
+        try {
+            string value = await Task.Run(() => Pcsc.Read(selected));
+            if (!IsDisposed) { uid.Text = String.Join(":", Enumerable.Range(0, value.Length / 2).Select(i => value.Substring(i * 2, 2))).ToUpperInvariant(); status.Text = "Card read."; }
+        }
         catch (Exception ex) { if (!IsDisposed) status.Text = ex is InvalidOperationException ? ex.Message : "Windows could not read this card."; }
         finally { if (!IsDisposed) Busy(false); }
     }
@@ -141,12 +210,16 @@ internal static class Program
 {
     [STAThread] private static int Main(string[] args)
     {
-        if (args.Length == 1 && args[0] == "--self-test") return Pcsc.SelfTest();
+        if (args.Length == 1 && args[0] == "--self-test") {
+            int pcsc = Pcsc.SelfTest();
+            return pcsc != 0 ? pcsc : ReaderBridge.SelfTest();
+        }
         if (args.Length == 1 && args[0] == "--probe") {
             try { Console.WriteLine("PC/SC readers detected: " + Pcsc.Readers().Length); return 0; }
             catch (InvalidOperationException ex) { Console.WriteLine(ex.Message); return 2; }
         }
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new ReaderForm()); return 0;
+        using (var bridge = new ReaderBridge()) Application.Run(new ReaderForm(bridge.Start()));
+        return 0;
     }
 }

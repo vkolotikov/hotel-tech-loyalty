@@ -129,10 +129,4 @@ clear shared cache while a rehearsal is active or unresolved. A successful run c
 
 ## ACR122U on Windows
 
-`tools/reader/README.md` documents the portable preview and reproducible build. The Scan page links its download
-and copy/paste workflow in all five locales. It reads a public UID through Windows PC/SC; it has no network service,
-card writes, stored credentials or background injection. Existing camera/HID input remains available. It is an
-unsigned preview pending actual ACR122U/card acceptance, not automatic continuous-reader integration.
-
-The workstation probe on 30 October found zero readers. Test repeated reads, link/lookup, unknown/off cards,
-unplug/reconnect and removed-card errors on the intended Windows PC before using it at a desk.
+`tools/reader/README.md` documents the Windows NFC reader and its build. The portable app takes card IDs from Windows PC/SC and offers them over a read-only loopback connection while its window is open. **Scan a member**, **Pair NFC**, member card linking and continuous door scanning share this Windows reader. A held card contributes one reading. The manual copy action remains available in the Windows app.
