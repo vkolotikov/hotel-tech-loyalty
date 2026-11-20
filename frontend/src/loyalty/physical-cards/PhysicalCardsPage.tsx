@@ -153,10 +153,11 @@ export function PhysicalCardsPage() {
       else refresh()
       setSaved({ key: 'paired', number: card.number })
     }} />}
-    {selected?.action === 'assign' && <AssignCardDialog card={selected.card} onClose={() => setOpen(null)}
+    {selected?.action === 'assign' && <AssignCardDialog card={selected.card} initialUid={selected.uid} onClose={() => setOpen(null)}
       onAssigned={memberId => assigned(selected.card, memberId)} onAdd={uid => show('new-member', selected.card, uid)} />}
     {selected?.action === 'new-member' && <AddMemberDialog physicalCard={{ ...selected.card, capturedUid: selected.uid }}
-      onClose={() => setOpen(null)} onCreated={memberId => assigned(selected.card, memberId)} />}
+      onClose={() => setOpen(null)} onCreated={memberId => assigned(selected.card, memberId)}
+      onChooseMember={uid => show('assign', selected.card, uid)} />}
     {selected?.action === 'qr' && <PrintedQrDialog card={selected.card} onClose={() => setOpen(null)} />}
   </div>
 }

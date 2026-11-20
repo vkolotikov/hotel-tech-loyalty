@@ -1,5 +1,10 @@
 {
   "uidOptional": "NFC-Karten-ID (optional)",
+  "useChipId": "Die gedruckte Kartennummer ist bereits ausgewählt. Lesen Sie die NFC-ID mit dem Lesegerät oder leeren Sie dieses Feld.",
+  "emailMatchesMember": "Diese Adresse gehört zu einem Mitglied in diesem Unternehmen. Beim Zuordnen der Karte bleibt die Mitgliedschaft bestehen.",
+  "emailUnavailable": "Verwenden Sie eine andere E-Mail-Adresse für ein neues Mitglied oder wählen Sie ein vorhandenes Mitglied dieses Unternehmens.",
+  "assignExisting": "Diesem Mitglied zuordnen",
+  "openMember": "Mitgliedsprofil öffnen",
   "issueHint": "Lesen Sie die Karte oder geben Sie die ID ein, um NFC beim Zuordnen zu verknüpfen.",
   "keepTagHint": "Lesen Sie eine neue Karte oder lassen Sie das Feld leer, um die aktuelle ID zu behalten.",
   "manageTag": "NFC-Tags verwalten",

@@ -37,7 +37,7 @@ export const physicalCardsApi = {
   qr: (cardId: number): Promise<{ code: string; qr_svg: string }> => watched(api.get(loyaltyUrl('physical-cards/' + cardId + '/qr'))),
   pair: (card: PhysicalCard, uid: string, replaceActive: boolean): Promise<{ card: PhysicalCard; next: PhysicalCard | null }> =>
     watched(api.put(loyaltyUrl('physical-cards/' + card.id + '/nfc'), { uid, expected_uid: card.uid, replace_active: replaceActive })),
-  assign: (card: PhysicalCard, memberId: number, uid: string): Promise<{ card: PhysicalCard }> =>
+  assign: (card: Pick<PhysicalCard, 'id' | 'uid'>, memberId: number, uid: string): Promise<{ card: PhysicalCard }> =>
     watched(api.put(loyaltyUrl('physical-cards/' + card.id + '/assignment'), {
       member_id: memberId, ...(uid ? { uid, expected_uid: card.uid } : {}),
     })),

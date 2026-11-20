@@ -168,6 +168,65 @@ class PhysicalCardsTest extends TestCase
         $this->assertFalse(User::query()->where('email', $otherEmail)->exists());
     }
 
+    public function test_a_staff_email_can_enrol_a_separate_member_and_issue_a_card(): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            // The lightweight users fixture has the pre-migration email index.
+            (require database_path('migrations/2026_05_25_120000_users_email_unique_per_org_for_staff.php'))->up();
+        }
+        $card = $this->stock($this->batch())[0]['id'];
+        $staff = $this->staffMember->fresh();
+        $tag = '04:62:EB:34:01:29:08';
+        $body = [
+            'name' => 'Card Recipient', 'email' => $staff->email, 'send_welcome' => false,
+            'physical_card_id' => $card, 'physical_card_uid' => $tag, 'physical_card_expected_uid' => null,
+        ];
+
+        $memberId = $this->postJson($this->api('members'), $body)->assertCreated()->json('member.id');
+        $member = LoyaltyMember::query()->with('user')->findOrFail($memberId);
+        $this->assertNotEquals($staff->id, $member->user_id);
+        $this->assertSame('member', $member->user->user_type);
+        $this->assertSame($staff->email, $member->user->email);
+        $this->assertSame($staff->getAttributes(), $staff->fresh()->getAttributes());
+
+        $this->putJson($this->api("members/{$memberId}"), [
+            'name' => 'Updated recipient', 'email' => $staff->email, 'marketing_consent' => false,
+        ])->assertOk()->assertJsonPath('member.name', 'Updated recipient');
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:0462eb34012908'])
+            ->assertOk()->assertJsonPath('member.id', $memberId);
+        $this->assertSame($staff->getAttributes(), $staff->fresh()->getAttributes());
+    }
+
+    public function test_a_card_enrolment_email_conflict_only_offers_a_member_from_this_company(): void
+    {
+        $card = $this->stock($this->batch())[0]['id'];
+        $other = $this->otherOrganization()['member'];
+        $this->ada->user->update(['email' => 'Existing.Member@example.test']);
+        $tag = '04:62:EB:34:01:29:18';
+        $body = [
+            'name' => 'Card Recipient', 'email' => 'existing.member@example.test', 'send_welcome' => false,
+            'physical_card_id' => $card, 'physical_card_uid' => $tag, 'physical_card_expected_uid' => null,
+        ];
+
+        $this->postJson($this->api('members'), $body)->assertUnprocessable()
+            ->assertJsonValidationErrors('email')->assertJsonPath('error', 'member_email_exists')
+            ->assertJsonPath('member.id', $this->ada->id)->assertJsonPath('member.is_active', true);
+        $this->postJson($this->api('members'), array_replace($body, ['email' => $other->user->email]))
+            ->assertUnprocessable()->assertJsonValidationErrors('email')->assertJsonMissingPath('member');
+        config(['services.saas.platform_admin_emails' => 'reserved.operator@example.test']);
+        $this->postJson($this->api('members'), array_replace($body, ['email' => 'Reserved.Operator@example.test']))
+            ->assertUnprocessable()->assertJsonValidationErrors('email')->assertJsonMissingPath('member');
+        $this->assertNull($this->stock()[0]['uid']);
+        $this->assertNull($this->stock()[0]['member']);
+
+        $this->putJson($this->api("physical-cards/{$card}/assignment"), [
+            'member_id' => $this->ada->id, 'uid' => $tag, 'expected_uid' => null,
+        ])->assertOk()->assertJsonPath('card.member.id', $this->ada->id);
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:0462eb34012918'])
+            ->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        \Illuminate\Support\Facades\Mail::assertNothingSent();
+    }
+
     public function test_erasing_a_member_unassigns_numbered_stock_and_rejects_its_old_assignment(): void
     {
         $batch = $this->batch();

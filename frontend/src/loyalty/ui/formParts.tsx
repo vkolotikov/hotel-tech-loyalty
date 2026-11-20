@@ -101,11 +101,11 @@ export function ConfirmDialog({ title, children, confirm, keep, busy, failure, o
 }
 
 /** The buttons at the foot of a form: leave, and save. */
-export function FormFoot({ cancel, save, busy, onCancel }: { cancel: string; save: string; busy: boolean; onCancel: () => void }) {
+export function FormFoot({ cancel, save, busy, disabled, onCancel }: { cancel: string; save: string; busy: boolean; disabled?: boolean; onCancel: () => void }) {
   return (
     <div className="flex flex-wrap justify-end gap-2 pt-1">
       <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>{cancel}</Button>
-      <Button type="submit" loading={busy}>{save}</Button>
+      <Button type="submit" loading={busy} disabled={disabled}>{save}</Button>
     </div>
   )
 }

@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Api\V1\Admin\Loyalty;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyMember;
-use App\Services\Booking\Setup\OwnRows;
 use App\Models\LoyaltyTier;
+use App\Models\User;
 use App\Services\Appointments\VenueClock;
+use App\Services\Booking\Setup\OwnRows;
 use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\Members\MemberCard;
@@ -15,10 +16,14 @@ use App\Services\Loyalty\Members\MemberEnrolment;
 use App\Services\Loyalty\Members\MemberErasure;
 use App\Services\Loyalty\Members\MemberProfile;
 use App\Services\Loyalty\Members\MemberStatus;
+use App\Services\Loyalty\Members\OwnAccount;
 use App\Services\Loyalty\Members\WelcomeNotSent;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -38,13 +43,13 @@ class MembershipController extends Controller
     /** Resend the welcome email at most once per member in this many seconds. */
     public const WELCOME_EVERY = 600;
 
+    private const EMAIL_UNAVAILABLE = 'This email is unavailable for a new loyalty account.';
+
     public function store(Request $request, MemberEnrolment $enrolment): JsonResponse
     {
         $data = $request->validate([
             'name'         => 'required|string|max:255',
-            // The users table holds every organisation's members and staff: a taken address may be someone elsewhere,
-            // so the answer says only that it is in use.
-            'email'        => 'required|email|max:255|unique:users,email',
+            'email'        => 'required|email|max:255',
             'phone'        => 'nullable|string|max:20',
             'send_welcome' => 'sometimes|boolean',
             'physical_card_id' => ['required_with:physical_card_uid', 'integer', OwnRows::rule('nfc_cards')->whereNotNull('card_batch_id')],
@@ -65,11 +70,20 @@ class MembershipController extends Controller
             LoyaltyAccess::requireActiveStaff($request->user());
         }
 
-        $result = $enrolment->enrol([
-            'name'  => trim($data['name']),
-            'email' => trim($data['email']),
-            'phone' => self::filled($data['phone'] ?? null),
-        ] + $assignment + $physicalCard, $request->user(), $request->boolean('send_welcome', true));
+        $email = mb_strtolower(trim($data['email']));
+        $withCard = isset($physicalCard['physical_card_id']);
+        $this->assertAvailableEmail($email, $withCard);
+        try {
+            $result = $enrolment->enrol([
+                'name'  => trim($data['name']),
+                'email' => $email,
+                'phone' => self::filled($data['phone'] ?? null),
+            ] + $assignment + $physicalCard, $request->user(), $request->boolean('send_welcome', true));
+        } catch (UniqueConstraintViolationException $e) {
+            // A simultaneous enrolment can win after the availability check. The failed enrolment has rolled back.
+            $this->assertAvailableEmail($email, $withCard);
+            throw $e;
+        }
 
         return response()->json([
             'member'     => MemberProfile::of($result['member']->fresh(['user'])),
@@ -81,25 +95,37 @@ class MembershipController extends Controller
     {
         $member = $this->member($id);
         $this->notErased($member);
+        $user = $member->user;
+        $currentEmail = $user?->getAttribute('email');
         $data = $request->validate([
             'name'              => 'required|string|max:255',
-            'email'             => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($member->user_id)],
+            'email'             => ['bail', 'required', 'email', 'max:255', function (string $attribute, string $value, \Closure $fail) use ($currentEmail) {
+                $email = mb_strtolower(trim($value));
+                if ($email !== mb_strtolower((string) $currentEmail)
+                    && (User::isPlatformOperatorEmail($email) || $this->memberAccounts($email)->exists())) {
+                    $fail(self::EMAIL_UNAVAILABLE);
+                }
+            }],
             'phone'             => 'nullable|string|max:20',
             'language'          => 'nullable|string|max:10',
             'nationality'       => 'nullable|string|max:100',
             'date_of_birth'     => 'nullable|date_format:Y-m-d|before_or_equal:' . VenueClock::today((int) $member->organization_id),
             'marketing_consent' => 'required|boolean',
         ]);
-        $language = self::filled($data['language'] ?? null);
-        if ($language !== null && !in_array($language, MemberDetails::LANGUAGES, true) && $language !== $member->user?->language) {
+        $currentLanguage = $user?->getAttribute('language');
+        $language = array_key_exists('language', $data) ? self::filled($data['language']) : $currentLanguage;
+        if ($language !== null && !in_array($language, MemberDetails::LANGUAGES, true) && $language !== $currentLanguage) {
             throw ValidationException::withMessages(['language' => 'Choose one of the languages offered.']);
         }
 
         // Only what changed is written and audited: the form sends every field each time.
-        $user = $member->user;
+        $email = mb_strtolower(trim($data['email']));
+        if (is_string($currentEmail) && $email === mb_strtolower($currentEmail)) {
+            $email = $currentEmail;
+        }
         $wanted = [
             'name'          => trim($data['name']),
-            'email'         => trim($data['email']),
+            'email'         => $email,
             'phone'         => self::filled($data['phone'] ?? null),
             'nationality'   => self::filled($data['nationality'] ?? null),
             'language'      => $language,
@@ -112,7 +138,14 @@ class MembershipController extends Controller
             ? ['marketing_consent' => (bool) $data['marketing_consent']] : [];
 
         if ($userFields !== [] || $memberFields !== []) {
-            $details->update($member, $memberFields, $userFields, $request->user());
+            try {
+                DB::transaction(fn () => $details->update($member, $memberFields, $userFields, $request->user()));
+            } catch (UniqueConstraintViolationException $e) {
+                if (isset($userFields['email'])) {
+                    $this->assertAvailableEmail($email);
+                }
+                throw $e;
+            }
         }
 
         return $this->answer($member);
@@ -218,6 +251,41 @@ class MembershipController extends Controller
         if (MemberErasure::isErased($member)) {
             throw new LoyaltyRefused('already_erased', 'This member was deleted.', 409);
         }
+    }
+
+    /** A member sign-in address is unique across Loyalty. A staff sign-in uses its own account. */
+    private function assertAvailableEmail(string $email, bool $withCard = false): void
+    {
+        $accounts = $this->memberAccounts($email)->limit(2)->get();
+        if ($accounts->isEmpty() && !User::isPlatformOperatorEmail($email)) {
+            return;
+        }
+
+        $account = $accounts->count() === 1 ? $accounts->first() : null;
+        if ($withCard && $account && OwnAccount::is($account, (int) app('current_organization_id'))) {
+            $members = LoyaltyMember::query()->where('user_id', $account->id)->limit(2)->get();
+            $member = $members->count() === 1 ? $members->first() : null;
+            if ($member && !MemberErasure::isErased($member->setRelation('user', $account))) {
+                $message = 'A member in this company already uses this email.';
+                throw new LoyaltyRefused('member_email_exists', $message, 422, [
+                    'errors' => ['email' => [$message]],
+                    'member' => [
+                        'id' => (int) $member->id,
+                        'name' => $account->name,
+                        'member_number' => $member->member_number,
+                        'is_active' => (bool) $member->is_active,
+                    ],
+                ]);
+            }
+        }
+
+        throw new LoyaltyRefused('member_email_unavailable', self::EMAIL_UNAVAILABLE, 422, ['errors' => ['email' => [self::EMAIL_UNAVAILABLE]]]);
+    }
+
+    /** @return Builder<User> */
+    private function memberAccounts(string $email): Builder
+    {
+        return User::query()->where('user_type', 'member')->whereRaw('LOWER(email) = ?', [$email]);
     }
 
     /** One of this organisation's members (the tenant scope), or 404. */

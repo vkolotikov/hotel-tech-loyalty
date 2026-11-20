@@ -1,5 +1,10 @@
 {
   "uidOptional": "NFC card ID (optional)",
+  "useChipId": "The printed number is already selected. Tap the card for its NFC ID, or clear this field.",
+  "emailMatchesMember": "This email matches a member here. Assign the card to keep their current membership.",
+  "emailUnavailable": "Use a different email for a new member, or choose an existing member from this company.",
+  "assignExisting": "Assign to this member",
+  "openMember": "Open member profile",
   "issueHint": "Tap the card or enter its ID to link NFC when you assign the member.",
   "keepTagHint": "Tap a replacement tag, or leave the field empty to use the current ID.",
   "manageTag": "Manage NFC tags",

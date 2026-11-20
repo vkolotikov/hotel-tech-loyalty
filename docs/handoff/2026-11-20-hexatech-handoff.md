@@ -29,3 +29,13 @@ On the owner's Windows PC, PC/SC enumerated the ACR122U and read the same seven-
 **Start reader with Windows** sets up the ACR122U reader once for the signed-in Windows user. Loyalty remembers the connection on that browser. On the owner's PC, the reader now runs in the background and returns the same seven-byte ID as the previous foreground window.
 
 **Assign member** can save a tag and an existing or new member together. **Edit NFC** lets a manager confirm a replacement on an issued numbered card. **Manage NFC tags** lets a manager in the source company find and release a tag. This releases the UID while retaining the numbered card's QR and assignment. Conflict responses identify the source company only for verified platform operators. See the [card runbook](../loyalty-memberships-and-partners.md#free-a-tag-for-another-card).
+
+## Add or assign a member from a numbered card
+
+Card enrolment now checks email availability against member logins, matching the database's member-only unique index.
+A staff email can be used for a separate loyalty account. Member emails are compared without case and reserved platform
+addresses remain protected. A duplicate email can offer an existing profile only when that member account belongs to the
+selected company. Assigning from this match uses the existing card assignment endpoint and preserves the membership period.
+
+The enrolment popup uses the same NFC reader controls as pairing and assignment. It flags the printed number if typed
+in the NFC field, and the return to existing-member search retains the NFC capture. No migration is required.

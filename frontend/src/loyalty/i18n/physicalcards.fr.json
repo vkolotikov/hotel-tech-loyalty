@@ -1,5 +1,10 @@
 {
   "uidOptional": "Identifiant NFC de la carte (facultatif)",
+  "useChipId": "Le numéro imprimé est déjà sélectionné. Présentez la carte au lecteur pour obtenir son identifiant NFC ou effacez ce champ.",
+  "emailMatchesMember": "Cette adresse correspond à un membre de cette société. L’attribution de la carte conserve son adhésion actuelle.",
+  "emailUnavailable": "Utilisez une autre adresse e-mail pour inscrire un membre ou choisissez un membre de cette société.",
+  "assignExisting": "Attribuer à ce membre",
+  "openMember": "Ouvrir le profil du membre",
   "issueHint": "Lisez la carte ou saisissez son identifiant pour lier le NFC lors de l’attribution au membre.",
   "keepTagHint": "Lisez une étiquette de remplacement ou laissez le champ vide pour garder l’identifiant actuel.",
   "manageTag": "Gérer les étiquettes NFC",

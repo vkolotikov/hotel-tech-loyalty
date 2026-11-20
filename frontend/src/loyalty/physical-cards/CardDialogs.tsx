@@ -124,12 +124,12 @@ export function PairCardDialog({ initial, onClose, onPaired }: { initial: Physic
   </Dialog>
 }
 
-export function AssignCardDialog({ card, onAdd, onClose, onAssigned }: {
-  card: PhysicalCard; onAdd: (uid: string) => void; onClose: () => void; onAssigned: (memberId: number) => void
+export function AssignCardDialog({ card, initialUid = '', onAdd, onClose, onAssigned }: {
+  card: PhysicalCard; initialUid?: string; onAdd: (uid: string) => void; onClose: () => void; onAssigned: (memberId: number) => void
 }) {
   const say = usePhysicalCardWords()
   const first = useFirstFocus<HTMLInputElement>()
-  const [uid, setUid] = useState('')
+  const [uid, setUid] = useState(initialUid)
   const assign = useMutation({
     mutationFn: (memberId: number) => physicalCardsApi.assign(card, memberId, uid.trim()),
     onSuccess: (_answer, memberId) => onAssigned(memberId),

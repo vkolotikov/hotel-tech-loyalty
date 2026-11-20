@@ -61,6 +61,12 @@ or pair specialist USB hardware. See [Chrome's NFC documentation](https://develo
 3. For an ACR122U, run the Windows download once and choose **Start reader with Windows**. In Loyalty, **Connect Windows reader** and allow local access if prompted. To prepare a batch, open **Pair NFC**, place each card on the reader, check its number and press **Save NFC**. A keyboard-style reader can type the ID and submit it with Enter.
 4. When handing out a card, choose **Assign member** at its printed number. Tap its NFC tag if needed and select an existing member or **Add new member**. The tag and assignment save together. Once assigned, the printed QR and paired tag identify the same member.
 
+**Add new member** also reads the tag directly. The printed number is already selected. Leave the NFC field blank to
+use the tag saved for that card. If the email matches a member in this company, choose **Assign to this member** to
+keep their existing membership and dates. **Find an existing member** or **Back** on a phone returns to search with the card and
+captured tag. A staff login can share an address with a separate loyalty member account. An address already used
+by a loyalty member in another company requires a different member email.
+
 A batch can be prepared before any recipients are known. It uses the selected organisation's card stock. Managers create batches and download the ZIP. Active staff can find, pair and assign the cards. An owner or manager can choose **Edit NFC** to correct an already issued card and confirm the replacement.
 
 To look up someone with the ACR122U, open **Scan a member**, choose **Use Windows NFC reader** and place their card on the reader. A paired card awaiting a member offers **Link this card**, which assigns the same card row and preserves its printed number and QR. See the [Windows reader setup](../tools/reader/README.md).
