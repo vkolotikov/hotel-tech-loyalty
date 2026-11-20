@@ -3,7 +3,7 @@
     "error": {
       "already_erased": "Dieses Mitglied wurde gelöscht.",
       "bad_uid": "Das ist keine Karten-ID. Tippen Sie die Karte an, lesen Sie sie ein oder geben Sie die aufgedruckte ID ein.",
-      "card_elsewhere": "Diese Karte wird anderswo verwendet und kann hier nicht zugeordnet werden.",
+      "card_elsewhere": "Dieses NFC-Tag ist in einem anderen Unternehmen registriert. Ein Inhaber oder Manager kann es dort unter Physische Karten → NFC-Tags verwalten freigeben.",
       "card_in_use": "Diese Karte ist einem anderen Mitglied zugeordnet. Schalten Sie sie zuerst auf der Seite dieses Mitglieds aus.",
       "invalid": "Geben Sie die ID der Karte ein.",
       "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",

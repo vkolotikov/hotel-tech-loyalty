@@ -1,10 +1,10 @@
 {
   "windows": "Windows-NFC-Leser",
   "windowsUse": "Windows-NFC-Leser verwenden",
-  "windowsSetup": "Öffnen Sie die HexaTech-Leser-App für Windows und verbinden Sie hier Ihren ACR122U.",
+  "windowsSetup": "Führen Sie die Einrichtung einmal aus und wählen Sie Start reader with Windows. Verbinden Sie den Leser dann hier.",
   "windowsConnect": "Windows-Leser verbinden",
   "windowsConnecting": "Verbindung mit dem Windows-Leser wird hergestellt. Erlauben Sie den lokalen Zugriff, falls der Browser danach fragt.",
-  "windowsOffline": "Öffnen Sie die HexaTech-Leser-App und versuchen Sie es erneut. Erlauben Sie dieser Website ggf. den lokalen Zugriff.",
+  "windowsOffline": "Der Leser ist im Hintergrund nicht verfügbar. Prüfen Sie das HexaTech-Symbol neben der Windows-Uhr oder starten Sie die Einrichtung erneut. Erlauben Sie lokalen Zugriff, falls der Browser danach fragt.",
   "windowsReady": "ACR122U ist bereit. Legen Sie eine Karte auf den Leser.",
   "windowsCard": "Karte gelesen. Nehmen Sie sie vor dem nächsten Scan vom Leser.",
   "windowsNoReader": "Die Leser-App ist geöffnet. Schließen Sie den ACR122U an und warten Sie, bis Windows ihn erkennt.",

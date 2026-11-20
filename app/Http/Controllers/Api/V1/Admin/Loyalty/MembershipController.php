@@ -47,7 +47,9 @@ class MembershipController extends Controller
             'email'        => 'required|email|max:255|unique:users,email',
             'phone'        => 'nullable|string|max:20',
             'send_welcome' => 'sometimes|boolean',
-            'physical_card_id' => ['sometimes', 'required', 'integer', OwnRows::rule('nfc_cards')->whereNotNull('card_batch_id')],
+            'physical_card_id' => ['required_with:physical_card_uid', 'integer', OwnRows::rule('nfc_cards')->whereNotNull('card_batch_id')],
+            'physical_card_uid' => 'sometimes|required|string|max:100',
+            'physical_card_expected_uid' => 'present_with:physical_card_uid|nullable|string|max:50',
             'membership_mode' => ['sometimes', Rule::in(\App\Services\Loyalty\Members\MembershipAssignment::MODES)],
             'tier_id' => 'required_if:membership_mode,assigned|nullable|integer|min:1',
             'valid_from' => 'sometimes|nullable|string|max:10',
@@ -58,7 +60,7 @@ class MembershipController extends Controller
             LoyaltyAccess::requireManager($request->user());
         }
 
-        $physicalCard = array_intersect_key($data, ['physical_card_id' => true]);
+        $physicalCard = array_intersect_key($data, array_flip(['physical_card_id', 'physical_card_uid', 'physical_card_expected_uid']));
         if ($physicalCard !== []) {
             LoyaltyAccess::requireActiveStaff($request->user());
         }

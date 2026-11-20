@@ -129,4 +129,4 @@ clear shared cache while a rehearsal is active or unresolved. A successful run c
 
 ## ACR122U on Windows
 
-`tools/reader/README.md` documents the Windows NFC reader and its build. The portable app takes card IDs from Windows PC/SC and offers them over a read-only loopback connection while its window is open. **Scan a member**, **Pair NFC**, member card linking and continuous door scanning share this Windows reader. A held card contributes one reading. The manual copy action remains available in the Windows app.
+`tools/reader/README.md` documents one-time setup. The reader starts with Windows for the user who enabled it and runs near the clock. **Scan a member**, **Pair NFC**, **Assign member**, member card linking and continuous door scanning share the read-only connection. A held card contributes one reading.

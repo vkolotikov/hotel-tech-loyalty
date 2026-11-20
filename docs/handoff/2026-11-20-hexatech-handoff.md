@@ -23,3 +23,9 @@ The feature branch starts from `93921dc0f`. Tests build a disposable `AF 10001â€
 On the owner's Windows PC, PC/SC enumerated the ACR122U and read the same seven-byte card ID twice. A browser permission for a device called **USB Receiver** previously let HID reports appear as card IDs in Loyalty even though the ACR122U uses the Windows Smart Card interface.
 
 **Scan a member** offers **Use Windows NFC reader**. **Pair NFC** and member card linking show the Windows connection in their dialogs. The reader app identifies card presentations through PC/SC and makes them available through a read-only loopback endpoint while it is open. The browser uses a physical card code for lookup. Pairing fills the field and waits for **Save NFC** before moving to the next printed number. The HID option rejects unrelated receivers before opening them. See the [Windows reader runbook](../../tools/reader/README.md).
+
+## Background NFC and tag recovery
+
+**Start reader with Windows** sets up the ACR122U reader once for the signed-in Windows user. Loyalty remembers the connection on that browser. On the owner's PC, the reader now runs in the background and returns the same seven-byte ID as the previous foreground window.
+
+**Assign member** can save a tag and an existing or new member together. **Edit NFC** lets a manager confirm a replacement on an issued numbered card. **Manage NFC tags** lets a manager in the source company find and release a tag. This releases the UID while retaining the numbered card's QR and assignment. Conflict responses identify the source company only for verified platform operators. See the [card runbook](../loyalty-memberships-and-partners.md#free-a-tag-for-another-card).

@@ -88,7 +88,7 @@ empty levels remain in an expandable list. Long lists are bounded and keyboard-s
 no longer stretches with them. All report data, routes and interactions are retained. See
 `loyalty-redesign/20-INSIGHTS-LAYOUT-REPORT.md` for Figma comparison, responsive checks and release evidence.
 
-Numbered physical cards (20 November 2026): **Members → Physical cards** creates ranges and exports a ZIP of named QR SVGs and a CSV manifest. Pair tags in order through the Windows NFC reader, a USB HID reader or the focused reader field. Staff assign each printed card to an active member. Creation and export are manager actions. The [card preparation runbook](loyalty-memberships-and-partners.md#prepare-and-issue-a-numbered-card-batch) documents the desk flow.
+Numbered physical cards (20 November 2026): **Members → Physical cards** creates ranges and exports a ZIP of named QR SVGs and a CSV manifest. Staff can pair tags in order or capture a tag while assigning a member. Owners and managers create batches, export QR codes, confirm replacements on issued cards and release tags for reuse. The [card preparation runbook](loyalty-memberships-and-partners.md#prepare-and-issue-a-numbered-card-batch) documents the desk flow.
 
 ## Who has it, and the ways in and back
 

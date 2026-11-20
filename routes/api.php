@@ -1481,8 +1481,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('card-batches', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardBatchesController::class, 'store']);
                 Route::get('card-batches/{id}/qr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardBatchesController::class, 'qr'])->whereNumber('id');
                 Route::get('physical-cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'index']);
+                Route::post('physical-cards/tag-lookup', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'tagLookup']);
                 Route::get('physical-cards/{id}/qr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'qr'])->whereNumber('id');
                 Route::put('physical-cards/{id}/nfc', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'pair'])->whereNumber('id');
+                Route::delete('physical-cards/{id}/nfc', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'releaseTag'])->whereNumber('id');
                 Route::put('physical-cards/{id}/assignment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'assign'])->whereNumber('id');
                 // Release 5 (spec 2026-10-23 §3): a member's NFC cards — the list, link, switch off
                 Route::get('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'index'])->whereNumber('id');

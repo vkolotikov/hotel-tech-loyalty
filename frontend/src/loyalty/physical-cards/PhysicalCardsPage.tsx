@@ -12,17 +12,18 @@ import { AddMemberDialog } from '../membership/AddMemberDialog'
 import { afterCardChange } from '../scan/cardsApi'
 import { Pager } from '../ui/Pager'
 import { AssignCardDialog, BatchDialog, CardError, PairCardDialog, PrintedQrDialog } from './CardDialogs'
+import { ManageTagDialog } from './ManageTagDialog'
 import { cardBatchesKey, physicalCardsApi, physicalCardsKey, type PhysicalCard } from './api'
 import { usePhysicalCardWords } from './words'
 
-type OpenCard = { action: 'assign' | 'new-member' | 'pair' | 'qr'; card: PhysicalCard }
+type OpenCard = { action: 'assign' | 'new-member' | 'pair' | 'qr'; card: PhysicalCard; uid?: string }
 const CONTROL = 'w-full min-w-0 rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
 export function PhysicalCardsPage() {
   const say = usePhysicalCardWords()
   const client = useQueryClient()
   const manages = useBoot().staff.can.manage_members
-  const [open, setOpen] = useState<OpenCard | 'batch' | null>(null)
+  const [open, setOpen] = useState<OpenCard | 'batch' | 'tag' | null>(null)
   const [batch, setBatch] = useState<number | null>(null)
   const [typed, setTyped] = useState('')
   const [search, setSearch] = useState('')
@@ -67,16 +68,20 @@ export function PhysicalCardsPage() {
     setOpen(null)
     setSaved({ key: 'assignedToMember', number: card.number })
   }
-  const show = (action: OpenCard['action'], card: PhysicalCard) => {
+  const show = (action: OpenCard['action'], card: PhysicalCard, uid?: string) => {
     setSaved(null)
-    setOpen({ action, card })
+    setOpen({ action, card, uid })
   }
+  const selected = typeof open === 'object' ? open : null
 
   return <div className="l-ov-page">
     <Link to="/loyalty" className="l-ov-link inline-flex items-center gap-1.5"><ArrowLeft size={15} aria-hidden />{say('members')}</Link>
     <header className="l-ov-page-heading">
       <h1>{say('title')}</h1>
-      {manages && <Button onClick={() => { setSaved(null); setOpen('batch') }} disabled={!batches.data}><Plus size={16} aria-hidden />{say('newBatch')}</Button>}
+      {manages && <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={() => { setSaved(null); setOpen('tag') }}><Nfc size={16} aria-hidden />{say('manageTag')}</Button>
+        <Button onClick={() => { setSaved(null); setOpen('batch') }} disabled={!batches.data}><Plus size={16} aria-hidden />{say('newBatch')}</Button>
+      </div>}
     </header>
 
     <div className="l-ov-panel space-y-4">
@@ -120,7 +125,7 @@ export function PhysicalCardsPage() {
               {card.member && <Link className="l-ov-link" to={memberPath(card.member.id)}>{card.member.name ?? card.member.number}</Link>}
             </span>
             <div className="flex flex-wrap gap-1">
-              {(card.uid === null || card.status !== 'assigned') && <Button size="sm" variant="secondary" onClick={() => show('pair', card)}>
+              {(manages || card.uid === null || card.status !== 'assigned') && <Button size="sm" variant="secondary" onClick={() => show('pair', card)}>
                 <Nfc size={15} aria-hidden />{say(card.uid === null ? 'pair' : 'editNfc')}
               </Button>}
               {card.status !== 'assigned' && <Button size="sm" variant="secondary" onClick={() => show('assign', card)}>{say('assign')}</Button>}
@@ -142,15 +147,16 @@ export function PhysicalCardsPage() {
       setOpen(null)
       refresh()
     }} />}
-    {open && open !== 'batch' && open.action === 'pair' && <PairCardDialog initial={open.card} onClose={() => setOpen(null)} onPaired={card => {
+    {open === 'tag' && <ManageTagDialog onClose={() => setOpen(null)} />}
+    {selected?.action === 'pair' && <PairCardDialog initial={selected.card} onClose={() => setOpen(null)} onPaired={card => {
       if (card.member) afterCardChange(client, card.member.id)
       else refresh()
       setSaved({ key: 'paired', number: card.number })
     }} />}
-    {open && open !== 'batch' && open.action === 'assign' && <AssignCardDialog card={open.card} onClose={() => setOpen(null)}
-      onAssigned={memberId => assigned(open.card, memberId)} onAdd={() => show('new-member', open.card)} />}
-    {open && open !== 'batch' && open.action === 'new-member' && <AddMemberDialog physicalCard={open.card}
-      onClose={() => setOpen(null)} onCreated={memberId => assigned(open.card, memberId)} />}
-    {open && open !== 'batch' && open.action === 'qr' && <PrintedQrDialog card={open.card} onClose={() => setOpen(null)} />}
+    {selected?.action === 'assign' && <AssignCardDialog card={selected.card} onClose={() => setOpen(null)}
+      onAssigned={memberId => assigned(selected.card, memberId)} onAdd={uid => show('new-member', selected.card, uid)} />}
+    {selected?.action === 'new-member' && <AddMemberDialog physicalCard={{ ...selected.card, capturedUid: selected.uid }}
+      onClose={() => setOpen(null)} onCreated={memberId => assigned(selected.card, memberId)} />}
+    {selected?.action === 'qr' && <PrintedQrDialog card={selected.card} onClose={() => setOpen(null)} />}
   </div>
 }

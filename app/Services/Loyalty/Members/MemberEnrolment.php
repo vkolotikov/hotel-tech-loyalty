@@ -56,7 +56,7 @@ final class MemberEnrolment
     }
 
     /**
-     * @param array{name: string, email: string, password?: ?string, phone?: ?string, tier_id?: ?int, nfc_uid?: ?string, physical_card_id?: int, valid_from?: ?string, valid_until?: ?string, membership_mode?: string} $data
+     * @param array{name: string, email: string, password?: ?string, phone?: ?string, tier_id?: ?int, nfc_uid?: ?string, physical_card_id?: int, physical_card_uid?: string, physical_card_expected_uid?: ?string, valid_from?: ?string, valid_until?: ?string, membership_mode?: string} $data
      * @return array{member: LoyaltyMember, tier: LoyaltyTier, invite_flow: bool, email_sent: bool}
      *
      * @throws LoyaltyRefused `member_limit` (402, the plan's sentence as its message) or `no_tier` (422)
@@ -128,7 +128,10 @@ final class MemberEnrolment
             }
 
             if (!empty($data['physical_card_id'])) {
-                app(NfcCards::class)->assignPrinted((int) $data['physical_card_id'], $member->id, $by);
+                app(NfcCards::class)->assignPrinted(
+                    (int) $data['physical_card_id'], $member->id, $by,
+                    $data['physical_card_uid'] ?? null, $data['physical_card_expected_uid'] ?? null,
+                );
             } elseif (!empty($data['nfc_uid'])) {
                 // Through NfcCards (release 6): the ID stored normalised, one card for one member across every
                 // organisation (a refusal rolls the whole enrolment back), and the member's QR code and wallet pass

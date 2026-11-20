@@ -21,6 +21,7 @@ import { assignmentFormOf, assignmentProblems, assignmentValues, type Assignment
 import { DesignDialog } from '../redesign/DesignUI'
 import { usePhone } from '../overview/useOverview'
 import { useMobileWords } from '../mobile/words'
+import { physicalCardError, usePhysicalCardWords } from '../physical-cards/words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
@@ -31,10 +32,11 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  */
 export function AddMemberDialog({ onClose, physicalCard, onCreated }: {
   onClose: () => void
-  physicalCard?: { id: number; number: string }
+  physicalCard?: { id: number; number: string; uid: string | null; capturedUid?: string }
   onCreated?: (memberId: number) => void
 }) {
   const { t } = useTranslation()
+  const physicalWords = usePhysicalCardWords()
   const phone = usePhone()
   const mobile = useMobileWords()
   const Surface = phone ? DesignDialog : Dialog
@@ -47,12 +49,16 @@ export function AddMemberDialog({ onClose, physicalCard, onCreated }: {
   const [form, setForm] = useState<EnrolForm>(NEW_MEMBER)
   const [assignment, setAssignment] = useState(assignmentFormOf)
   const [tried, setTried] = useState(false)
+  const [physicalUid, setPhysicalUid] = useState(physicalCard?.capturedUid ?? '')
 
   const save = useMutation({
     mutationFn: () => membershipApi.enrol({
       ...enrolBody(form),
       ...(dated ? assignmentValues(assignment) : {}),
       ...(physicalCard ? { physical_card_id: physicalCard.id } : {}),
+      ...(physicalCard && physicalUid.trim() ? {
+        physical_card_uid: physicalUid.trim(), physical_card_expected_uid: physicalCard.uid,
+      } : {}),
     }),
     onSuccess: (answer) => {
       afterMemberChange(client, null)
@@ -67,6 +73,8 @@ export function AddMemberDialog({ onClose, physicalCard, onCreated }: {
   }
 
   const failure = save.isError ? failureOf(save.error) : null
+  const tagFailure = physicalCard && failure && ['bad_uid', 'card_changed', 'card_elsewhere', 'card_in_use'].includes(failure.code)
+    ? physicalCardError(save.error) : null
   const assignmentErrors = dated ? assignmentProblems(assignment, boot.programme.tiers, today) : {}
   const updateAssignment = (patch: Partial<AssignmentForm>) => { setAssignment(value => ({ ...value, ...patch })); save.reset() }
   const problems = { ...(tried ? enrolProblems(form) : {}), ...serverProblems(failure?.fields, ENROL_FIELDS) }
@@ -83,6 +91,10 @@ export function AddMemberDialog({ onClose, physicalCard, onCreated }: {
         if (!save.isPending && Object.keys(enrolProblems(form)).length === 0 && Object.keys(assignmentErrors).length === 0) save.mutate()
       }}>
         {physicalCard && <p className="text-sm text-a-text-2">{t('loyalty.physicalcards.newMemberFor', { number: physicalCard.number })}</p>}
+        {physicalCard && <FormField label={t('loyalty.physicalcards.uidOptional')}>
+          <input type="text" value={physicalUid} maxLength={100} disabled={save.isPending} autoComplete="off" spellCheck={false}
+            onChange={e => { setPhysicalUid(e.target.value); if (save.isError) save.reset() }} className={INPUT} />
+        </FormField>}
         <div className={phone ? 'l-mw-panel l-mw-add-fields' : 'l-mw-add-desktop-fields'}>
         <FormField label={t('loyalty.membership.add.name', 'Name')} problem={problem('name')}>
           <input ref={first} type="text" value={form.name} maxLength={MAX_NAME} disabled={save.isPending} autoComplete="off" onChange={(e) => update({ name: e.target.value })} className={INPUT} />
@@ -102,8 +114,8 @@ export function AddMemberDialog({ onClose, physicalCard, onCreated }: {
         {assignment.membership_mode === 'earned' && <p className="text-sm text-a-text-2">{t('loyalty.membership.add.start', 'The member starts on the programme’s first tier, with the welcome bonus.')}</p>}
         </div>
 
-        {failure && <Notice tone="danger">{physicalCard && failure.code === 'card_in_use'
-          ? t('loyalty.physicalcards.errors.card_in_use')
+        {failure && <Notice tone="danger">{tagFailure
+          ? physicalWords(tagFailure.key, { number: tagFailure.number, company: tagFailure.company })
           : t(...refusalKey('loyalty.membership', ERRORS, 'add', failure))}</Notice>}
 
         <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose} save={t('loyalty.membership.add.save', 'Add member')} />

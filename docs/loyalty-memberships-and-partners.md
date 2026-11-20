@@ -58,12 +58,20 @@ or pair specialist USB hardware. See [Chrome's NFC documentation](https://develo
 
 1. Open **Members → Physical cards → New batch** as an owner or manager. For cards marked AF 10001 through AF 10100, enter prefix `AF`, first number `10001` and last number `10100`. The range includes both ends, retains leading zeros, and accepts up to 500 cards. Submitting the same range again opens its existing batch.
 2. Select the batch and use **Download batch QRs**. The ZIP contains a named SVG for each printed number and a `cards.csv` manifest with the QR payload and file name. You can also open a single card’s **QR** and download its SVG. This is the card's permanent QR.
-3. Open **Pair NFC** at the first card. To use an ACR122U, open the **Windows NFC reader** app and press **Connect Windows reader** in Loyalty. Place the card on the reader, check the printed number and press **Save NFC**. Lift it and continue with the next number. A keyboard-style reader can still type the ID into the field and submit it with Enter.
-4. When handing the card out, find the printed number and choose **Assign member**. Select an existing member or use **Add new member** to enrol and assign in one action. Once assigned, the printed QR works with the staff scanner. A paired tag identifies the same member.
+3. For an ACR122U, run the Windows download once and choose **Start reader with Windows**. In Loyalty, **Connect Windows reader** and allow local access if prompted. To prepare a batch, open **Pair NFC**, place each card on the reader, check its number and press **Save NFC**. A keyboard-style reader can type the ID and submit it with Enter.
+4. When handing out a card, choose **Assign member** at its printed number. Tap its NFC tag if needed and select an existing member or **Add new member**. The tag and assignment save together. Once assigned, the printed QR and paired tag identify the same member.
 
-A batch can be prepared before any recipients are known. It uses the selected organisation's card stock. Managers create batches and download the ZIP. Active staff can find, pair and assign the cards. The stored NFC ID can be corrected while the card is unassigned or switched off.
+A batch can be prepared before any recipients are known. It uses the selected organisation's card stock. Managers create batches and download the ZIP. Active staff can find, pair and assign the cards. An owner or manager can choose **Edit NFC** to correct an already issued card and confirm the replacement.
 
 To look up someone with the ACR122U, open **Scan a member**, choose **Use Windows NFC reader** and place their card on the reader. A paired card awaiting a member offers **Link this card**, which assigns the same card row and preserves its printed number and QR. See the [Windows reader setup](../tools/reader/README.md).
+
+## Free a tag for another card
+
+1. Open **Physical cards → Manage NFC tags** as an owner or manager in the company that registered it.
+2. Tap the tag, choose **Find tag**, review the matching card, then choose **Release tag** and confirm.
+3. In the receiving company, open **Assign member** or **Pair NFC** for the intended printed number and tap the tag again.
+
+A tag has one registration across the platform. Verified platform operators see the source company on a pairing conflict. Releasing a tag removes it from NFC lookup in its source company. A numbered source card keeps its printed QR and current assignment.
 
 ## Reuse a returned physical card
 

@@ -3,7 +3,7 @@
     "error": {
       "already_erased": "Este miembro fue eliminado.",
       "bad_uid": "Esto no es un ID de tarjeta. Acerque o lea la tarjeta, o escriba el ID impreso en ella.",
-      "card_elsewhere": "Esta tarjeta se usa en otro lugar y no se puede vincular aquí.",
+      "card_elsewhere": "Esta etiqueta NFC está registrada en otra empresa. Un propietario o gerente de esa empresa puede liberarla en Tarjetas físicas → Gestionar etiquetas NFC.",
       "card_in_use": "Esta tarjeta está vinculada a otro miembro. Primero desactívela en la página de ese miembro.",
       "invalid": "Escriba el ID de la tarjeta.",
       "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",

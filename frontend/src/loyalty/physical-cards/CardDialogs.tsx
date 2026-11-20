@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Plus, Usb } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -8,19 +8,17 @@ import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { MemberPicker } from '../events/MemberPicker'
 import { useFirstFocus } from '../lib/useFirstFocus'
-import { detectEnv, hexWithColons, modeState } from '../scan/scanMath'
-import { useScanWords } from '../scan/design/words'
-import { UsbReader } from '../scan/UsbReader'
-import { WindowsReader } from '../scan/WindowsReader'
+import { hexWithColons } from '../scan/scanMath'
 import { physicalCardsApi, physicalCardsKey, type BatchRange, type CardBatch, type PhysicalCard } from './api'
 import { physicalCardError, usePhysicalCardWords } from './words'
+import { CardTagInput } from './CardTagInput'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
 export function CardError({ error, limit }: { error: unknown; limit?: number }) {
   const say = usePhysicalCardWords()
   const failure = physicalCardError(error)
-  return <Notice tone="danger">{say(failure.key, { number: failure.number, ...(limit === undefined ? {} : { limit }) })}</Notice>
+  return <Notice tone="danger">{say(failure.key, { number: failure.number, company: failure.company, ...(limit === undefined ? {} : { limit }) })}</Notice>
 }
 
 export function BatchDialog({ limit, onClose, onCreated }: { limit: number; onClose: () => void; onCreated: (batch: CardBatch) => void }) {
@@ -65,16 +63,15 @@ export function BatchDialog({ limit, onClose, onCreated }: { limit: number; onCl
 
 export function PairCardDialog({ initial, onClose, onPaired }: { initial: PhysicalCard; onClose: () => void; onPaired: (card: PhysicalCard) => void }) {
   const say = usePhysicalCardWords()
-  const scanWords = useScanWords()
   const client = useQueryClient()
   const [card, setCard] = useState(initial)
   const [uid, setUid] = useState('')
-  const [usb, setUsb] = useState(false)
-  const windows = modeState('windows', detectEnv()) === 'ready'
+  const [confirmed, setConfirmed] = useState(false)
+  const replacing = initial.uid !== null && initial.status === 'assigned'
   const [lastPaired, setLastPaired] = useState<string | null>(null)
   const field = useRef<HTMLInputElement>(null)
   const pair = useMutation({
-    mutationFn: (value: string) => physicalCardsApi.pair(card, value),
+    mutationFn: (value: string) => physicalCardsApi.pair(card, value, replacing && confirmed),
     onError: error => {
       if (physicalCardError(error).key === 'errors.card_changed') {
         void client.invalidateQueries({ queryKey: physicalCardsKey })
@@ -97,53 +94,51 @@ export function PairCardDialog({ initial, onClose, onPaired }: { initial: Physic
   }, [card.id, pair.isPending])
 
   const change = (value: string) => {
+    if (value === uid) return
     setUid(value)
+    setConfirmed(false)
     if (pair.isError) pair.reset()
   }
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!pair.isPending && uid.trim()) pair.mutate(uid.trim())
+    if (!pair.isPending && uid.trim() && (!replacing || confirmed)) pair.mutate(uid.trim())
   }
 
   return <Dialog title={say('pairTitle', { number: card.number })} onClose={onClose} busy={pair.isPending}>
     <div className="space-y-4">
       {lastPaired !== null && <Notice tone="success">{say('paired', { number: lastPaired })}</Notice>}
       {initial.uid !== null && <p className="text-sm text-a-text-2">{say('currentUid', { uid: hexWithColons(initial.uid) })}</p>}
-      {windows && !usb && <WindowsReader onUid={value => {
-        if (pair.isPending) return false
-        change(hexWithColons(value))
-      }} />}
       <form onSubmit={submit} className="space-y-4">
-        <Field label={say('uid')} hint={say('readerHint')}>
-          <input ref={field} className={INPUT} value={uid} onChange={event => change(event.target.value)} maxLength={100}
-            autoComplete="off" autoCapitalize="off" spellCheck={false} disabled={pair.isPending} />
-        </Field>
+        <CardTagInput value={uid} onChange={change} inputRef={field} disabled={pair.isPending} />
+        {replacing && <label className="flex items-start gap-2 text-sm text-a-text">
+          <input type="checkbox" className="mt-1" checked={confirmed} disabled={pair.isPending || !uid.trim()} onChange={event => setConfirmed(event.target.checked)} />
+          {say('confirmReplace')}
+        </label>}
         {pair.isError && <CardError error={pair.error} />}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={pair.isPending}>{say('done')}</Button>
-          <Button type="submit" loading={pair.isPending} disabled={uid.trim() === ''}>{say('saveNfc')}</Button>
+          <Button type="submit" loading={pair.isPending} disabled={uid.trim() === '' || (replacing && !confirmed)}>{say('saveNfc')}</Button>
         </div>
       </form>
-      <Button type="button" variant="ghost" onClick={() => setUsb(value => !value)} aria-expanded={usb}>
-        <Usb size={16} aria-hidden />{windows && usb ? scanWords('windowsUse') : say('readerOptions')}
-      </Button>
-      {usb && <UsbReader onUid={value => { if (!pair.isPending) change(hexWithColons(value)) }} />}
     </div>
   </Dialog>
 }
 
 export function AssignCardDialog({ card, onAdd, onClose, onAssigned }: {
-  card: PhysicalCard; onAdd: () => void; onClose: () => void; onAssigned: (memberId: number) => void
+  card: PhysicalCard; onAdd: (uid: string) => void; onClose: () => void; onAssigned: (memberId: number) => void
 }) {
   const say = usePhysicalCardWords()
   const first = useFirstFocus<HTMLInputElement>()
+  const [uid, setUid] = useState('')
   const assign = useMutation({
-    mutationFn: (memberId: number) => physicalCardsApi.assign(card.id, memberId),
+    mutationFn: (memberId: number) => physicalCardsApi.assign(card, memberId, uid.trim()),
     onSuccess: (_answer, memberId) => onAssigned(memberId),
   })
 
   return <Dialog title={say('assignTitle', { number: card.number })} onClose={onClose} busy={assign.isPending}>
     <div className="space-y-4">
+      <CardTagInput value={uid} onChange={value => { setUid(value); if (assign.isError) assign.reset() }}
+        disabled={assign.isPending} currentUid={card.uid} optional />
       <MemberPicker label={say('findMember')} inputRef={first} action={member => (
         <Button type="button" size="sm" disabled={assign.isPending || !member.is_active} onClick={() => assign.mutate(member.id)}>
           {say(member.is_active ? 'assign' : 'inactiveMember')}
@@ -151,7 +146,7 @@ export function AssignCardDialog({ card, onAdd, onClose, onAssigned }: {
       )} />
       {assign.isError && <CardError error={assign.error} />}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="secondary" disabled={assign.isPending} onClick={onAdd}>
+        <Button type="button" variant="secondary" disabled={assign.isPending} onClick={() => onAdd(uid.trim())}>
           <Plus size={16} aria-hidden />{say('newMember')}
         </Button>
         <Button type="button" variant="ghost" disabled={assign.isPending} onClick={onClose}>{say('cancel')}</Button>

@@ -5,6 +5,7 @@ namespace App\Services\Loyalty\Cards;
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\NfcCard;
+use App\Models\Organization;
 use App\Models\User;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\Members\MemberErasure;
@@ -29,6 +30,7 @@ final class NfcCards
     public function forMember(LoyaltyMember $member): Collection
     {
         return NfcCard::query()->where('member_id', $member->id)
+            ->where(fn ($rows) => $rows->whereNotNull('uid')->orWhereNotNull('card_batch_id'))
             ->orderByDesc('is_active')->orderByDesc('issued_at')->orderByDesc('id')->get();
     }
 
@@ -73,55 +75,70 @@ final class NfcCards
     }
 
     /** Reserve this tag for the numbered card, even when the recipient is still unknown. */
-    public function pairPrinted(int $id, string $entry, ?string $expectedUid, User $by): NfcCard
+    public function pairPrinted(int $id, string $entry, ?string $expectedUid, User $by, bool $replaceActive = false): NfcCard
     {
-        return $this->withUid($entry, function (array $forms) use ($id, $expectedUid, $by) {
-            $card = NfcCard::query()->printed()->lockForUpdate()->find($id) ?? throw LoyaltyRefused::notFound();
-            if ($card->uid !== null) {
-                if (in_array(CodeReader::hexUid($card->uid), $forms, true)) {
-                    return $card;
-                }
-                if ($card->is_active) {
-                    throw new LoyaltyRefused('card_in_use', 'Switch off the card before replacing its NFC ID.', 409);
-                }
-            }
-
-            if ($card->uid !== $expectedUid) {
-                throw new LoyaltyRefused('card_changed', 'The saved NFC ID has changed. Reopen this card.', 409);
-            }
-
-            $matches = $this->withMatchingUid($forms)->where('id', '!=', $card->id);
-            if ($matches->contains(fn (NfcCard $c) => (int) $c->organization_id !== (int) $card->organization_id)) {
-                throw new LoyaltyRefused('card_elsewhere', 'This card cannot be linked here.', 409);
-            }
-            if ($matches->isNotEmpty()) {
-                throw new LoyaltyRefused('card_in_use', 'This NFC ID is already registered to another card.', 409);
-            }
-
-            $card->update(['uid' => $forms[0]]);
-            AuditLog::record('nfc_card_paired', $card, ['number' => $card->printed_number], [], $by);
+        return $this->withUid($entry, function (array $forms) use ($id, $expectedUid, $by, $replaceActive) {
+            $card = $this->lockPrinted($id);
+            $this->setPrintedUid($card, $forms, $expectedUid, $by, $replaceActive);
 
             return $card;
-        });
+        }, $expectedUid);
     }
 
     /** Assignment by printed number works with or without a paired tag. */
-    public function assignPrinted(int $id, int $memberId, User $by): NfcCard
+    public function assignPrinted(int $id, int $memberId, User $by, ?string $entry = null, ?string $expectedUid = null): NfcCard
     {
-        return DB::transaction(function () use ($id, $memberId, $by) {
+        $assign = function (?array $forms) use ($id, $memberId, $by, $expectedUid) {
             $member = LoyaltyMember::query()->with('user')->lockForUpdate()->find($memberId) ?? throw LoyaltyRefused::notFound();
             if (MemberErasure::isErased($member) || MemberErasure::isSelfDeleted($member)) {
                 throw new LoyaltyRefused('already_erased', 'This member was deleted.', 409);
             }
             MemberStatus::assertActive($member);
 
-            $card = NfcCard::query()->printed()->lockForUpdate()->find($id) ?? throw LoyaltyRefused::notFound();
+            // The member is always locked before the card, including when we pair a tag in the same write.
+            $card = $this->lockPrinted($id);
+            if ($forms !== null) {
+                $this->setPrintedUid($card, $forms, $expectedUid, $by);
+            }
             if ($card->is_active && (int) $card->member_id === (int) $member->id) {
                 return $card;
             }
 
             return $this->activate($card, $member, $by, ['via' => 'physical_cards', 'audited' => true])
                 ?? throw new LoyaltyRefused('card_in_use', 'This card is linked to another member.', 409);
+        };
+
+        return $entry === null
+            ? DB::transaction(fn () => $assign(null))
+            : $this->withUid($entry, $assign, $expectedUid);
+    }
+
+    /** @return Collection<int, NfcCard> Only matches the signed-in organisation is allowed to inspect. */
+    public function findTags(string $entry): Collection
+    {
+        return NfcCard::query()->whereIn(DB::raw(CodeReader::UID_SQL), self::uidForms($entry))
+            ->orderBy('id')->with('member.user')->get();
+    }
+
+    /** Free the tag for reuse while keeping any printed card and its assignment. */
+    public function releaseTag(int $id, string $expectedUid, User $by): void
+    {
+        // The lookup includes the stored UID. Treat a numeric UID returned there as hex.
+        $expected = CodeReader::hexUid($expectedUid) ?? throw new LoyaltyRefused('bad_uid', 'This is not a card ID.', 422);
+        $entry = implode(':', str_split($expected, 2));
+
+        $this->withUid($entry, function () use ($id, $expected, $by) {
+            $card = NfcCard::query()->lockForUpdate()->find($id) ?? throw LoyaltyRefused::notFound();
+            if ($card->uid === null) {
+                return;
+            }
+            if (CodeReader::hexUid($card->uid) !== $expected) {
+                throw new LoyaltyRefused('card_changed', 'The saved NFC ID has changed. Reopen this card.', 409);
+            }
+
+            $old = ['uid' => $card->uid, 'is_active' => $card->is_active];
+            $card->update(['uid' => null, 'is_active' => $card->card_batch_id !== null && $card->is_active]);
+            AuditLog::record('nfc_tag_released', $card, ['number' => $card->printed_number], $old, $by);
         });
     }
 
@@ -149,9 +166,7 @@ final class NfcCards
 
     public static function printedRow(NfcCard $card): array
     {
-        $card->loadMissing('member.user');
-        $member = $card->member;
-        $user = $member?->user;
+        $member = self::memberOn($card);
 
         return [
             'id'       => (int) $card->id,
@@ -159,11 +174,30 @@ final class NfcCards
             'number'   => $card->printed_number,
             'uid'      => $card->uid,
             'status'   => $member === null ? 'unassigned' : ($card->is_active ? 'assigned' : 'disabled'),
-            'member'   => $member === null ? null : [
-                'id'     => (int) $member->id,
-                'name'   => $user instanceof User && OwnAccount::is($user, (int) $card->organization_id) ? $user->name : null,
-                'number' => $member->member_number,
-            ],
+            'member'   => $member,
+        ];
+    }
+
+    public static function tagRow(NfcCard $card): array
+    {
+        return [
+            'id' => (int) $card->id,
+            'number' => $card->printed_number,
+            'uid' => $card->uid,
+            'member' => self::memberOn($card),
+        ];
+    }
+
+    private static function memberOn(NfcCard $card): ?array
+    {
+        $card->loadMissing('member.user');
+        $member = $card->member;
+        $user = $member?->user;
+
+        return $member === null ? null : [
+            'id'     => (int) $member->id,
+            'name'   => $user instanceof User && OwnAccount::is($user, (int) $card->organization_id) ? $user->name : null,
+            'number' => $member->member_number,
         ];
     }
 
@@ -258,17 +292,65 @@ final class NfcCards
         return NfcCard::withoutGlobalScopes()->whereIn(DB::raw(CodeReader::UID_SQL), $forms)->orderBy('id')->get();
     }
 
+    private function lockPrinted(int $id): NfcCard
+    {
+        return NfcCard::query()->printed()->lockForUpdate()->find($id) ?? throw LoyaltyRefused::notFound();
+    }
+
+    /** @param list<string> $forms */
+    private function setPrintedUid(NfcCard $card, array $forms, ?string $expectedUid, User $by, bool $replaceActive = false): void
+    {
+        if ($card->uid !== null) {
+            if (in_array(CodeReader::hexUid($card->uid), $forms, true)) {
+                return;
+            }
+            if ($card->is_active && !$replaceActive) {
+                throw new LoyaltyRefused('card_in_use', 'An owner or manager can replace an assigned card’s tag.', 409);
+            }
+        }
+        if ($card->uid !== $expectedUid) {
+            throw new LoyaltyRefused('card_changed', 'The saved NFC ID has changed. Reopen this card.', 409);
+        }
+
+        $matches = $this->withMatchingUid($forms)->where('id', '!=', $card->id);
+        $foreign = $matches->filter(fn (NfcCard $c) => (int) $c->organization_id !== (int) $card->organization_id);
+        if ($foreign->isNotEmpty()) {
+            // Only verified platform operators may identify the company. A release still runs in its own scope.
+            $organisations = $foreign->pluck('organization_id')->unique()->values();
+            $company = $by->isPlatformAdmin() && $organisations->count() === 1
+                ? Organization::query()->whereKey($organisations->first())->value('name')
+                : null;
+            throw new LoyaltyRefused('card_elsewhere', 'This tag is already registered to another company.', 409,
+                is_string($company) && $company !== '' ? ['source_company' => $company] : []);
+        }
+        if ($matches->isNotEmpty()) {
+            throw new LoyaltyRefused('card_in_use', 'This NFC ID is already registered to another card.', 409, ['tag_in_use' => true]);
+        }
+
+        $previous = $card->uid;
+        $card->update(['uid' => $forms[0]]);
+        AuditLog::record('nfc_card_paired', $card, ['number' => $card->printed_number, 'uid' => $card->uid], ['uid' => $previous], $by);
+    }
+
+    /** @return list<string> */
+    private static function uidForms(string $entry): array
+    {
+        $read = CodeReader::cardUid($entry) ?? throw new LoyaltyRefused('bad_uid', 'This is not a card ID.', 422);
+
+        return [$read['uid'], ...$read['also']];
+    }
+
     /**
      * Pairing and legacy linking share the same locks, including the other byte order of a tag ID.
      * @template T
      * @param callable(list<string>): T $write
      * @return T
      */
-    private function withUid(string $entry, callable $write): mixed
+    private function withUid(string $entry, callable $write, ?string $expectedUid = null): mixed
     {
-        $read = CodeReader::cardUid($entry) ?? throw new LoyaltyRefused('bad_uid', 'This is not a card ID.', 422);
-        $forms = [$read['uid'], ...$read['also']];
-        $keys = array_unique($forms);
+        $forms = self::uidForms($entry);
+        $previous = $expectedUid === null ? null : CodeReader::hexUid($expectedUid);
+        $keys = array_unique($previous === null ? $forms : [...$forms, $previous, CodeReader::reversed($previous) ?? $previous]);
         sort($keys, SORT_STRING);
 
         return DB::transaction(function () use ($keys, $forms, $write) {

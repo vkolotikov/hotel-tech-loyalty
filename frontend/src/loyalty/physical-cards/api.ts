@@ -17,6 +17,8 @@ export interface PhysicalCard {
   member: { id: number; name: string | null; number: string } | null
 }
 
+export type RegisteredTag = Pick<PhysicalCard, 'id' | 'member'> & { number: string | null; uid: string }
+
 export interface BatchRange {
   prefix: string
   first: string
@@ -33,8 +35,14 @@ export const physicalCardsApi = {
   list: (params: { batch_id?: number; q?: string; page: number }): Promise<{ cards: PhysicalCard[]; page: number; pages: number; total: number }> =>
     watched(api.get(loyaltyUrl('physical-cards'), { params })),
   qr: (cardId: number): Promise<{ code: string; qr_svg: string }> => watched(api.get(loyaltyUrl('physical-cards/' + cardId + '/qr'))),
-  pair: (card: PhysicalCard, uid: string): Promise<{ card: PhysicalCard; next: PhysicalCard | null }> =>
-    watched(api.put(loyaltyUrl('physical-cards/' + card.id + '/nfc'), { uid, expected_uid: card.uid })),
-  assign: (cardId: number, memberId: number): Promise<{ card: PhysicalCard }> =>
-    watched(api.put(loyaltyUrl('physical-cards/' + cardId + '/assignment'), { member_id: memberId })),
+  pair: (card: PhysicalCard, uid: string, replaceActive: boolean): Promise<{ card: PhysicalCard; next: PhysicalCard | null }> =>
+    watched(api.put(loyaltyUrl('physical-cards/' + card.id + '/nfc'), { uid, expected_uid: card.uid, replace_active: replaceActive })),
+  assign: (card: PhysicalCard, memberId: number, uid: string): Promise<{ card: PhysicalCard }> =>
+    watched(api.put(loyaltyUrl('physical-cards/' + card.id + '/assignment'), {
+      member_id: memberId, ...(uid ? { uid, expected_uid: card.uid } : {}),
+    })),
+  tagLookup: (uid: string): Promise<{ cards: RegisteredTag[] }> =>
+    watched(api.post(loyaltyUrl('physical-cards/tag-lookup'), { uid })),
+  releaseTag: (card: RegisteredTag): Promise<void> =>
+    watched(api.delete(loyaltyUrl('physical-cards/' + card.id + '/nfc'), { data: { expected_uid: card.uid } })),
 }

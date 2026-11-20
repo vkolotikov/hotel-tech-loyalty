@@ -76,7 +76,7 @@ export function ScanPage() {
   const navigate = useNavigate()
   const env = useMemo(() => detectEnv(), [])
   const windows = modeState('windows', env) === 'ready'
-  const readers: ScanMode[] = ['camera', ...(windows ? ['windows' as const] : []), 'nfc', 'usb']
+  const readers: ScanMode[] = ['camera', windows ? 'windows' : 'nfc', 'usb']
   const named = contextFromSearch(location.search)
   const [wanted, setWanted] = useState<ScanContext>(() => {
     const first = named ?? loadContext()

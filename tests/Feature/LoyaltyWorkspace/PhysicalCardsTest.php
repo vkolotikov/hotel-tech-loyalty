@@ -183,4 +183,101 @@ class PhysicalCardsTest extends TestCase
         $this->assertSame($code, $this->printedCode($id));
         $this->postJson($this->api('scan'), ['code' => $code])->assertNotFound();
     }
+
+    public function test_nfc_workflow_pairs_and_assigns_existing_and_new_members_in_one_write(): void
+    {
+        $batch = $this->batch();
+        [$first, $second, $third] = $this->stock($batch);
+        $tag = ['uid' => '04:39:AB:CD:12:34:56', 'expected_uid' => null];
+
+        $this->asStaffMember()->putJson($this->api("physical-cards/{$first['id']}/assignment"), $tag + ['member_id' => $this->ada->id])
+            ->assertOk()->assertJsonPath('card.uid', '0439abcd123456')->assertJsonPath('card.member.id', $this->ada->id);
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:0439abcd123456'])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        $this->putJson($this->api("physical-cards/{$second['id']}/assignment"), $tag + ['member_id' => $this->grace->id])
+            ->assertConflict()->assertJsonPath('error', 'card_in_use');
+        $this->assertNull($this->stock($batch)[1]['member']);
+
+        $body = [
+            'name' => 'New tag recipient', 'email' => 'tag-recipient@example.test', 'send_welcome' => false,
+            'physical_card_id' => $third['id'], 'physical_card_uid' => $tag['uid'], 'physical_card_expected_uid' => null,
+        ];
+        $this->postJson($this->api('members'), $body)->assertConflict()->assertJsonPath('error', 'card_in_use');
+        $this->assertFalse(User::query()->where('email', $body['email'])->exists());
+        $member = $this->postJson($this->api('members'), array_replace($body, ['physical_card_uid' => '04:22:43:FE:ED:02:0A']))
+            ->assertCreated()->json('member.id');
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:042243feed020a'])->assertOk()->assertJsonPath('member.id', $member);
+    }
+
+    public function test_nfc_workflow_releases_a_tag_in_its_home_company_and_keeps_its_printed_qr(): void
+    {
+        $source = $this->stock($this->batch())[0]['id'];
+        $print = $this->printedCode($source);
+        $uid = '04:FE:AB:CD:12:34:56';
+        $this->putJson($this->api("physical-cards/{$source}/nfc"), ['uid' => $uid, 'expected_uid' => null])->assertOk();
+        $this->putJson($this->api("physical-cards/{$source}/assignment"), ['member_id' => $this->ada->id])->assertOk();
+        $release = $this->api("physical-cards/{$source}/nfc");
+        $this->asStaffMember()->deleteJson($release, ['expected_uid' => $uid])->assertForbidden();
+        $this->asManager()->deleteJson($release, ['expected_uid' => '04:FE:AB:CD:12:34:55'])
+            ->assertConflict()->assertJsonPath('error', 'card_changed');
+
+        $other = $this->otherOrganization();
+        $otherManager = $this->staffUser($other['org']);
+        $this->actingAs($otherManager, 'sanctum')->postJson($this->api('physical-cards/tag-lookup'), ['uid' => $uid])
+            ->assertOk()->assertJsonCount(0, 'cards');
+        $this->deleteJson($release, ['expected_uid' => $uid])->assertNotFound();
+        $this->postJson($this->api('card-batches'), ['prefix' => 'AE', 'first' => '00001', 'last' => '00001'])->assertCreated();
+        $target = $this->getJson($this->api('physical-cards'))->assertOk()->json('cards.0.id');
+        $move = ['member_id' => $other['member']->id, 'uid' => $uid, 'expected_uid' => null];
+        $this->putJson($this->api("physical-cards/{$target}/assignment"), $move)
+            ->assertConflict()->assertJsonPath('error', 'card_elsewhere')->assertJsonMissingPath('source_company');
+
+        config(['services.saas.platform_admin_emails' => $otherManager->email]);
+        $otherManager->forceFill(['email_verified_at' => null])->save();
+        $this->putJson($this->api("physical-cards/{$target}/assignment"), $move)
+            ->assertConflict()->assertJsonMissingPath('source_company');
+        $otherManager->forceFill(['email_verified_at' => now()])->save();
+        $this->putJson($this->api("physical-cards/{$target}/assignment"), $move)
+            ->assertConflict()->assertJsonPath('source_company', $this->org->name)->assertJsonMissingPath('member');
+        $this->deleteJson($release, ['expected_uid' => $uid])->assertNotFound();
+        $this->postJson($this->api('physical-cards/tag-lookup'), ['uid' => $uid])->assertOk()->assertJsonCount(0, 'cards');
+
+        $this->asManager()->postJson($this->api('physical-cards/tag-lookup'), ['uid' => $uid])
+            ->assertOk()->assertJsonPath('cards.0.id', $source)->assertJsonPath('cards.0.number', 'AF 10001');
+        $this->deleteJson($release, ['expected_uid' => $uid])->assertNoContent();
+        $this->deleteJson($release, ['expected_uid' => $uid])->assertNoContent();
+        $this->postJson($this->api('scan'), ['code' => $print])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:'.$uid])->assertNotFound();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'nfc_tag_released', 'subject_id' => $source]);
+
+        $this->actingAs($otherManager, 'sanctum')->putJson($this->api("physical-cards/{$target}/assignment"), $move)
+            ->assertOk()->assertJsonPath('card.member.id', $other['member']->id);
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:'.$uid])->assertOk()->assertJsonPath('member.id', $other['member']->id);
+    }
+
+    public function test_nfc_workflow_allows_managers_to_correct_an_issued_tag_in_place(): void
+    {
+        $id = $this->stock($this->batch())[0]['id'];
+        $this->asStaffMember()->putJson($this->api("physical-cards/{$id}/nfc"), ['uid' => '02:09:20:00:50:01', 'expected_uid' => null])->assertOk();
+        $this->putJson($this->api("physical-cards/{$id}/assignment"), ['member_id' => $this->ada->id])->assertOk();
+
+        $change = ['uid' => '04:12:AB:CD:12:34:56', 'expected_uid' => '020920005001', 'replace_active' => true];
+        $this->putJson($this->api("physical-cards/{$id}/nfc"), $change)->assertForbidden();
+        $this->asManager()->putJson($this->api("physical-cards/{$id}/nfc"), $change)->assertOk()
+            ->assertJsonPath('card.uid', '0412abcd123456')->assertJsonPath('card.member.id', $this->ada->id);
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:020920005001'])->assertNotFound();
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:0412abcd123456'])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+    }
+
+    public function test_nfc_workflow_can_release_an_older_unnumbered_registration(): void
+    {
+        $uid = '04:86:AB:CD';
+        $id = $this->asManager()->postJson($this->api("members/{$this->ada->id}/cards"), ['uid' => $uid])
+            ->assertCreated()->json('card.id');
+        $this->postJson($this->api('physical-cards/tag-lookup'), ['uid' => $uid])->assertOk()
+            ->assertJsonPath('cards.0.id', $id)->assertJsonPath('cards.0.number', null);
+        $this->deleteJson($this->api("physical-cards/{$id}/nfc"), ['expected_uid' => $uid])->assertNoContent();
+        $this->getJson($this->api("members/{$this->ada->id}/cards"))->assertOk()->assertJsonCount(0, 'cards');
+        $this->postJson($this->api('scan'), ['code' => 'HTCARD:'.$uid])->assertNotFound();
+        $this->assertDatabaseHas('nfc_cards', ['id' => $id, 'member_id' => $this->ada->id, 'uid' => null, 'is_active' => false]);
+    }
 }

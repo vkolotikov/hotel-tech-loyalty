@@ -10,6 +10,7 @@ use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class PhysicalCardsController extends Controller
 {
@@ -46,8 +47,13 @@ class PhysicalCardsController extends Controller
         $data = $request->validate([
             'uid'          => 'required|string|max:100',
             'expected_uid' => 'present|nullable|string|max:50',
+            'replace_active' => 'sometimes|boolean',
         ]);
-        $card = $cards->pairPrinted($id, $data['uid'], $data['expected_uid'], $request->user());
+        $replace = $request->boolean('replace_active');
+        if ($replace) {
+            LoyaltyAccess::requireManager($request->user());
+        }
+        $card = $cards->pairPrinted($id, $data['uid'], $data['expected_uid'], $request->user(), $replace);
         $next = NfcCard::query()->where('card_batch_id', $card->card_batch_id)->whereNull('uid')
             ->where('id', '>', $card->id)->orderBy('id')->with('member.user')->first();
 
@@ -60,10 +66,33 @@ class PhysicalCardsController extends Controller
     public function assign(Request $request, int $id, NfcCards $cards): JsonResponse
     {
         LoyaltyAccess::requireActiveStaff($request->user());
-        $data = $request->validate(['member_id' => ['required', 'integer', OwnRows::rule('loyalty_members')]]);
-        $card = $cards->assignPrinted($id, (int) $data['member_id'], $request->user());
+        $data = $request->validate([
+            'member_id' => ['required', 'integer', OwnRows::rule('loyalty_members')],
+            'uid' => 'sometimes|required|string|max:100',
+            'expected_uid' => 'present_with:uid|nullable|string|max:50',
+        ]);
+        $card = $cards->assignPrinted($id, (int) $data['member_id'], $request->user(), $data['uid'] ?? null, $data['expected_uid'] ?? null);
 
         return response()->json(['card' => NfcCards::printedRow($card)]);
+    }
+
+    public function tagLookup(Request $request, NfcCards $cards): JsonResponse
+    {
+        LoyaltyAccess::requireManager($request->user());
+        $data = $request->validate(['uid' => 'required|string|max:100']);
+
+        return response()->json([
+            'cards' => $cards->findTags($data['uid'])->map(fn (NfcCard $card) => NfcCards::tagRow($card)),
+        ], headers: ['Cache-Control' => 'private, no-store']);
+    }
+
+    public function releaseTag(Request $request, int $id, NfcCards $cards): Response
+    {
+        LoyaltyAccess::requireManager($request->user());
+        $data = $request->validate(['expected_uid' => 'required|string|max:50']);
+        $cards->releaseTag($id, $data['expected_uid'], $request->user());
+
+        return response()->noContent();
     }
 
     public function qr(Request $request, int $id, NfcCards $cards, QrCodeService $qr): JsonResponse

@@ -16,6 +16,7 @@ describe('door reading preference and reusable physical identity', () => {
     expect(firstReader(desktop)).toBe('camera')
     expect(firstReader(desktop, null, true)).toBe('windows')
     expect(firstReader(desktop, 'camera', true)).toBe('camera')
+    expect(firstReader(desktop, 'nfc', true)).toBe('windows')
     expect(firstReader(desktop, 'camera')).toBe('camera')
     expect(firstReader({ ...desktop, secure: false }, 'windows')).toBe('camera')
     expect(firstReader({ ...desktop, windows: false }, 'windows')).toBe('camera')

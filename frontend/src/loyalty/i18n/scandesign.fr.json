@@ -1,10 +1,10 @@
 {
   "windows": "Lecteur NFC Windows",
   "windowsUse": "Utiliser le lecteur NFC Windows",
-  "windowsSetup": "Ouvrez l’application de lecture HexaTech pour Windows, puis connectez votre ACR122U ici.",
+  "windowsSetup": "Lancez la configuration du lecteur une seule fois et choisissez Start reader with Windows. Connectez-le ensuite ici.",
   "windowsConnect": "Connecter le lecteur Windows",
   "windowsConnecting": "Connexion au lecteur Windows. Autorisez l’accès local si votre navigateur le demande.",
-  "windowsOffline": "Ouvrez l’application de lecture HexaTech et réessayez. Autorisez l’accès local à ce site si votre navigateur le demande.",
+  "windowsOffline": "Le lecteur en arrière-plan est indisponible. Vérifiez l’icône HexaTech près de l’horloge Windows ou relancez la configuration. Autorisez l’accès local si le navigateur le demande.",
   "windowsReady": "ACR122U prêt. Posez une carte sur le lecteur.",
   "windowsCard": "Carte lue. Retirez-la avant la prochaine lecture.",
   "windowsNoReader": "L’application est ouverte. Branchez l’ACR122U et attendez que Windows le détecte.",

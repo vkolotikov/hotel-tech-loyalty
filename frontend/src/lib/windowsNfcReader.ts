@@ -1,6 +1,6 @@
 // A local hardware transport. Loyalty reads and writes member records through its regular server endpoints.
 const BRIDGE = 'http://127.0.0.1:17432/v1/reader'
-const SESSION_KEY = 'loyalty:windows-reader'
+const READER_KEY = 'loyalty:windows-reader'
 
 const READER_STATES = ['waiting', 'no_reader', 'service', 'busy', 'unreadable'] as const
 type ReaderState = (typeof READER_STATES)[number]
@@ -27,17 +27,20 @@ export function newlyPresentedCard(snapshot: ReaderSnapshot, previous: string | 
 }
 
 export function usedWindowsReader(): boolean {
-  try { return sessionStorage.getItem(SESSION_KEY) === '1' } catch { return false }
+  try { return localStorage.getItem(READER_KEY) === '1' || sessionStorage.getItem(READER_KEY) === '1' } catch { return false }
 }
 
 export function forgetWindowsReader() {
-  try { sessionStorage.removeItem(SESSION_KEY) } catch { /* storage can be disabled */ }
+  try {
+    localStorage.removeItem(READER_KEY)
+    sessionStorage.removeItem(READER_KEY)
+  } catch { /* storage can be disabled */ }
 }
 
 /** Start from the connect button so the browser can ask to reach the companion app. */
 export function watchWindowsReader(report: (snapshot: ReaderSnapshot | 'offline') => void): () => void {
   let stopped = false
-  let reachable = false
+  let reachable = usedWindowsReader()
   let request: AbortController | undefined
   let next: ReturnType<typeof setTimeout> | undefined
   const foreground = () => document.visibilityState !== 'hidden' && document.hasFocus()
@@ -60,7 +63,7 @@ export function watchWindowsReader(report: (snapshot: ReaderSnapshot | 'offline'
       if (!snapshot) throw new Error('Reader response unavailable')
       if (stopped) return
       reachable = true
-      try { sessionStorage.setItem(SESSION_KEY, '1') } catch { /* storage can be disabled */ }
+      try { localStorage.setItem(READER_KEY, '1') } catch { /* storage can be disabled */ }
       if (foreground()) report(snapshot)
       next = setTimeout(poll, 350)
     } catch {

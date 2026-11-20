@@ -152,15 +152,15 @@ internal sealed class ReaderForm : Form
     private readonly Button read = new Button { Text = "Read card", AutoSize = true };
     private readonly Button copy = new Button { Text = "Copy UID", AutoSize = true, Enabled = false };
 
-    public ReaderForm(bool connected)
+    public ReaderForm(bool connected, Action backgroundReady)
     {
         Text = "HexaTech Windows NFC reader"; StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(560, 330); MinimumSize = new Size(510, 370); Font = new Font("Segoe UI", 10);
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 7, AutoScroll = true };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 8, AutoScroll = true };
         layout.Controls.Add(new Label { Text = "Windows NFC reader", Font = new Font("Segoe UI", 17, FontStyle.Bold), AutoSize = true });
         layout.Controls.Add(new Label {
             Text = connected
-                ? "Keep this window open. In Loyalty, choose Windows NFC reader\nand tap a card on the ACR122U."
+                ? "Connect the Windows reader in Loyalty, then place a card on the ACR122U."
                 : "Loyalty could not connect to this window. Close other reader windows\nand reopen this one, or copy the card ID below.",
             AutoSize = true, ForeColor = connected ? Color.DarkGreen : Color.Firebrick,
         });
@@ -169,6 +169,19 @@ internal sealed class ReaderForm : Form
         layout.Controls.Add(uid);
         layout.Controls.Add(new Label { Text = "For manual entry, read and copy the card ID.", AutoSize = true });
         layout.Controls.Add(status);
+        var startup = new Button { Text = "Start reader with Windows", AutoSize = true };
+        startup.Enabled = !ReaderStartup.IsEnabled();
+        Activated += (s, e) => { startup.Enabled = !ReaderStartup.IsEnabled(); };
+        startup.Click += (s, e) => {
+            if (ReaderStartup.TryEnable()) {
+                startup.Enabled = false;
+                status.Text = "The reader will start with Windows. Find its icon near the clock.";
+                backgroundReady();
+            } else {
+                status.Text = "Windows could not set up automatic startup. Close an older reader app and try again.";
+            }
+        };
+        layout.Controls.Add(startup);
         Controls.Add(layout);
         Shown += async (s, e) => await RefreshReaders();
         refresh.Click += async (s, e) => await RefreshReaders();
@@ -206,20 +219,77 @@ internal sealed class ReaderForm : Form
     }
 }
 
+internal sealed class ReaderApplication : ApplicationContext
+{
+    private readonly NotifyIcon tray;
+    private readonly ContextMenuStrip menu;
+    private readonly bool connected;
+    private ReaderForm form;
+    private bool exiting;
+
+    public ReaderApplication(bool connected, bool background)
+    {
+        this.connected = connected;
+        menu = new ContextMenuStrip();
+        tray = new NotifyIcon {
+            Icon = SystemIcons.Application, Text = "HexaTech NFC reader",
+            ContextMenuStrip = menu, Visible = background || (connected && ReaderStartup.IsEnabled()),
+        };
+        menu.Items.Add("Reader settings", null, (s, e) => ShowSettings());
+        var disable = menu.Items.Add("Disable automatic startup", null, (s, e) => {
+            ReaderStartup.Disable();
+            ShowSettings();
+        });
+        menu.Items.Add("Exit reader", null, (s, e) => ExitThread());
+        menu.Opening += (s, e) => { disable.Enabled = ReaderStartup.IsEnabled(); };
+        tray.DoubleClick += (s, e) => ShowSettings();
+        if (!background) ShowSettings();
+    }
+
+    private void ShowSettings()
+    {
+        if (form == null) {
+            form = new ReaderForm(connected, () => { if (connected) tray.Visible = true; });
+            form.FormClosed += (s, e) => {
+                form = null;
+                if (!exiting && !tray.Visible) ExitThread();
+            };
+            form.Show();
+        }
+        form.Activate();
+    }
+
+    protected override void ExitThreadCore()
+    {
+        exiting = true;
+        if (form != null) form.Close();
+        tray.Dispose();
+        menu.Dispose();
+        base.ExitThreadCore();
+    }
+}
+
 internal static class Program
 {
     [STAThread] private static int Main(string[] args)
     {
         if (args.Length == 1 && args[0] == "--self-test") {
             int pcsc = Pcsc.SelfTest();
-            return pcsc != 0 ? pcsc : ReaderBridge.SelfTest();
+            if (pcsc != 0) return pcsc;
+            int bridgeResult = ReaderBridge.SelfTest();
+            return bridgeResult != 0 ? bridgeResult : ReaderStartup.SelfTest();
         }
+        if (args.Length == 1 && args[0] == "--enable-background") return ReaderStartup.TryEnable() ? 0 : 3;
         if (args.Length == 1 && args[0] == "--probe") {
             try { Console.WriteLine("PC/SC readers detected: " + Pcsc.Readers().Length); return 0; }
             catch (InvalidOperationException ex) { Console.WriteLine(ex.Message); return 2; }
         }
+        bool background = args.Length == 1 && args[0] == "--background";
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
-        using (var bridge = new ReaderBridge()) Application.Run(new ReaderForm(bridge.Start()));
+        using (var bridge = new ReaderBridge()) {
+            bool connected = bridge.Start();
+            if (!background || connected) Application.Run(new ReaderApplication(connected, background));
+        }
         return 0;
     }
 }

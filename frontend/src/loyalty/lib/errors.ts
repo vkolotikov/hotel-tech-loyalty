@@ -57,7 +57,7 @@ export const ERRORS = {
   // Release 5: a member's NFC cards (link, switch off). Another member's or organisation's card is never named.
   cards: {
     card_in_use: 'This card is linked to another member. Switch it off on that member’s page first.',
-    card_elsewhere: 'This card is in use elsewhere and cannot be linked here.',
+    card_elsewhere: 'This NFC tag is registered to another company. An owner or manager there can release it under Physical cards → Manage NFC tags.',
     bad_uid: 'This is not a card ID. Tap or read the card, or type the ID printed on it.',
     already_erased: 'This member was deleted.',
     invalid: 'Type the card’s ID.',
