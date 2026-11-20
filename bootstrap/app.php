@@ -73,9 +73,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // TenantScope, which finds nothing until TenantMiddleware has set the organisation. Laravel sorts
         // SubstituteBindings ahead of both middleware (they are not in its priority list), so every such admin
         // route answered 404 for the organisation's own rows. The SaaS sign-in runs first because it can name the
-        // organisation TenantMiddleware chooses; their order to each other and after sign-in is unchanged.
+        // organisation TenantMiddleware chooses. It also has to authenticate SaaS JWTs before Sanctum checks the request.
         // tests/Feature/AdminAccess/RouteBindingTenantTest.php
-        $middleware->prependToPriorityList(\Illuminate\Routing\Middleware\SubstituteBindings::class, \App\Http\Middleware\SaasAuthMiddleware::class);
+        $middleware->prependToPriorityList(\Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, \App\Http\Middleware\SaasAuthMiddleware::class);
         $middleware->prependToPriorityList(\Illuminate\Routing\Middleware\SubstituteBindings::class, \App\Http\Middleware\TenantMiddleware::class);
 
         // RFC 8058 one-click unsubscribe. Gmail and Yahoo POST to this URL
