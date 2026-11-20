@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Download, Loader2, MoreHorizontal, Upload, Users } from 'lucide-react'
+import { CreditCard, Download, Loader2, MoreHorizontal, Upload, Users } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { SideMenu } from '../../workspace/shell/SideMenu'
@@ -88,6 +88,7 @@ export function MembersPage() {
   if (phone) return <div className="l-ov-page l-mw-page l-mw-members">
     <MobileTitle icon={mobileIcons.members}>{t('loyalty.members.title', 'Members')}</MobileTitle>
     <div className="l-mw-tiles">{actions.add && <MobileTile primary icon={mobileIcons.members} title={t('loyalty.membership.list.add', 'Add member')} hint={mobile('createMember')} onClick={() => setAdding(true)} />}<MobileTile icon={mobileIcons.filters} title={mobile('filters')} hint={mobile('levelStatus')} onClick={() => setFiltering(true)} /></div>
+    <Link to="/loyalty/members/cards" className="l-ov-button w-fit"><CreditCard size={16} aria-hidden />{t('loyalty.physicalcards.title')}</Link>
     <label className="l-mw-search"><span>{mobile('findMember')}</span><input type="search" value={typed} onChange={e => setTyped(e.target.value)} maxLength={100} placeholder={t('loyalty.members.search_hint', 'Name, email, phone or member number')} /></label>
     {page && <small role="status">{mobile('countSort', { count: points(page.total, locale), sort: t(`loyalty.members.sort_${filters.sort}`) })}</small>}
     {query.isError && <><Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice><OverviewButton onClick={() => { void query.refetch() }}>{t('loyalty.common.retry', 'Try again')}</OverviewButton></>}
@@ -98,6 +99,7 @@ export function MembersPage() {
   </div>
   return <div className="l-ov-page l-rd-page l-mb-members-page" style={memberPaintStyle(look.resolved)}>
     <header className="l-ov-page-heading"><h1>{t('loyalty.members.title', 'Members')}</h1><div className="l-rd-actions">
+      <Link to="/loyalty/members/cards" className="l-ov-button"><CreditCard size={16} aria-hidden />{t('loyalty.physicalcards.title')}</Link>
       {actions.add && <OverviewButton primary onClick={() => setAdding(true)}><img src={memberAssets.award} alt="" />{t('loyalty.membership.list.add', 'Add member')}</OverviewButton>}
       {actions.tools && <SideMenu kind="menu" place="down-right" named label={t('loyalty.membership.more.label', 'More')} buttonClassName="l-ov-button l-rd-icon-button" listClassName="w-56"
         face={download.isPending ? <Loader2 size={18} aria-hidden className="animate-spin" /> : <MoreHorizontal size={18} aria-hidden />}><ListTools exporting={download.isPending} onExport={() => download.mutate()} /></SideMenu>}

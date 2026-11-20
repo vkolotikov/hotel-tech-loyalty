@@ -41,7 +41,7 @@ class CardsController extends Controller
         $member = $this->member($id);
         $this->notErased($member);
         $row = $cards->forMember($member)->firstWhere('id', $card) ?? throw LoyaltyRefused::notFound();
-        $code = NfcCards::SCAN_PREFIX.NfcCards::row($row)['uid'];
+        $code = NfcCards::scanCode($row);
         return response()->json(['code' => $code, 'qr_svg' => $qr->cardQrDataUri($code)]);
     }
 

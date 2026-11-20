@@ -54,21 +54,30 @@ iPhone/other browsers. For USB readers that type the ID, select **Physical card 
 **QR / member code** for personal QR codes. This partner screen does not configure
 or pair specialist USB hardware. See [Chrome's NFC documentation](https://developer.chrome.com/docs/capabilities/nfc).
 
+## Prepare and issue a numbered card batch
+
+1. Open **Members → Physical cards → New batch** as an owner or manager. For cards marked AF 10001 through AF 10100, enter prefix `AF`, first number `10001` and last number `10100`. The range includes both ends, retains leading zeros, and accepts up to 500 cards. Submitting the same range again opens its existing batch.
+2. Select the batch and use **Download batch QRs**. The ZIP contains a named SVG for each printed number and a `cards.csv` manifest with the QR payload and file name. You can also open a single card’s **QR** and download its SVG. This is the card's permanent QR.
+3. Open **Pair NFC** at the first card. With the NFC card ID field focused, tap the card on a USB reader that types its ID. A reader that sends Enter saves the entry. You can also type or paste the ID and use **Save NFC**. The form advances to the next unpaired number. **USB reader options** opens the existing WebHID controls and the Windows helper instructions.
+4. When handing the card out, find the printed number and choose **Assign member**. Select an existing member or use **Add new member** to enrol and assign in one action. Once assigned, the printed QR works with the staff scanner. A paired tag identifies the same member.
+
+A batch can be prepared before any recipients are known. It uses the selected organisation's card stock. Managers create batches and download the ZIP. Active staff can find, pair and assign the cards. The stored NFC ID can be corrected while the card is unassigned or switched off.
+
 ## Reuse a returned physical card
 
 1. Recover the card from the former member.
 2. Open the former member → **NFC cards → Switch off**.
-3. Open the new member → **NFC cards → Link NFC card**, and read/type the same card ID.
+3. For a numbered card, open **Members → Physical cards**, find the number and choose **Assign member**. For a card linked outside a batch, open the new member → **NFC cards → Link NFC card**, and read or type the same card ID.
 4. Scan it and confirm the new name and package. The existing card row is reused and the prior assignment remains
    in the audit log; the new member does not inherit the former member's points, account or history.
 
 Reassigning a card does not end the former membership. Switch that membership off separately if the person should
 lose access; their personal QR and Wallet codes still identify their own account.
 
-**Card QR** on a linked card provides an SVG you can download and print. It encodes `HTCARD:<card ID>`,
+**Card QR** on a linked card provides an SVG you can download and print. For cards linked outside a batch it encodes `HTCARD:<card ID>`,
 so that QR follows the card when relinked. The partner scanner uses this explicit physical identity for NFC serials
 and **Physical card ID** input, preserving personal Wallet tokens even when an older token equals the card ID.
-Older full-admin/native NFC readers keep their existing interpretation until updated to send the explicit card code.
+Numbered stock uses its own `HTCARD:PRINT:` code, issued before the tag is paired. Older full-admin/native NFC readers keep their existing interpretation of raw tag IDs.
 An old QR containing only a bare card ID can collide with a personal Wallet token; replace that print once with Card QR.
 A QR containing a personal member number, app token or Wallet pass remains personal; replace that printed QR once
 with the reusable Card QR. Personal digital cards and login credentials are never reassigned. Static QR/UID cards

@@ -52,7 +52,12 @@ class QrCodeService
     /** A reusable physical card encodes its stable ID, never a member's personal number or wallet token. */
     public function cardQrDataUri(string $uid): string
     {
-        return 'data:image/svg+xml;base64,' . base64_encode($this->buildQrSvg($uid));
+        return 'data:image/svg+xml;base64,' . base64_encode($this->cardQrSvg($uid));
+    }
+
+    public function cardQrSvg(string $code): string
+    {
+        return $this->buildQrSvg($code);
     }
 
     /**

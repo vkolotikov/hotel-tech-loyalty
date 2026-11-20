@@ -29,7 +29,11 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * starts on the default tier or a manager's assigned membership. Level and dates are part of the same enrolment,
  * before the welcome bonus; a failed assignment never leaves an undated, partially configured member.
  */
-export function AddMemberDialog({ onClose }: { onClose: () => void }) {
+export function AddMemberDialog({ onClose, physicalCard, onCreated }: {
+  onClose: () => void
+  physicalCard?: { id: number; number: string }
+  onCreated?: (memberId: number) => void
+}) {
   const { t } = useTranslation()
   const phone = usePhone()
   const mobile = useMobileWords()
@@ -45,11 +49,16 @@ export function AddMemberDialog({ onClose }: { onClose: () => void }) {
   const [tried, setTried] = useState(false)
 
   const save = useMutation({
-    mutationFn: () => membershipApi.enrol({ ...enrolBody(form), ...(dated ? assignmentValues(assignment) : {}) }),
+    mutationFn: () => membershipApi.enrol({
+      ...enrolBody(form),
+      ...(dated ? assignmentValues(assignment) : {}),
+      ...(physicalCard ? { physical_card_id: physicalCard.id } : {}),
+    }),
     onSuccess: (answer) => {
       afterMemberChange(client, null)
       onClose()
-      navigate(memberPath(answer.member.id))
+      if (onCreated) onCreated(answer.member.id)
+      else navigate(memberPath(answer.member.id))
     },
   })
   const update = (patch: Partial<EnrolForm>) => {
@@ -73,6 +82,7 @@ export function AddMemberDialog({ onClose }: { onClose: () => void }) {
         setTried(true)
         if (!save.isPending && Object.keys(enrolProblems(form)).length === 0 && Object.keys(assignmentErrors).length === 0) save.mutate()
       }}>
+        {physicalCard && <p className="text-sm text-a-text-2">{t('loyalty.physicalcards.newMemberFor', { number: physicalCard.number })}</p>}
         <div className={phone ? 'l-mw-panel l-mw-add-fields' : 'l-mw-add-desktop-fields'}>
         <FormField label={t('loyalty.membership.add.name', 'Name')} problem={problem('name')}>
           <input ref={first} type="text" value={form.name} maxLength={MAX_NAME} disabled={save.isPending} autoComplete="off" onChange={(e) => update({ name: e.target.value })} className={INPUT} />
@@ -92,7 +102,9 @@ export function AddMemberDialog({ onClose }: { onClose: () => void }) {
         {assignment.membership_mode === 'earned' && <p className="text-sm text-a-text-2">{t('loyalty.membership.add.start', 'The member starts on the programme’s first tier, with the welcome bonus.')}</p>}
         </div>
 
-        {failure && <Notice tone="danger">{t(...refusalKey('loyalty.membership', ERRORS, 'add', failure))}</Notice>}
+        {failure && <Notice tone="danger">{physicalCard && failure.code === 'card_in_use'
+          ? t('loyalty.physicalcards.errors.card_in_use')
+          : t(...refusalKey('loyalty.membership', ERRORS, 'add', failure))}</Notice>}
 
         <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose} save={t('loyalty.membership.add.save', 'Add member')} />
       </form>

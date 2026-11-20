@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Loyalty;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyMember;
+use App\Services\Booking\Setup\OwnRows;
 use App\Models\LoyaltyTier;
 use App\Services\Appointments\VenueClock;
 use App\Services\Loyalty\LoyaltyAccess;
@@ -46,6 +47,7 @@ class MembershipController extends Controller
             'email'        => 'required|email|max:255|unique:users,email',
             'phone'        => 'nullable|string|max:20',
             'send_welcome' => 'sometimes|boolean',
+            'physical_card_id' => ['sometimes', 'required', 'integer', OwnRows::rule('nfc_cards')->whereNotNull('card_batch_id')],
             'membership_mode' => ['sometimes', Rule::in(\App\Services\Loyalty\Members\MembershipAssignment::MODES)],
             'tier_id' => 'required_if:membership_mode,assigned|nullable|integer|min:1',
             'valid_from' => 'sometimes|nullable|string|max:10',
@@ -56,11 +58,16 @@ class MembershipController extends Controller
             LoyaltyAccess::requireManager($request->user());
         }
 
+        $physicalCard = array_intersect_key($data, ['physical_card_id' => true]);
+        if ($physicalCard !== []) {
+            LoyaltyAccess::requireActiveStaff($request->user());
+        }
+
         $result = $enrolment->enrol([
             'name'  => trim($data['name']),
             'email' => trim($data['email']),
             'phone' => self::filled($data['phone'] ?? null),
-        ] + $assignment, $request->user(), $request->boolean('send_welcome', true));
+        ] + $assignment + $physicalCard, $request->user(), $request->boolean('send_welcome', true));
 
         return response()->json([
             'member'     => MemberProfile::of($result['member']->fresh(['user'])),

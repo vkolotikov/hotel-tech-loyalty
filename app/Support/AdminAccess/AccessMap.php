@@ -125,6 +125,9 @@ final class AccessMap
         'admin/loyalty/push'                    => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/sms'                     => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/members/{id}/cards'      => ['staff',              'staff',              'loyalty'],       // Release 5: a member's NFC cards (link, switch off: every staff member, as Edit details and admin/nfc-cards)
+        'admin/loyalty/card-batches'            => ['staff',              'manager',            'loyalty'],
+        'admin/loyalty/card-batches/{id}/qr'    => ['manager',            'manager',            'loyalty'],
+        'admin/loyalty/physical-cards'          => ['staff',              'staff',              'loyalty'],
         'admin/loyalty/members/{id}/membership' => ['manager',            'manager',            'loyalty'],
         'admin/loyalty/partner'                 => ['staff',              'staff',              'loyalty'],
         'admin/loyalty/partners'                => ['manager',            'manager',            'loyalty'],

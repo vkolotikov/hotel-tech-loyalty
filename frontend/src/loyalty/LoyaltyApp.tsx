@@ -27,6 +27,7 @@ const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ d
 const MemberPage = lazy(() => import('./member/MemberPage').then(m => ({ default: m.MemberPage })))
 const DuplicatesPage = lazy(() => import('./membership/DuplicatesPage').then(m => ({ default: m.DuplicatesPage })))
 const ImportPage = lazy(() => import('./membership/ImportPage').then(m => ({ default: m.ImportPage })))
+const PhysicalCardsPage = lazy(() => import('./physical-cards/PhysicalCardsPage').then(m => ({ default: m.PhysicalCardsPage })))
 const MembersPage = lazy(() => import('./members/MembersPage').then(m => ({ default: m.MembersPage })))
 const EarnPage = lazy(() => import('./management/EarningPage').then(m => ({ default: m.EarningPage })))
 const SetupWizard = lazy(() => import('./options/SetupWizard').then(m => ({ default: m.SetupWizard })))
@@ -81,6 +82,7 @@ export function LoyaltyApp() {
           <Route path="more" element={<MorePage />} />
           <Route path="members/duplicates" element={<DuplicatesPage />} />
           <Route path="members/import" element={<ImportPage />} />
+          <Route path="members/cards" element={<PhysicalCardsPage />} />
           <Route path="members/:id" element={<MemberPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="program" element={<ProgramPage />} />

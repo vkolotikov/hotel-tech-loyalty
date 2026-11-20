@@ -17,6 +17,7 @@ export interface EnrolBody {
   email: string
   phone: string | null
   send_welcome: boolean
+  physical_card_id?: number
   membership_mode?: 'assigned' | 'earned'
   tier_id?: number
   valid_from?: string | null

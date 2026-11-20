@@ -1,12 +1,14 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
+import { physicalCardsKey } from '../physical-cards/api'
 
 /** A member's NFC card as their page shows it (`App\Services\Loyalty\Cards\NfcCards::row`). */
 export interface NfcCardRow {
   id: number
   /** Lower-case hex without separators (as stored since release 5; older rows read the same way). */
   uid: string
+  number?: string
   is_active: boolean
   linked_at: string | null
   last_used_at: string | null
@@ -29,7 +31,8 @@ export const cardsApi = {
 
 export const cardsKey = (memberId: number) => ['loyalty', 'cards', memberId] as const
 
-/** What linking or switching off makes stale: the member's cards. */
+/** Linking or switching off can also change the card's entry in the stock list. */
 export function afterCardChange(client: QueryClient, memberId: number): void {
   void client.invalidateQueries({ queryKey: cardsKey(memberId) })
+  void client.invalidateQueries({ queryKey: physicalCardsKey })
 }

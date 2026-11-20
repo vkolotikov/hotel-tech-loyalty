@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
+import { physicalCardsKey } from '../physical-cards/api'
 import type { MemberFilters } from '../lib/types'
 import { exportParams } from './membershipMath'
 import type {
@@ -68,6 +69,7 @@ export function afterMemberChange(client: QueryClient, memberId: number | null):
   }
   void client.invalidateQueries({ queryKey: ['loyalty', 'members'] })
   void client.invalidateQueries({ queryKey: duplicatesKey })
+  void client.invalidateQueries({ queryKey: physicalCardsKey })
   void client.invalidateQueries({ queryKey: ['loyalty', 'bootstrap'] })
   void client.invalidateQueries({ queryKey: ['loyalty', 'overview'] })
 }

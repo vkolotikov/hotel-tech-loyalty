@@ -92,6 +92,15 @@ final class CardLookup
             return new CardRead('manual', CardRead::NONE, null, 'member_not_found');
         }
 
+        if (strncasecmp($code, NfcCards::PRINT_PREFIX, strlen(NfcCards::PRINT_PREFIX)) === 0) {
+            $token = strtolower(substr($code, strlen(NfcCards::PRINT_PREFIX)));
+            $card = preg_match('/\A[0-9a-f]{32}\z/', $token)
+                ? NfcCard::query()->printed()->where('printed_qr_token', $token)->first()
+                : null;
+
+            return $card ? $this->readCard($card, $by, 'qr') : new CardRead('qr', CardRead::CARD, null, 'member_not_found');
+        }
+
         // Explicit physical identity: never fall through to a personal token or member number.
         if (strncasecmp($code, NfcCards::SCAN_PREFIX, strlen(NfcCards::SCAN_PREFIX)) === 0) {
             $card = CodeReader::cardUid(substr($code, strlen(NfcCards::SCAN_PREFIX)));
@@ -207,21 +216,22 @@ final class CardLookup
     {
         $cards = NfcCard::query()->whereIn(DB::raw(CodeReader::UID_SQL), $uids)->get();
         $card = collect($uids)->map(fn (string $uid) => $cards->first(fn (NfcCard $c) => CodeReader::hexUid((string) $c->uid) === $uid))->filter()->first();
-        if (!$card) {
-            return null;
-        }
+        return $card ? $this->readCard($card, $by, 'nfc') : null;
+    }
 
-        $member = LoyaltyMember::query()->whereKey($card->member_id)->first();
+    private function readCard(NfcCard $card, ?User $by, string $kind): CardRead
+    {
+        $member = $card->member_id === null ? null : LoyaltyMember::query()->find($card->member_id);
         if (!$member) {
-            return new CardRead('nfc', CardRead::CARD, null, 'member_not_found');
+            return new CardRead($kind, CardRead::CARD, null, 'member_not_found');
         }
         if (!$card->is_active || !$member->is_active) {
-            return new CardRead('nfc', CardRead::CARD, $member, 'inactive_member', null, !$card->is_active);
+            return new CardRead($kind, CardRead::CARD, $member, 'inactive_member', null, !$card->is_active);
         }
         $card->increment('scan_count');
         $card->update(['last_scanned_at' => now()] + ($by ? ['last_scanned_by' => $by->id] : []));
 
-        return new CardRead('nfc', CardRead::CARD, $member, 'success');
+        return new CardRead($kind, CardRead::CARD, $member, 'success');
     }
 
     /**

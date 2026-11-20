@@ -58,7 +58,7 @@ export function NfcCards({ member, locale, timeZone, redesigned = false }: { mem
             <li key={card.id} data-card={card.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 ${card.is_active ? '' : 'opacity-70'}`}>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-a-mono text-sm text-a-text" title={hexWithColons(card.uid)}>{shortUid(card.uid)}</span>
+                  <span className="font-a-mono text-sm text-a-text" title={card.uid ? hexWithColons(card.uid) : undefined}>{card.number ?? shortUid(card.uid)}</span>
                   {card.is_active
                     ? <span className="rounded-full bg-a-st-confirmed/12 px-2 py-0.5 text-xs font-semibold text-a-st-confirmed">{t('loyalty.member.cards_on', 'On')}</span>
                     : <span className="rounded-full bg-a-surface-2 px-2 py-0.5 text-xs font-semibold text-a-text-2">{t('loyalty.member.cards_off', 'Switched off')}</span>}
@@ -93,7 +93,7 @@ function ReusableQrDialog({ memberId, card, onClose }: { memberId: number; card:
   return <Dialog title={t('loyalty.membership.reusable.title', 'Reusable card QR')} onClose={onClose}><div className="space-y-4">
     <p className="text-sm text-a-text-2">{t('loyalty.membership.reusable.hint', 'This QR contains the physical card ID. It follows the card when you relink it. Personal member and wallet QR codes stay with their member.')}</p>
     {query.isError && <Notice tone="danger">{w('loadFailed')}</Notice>}
-    {query.data && <><div data-print-card="" className="flex flex-col items-center gap-3 rounded-xl border border-a-border bg-a-surface p-5"><img src={query.data.qr_svg} width={220} height={220} alt={t('loyalty.membership.reusable.title', 'Reusable card QR')} /><code>{query.data.code}</code></div><a className="inline-flex items-center gap-2 text-a-accent-text" href={query.data.qr_svg} download={`card-${query.data.code.replace(/[^a-zA-Z0-9-]/g, '-')}.svg`}><Download size={16} aria-hidden />{t('loyalty.membership.reusable.download', 'Download QR')}</a></>}
+    {query.data && <><div data-print-card="" className="flex flex-col items-center gap-3 rounded-xl border border-a-border bg-a-surface p-5"><img src={query.data.qr_svg} width={220} height={220} alt={t('loyalty.membership.reusable.title', 'Reusable card QR')} /><code>{card.number ?? query.data.code}</code></div><a className="inline-flex items-center gap-2 text-a-accent-text" href={query.data.qr_svg} download={`card-${query.data.code.replace(/[^a-zA-Z0-9-]/g, '-')}.svg`}><Download size={16} aria-hidden />{t('loyalty.membership.reusable.download', 'Download QR')}</a></>}
     <div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{w('cancelled')}</Button></div>
   </div></Dialog>
 }
@@ -164,7 +164,7 @@ function SwitchOffDialog({ memberId, card, onClose, onDone }: { memberId: number
   const failure = off.isError ? failureOf(off.error) : null
 
   return (
-    <Dialog title={t('loyalty.member.cards_off_title', 'Switch off card {{id}}', { id: shortUid(card.uid) })} onClose={onClose} busy={off.isPending}>
+    <Dialog title={t('loyalty.member.cards_off_title', 'Switch off card {{id}}', { id: card.number ?? shortUid(card.uid) })} onClose={onClose} busy={off.isPending}>
       <div className="space-y-4">
         <p className="text-sm text-a-text">{t('loyalty.member.cards_off_effect', 'Scan will no longer find the member by this card. The member’s QR code and wallet pass keep working. Linking the card again later switches it back on.')}</p>
         {failure && <Notice tone="danger">{t(...refusalKey('loyalty', ERRORS, 'cards', failure))}</Notice>}

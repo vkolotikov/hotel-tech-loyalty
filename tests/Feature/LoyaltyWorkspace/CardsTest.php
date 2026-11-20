@@ -211,7 +211,10 @@ class CardsTest extends TestCase
         });
 
         $this->link($this->ada->id, '04:99:88:77')->assertStatus(409)->assertJsonPath('error', 'card_in_use');
-        $this->assertSame([$graceId], NfcCard::query()->pluck('member_id')->map(fn ($id) => (int) $id)->all());
+        // The listener simulates the competing insert on our connection, so the enclosing write's rollback
+        // undoes that fixture too. The refusal proves we looked it up again and never issued it to Ada.
+        $this->assertTrue($done);
+        $this->assertFalse(NfcCard::query()->where('member_id', $this->ada->id)->exists());
     }
 
     public function test_what_is_no_card_id_and_a_deleted_or_another_organisations_member_are_refused(): void

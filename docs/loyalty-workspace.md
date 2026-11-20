@@ -88,6 +88,8 @@ empty levels remain in an expandable list. Long lists are bounded and keyboard-s
 no longer stretches with them. All report data, routes and interactions are retained. See
 `loyalty-redesign/20-INSIGHTS-LAYOUT-REPORT.md` for Figma comparison, responsive checks and release evidence.
 
+Numbered physical cards (20 November 2026): **Members → Physical cards** creates ranges and exports a ZIP of named QR SVGs and a CSV manifest. Pair tags in order through the focused reader field or the existing USB options. Staff assign each printed card to an active member. Creation and export are manager actions. The [card preparation runbook](loyalty-memberships-and-partners.md#prepare-and-issue-a-numbered-card-batch) documents the desk flow.
+
 ## Who has it, and the ways in and back
 
 Insights filters (6 November 2026, alignment follow-up): four matching dropdowns for reporting period, membership level, status and email preferences sit in one desktop row, followed by a **Compare with previous period** checkbox. They wrap into two columns on tablets and stack on phones. Native dropdown options have explicit foreground/background colours in both themes. The date range opens only the custom-date window; member filters are inline. Every valid selection applies automatically. Custom dates wait 350 ms for complete, valid input; invalid dates leave the previous report standing. There is no Save or Apply step. Selected member filters appear as removable chips; Clear member filters preserves dates/comparison, while Reset restores all defaults. Charts remain visible with an updating state during filter changes, scoped to the same organisation, staff member and permissions; export waits for the current response. Rapid choices merge against the last selection even while Router transitions are pending; browser Back restores its URL rather than reapplying stale date input. Visibility stays on this device. Presets use completed venue days (7/28/90/365, last calendar month), with explicit custom dates. `GET insights/report` accepts `state=all|active|inactive`, `consent=all|yes|no` (current email marketing consent) and `without_tier=1` (mutually exclusive with `tier_id`). Its `filter_options` supplies the status and consent choices. `InsightsAudience` supplies one population to activity, comparisons, levels, rewards, cohorts and direct/guest-linked member sales. Reports cover all places; defaults and legacy detailed endpoints are unchanged. See `handoff/2026-11-06-hexatech-handoff.md` for verification and deployment.
@@ -172,6 +174,8 @@ never offer what the server refuses. A deactivated staff row counts for nothing;
 | Scan at a place or an event; sign a member up for an event or check one in by hand | every active staff member (an event's points are the event's) |
 | Events: create, change, publish, cancel | managers and `can_manage_offers` (as offers) |
 | A membership's end date: set, extend, remove | managers (as a tier change) |
+
+Unassigned numbered stock is inactive and has no member. The organisation owns the unique printed number. A stable, random `HTCARD:PRINT:` code belongs to the card, independently of its NFC tag. Batches, printing and stock use `card-batches` and `physical-cards` under the same Loyalty API. Tag pairing and assignment run through `NfcCards`, and enrolling with a prepared card saves the member and assignment in the same transaction. Erasure releases numbered stock from a member and retains the printed card identity.
 
 ## The API
 

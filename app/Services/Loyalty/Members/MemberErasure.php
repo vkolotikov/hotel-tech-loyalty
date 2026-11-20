@@ -5,9 +5,9 @@ namespace App\Services\Loyalty\Members;
 use App\Models\AuditLog;
 use App\Models\Guest;
 use App\Models\LoyaltyMember;
-use App\Models\NfcCard;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\Loyalty\Cards\NfcCards;
 use App\Services\Loyalty\Credit\CreditLedger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -106,6 +106,7 @@ final class MemberErasure
         $name = $user?->name;
 
         DB::transaction(function () use ($user, $member, $by) {
+            LoyaltyMember::query()->whereKey($member->id)->lockForUpdate()->firstOrFail();
             // Release 7 (spec 2026-10-25 §3): the cashback credit is forfeited — an `adjust` line to zero, audited
             // `credit.forfeited_on_erasure` — and its ledger rows stay (money records). The ledger writes it, under the
             // member row's lock, in a savepoint of this transaction: an erasure that fails keeps the balance.
@@ -121,10 +122,8 @@ final class MemberErasure
                 }
             }
 
-            // Physical cards must not open the anonymised account any more.
-            try {
-                NfcCard::where('member_id', $member->id)->delete();
-            } catch (\Throwable) {
+            if (Schema::hasTable('nfc_cards')) {
+                app(NfcCards::class)->forgetMember($member);
             }
 
             $member->update([
