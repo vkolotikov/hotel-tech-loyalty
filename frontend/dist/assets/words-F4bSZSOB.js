@@ -1,1 +1,0 @@
-import{dr as e}from"./index-CoNbLmxz.js";import{Bt as t}from"./LoyaltyApp-CGXi1Svg.js";function n(){let{t:n}=e();return(e,r)=>n(`loyalty.scandesign.${e}`,{defaultValue:t[e],...r})}export{n as t};
