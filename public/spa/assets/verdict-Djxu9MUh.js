@@ -1,0 +1,1 @@
+import{dr as e}from"./index-9pvKJTB9.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
