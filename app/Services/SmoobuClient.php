@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\SmoobuAuthenticationFailed;
 use App\Models\HotelSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -1001,6 +1002,9 @@ class SmoobuClient
             }
 
             $status = $response->status();
+            if ($status === 401) {
+                throw new SmoobuAuthenticationFailed($method, $path, $this->apiSecret !== '');
+            }
             $isRetryable = $status === 429 || $status >= 500;
 
             if (!$isRetryable || $attempt >= self::RATE_LIMIT_RETRIES) {

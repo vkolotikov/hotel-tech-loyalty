@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Exceptions\SmoobuAuthenticationFailed;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\HotelSetting;
@@ -618,6 +619,7 @@ class SettingsController extends Controller
             $response = \App\Support\SmoobuAuthentication::apply(\Illuminate\Support\Facades\Http::withoutRedirecting()->timeout(10), $key, $secret ?: '')
                 ->get("{$base}/apartments", ['page' => 1, 'page_size' => 50]);
             $code = $response->status();
+            if ($code === 401) throw new SmoobuAuthenticationFailed('GET', '/apartments', (bool) $secret);
             if ($code < 200 || $code >= 300) return response()->json(['success' => false, 'message' => "HTTP {$code}"]);
 
             $payload = $response->json() ?: [];

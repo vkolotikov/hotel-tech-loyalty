@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
+import { syncPmsBookings } from '../lib/bookingSync'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readCachedTheme, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
 import { StylePicker } from '../components/settings/StylePicker'
@@ -2465,13 +2466,10 @@ export function Settings() {
                       <button onClick={async () => {
                           setSyncingNow(section.id)
                           try {
-                            const { data: res } = await api.post('/v1/admin/bookings/sync')
-                            toast.success(res.message || 'Sync complete')
+                            await syncPmsBookings()
                             refetchSync()
                             qc.invalidateQueries({ queryKey: ['bookings-engine'] })
                             qc.invalidateQueries({ queryKey: ['bookings-today'] })
-                          } catch {
-                            toast.error('Sync failed')
                           } finally { setSyncingNow(null) }
                         }}
                         disabled={syncingNow === section.id}

@@ -52,7 +52,9 @@ The booking retains the original stay/discount/extras breakdown. Smoobu receives
 
 ## Smoobu credentials
 
-Existing API-key authentication continues when no signing secret is configured. For accounts using [Smoobu HMAC authentication](https://docs.smoobu.com/), enter **Booking Smoobu API Secret** alongside the API key in integration settings. The secret is encrypted and excluded from the settings cache and API responses. Brand-specific credentials also support a signing secret; a brand key never borrows an organisation's secret.
+Smoobu stopped accepting key-only requests on 17 November 2026. In the venue’s main Smoobu account, open **Advanced → API Keys → Create New**. Enable guest-data access if the booking import needs guest names and contact details. Save the new API key and its matching signing secret together in the venue’s **Settings → Integrations & API → Property Management Systems → Smoobu**. Use the API signing secret field. Each brand with its own key needs that key’s secret. HexaTech stores the signing secret encrypted. [Smoobu’s account setup guide](https://support.smoobu.com/hc/en-us/articles/360003170740-Use-the-Smoobu-API-get-an-API-key-set-up-webhooks-and-sign-your-requests)
+
+After saving, use **Test connection**, then run the room and booking syncs. A missing-secret message means the selected connection has only a key. If Smoobu rejects a signed request, verify that the key is active and the secret came from the same key. A partial booking import reports the counts and any failure to refresh rooms.
 
 The signer covers the actual serialized request body, sorted encoded query, method, path, key, timestamp and a fresh nonce for each attempt. Signed calls require Smoobu's official HTTPS host. Use **Test connection** with the venue's credentials before activation. A live Smoobu or Stripe transaction was not made during development.
 

@@ -1,5 +1,11 @@
 # Handoff — 22 November 2026
 
+## Forrest Glamp Smoobu connection
+
+The production organisation named **Forrest Glamp** has 15 mapped rooms. On 22 November, both the apartments and reservations endpoints returned 401 with its saved organisation key. Its signing secret was empty and neither brand had a credential override. The last successful scheduled import and first subsequent 401 were five minutes apart on 17 November, the date Smoobu retired key-only access. The venue owner will need access to the main Smoobu account to supply the matching key and secret. Live recovery requires a successful room and reservation sync after they are saved.
+
+The admin sync and connection test now identify a missing signing secret or a rejected signed request. Bookings and Settings display failed and partial syncs as errors. See the [credential setup and recovery instructions](../booking-promotions.md#smoobu-credentials).
+
 ## CRM lead AI assistant
 
 Leads have an **AI assistant** for briefs, sales and marketing plans, proposals and response emails. Staff can

@@ -115,6 +115,62 @@ class IntegrationBoundaryTest extends TestCase
         }
     }
 
+    public function test_rejected_key_only_connection_reports_the_missing_secret_in_both_syncs_and_the_connection_test(): void
+    {
+        $this->owner();
+        HotelSetting::create(['key' => 'booking_smoobu_api_key', 'value' => 'fixture-old-key', 'group' => 'integrations', 'type' => 'string']);
+        Http::fake([SmoobuEndpoint::BASE.'/*' => Http::response(['detail' => 'fixture-provider-detail'], 401)]);
+
+        foreach (['bookings/sync', 'booking-rooms/sync'] as $route) {
+            $this->postJson('/api/v1/admin/'.$route)
+                ->assertStatus(502)->assertJsonPath('synced', 0)
+                ->assertSee('signing secret is missing')->assertDontSee('fixture-old-key')->assertDontSee('fixture-provider-detail');
+        }
+        $this->postJson('/api/v1/admin/settings/test-integration', ['type' => 'smoobu'])
+            ->assertOk()->assertJsonPath('success', false)->assertSee('signing secret is missing');
+    }
+
+    public function test_rejected_signed_connection_reports_that_the_pair_needs_checking(): void
+    {
+        $this->owner();
+        foreach (['booking_smoobu_api_key' => 'fixture-new-key', 'booking_smoobu_api_secret' => 'fixture-new-secret'] as $key => $value) {
+            HotelSetting::create(['key' => $key, 'value' => $value, 'group' => 'integrations', 'type' => 'string']);
+        }
+        Http::fake([SmoobuEndpoint::BASE.'/*' => Http::response([], 401)]);
+        $this->postJson('/api/v1/admin/settings/test-integration', ['type' => 'smoobu'])
+            ->assertOk()->assertJsonPath('success', false)->assertSee('rejected the signed request')
+            ->assertDontSee('fixture-new-secret')->assertDontSee('fixture-new-key');
+        Http::assertSent(fn ($request) => $request->hasHeader('X-Signature') && !$request->hasHeader('Api-Key'));
+    }
+
+    public function test_partial_refresh_and_recovery_after_saving_a_matching_pair(): void
+    {
+        $this->setUpAvailabilitySchema();
+        $this->owner();
+        HotelSetting::create(['key' => 'booking_smoobu_api_key', 'value' => 'fixture-old-key', 'group' => 'integrations', 'type' => 'string']);
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/apartments')) {
+                return $request->hasHeader('X-Signature') && $request->hasHeader('X-API-Key', 'fixture-replacement-key')
+                    ? Http::response(['apartments' => [['id' => 42, 'name' => 'Fixture cabin']], 'page_count' => 1])
+                    : Http::response([], 401);
+            }
+            return Http::response(['bookings' => [], 'data' => [], 'page_count' => 1]);
+        });
+
+        $this->postJson('/api/v1/admin/bookings/sync')->assertOk()
+            ->assertJsonPath('error', true)->assertSee('signing secret is missing');
+        $this->save([
+            ['key' => 'booking_smoobu_api_key', 'value' => 'fixture-replacement-key'],
+            ['key' => 'booking_smoobu_api_secret', 'value' => 'fixture-matching-secret'],
+        ])->assertOk();
+        $rooms = $this->postJson('/api/v1/admin/booking-rooms/sync');
+        $this->assertSame(200, $rooms->status(), $rooms->json('message'));
+        $rooms->assertJsonPath('created', 1);
+        $this->assertDatabaseHas('booking_rooms', ['organization_id' => $this->org->id, 'pms_id' => '42']);
+        $this->postJson('/api/v1/admin/bookings/sync')->assertOk()->assertJsonPath('error', false);
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/reservations') && $request->hasHeader('X-Signature'));
+    }
+
     public function test_smoobu_client_uses_fixed_origin_and_tenant_key_and_rejects_foreign_brand_credentials(): void
     {
         $this->addColumnsIfMissing('brands', [

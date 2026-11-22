@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { syncPmsBookings } from '../lib/bookingSync'
 import { Search, ChevronLeft, ChevronRight, RefreshCw, Eye, Calendar, DollarSign, Users, TrendingUp, XCircle, AlertTriangle, Clock, Activity, FileText, Wifi, List as ListIcon, CalendarRange, LogIn, LogOut, Hotel, CalendarPlus, Download, LayoutDashboard, Globe, AlarmClock, CreditCard, Mail, Phone } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -352,11 +353,8 @@ export function Bookings() {
   const handleSync = async () => {
     setSyncing(true)
     try {
-      const { data: res } = await api.post('/v1/admin/bookings/sync')
-      toast.success(res.message || 'Sync complete')
+      await syncPmsBookings()
       refetch()
-    } catch {
-      toast.error('Sync failed')
     } finally {
       setSyncing(false)
     }

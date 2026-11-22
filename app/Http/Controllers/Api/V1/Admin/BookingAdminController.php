@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Exceptions\SmoobuAuthenticationFailed;
 use App\Http\Controllers\Controller;
 use App\Enums\PaymentStatus;
 use App\Models\AuditLog;
@@ -604,31 +605,23 @@ class BookingAdminController extends Controller
     {
         $activePms = app(PmsResolver::class)->activePms();
 
-        // Refresh apartments first so any newly-added units in Smoobu are
-        // tracked before we start ingesting bookings against them.
-        // Surface failures rather than silently swallowing them — staff
-        // need to know if their unit list is stale.
-        $apartmentWarning = null;
-        try {
-            $this->syncApartments($smoobu);
-        } catch (\Throwable $e) {
-            $apartmentWarning = "Apartment refresh failed: {$e->getMessage()}";
-            \Illuminate\Support\Facades\Log::error('Apartment sync failed during full sync', ['error' => $e->getMessage()]);
-        }
-
         if (!$activePms) {
-            return response()->json(['message' => 'No PMS integration configured. Connect a provider in Settings → Integrations to sync bookings.', 'synced' => 0]);
+            return response()->json(['message' => 'No PMS integration configured. Connect a provider in Settings → Integrations to sync bookings.', 'synced' => 0], 422);
         }
 
         if (!$activePms['syncable']) {
-            return response()->json(['message' => "{$activePms['name']} is connected but booking sync is not yet supported for this provider.", 'synced' => 0]);
+            return response()->json(['message' => "{$activePms['name']} is connected but booking sync is not yet supported for this provider.", 'synced' => 0], 422);
         }
 
         if ($smoobu->isMock()) {
-            return response()->json(['message' => "Smoobu API key is missing or invalid. Check your credentials in Settings → Integrations.", 'synced' => 0]);
+            return response()->json(['message' => "Smoobu API key is missing or invalid. Check your credentials in Settings → Integrations.", 'synced' => 0], 422);
         }
 
         try {
+            // A failed room refresh still permits a reservation import. Report both outcomes.
+            $apartments = $this->syncApartments($smoobu);
+            $apartmentWarning = $apartments->isSuccessful() ? null : $apartments->getData(true)['message'];
+
             $result = $service->syncReservationsFromPms(
                 $request->input('from'),
                 $request->input('to'),
@@ -651,14 +644,14 @@ class BookingAdminController extends Controller
                 ]);
             } catch (\Throwable) {}
 
-            return response()->json(['message' => $msg, 'synced' => $synced, 'errors' => $errors]);
+            return response()->json(['message' => $msg, 'synced' => $synced, 'errors' => $errors, 'error' => $errors > 0 || $apartmentWarning !== null]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('PMS sync failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'message' => 'PMS sync failed: ' . $e->getMessage(),
                 'synced' => 0,
                 'error' => true,
-            ], 200); // 200 so frontend can display the message
+            ], $e instanceof SmoobuAuthenticationFailed ? 502 : 500);
         }
     }
 
@@ -1077,7 +1070,7 @@ class BookingAdminController extends Controller
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Apartment sync failed', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Failed to sync apartments: ' . $e->getMessage(), 'count' => 0], 200);
+            return response()->json(['message' => 'Failed to sync apartments: ' . $e->getMessage(), 'count' => 0], $e instanceof SmoobuAuthenticationFailed ? 502 : 500);
         }
     }
 

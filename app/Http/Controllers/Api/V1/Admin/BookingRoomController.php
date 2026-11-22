@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Exceptions\SmoobuAuthenticationFailed;
 use App\Http\Controllers\Controller;
 use App\Models\BookingRoom;
 use App\Models\AuditLog;
@@ -252,6 +253,8 @@ class BookingRoomController extends Controller
             ], 422);
         }
 
+        $created = 0;
+        $updated = 0;
         try {
             $response = $smoobu->getApartments();
             $apartments = $response['apartments'] ?? [];
@@ -275,9 +278,6 @@ class BookingRoomController extends Controller
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('Rate fetch during sync failed', ['error' => $e->getMessage()]);
             }
-
-            $created = 0;
-            $updated = 0;
 
             foreach ($apartments as $apt) {
                 $pmsId = (string) ($apt['id'] ?? '');
@@ -335,7 +335,10 @@ class BookingRoomController extends Controller
                 'provider' => $activePms['name'],
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['message' => "Sync from {$activePms['name']} failed: " . $e->getMessage()], 500);
+            return response()->json([
+                'message' => "Sync from {$activePms['name']} failed: " . $e->getMessage(),
+                'synced' => $created + $updated, 'created' => $created, 'updated' => $updated,
+            ], $e instanceof SmoobuAuthenticationFailed ? 502 : 500);
         }
     }
 
