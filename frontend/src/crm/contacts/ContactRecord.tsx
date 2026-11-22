@@ -3,10 +3,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Activity, Briefcase, Flag, GitMerge, Mail, MailX, MapPin, MessageCircle, Phone, SlidersHorizontal, StickyNote, Target, Trash2, UserRound,
+  Activity, Briefcase, Flag, GitMerge, Globe2, Mail, MailX, MapPin, MessageCircle, Phone, SlidersHorizontal, StickyNote, Target, Trash2, UserRound,
   type LucideIcon,
 } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
+import { BusinessProfilePanel } from '../business/BusinessProfilePanel'
 import { useBoot } from '../CrmProvider'
 import { send } from '../lib/api'
 import { timeAgo } from '../lib/format'
@@ -19,6 +20,7 @@ import { QueryState } from '../ui/QueryState'
 import { RecordFrame, RecordPanel, type RecordHostProps, type RecordTab } from '../ui/RecordPanel'
 import { useToast } from '../ui/Toast'
 import { RecordEmails } from '../mail/RecordEmails'
+import { WhatsAppHistory } from '../whatsapp/WhatsAppHistory'
 import { ContactActivity, ContactDelete, ContactLeads, TagBadges } from './contactParts'
 import {
   CONTACT_GROUPS, KEPT_FIELDS, contactSubtitle, displayName, fieldPatch, mailLink, optionsWith, pairsWith, phoneLink, whatsappLink,
@@ -96,6 +98,7 @@ export function ContactFrame({ id, tab, onTab, tools, titleId, onGone, onOpenCon
   idPrefix?: string
 }) {
   const { t } = useTranslation()
+  const hasWhatsApp = !!useBoot().features.whatsapp_brand_id
   const guest = useContact(id)
   const leads = useContactLeads(id)
   const timeline = useTimeline(id)
@@ -107,9 +110,11 @@ export function ContactFrame({ id, tab, onTab, tools, titleId, onGone, onOpenCon
 
   const tabs: RecordTab[] = [
     { key: 'overview', label: t('crm.record.overview', 'Overview'), icon: UserRound },
+    { key: 'business', label: t('crm.business.tab'), icon: Globe2 },
     { key: 'leads', label: t('crm.contacts.leads', 'Leads'), icon: Target, count: leadRows.length },
     { key: 'activity', label: t('crm.contacts.tab_activity', 'Activity'), icon: Activity, count: timelineRows.length },
     { key: 'emails', label: t('crm.contacts.tab_emails', 'Emails'), icon: Mail },
+    ...(hasWhatsApp ? [{ key: 'whatsapp', label: t('crm.whatsapp.title'), icon: MessageCircle }] : []),
     { key: 'fields', label: t('crm.contacts.tab_fields', 'Fields'), icon: SlidersHorizontal, count: g ? filledCount(fields, g.custom_data) : undefined },
   ]
   const choose = (key: string) => onTab(contactTab(key))
@@ -125,14 +130,17 @@ export function ContactFrame({ id, tab, onTab, tools, titleId, onGone, onOpenCon
   }
 
   const name = displayName(g) ?? t('crm.common.no_name', 'No name')
+  const shown = tab === 'whatsapp' && !hasWhatsApp ? 'overview' : tab
   return (
     <RecordFrame idPrefix={idPrefix} titleId={titleId} title={name} tools={tools}
       avatar={<Avatar name={name} size="lg" tone="accent" />}
       badges={<ContactBadges guest={g} />}
       subtitle={contactSubtitle(g) || undefined}
       actions={<ContactActions guest={g} onGone={onGone} onOpenContact={onOpenContact} />}
-      tabs={tabs} tab={tab} onTab={choose}>
-      {tab === 'overview' && <ContactOverview guest={g} idPrefix={idPrefix} />}
+      tabs={tabs} tab={shown} onTab={choose}>
+      {shown === 'overview' && <ContactOverview guest={g} idPrefix={idPrefix} />}
+      {shown === 'business' && <BusinessProfilePanel resource="guests" id={id} />}
+      {shown === 'whatsapp' && <WhatsAppHistory key={id} resource="guests" id={id} />}
       {tab === 'leads' && <ContactLeads id={id} rows={leadRows} loading={leads.isLoading} error={leads.error} onRetry={() => { void leads.refetch() }} />}
       {tab === 'activity' && <ContactActivity id={id} rows={timelineRows} loading={timeline.isLoading} error={timeline.error} onRetry={() => { void timeline.refetch() }} />}
       {tab === 'emails' && (

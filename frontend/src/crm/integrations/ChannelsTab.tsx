@@ -21,6 +21,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
+import { WhatsAppStatusCard } from '../whatsapp/WhatsAppHistory'
 import { facebookLogin, loadFacebook } from './facebook'
 import { INTEGRATION_KEYS, integrationError, integrationsApi } from './integrationsApi'
 import {
@@ -33,13 +34,15 @@ import { Ago } from './parts'
  * Channels (round 5): the Facebook Messenger pages whose messages arrive in the inbox — connect one through Facebook's
  * own login, check it, reconnect it when its token died, send a test message, disconnect — on the full admin's own
  * endpoints (`integrations/messenger*`, a manager's; the page token is the server's, kept encrypted and never shown).
- * WhatsApp has no inbox channel yet: the chat widget's WhatsApp button is where visitors reach the team on it.
+ * The FDS Cards workspace also shows the status of its Contacts DB WhatsApp connection.
  */
 export function ChannelsTab() {
+  const boot = useBoot()
   return (
     <div className="space-y-4">
       <MessengerCard />
-      <WhatsAppCard />
+      {boot.features.whatsapp_brand_id && <WhatsAppStatusCard />}
+      <WhatsAppHandoffCard />
     </div>
   )
 }
@@ -346,12 +349,10 @@ function CheckRow({ item }: { item: DiagnosticCheck }) {
   )
 }
 
-function WhatsAppCard() {
+function WhatsAppHandoffCard() {
   const { t } = useTranslation()
   return (
-    <Card title={t('crm.integrations.whatsapp.title', 'WhatsApp')} icon={MessageSquare} tone="success"
-      description={t('crm.integrations.whatsapp.about', 'WhatsApp messages do not arrive in the inbox yet. The chat widget can hand visitors to your WhatsApp number.')}
-      hint={<Pill tone="neutral">{t('crm.integrations.whatsapp.soon', 'Inbox: not yet')}</Pill>}>
+    <Card title={t('crm.whatsapp.handoff')} icon={MessageSquare} tone="success">
       <div className="flex flex-wrap items-center gap-3">
         <p className="min-w-0 flex-1 text-sm text-a-text-2">{t('crm.integrations.whatsapp.line', 'Visitors tap WhatsApp in the chat to reach your team.')}</p>
         <Link to="/crm/widget?tab=behaviour"

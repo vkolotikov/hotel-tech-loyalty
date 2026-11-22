@@ -5,7 +5,7 @@
  * what a custom value may be (CustomFieldService::validate); these only shape what is shown and sent.
  */
 
-export const CONTACT_TABS = ['overview', 'leads', 'activity', 'emails', 'fields'] as const
+export const CONTACT_TABS = ['overview', 'business', 'leads', 'activity', 'emails', 'whatsapp', 'fields'] as const
 export type ContactTab = (typeof CONTACT_TABS)[number]
 
 export const COMPANY_TABS = ['overview', 'people', 'leads', 'fields'] as const

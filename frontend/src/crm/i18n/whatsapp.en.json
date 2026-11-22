@@ -1,0 +1,38 @@
+{
+  "title": "WhatsApp",
+  "description": "WhatsApp connection managed in Contacts DB.",
+  "history": "WhatsApp history",
+  "history_description": "Messages captured by Contacts DB for this customer.",
+  "handoff": "WhatsApp on the chat widget",
+  "captured": "{{messages}} messages captured",
+  "last_received": "Last event {{time}}",
+  "open_contacts": "Open Contacts DB",
+  "received": "Received",
+  "sent": "Sent",
+  "imported": "Imported history",
+  "edited": "Edited",
+  "newer": "Newer messages",
+  "older": "Older messages",
+  "import_progress": "History import",
+  "state": {
+    "setup_required": "Setup required",
+    "awaiting_messages": "Waiting for messages",
+    "connected": "Connected",
+    "needs_attention": "Needs attention",
+    "review_required": "Contact match needed",
+    "phone_required": "Phone number needed",
+    "bridge_unavailable": "Connection status unavailable",
+    "empty": "No messages yet",
+    "not_available": "History unavailable"
+  },
+  "detail": {
+    "setup_required": "Complete the WhatsApp Business connection in Contacts DB.",
+    "awaiting_messages": "The connection is configured. Contacts DB is waiting for the first messages.",
+    "needs_attention": "Check the WhatsApp connection in Contacts DB.",
+    "review_required": "Link this CRM record and confirm its WhatsApp match in Contacts DB.",
+    "phone_required": "Add a phone number with its international country code to the contact.",
+    "bridge_unavailable": "Try refreshing or check WhatsApp in Contacts DB.",
+    "empty": "Matched messages from Contacts DB will appear here.",
+    "not_available": "WhatsApp history is unavailable for this record."
+  }
+}

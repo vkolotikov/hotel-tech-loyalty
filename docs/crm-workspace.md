@@ -338,3 +338,24 @@ Optional, off by default and enabled per form through the manager-only full-admi
 [lead-form automatic replies](lead-form-auto-replies.md) for configuration, expiry, explicit catch-up and delivery
 states. The CRM workspace and full-admin form editor keep their existing UI. Consent, tenant/brand-owned templates,
 durable deduplication, shared hourly budgets and permanent marketing opt-out are enforced by the server.
+
+## WhatsApp history and AI Discovery
+
+**FDS Cards WhatsApp.** In **Integrations → Channels**, the WhatsApp card reads the Contacts DB connection and reports
+the captured message count and most recent event. Open **Contacts DB → Integrations** to complete Meta Embedded Signup
+for the business number. The lead and contact **WhatsApp** tabs read incoming messages, business-app echoes and imported
+history from Contacts DB. Open original media in WhatsApp. The CRM uses the existing FDS Cards server bridge, and
+Contacts DB requires an active linked contact and the same international number in both systems. Ambiguous matches
+stay in Contacts DB for review. A changed phone takes effect when the Contacts DB CRM feed has the updated record.
+The CRM history reads the stored messages as Contacts DB receives them.
+
+**AI Discovery.** Open a lead or contact and select **AI Discovery**. Enter the company or its official website and press
+**Research with AI**. Discovery queues a public-company search, then returns field-level sources, possible follow-up
+services and questions to confirm. Staff choose which suggestions to use and save their edits to the shared contact
+profile. **Proposal** reads the saved business profile together with the lead request. **Export profile** downloads
+`customer_business_profile.v1` JSON for the customer portal handoff. The export contains saved business facts and
+their sources. Proposal planning notes stay in the CRM.
+
+The matching lead and contact routes share `BusinessProfile` and `guest_business_profiles`. Profile versions protect
+concurrent edits. CRM discovery uses the `ai` worker queue and records its searches and model usage under `crm_discovery`.
+Only the public company name, website and CRM language are sent for discovery.

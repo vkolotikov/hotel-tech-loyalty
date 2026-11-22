@@ -5,7 +5,7 @@ export interface Bootstrap {
   accent: string | null
   venue: { timezone: string; today: string; currency: string }
   /** What the plan holds; `ai_capture` is the AI capture of a lead or a deal from pasted text (`crm-ai/capture-*`), every staff member's (RequireAiCapture). */
-  features: { chatbot: boolean; engagement: boolean; ai_capture: boolean }
+  features: { chatbot: boolean; engagement: boolean; ai_capture: boolean; whatsapp_brand_id?: number | null }
   ai: { status: 'unlimited' | 'under' | 'warn' | 'over'; percent: number | null }
   staff: {
     id: number

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CrmContext } from '../CrmProvider'
+import whatsappWords from '../i18n/whatsapp.en.json'
 import type { Bootstrap } from '../lib/types'
 import { INTEGRATION_KEYS } from './integrationsApi'
 import { IntegrationsPage } from './IntegrationsPage'
@@ -10,8 +11,12 @@ import { IntegrationsPage } from './IntegrationsPage'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string | Record<string, unknown>, vars?: Record<string, unknown>) => {
-      const text = typeof fallback === 'string' ? fallback : key
-      return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String((vars ?? {})[name] ?? ''))
+      const word = key.startsWith('crm.whatsapp.') && key.slice(13).split('.').reduce<unknown>(
+        (node, part) => (node as Record<string, unknown> | undefined)?.[part], whatsappWords,
+      )
+      const text = typeof fallback === 'string' ? fallback : typeof word === 'string' ? word : key
+      const values = typeof fallback === 'object' ? fallback : vars ?? {}
+      return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String(values[name] ?? ''))
     },
     i18n: { language: 'en' },
   }),
@@ -48,6 +53,7 @@ function render(at: string, data: Partial<Bootstrap> = {}) {
   })
   client.setQueryData(INTEGRATION_KEYS.messengerConfig, { configured: true, app_id: '1', graph_version: 'v25.0', required_scopes: [], subscribed_fields: [] })
   client.setQueryData(INTEGRATION_KEYS.messenger, [{ id: 5, channel: 'messenger', external_id: '111', display_name: 'Harbour Page', display_avatar_url: null, status: 'reauth_required', brand_id: 3, token_verified_at: null, last_webhook_at: null, last_error: 'Token expired', created_at: null }])
+  client.setQueryData(['crm', 'whatsapp-status', data.brand_id], { available: true, state: 'setup_required', message_count: 0 })
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[at]}>
@@ -102,14 +108,22 @@ describe('IntegrationsPage', () => {
     expect(html).toContain('2026-11-04: $7.00, 2 calls')
   })
 
-  it('lists the Messenger pages with their state and Reconnect for a dead token, and WhatsApp as not in the inbox yet', () => {
+  it('lists Messenger pages and the WhatsApp widget shortcut', () => {
     const html = render('/crm/integrations?tab=channels')
     expect(html).toContain('Harbour Page')
     expect(html).toContain('Reconnect')
     expect(html).toContain('Something needs attention: run Check.')
     expect(html).not.toContain('Token expired</')
     expect(html).toContain('More for Harbour Page')
-    expect(html).toContain('Inbox: not yet')
+    expect(html).toContain('WhatsApp on the chat widget')
+    expect(html).not.toContain('Open Contacts DB')
     expect(html).toContain('href="/crm/widget?tab=behaviour"')
+  })
+
+  it('shows the Contacts DB capture status for the connected brand', () => {
+    const html = render('/crm/integrations?tab=channels', { brand_id: 23, features: { ...boot.features, whatsapp_brand_id: 23 } })
+    expect(html).toContain('Setup required')
+    expect(html).toContain('0 messages captured')
+    expect(html).toContain('https://contacts.hexa-tech.uk/#integrations')
   })
 })

@@ -159,14 +159,16 @@ class AiUsageService
         int $outputTokens,
         string $feature,
         string $kind = 'chat',
+        int $additionalCents = 0,
+        ?int $userId = null,
     ): void {
         try {
-            $costCents = $this->computeCostCents($model, $inputTokens, $outputTokens, $kind);
+            $costCents = $this->computeCostCents($model, $inputTokens, $outputTokens, $kind) + max(0, $additionalCents);
 
             AiUsageLog::create([
                 'organization_id' => $orgId,
                 'brand_id'        => app()->bound('current_brand_id') ? app('current_brand_id') : null,
-                'user_id'         => auth()->id(),
+                'user_id'         => $userId ?? auth()->id(),
                 'model'           => $model,
                 'kind'            => $kind,
                 'feature'         => mb_substr($feature, 0, 60),

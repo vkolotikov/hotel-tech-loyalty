@@ -59,6 +59,8 @@ class WorkspaceController extends Controller
                 'chatbot'    => $platform || $org->hasFeature('chatbot'),
                 'engagement' => $platform || $org->hasFeature('engagement'),
                 'ai_capture' => \App\Http\Middleware\RequireAiCapture::allows($org, $user),
+                'whatsapp_brand_id' => app(\App\Services\Integrations\CrmMail::class)->available($user)
+                    ? \App\Services\Integrations\CrmMail::BRAND : null,
             ],
             // The month's AI allowance (the widget's assistant and the inbox's drafts spend it).
             'ai'           => ['status' => $budget['status'], 'percent' => $budget['percent']],

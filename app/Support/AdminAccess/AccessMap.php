@@ -89,6 +89,7 @@ final class AccessMap
         'admin/crm/intake-tokens'               => ['manager',            'manager',            'crm'],           // Lead-intake API tokens (manager, as admin/api-tokens); each reaches only POST integrations/leads (IntakeTokens)
         'admin/crm/mail-settings'               => ['staff',              'manager',            'crm'],           // The emails' sender name and reply-to only (read by everyone, as admin/settings; changes: an owner, SenderSettings)
         'admin/crm/ai-usage'                    => ['manager',            'manager',            'crm'],           // This month's AI spend against the allowance, this organisation's own (manager, as admin/ai-usage)
+        'admin/crm/whatsapp-status'             => ['manager',            'manager',            'crm'],
         'admin/integrations/messenger'          => ['manager',            'manager',            'chat'],           // Facebook Messenger pages for the inbox (manager; was `admin/integrations`, admin, whose only routes these are — a new integrations route falls back to manager / admin); `chat`: HexaTech CRM connects them too
         'admin/time'                            => ['staff',              'staff',              'time'],          // HexaTech Time Planner (2026-11-09; sold as a module, or the Enterprise plan's time_management): whose day one may plan is PlanningMode
         'admin/time/people/{user}'              => ['staff',              'manager',            'time'],          // A person's planner profile (knowledge, hours, days, break): a manager's, as the team's skills (admin/team)
@@ -217,6 +218,10 @@ final class AccessMap
         'admin/email-templates'                 => ['staff',              'manager',            'crm'],           // Email templates (Marketing, manager); sending one is overridden below
         'admin/guests/{guest}/email-history'     => ['staff',              'staff',              'crm'],
         'admin/inquiries/{inquiry}/email-history' => ['staff',             'staff',              'crm'],
+        'admin/guests/{guest}/whatsapp-history'     => ['staff',            'staff',              'crm'],
+        'admin/inquiries/{inquiry}/whatsapp-history' => ['staff',          'staff',              'crm'],
+        'admin/guests/{guest}/business-profile'     => ['staff',            'staff',              'crm'],
+        'admin/inquiries/{inquiry}/business-profile' => ['staff',          'staff',              'crm'],
         'admin/guests'                          => ['staff',              'staff',              'crm'],           // Guests and clients
         'admin/inquiries'                       => ['staff',              'staff',              'crm'],           // Leads (menu: everyone)
         'admin/inquiry-lost-reasons'            => ['staff',              'manager',            'crm'],           // Lost reasons (Pipelines admin)

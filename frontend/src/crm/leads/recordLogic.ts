@@ -10,7 +10,7 @@ import type { LeadDetail, LeadKpis, StageKind } from './leadTypes'
  * address, and which of the Leads and Deals pages' figures are worth showing.
  */
 
-export const LEAD_TABS = ['overview', 'deal', 'activity', 'tasks', 'emails', 'files', 'chat'] as const
+export const LEAD_TABS = ['overview', 'deal', 'business', 'activity', 'tasks', 'emails', 'whatsapp', 'files', 'chat'] as const
 export type LeadTab = (typeof LEAD_TABS)[number]
 
 export interface TabFacts {
@@ -22,6 +22,8 @@ export interface TabFacts {
   activities?: number
   openTasks?: number
   files?: number
+  business?: boolean
+  whatsapp?: boolean
 }
 
 /**
@@ -32,7 +34,10 @@ export interface TabFacts {
 export function leadTabs(facts: TabFacts): { key: LeadTab; count?: number }[] {
   const tabs: { key: LeadTab; count?: number }[] = [{ key: 'overview' }]
   if (facts.won) tabs.push({ key: 'deal' })
-  tabs.push({ key: 'activity', count: facts.activities }, { key: 'tasks', count: facts.openTasks }, { key: 'emails' }, { key: 'files', count: facts.files })
+  if (facts.business) tabs.push({ key: 'business' })
+  tabs.push({ key: 'activity', count: facts.activities }, { key: 'tasks', count: facts.openTasks }, { key: 'emails' })
+  if (facts.whatsapp) tabs.push({ key: 'whatsapp' })
+  tabs.push({ key: 'files', count: facts.files })
   if (facts.chats > 0) tabs.push({ key: 'chat', count: facts.chats })
   return tabs
 }

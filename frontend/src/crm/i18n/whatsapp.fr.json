@@ -1,0 +1,38 @@
+{
+  "title": "WhatsApp",
+  "description": "La connexion WhatsApp est gérée dans Contacts DB.",
+  "history": "Historique WhatsApp",
+  "history_description": "Messages de ce client enregistrés par Contacts DB.",
+  "handoff": "WhatsApp dans le widget de chat",
+  "captured": "{{messages}} messages enregistrés",
+  "last_received": "Dernier événement {{time}}",
+  "open_contacts": "Ouvrir Contacts DB",
+  "received": "Reçu",
+  "sent": "Envoyé",
+  "imported": "Historique importé",
+  "edited": "Modifié",
+  "newer": "Messages plus récents",
+  "older": "Messages plus anciens",
+  "import_progress": "Importation de l’historique",
+  "state": {
+    "setup_required": "Configuration requise",
+    "awaiting_messages": "En attente de messages",
+    "connected": "Connecté",
+    "needs_attention": "À vérifier",
+    "review_required": "Contact à associer",
+    "phone_required": "Numéro requis",
+    "bridge_unavailable": "État indisponible",
+    "empty": "Aucun message pour le moment",
+    "not_available": "Historique indisponible"
+  },
+  "detail": {
+    "setup_required": "Terminez la connexion WhatsApp Business dans Contacts DB.",
+    "awaiting_messages": "La connexion est configurée. Contacts DB attend les premiers messages.",
+    "needs_attention": "Vérifiez la connexion WhatsApp dans Contacts DB.",
+    "review_required": "Associez cette fiche CRM et confirmez le contact WhatsApp dans Contacts DB.",
+    "phone_required": "Ajoutez au contact un numéro avec l’indicatif international.",
+    "bridge_unavailable": "Actualisez la page ou vérifiez WhatsApp dans Contacts DB.",
+    "empty": "Les messages associés depuis Contacts DB apparaîtront ici.",
+    "not_available": "L’historique WhatsApp est indisponible pour cette fiche."
+  }
+}

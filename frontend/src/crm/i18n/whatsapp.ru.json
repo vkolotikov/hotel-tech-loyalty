@@ -1,0 +1,38 @@
+{
+  "title": "WhatsApp",
+  "description": "Подключение WhatsApp управляется в Contacts DB.",
+  "history": "История WhatsApp",
+  "history_description": "Сообщения этого клиента, полученные в Contacts DB.",
+  "handoff": "WhatsApp в виджете чата",
+  "captured": "Получено сообщений: {{messages}}",
+  "last_received": "Последнее событие {{time}}",
+  "open_contacts": "Открыть Contacts DB",
+  "received": "Получено",
+  "sent": "Отправлено",
+  "imported": "Импортированная история",
+  "edited": "Изменено",
+  "newer": "Более новые сообщения",
+  "older": "Более ранние сообщения",
+  "import_progress": "Импорт истории",
+  "state": {
+    "setup_required": "Требуется настройка",
+    "awaiting_messages": "Ожидание сообщений",
+    "connected": "Подключено",
+    "needs_attention": "Требует внимания",
+    "review_required": "Нужно сопоставить контакт",
+    "phone_required": "Нужен номер телефона",
+    "bridge_unavailable": "Статус недоступен",
+    "empty": "Сообщений пока нет",
+    "not_available": "История недоступна"
+  },
+  "detail": {
+    "setup_required": "Завершите подключение WhatsApp Business в Contacts DB.",
+    "awaiting_messages": "Подключение настроено. Contacts DB ожидает первые сообщения.",
+    "needs_attention": "Проверьте подключение WhatsApp в Contacts DB.",
+    "review_required": "Свяжите эту запись CRM и подтвердите соответствие контакта WhatsApp в Contacts DB.",
+    "phone_required": "Добавьте номер телефона контакта с международным кодом страны.",
+    "bridge_unavailable": "Обновите страницу или проверьте WhatsApp в Contacts DB.",
+    "empty": "Здесь появятся сообщения, сопоставленные в Contacts DB.",
+    "not_available": "История WhatsApp недоступна для этой записи."
+  }
+}

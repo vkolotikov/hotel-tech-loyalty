@@ -1030,6 +1030,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:10,1,crm-mail-refresh');
             Route::get('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:60,1,crm-mail-read');
             Route::post('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:10,1,crm-mail-refresh');
+            Route::get('guests/{guest}/whatsapp-history', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'guest'])->whereNumber('guest')->middleware('throttle:60,1,crm-whatsapp');
+            Route::get('inquiries/{inquiry}/whatsapp-history', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:60,1,crm-whatsapp');
+            Route::match(['get', 'put', 'post'], 'guests/{guest}/business-profile', [\App\Http\Controllers\Api\V1\Admin\BusinessProfileController::class, 'guest'])->whereNumber('guest')->middleware('throttle:30,1,crm-business-profile');
+            Route::match(['get', 'put', 'post'], 'inquiries/{inquiry}/business-profile', [\App\Http\Controllers\Api\V1\Admin\BusinessProfileController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:30,1,crm-business-profile');
             Route::get('guests/{id}/delete-impact',       [GuestController::class, 'deleteImpact']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update'])
@@ -1670,6 +1674,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // has it unless an operator switched it off
             // (`php artisan workspace:crm <organisation id> --off`).
             Route::prefix('crm')->middleware('workspace:crm')->group(function () {
+                Route::get('whatsapp-status', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'status']);
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'bootstrap']);
                 Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);

@@ -2,10 +2,11 @@ import { useState, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
-  ArrowRightLeft, BriefcaseBusiness, CheckSquare, ChevronDown, History, LayoutDashboard, ListPlus, Mail, MessagesSquare, Paperclip,
+  ArrowRightLeft, BriefcaseBusiness, CheckSquare, ChevronDown, Globe2, History, LayoutDashboard, ListPlus, Mail, MessageCircle, MessagesSquare, Paperclip,
   Pencil, Send, Sparkles, Trash2, Trophy, UserRound, Wand2, XCircle, type LucideIcon,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { BusinessProfilePanel } from '../business/BusinessProfilePanel'
 import { useBoot } from '../CrmProvider'
 import { send } from '../lib/api'
 import { errorText } from '../lib/errors'
@@ -18,6 +19,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { RecordFrame, RecordPanel, type RecordHostProps, type RecordTab } from '../ui/RecordPanel'
 import { useToast } from '../ui/Toast'
+import { WhatsAppHistory } from '../whatsapp/WhatsAppHistory'
 import { TaskForm } from '../tasks/TaskForm'
 import { DealTab } from './LeadDeal'
 import { LostDialog, WonDialog } from './LeadClose'
@@ -64,7 +66,8 @@ function leadName(lead: LeadDetail, none: string): string {
 }
 
 const TAB_ICON: Record<LeadTab, LucideIcon> = {
-  overview: LayoutDashboard, deal: BriefcaseBusiness, activity: History, tasks: CheckSquare, emails: Mail, files: Paperclip, chat: MessagesSquare,
+  overview: LayoutDashboard, deal: BriefcaseBusiness, business: Globe2, activity: History, tasks: CheckSquare,
+  emails: Mail, whatsapp: MessageCircle, files: Paperclip, chat: MessagesSquare,
 }
 
 /**
@@ -130,14 +133,18 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
     activities: activities.data?.meta.total,
     openTasks: lead.open_tasks?.length,
     files: files.data?.length,
+    business: !!lead.guest_id,
+    whatsapp: !!lead.guest_id && !!boot.features.whatsapp_brand_id && lead.brand_id === boot.features.whatsapp_brand_id,
   })
   const tabLabel = (key: LeadTab): string => {
     switch (key) {
       case 'overview': return t('crm.record.overview', 'Overview')
       case 'deal': return t('crm.leads.tab_deal', 'Deal')
+      case 'business': return t('crm.business.tab')
       case 'activity': return t('crm.leads.tab_activity', 'Activity')
       case 'tasks': return t('crm.leads.tasks', 'Tasks')
       case 'emails': return t('crm.leads.emails', 'Emails')
+      case 'whatsapp': return t('crm.whatsapp.title')
       case 'files': return t('crm.leads.files', 'Files')
       default: return t('crm.leads.tab_chat', 'Chat')
     }
@@ -200,6 +207,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
             onEdit={() => setEditing(true)} onDeal={() => onTab('deal')} />
         )}
         {shown === 'deal' && <DealTab lead={lead} />}
+        {shown === 'business' && <BusinessProfilePanel resource="inquiries" id={lead.id} />}
         {shown === 'activity' && <LeadTimeline lead={lead} seed={seed} />}
         {shown === 'tasks' && <LeadTasks lead={lead} name={name} onAdd={() => setAddingTask(true)} />}
         {shown === 'emails' && (
@@ -214,6 +222,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
           </div>
         )}
         {shown === 'files' && <FilesTab leadId={lead.id} />}
+        {shown === 'whatsapp' && <WhatsAppHistory key={lead.id} resource="inquiries" id={lead.id} />}
         {shown === 'chat' && <ChatTab leadId={lead.id} />}
       </RecordFrame>
 
