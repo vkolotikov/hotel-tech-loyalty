@@ -1,5 +1,12 @@
 # Handoff — 22 November 2026
 
+## CRM business profile setup
+
+**Settings → Our business** now has five steps from Sources through Review. Managers can enter details manually or
+review suggestions from the company website, public search and uploaded documents. One-click blank filling preserves
+existing values. References from accepted suggestions remain on saved profile fields. See the
+[business profile runbook](../crm-workspace.md#business-profile-setup).
+
 ## Forrest Glamp Smoobu connection
 
 The production organisation named **Forrest Glamp** has 15 mapped rooms. On 22 November, both the apartments and reservations endpoints returned 401 with its saved organisation key. Its signing secret was empty and neither brand had a credential override. The last successful scheduled import and first subsequent 401 were five minutes apart on 17 November, the date Smoobu retired key-only access. The venue owner will need access to the main Smoobu account to supply the matching key and secret. Live recovery requires a successful room and reservation sync after they are saved.

@@ -385,3 +385,20 @@ Generation sends a bounded context to OpenAI Responses, with storage disabled an
 on the `ai` queue, using the organisation's AI allowance under `crm_sales_assistant`. The assistant stores the
 latest generated result for each mode and the staff-reviewed strategies on the lead. It drafts emails for staff
 review.
+
+### Business profile setup
+
+**Settings → Our business** guides a manager through **Sources**, **Company**, **Market**, **Sales**, and **Review**.
+Use **Enter manually** to start filling the profile. **Capture with AI** can use a public website, a public web search
+for the company, or uploaded PDF, Word, Excel, PowerPoint, CSV, Markdown, and text files. The Sources step shows the
+current file limits. A website that cannot be read directly can use public search results from the same site.
+
+The review shows the proposed value and the page or file it came from. **Fill empty fields** respects existing CRM and
+Content Planner values. Use individual suggestions or edit any field before **Save profile**. Staff can read the
+saved profile. The assistant uses the current reviewed profile for strategies and email drafts. Saved AI values keep
+their references until the value is edited.
+
+The manager-only `sales-profile/capture` endpoint starts work on the `ai` queue for the selected brand. Public research
+receives only the public business identity. Document extraction uses a tool-free request. Uploaded input is encrypted
+until claimed and is cleared on claim, failure, or expiry. The app keeps the findings and their references. Metered use
+appears under `crm_sales_capture`. Reported update conflicts retain the existing profile until the manager reloads it.

@@ -91,6 +91,7 @@ final class AccessMap
         'admin/crm/ai-usage'                    => ['manager',            'manager',            'crm'],           // This month's AI spend against the allowance, this organisation's own (manager, as admin/ai-usage)
         'admin/crm/whatsapp-status'             => ['manager',            'manager',            'crm'],
         'admin/crm/sales-profile'               => ['staff',              'manager',            'crm'],
+        'admin/crm/sales-profile/capture'       => ['manager',            'manager',            'crm'],
         'admin/crm/leads/{inquiry}/assistant'   => ['staff',              'staff',              'crm'],
         'admin/integrations/messenger'          => ['manager',            'manager',            'chat'],           // Facebook Messenger pages for the inbox (manager; was `admin/integrations`, admin, whose only routes these are — a new integrations route falls back to manager / admin); `chat`: HexaTech CRM connects them too
         'admin/time'                            => ['staff',              'staff',              'time'],          // HexaTech Time Planner (2026-11-09; sold as a module, or the Enterprise plan's time_management): whose day one may plan is PlanningMode

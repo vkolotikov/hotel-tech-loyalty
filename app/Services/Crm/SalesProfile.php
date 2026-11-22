@@ -5,6 +5,7 @@ namespace App\Services\Crm;
 use App\Exceptions\AiHelperRefused;
 use App\Models\Brand;
 use App\Models\ContentPlannerProfile;
+use App\Models\CrmSalesProfileCapture;
 use App\Models\Organization;
 use App\Scopes\BrandScope;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +17,34 @@ final class SalesProfile
         'selling' => ['offerings', 'positioning', 'proof', 'terms', 'voice', 'guidelines', 'next_step'],
     ];
 
+    public const STEPS = [
+        'company' => ['name', 'website', 'overview', 'values'],
+        'market' => ['usp', 'audiences', 'markets', 'positioning'],
+        'services' => ['offerings', 'proof', 'terms', 'voice', 'guidelines', 'next_step'],
+    ];
+
+    public static function keys(): array
+    {
+        return array_merge(...array_values(self::STEPS));
+    }
+
+    public static function clean(string $key, mixed $value): string
+    {
+        if (! is_string($value)) {
+            return '';
+        }
+        $value = trim(str_replace("\0", '', $value));
+
+        return $key === 'website' ? (BusinessProfile::publicUrl($value) ?? '') : mb_substr($value, 0, 3000);
+    }
+
     public static function rules(): array
     {
-        $keys = array_merge(...array_values(self::GROUPS));
-        $rules = ['fields' => 'required|array:'.implode(',', $keys), 'revision' => 'required|integer|min:0', 'profile_brand' => 'required|integer|min:1'];
+        $keys = self::keys();
+        $rules = [
+            'fields' => 'required|array:'.implode(',', $keys), 'revision' => 'required|integer|min:0',
+            'profile_brand' => 'required|integer|min:1', 'capture_id' => 'nullable|uuid',
+        ];
         foreach ($keys as $key) {
             $rules["fields.$key"] = $key === 'website' ? 'nullable|string|max:2000|url:http,https' : 'nullable|string|max:3000';
         }
@@ -37,9 +62,11 @@ final class SalesProfile
         return [
             'brand' => ['id' => (int) $brand->id, 'name' => $brand->name],
             'groups' => self::GROUPS,
+            'steps' => self::STEPS,
             'fields' => (object) $fields,
             'manual' => (object) ($manual['fields'] ?? []),
             'inherited' => (object) $inherited,
+            'sources' => (object) ($manual['sources'] ?? []),
             'revision' => $manual['revision'] ?? 0,
         ];
     }
@@ -54,12 +81,26 @@ final class SalesProfile
                 throw new AiHelperRefused('sales_profile_changed', 'The business profile changed. Reload it before saving.', 409);
             }
             $fields = $profile['fields'] ?? [];
+            $sources = $profile['sources'] ?? [];
+            $suggestions = [];
+            if (isset($input['capture_id'])) {
+                $capture = CrmSalesProfileCapture::query()->whereKey($brand->id)->where('run_id', $input['capture_id'])
+                    ->where('status', 'ready')->value('outcome');
+                $suggestions = $capture['fields'] ?? [];
+            }
             foreach ($input['fields'] as $key => $value) {
-                $fields[$key] = trim((string) $value);
+                $value = trim((string) $value);
+                if ($value === ($suggestions[$key]['value'] ?? null)) {
+                    $sources[$key] = $suggestions[$key]['sources'];
+                } elseif ($value !== ($fields[$key] ?? '')) {
+                    unset($sources[$key]);
+                }
+                $fields[$key] = $value;
             }
             $brand->forceFill(['crm_sales_profile' => [
                 'revision' => $revision + 1,
                 'fields' => array_filter($fields, fn ($value) => $value !== ''),
+                'sources' => $sources,
             ]])->save();
 
             return $brand;

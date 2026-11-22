@@ -171,6 +171,7 @@ function featureName(t: TFunction, feature: string): string {
     case 'crm_draft': return t('crm.integrations.feature.crm_draft', 'Inbox drafts')
     case 'crm_discovery': return t('crm.business.tab')
     case 'crm_sales_assistant': return t('crm.sales.title')
+    case 'crm_sales_capture': return t('crm.wizard.capture')
     case 'voice_agent': return t('crm.integrations.feature.voice_agent', 'Voice agent')
     case 'engagement_brief': return t('crm.integrations.feature.engagement_brief', 'Chat briefs')
     case 'engagement_translate': return t('crm.integrations.feature.engagement_translate', 'Translations')

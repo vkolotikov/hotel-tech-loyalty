@@ -1676,6 +1676,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::prefix('crm')->middleware('workspace:crm')->group(function () {
                 Route::get('whatsapp-status', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'status']);
                 Route::match(['get', 'put'], 'sales-profile', \App\Http\Controllers\Api\V1\Admin\Crm\SalesProfileController::class);
+                Route::get('sales-profile/capture', [\App\Http\Controllers\Api\V1\Admin\Crm\SalesProfileController::class, 'capture']);
+                Route::post('sales-profile/capture', [\App\Http\Controllers\Api\V1\Admin\Crm\SalesProfileController::class, 'capture'])
+                    ->middleware('throttle:8,15,crm-sales-capture');
                 Route::match(['get', 'put'], 'leads/{inquiry}/assistant', \App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class)
                     ->whereNumber('inquiry');
                 Route::post('leads/{inquiry}/assistant', \App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class)
