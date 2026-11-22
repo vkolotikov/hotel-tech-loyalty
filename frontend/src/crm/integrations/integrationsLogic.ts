@@ -371,7 +371,7 @@ export function dayOfMonth(day: string): number {
 
 /** The features the ledger writes that have their own words (`crm.integrations.feature.<name>`); others show as named. */
 export const KNOWN_FEATURES = [
-  'website_chatbot', 'website_chatbot_tools', 'messenger_chat', 'member_chat', 'chatbot_test', 'chat', 'crm_chat', 'crm_draft',
+  'website_chatbot', 'website_chatbot_tools', 'messenger_chat', 'member_chat', 'chatbot_test', 'chat', 'crm_chat', 'crm_draft', 'crm_discovery',
   'voice_agent', 'engagement_brief', 'engagement_translate', 'knowledge_faqs', 'knowledge_keywords', 'inquiry_smart_panel',
   'inquiry_lost_reason', 'inquiry_proposal_draft', 'content', 'time_plan', 'time_review', 'time_capture',
 ] as const
