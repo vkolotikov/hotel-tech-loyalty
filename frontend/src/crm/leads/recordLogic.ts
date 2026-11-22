@@ -10,7 +10,7 @@ import type { LeadDetail, LeadKpis, StageKind } from './leadTypes'
  * address, and which of the Leads and Deals pages' figures are worth showing.
  */
 
-export const LEAD_TABS = ['overview', 'deal', 'business', 'activity', 'tasks', 'emails', 'whatsapp', 'files', 'chat'] as const
+export const LEAD_TABS = ['overview', 'deal', 'assistant', 'business', 'activity', 'tasks', 'emails', 'whatsapp', 'files', 'chat'] as const
 export type LeadTab = (typeof LEAD_TABS)[number]
 
 export interface TabFacts {
@@ -27,13 +27,13 @@ export interface TabFacts {
 }
 
 /**
- * The record's tabs in order: Overview; the Deal right after it once the lead is won (a won lead's work is its steps
- * and its payment); Activity, Tasks, Emails, Files; the Chat only when the contact wrote to the website chat. A count
- * shows only once known.
+ * The deal follows Overview on won leads. Assistant, activity, tasks, emails and files are always available.
+ * A count appears once known.
  */
 export function leadTabs(facts: TabFacts): { key: LeadTab; count?: number }[] {
   const tabs: { key: LeadTab; count?: number }[] = [{ key: 'overview' }]
   if (facts.won) tabs.push({ key: 'deal' })
+  tabs.push({ key: 'assistant' })
   if (facts.business) tabs.push({ key: 'business' })
   tabs.push({ key: 'activity', count: facts.activities }, { key: 'tasks', count: facts.openTasks }, { key: 'emails' })
   if (facts.whatsapp) tabs.push({ key: 'whatsapp' })

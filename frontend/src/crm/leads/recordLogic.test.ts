@@ -13,8 +13,8 @@ const lead: LeadDetail = {
 
 describe('a lead\'s record (round 5)', () => {
   it('has Overview, Activity, Tasks, Emails and Files; the Deal once won, right after Overview; the Chat only with one', () => {
-    expect(leadTabs({ won: false, chats: 0 }).map(t => t.key)).toEqual(['overview', 'activity', 'tasks', 'emails', 'files'])
-    expect(leadTabs({ won: true, chats: 2 }).map(t => t.key)).toEqual(['overview', 'deal', 'activity', 'tasks', 'emails', 'files', 'chat'])
+    expect(leadTabs({ won: false, chats: 0 }).map(t => t.key)).toEqual(['overview', 'assistant', 'activity', 'tasks', 'emails', 'files'])
+    expect(leadTabs({ won: true, chats: 2 }).map(t => t.key)).toEqual(['overview', 'deal', 'assistant', 'activity', 'tasks', 'emails', 'files', 'chat'])
     const counted = leadTabs({ won: false, chats: 1, activities: 7, openTasks: 2, files: 0 })
     expect(counted.find(t => t.key === 'activity')?.count).toBe(7)
     expect(counted.find(t => t.key === 'tasks')?.count).toBe(2)

@@ -13,6 +13,8 @@ import { errorText } from '../lib/errors'
 import { timeAgo } from '../lib/format'
 import { useRecords } from '../lib/useRecords'
 import { RecordEmails } from '../mail/RecordEmails'
+import { useAssistant, type Mode } from '../sales/assistantData'
+import { LeadAssistantPanel } from '../sales/LeadAssistantPanel'
 import { Avatar } from '../ui/Avatar'
 import { ActionMenu, type MenuItem } from '../ui/Menu'
 import { Pill } from '../ui/Pill'
@@ -28,13 +30,13 @@ import { useLeadChanged, useLeadSettings, usePipelines } from './leadData'
 import { DeleteLead } from './LeadDelete'
 import { defaultPipeline, kindOf, moveTo, resolveStage, sortedStages } from './leadLogic'
 import { OverviewTab } from './LeadOverview'
-import { ChatTab, FilesTab, ProposalDialog } from './LeadSide'
+import { ChatTab, FilesTab } from './LeadSide'
 import { LeadTasks } from './LeadTasks'
 import { LeadTimeline, type ComposerSeed } from './LeadTimeline'
 import { priorityTone } from './listLogic'
 import { ContactLinks, FreshChip, StagePill } from './parts'
 import { fullPagePath, headerActions, leadTabs, tabShown, type LeadTab } from './recordLogic'
-import { useAiBrief, useLeadActivities, useLeadChats, useLeadDetail, useLeadFiles } from './recordData'
+import { useLeadActivities, useLeadChats, useLeadDetail, useLeadFiles } from './recordData'
 import { SendTemplate } from './SendTemplate'
 import type { LeadDetail, Stage } from './leadTypes'
 import { sourceLabel } from './leadWords'
@@ -66,7 +68,7 @@ function leadName(lead: LeadDetail, none: string): string {
 }
 
 const TAB_ICON: Record<LeadTab, LucideIcon> = {
-  overview: LayoutDashboard, deal: BriefcaseBusiness, business: Globe2, activity: History, tasks: CheckSquare,
+  overview: LayoutDashboard, deal: BriefcaseBusiness, assistant: Sparkles, business: Globe2, activity: History, tasks: CheckSquare,
   emails: Mail, whatsapp: MessageCircle, files: Paperclip, chat: MessagesSquare,
 }
 
@@ -96,7 +98,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
   const changed = useLeadChanged()
   const pipelines = usePipelines()
   const settings = useLeadSettings()
-  const ai = useAiBrief(lead)
+  const assistant = useAssistant(lead.id)
   const activities = useLeadActivities(lead.id)
   const files = useLeadFiles(lead.id)
   const chats = useLeadChats(lead.id)
@@ -106,8 +108,9 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
   const [mailing, setMailing] = useState(false)
   const [editing, setEditing] = useState(false)
   const [addingTask, setAddingTask] = useState(false)
-  const [proposing, setProposing] = useState(false)
+  const [assistantMode, setAssistantMode] = useState<Mode>('brief')
   const [seed, setSeed] = useState<ComposerSeed | null>(null)
+  const openAssistant = (mode: Mode) => { setAssistantMode(mode); onTab('assistant') }
 
   const stages = sortedStages(lead.pipeline?.stages?.length ? lead.pipeline.stages : defaultPipeline(pipelines.data)?.stages)
   const stage = resolveStage(lead, stages)
@@ -140,6 +143,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
     switch (key) {
       case 'overview': return t('crm.record.overview', 'Overview')
       case 'deal': return t('crm.leads.tab_deal', 'Deal')
+      case 'assistant': return t('crm.sales.title')
       case 'business': return t('crm.business.tab')
       case 'activity': return t('crm.leads.tab_activity', 'Activity')
       case 'tasks': return t('crm.leads.tasks', 'Tasks')
@@ -191,11 +195,10 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
             </Button>
             <ContactLinks guest={lead.guest} name={name} />
             <span className="flex items-center gap-1.5">
-              <button type="button" className={aiPill} disabled={ai.pending} title={t('crm.leads.ai_line', 'Where the lead stands, read by the AI')}
-                onClick={() => { ai.run(); onTab('overview') }}>
-                <Sparkles size={14} aria-hidden className={ai.pending ? 'animate-pulse' : ''} />{t('crm.leads.ai_title', 'AI brief')}
+              <button type="button" className={aiPill} onClick={() => openAssistant('brief')}>
+                <Sparkles size={14} aria-hidden />{t('crm.sales.modes.brief')}
               </button>
-              <button type="button" className={aiPill} onClick={() => setProposing(true)} title={t('crm.leads.ai_proposal', 'Draft a proposal')}>
+              <button type="button" className={aiPill} onClick={() => openAssistant('proposal')} title={t('crm.sales.modes.proposal')}>
                 <Wand2 size={14} aria-hidden />{t('crm.leads.ai_proposal_short', 'Proposal')}
               </button>
             </span>
@@ -203,10 +206,16 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
           </>
         )}>
         {shown === 'overview' && (
-          <OverviewTab lead={lead} stages={stages} onPick={pickStage} busy={move.isPending} ai={ai}
+          <OverviewTab lead={lead} stages={stages} onPick={pickStage} busy={move.isPending} brief={assistant.data?.results.brief}
+            onBrief={() => openAssistant('brief')}
             onEdit={() => setEditing(true)} onDeal={() => onTab('deal')} />
         )}
         {shown === 'deal' && <DealTab lead={lead} />}
+        {shown === 'assistant' && (
+          <LeadAssistantPanel leadId={lead.id} recipient={lead.guest?.email} mode={assistantMode} onMode={setAssistantMode} query={assistant}
+            onEmails={() => onTab('emails')}
+            onUse={draft => { setSeed({ ...draft, type: 'email', n: Date.now() }); onTab('activity'); toast(t('crm.leads.proposal_placed_tab', 'The draft is in the Activity box')) }} />
+        )}
         {shown === 'business' && <BusinessProfilePanel resource="inquiries" id={lead.id} />}
         {shown === 'activity' && <LeadTimeline lead={lead} seed={seed} />}
         {shown === 'tasks' && <LeadTasks lead={lead} name={name} onAdd={() => setAddingTask(true)} />}
@@ -232,10 +241,6 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
       {mailing && <SendTemplate lead={lead} name={name} onClose={() => setMailing(false)} />}
       {editing && <LeadEditPanel lead={lead} onClose={() => setEditing(false)} />}
       {addingTask && <TaskForm task={null} inquiryId={lead.id} leadName={name} onClose={() => setAddingTask(false)} />}
-      {proposing && (
-        <ProposalDialog leadId={lead.id} onClose={() => setProposing(false)}
-          onUse={draft => { setSeed({ ...draft, n: Date.now() }); setProposing(false); onTab('activity'); toast(t('crm.leads.proposal_placed_tab', 'The draft is in the Activity box')) }} />
-      )}
     </>
   )
 }

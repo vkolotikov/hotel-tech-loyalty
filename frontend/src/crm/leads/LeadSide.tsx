@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BedDouble, Copy, ExternalLink, FileText, FileUp, ListChecks, ListPlus, Mail, MessagesSquare, Pencil, Phone, RefreshCw, Sparkles, Trash2, UserRound } from 'lucide-react'
+import { BedDouble, ExternalLink, FileText, FileUp, ListChecks, Mail, MessagesSquare, Pencil, Phone, Sparkles, Trash2, UserRound } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
-import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
@@ -13,6 +12,7 @@ import { errorText } from '../lib/errors'
 import { dateTime, dayLabel, timeAgo } from '../lib/format'
 import { conversationPath } from '../lib/links'
 import { useRecords } from '../lib/useRecords'
+import type { Result } from '../sales/assistantData'
 import { Avatar } from '../ui/Avatar'
 import { Card } from '../ui/Card'
 import { IconButton } from '../ui/IconButton'
@@ -26,10 +26,9 @@ import { useLeadChanged } from './leadData'
 import { TextInput } from '../ui/inputs'
 import { customBody, customErrors, dayOf, fileSize, missingCustom, newestConversation, winTone } from './leadLogic'
 import { contactDraft, contactPatch, type ContactDraft } from './listLogic'
-import type { Attachment, CustomField, LeadDetail, ProposalDraft } from './leadTypes'
-import { useLeadChats, useLeadFiles, type AiRead } from './recordData'
+import type { Attachment, CustomField, LeadDetail } from './leadTypes'
+import { useLeadChats, useLeadFiles } from './recordData'
 import { coldLabel, intentLabel, senderLabel } from './leadWords'
-import type { ComposerSeed } from './LeadTimeline'
 
 /**
  * Who the lead is: name, company, country and how to reach them (one press to write, call or message), their contact
@@ -108,98 +107,44 @@ export function ContactCard({ lead }: { lead: LeadDetail }) {
   )
 }
 
-/**
- * The AI's read of the lead (`POST inquiries/{id}/ai-brief`, kept 15 minutes by the server): a summary, what they
- * want, the chance to win, whether it is going cold and the next step. Shown from what the lead already holds; asked
- * for only when someone presses (here or in the header, one answer: `useAiBrief`). The header's Proposal drafts an email
- * for a person to edit (`draft-proposal`, ProposalDialog); nothing is sent.
- */
-export function AiCard({ ai }: { ai: AiRead }) {
+/** Show the assistant's summary on Overview, with earlier basic briefs as a fallback. */
+export function AiCard({ lead, brief, onOpen }: { lead: LeadDetail; brief?: Result; onOpen: () => void }) {
   const { t, i18n } = useTranslation()
-  const shown = ai.shown
-  const tone = winTone(shown?.win_probability)
-  const intent = intentLabel(t, shown?.intent)
-  const cold = coldLabel(t, shown?.going_cold_risk)
+  const summary = brief?.summary || lead.ai_brief
+  const generatedAt = brief?.generated_at || lead.ai_brief_at
+  const tone = winTone(lead.ai_win_probability)
+  const intent = intentLabel(t, lead.ai_intent)
+  const cold = coldLabel(t, lead.ai_going_cold_risk)
   return (
     <section aria-label={t('crm.leads.ai_title', 'AI brief')} className="crm-ai-border min-w-0 rounded-2xl border bg-a-surface shadow-a-sm">
       <div className="flex min-h-12 flex-wrap items-center gap-2 px-4 py-2">
         <span aria-hidden className="crm-ai-soft grid h-7 w-7 shrink-0 place-items-center rounded-lg"><Sparkles size={15} /></span>
         <h2 className="text-sm font-semibold text-a-text">{t('crm.leads.ai_title', 'AI brief')}</h2>
         <InfoTip text={t('crm.leads.ai_line', 'Where the lead stands, read by the AI')} />
-        {shown?.generated_at && <span className="text-xs text-a-text-2">{timeAgo(shown.generated_at, i18n.language)}</span>}
+        {generatedAt && <span className="text-xs text-a-text-2">{timeAgo(generatedAt, i18n.language)}</span>}
         <span className="ml-auto flex items-center gap-1.5">
-          <button type="button" onClick={ai.run} disabled={ai.pending}
-            className={`${shown?.brief ? 'crm-ai-soft' : 'crm-ai-fill'} inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-a-accent`}>
-            {shown?.brief ? <RefreshCw size={13} aria-hidden className={ai.pending ? 'animate-spin' : ''} /> : <Sparkles size={13} aria-hidden />}
-            {ai.pending ? t('crm.leads.ai_reading', 'Reading…') : shown?.brief ? t('crm.leads.ai_refresh_short', 'Again') : t('crm.leads.ai_write_short', 'Write it')}
+          <button type="button" onClick={onOpen}
+            className={`${summary ? 'crm-ai-soft' : 'crm-ai-fill'} inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-a-accent`}>
+            <Sparkles size={13} aria-hidden />{t('crm.sales.open_brief')}
           </button>
         </span>
       </div>
-      {(shown?.brief || ai.failed || Boolean(ai.error)) && (
+      {summary && (
         <div className="space-y-2 border-t border-a-border px-4 py-3">
-          {shown?.brief && (
+          <p className="whitespace-pre-wrap break-words text-sm text-a-text">{summary}</p>
+          {!brief && (
             <>
-              <p className="text-sm text-a-text">{shown.brief}</p>
               <div className="flex flex-wrap gap-1.5">
-                {typeof shown.win_probability === 'number' && tone && <Pill tone={tone}>{t('crm.leads.ai_win', '{{percent}} % likely to win', { percent: shown.win_probability })}</Pill>}
+                {typeof lead.ai_win_probability === 'number' && tone && <Pill tone={tone}>{t('crm.leads.ai_win', '{{percent}} % likely to win', { percent: lead.ai_win_probability })}</Pill>}
                 {intent && <Pill tone="ai">{intent}</Pill>}
-                {cold && <Pill tone={shown.going_cold_risk === 'high' ? 'danger' : shown.going_cold_risk === 'medium' ? 'pending' : 'success'}>{cold}</Pill>}
+                {cold && <Pill tone={lead.ai_going_cold_risk === 'high' ? 'danger' : lead.ai_going_cold_risk === 'medium' ? 'pending' : 'success'}>{cold}</Pill>}
               </div>
-              {shown.suggested_action && <p className="text-sm"><span className="crm-ai-text font-medium">{t('crm.leads.ai_next', 'Next:')}</span> <span className="text-a-text">{shown.suggested_action}</span></p>}
+              {lead.ai_suggested_action && <p className="text-sm"><span className="crm-ai-text font-medium">{t('crm.leads.ai_next', 'Next:')}</span> <span className="text-a-text">{lead.ai_suggested_action}</span></p>}
             </>
           )}
-          {ai.failed && <p className="text-sm text-a-danger">{t('crm.errors.ai_failed', 'The AI could not help just now. Please try again in a moment.')}</p>}
-          {Boolean(ai.error) && <Notice tone="danger">{errorText(t, ai.error)}</Notice>}
         </div>
       )}
     </section>
-  )
-}
-
-/** A proposal drafted by the AI (`draft-proposal`): copied, or put in the Activity tab's box for a person to send. */
-export function ProposalDialog({ leadId, onClose, onUse }: { leadId: number; onClose: () => void; onUse: (seed: Omit<ComposerSeed, 'n'>) => void }) {
-  const { t } = useTranslation()
-  const toast = useToast()
-  const draft = useQuery({
-    queryKey: ['crm', 'leads', 'proposal', leadId],
-    queryFn: () => send<ProposalDraft>('post', `inquiries/${leadId}/draft-proposal`),
-    staleTime: Infinity,
-    gcTime: 0,
-    retry: false,
-  })
-  const ok = draft.data && !draft.data.error && (draft.data.subject || draft.data.body)
-  const copy = async () => {
-    if (!draft.data) return
-    try {
-      await navigator.clipboard.writeText(`${draft.data.subject}\n\n${draft.data.body}`)
-      toast(t('crm.common.copied', 'Copied'))
-    } catch {
-      toast(t('crm.errors.unknown', 'Something went wrong. Please try again.'), 'danger')
-    }
-  }
-  return (
-    <Dialog title={t('crm.leads.proposal_title', 'A proposal, drafted by AI')} onClose={onClose}>
-      <div className="space-y-4">
-        <QueryState loading={draft.isLoading} error={draft.error} onRetry={() => { void draft.refetch() }} rows={3}>
-          {ok ? (
-            <div className="crm-ai-border space-y-2 rounded-xl border p-3">
-              <p className="text-sm font-semibold text-a-text">{draft.data?.subject}</p>
-              <p className="whitespace-pre-wrap text-sm text-a-text">{draft.data?.body}</p>
-            </div>
-          ) : (
-            <Notice tone="danger">{t('crm.errors.ai_failed', 'The AI could not help just now. Please try again in a moment.')}</Notice>
-          )}
-        </QueryState>
-        <p className="text-xs text-a-text-2">{t('crm.leads.proposal_line', 'Nothing is sent. Read it, change it, then send it yourself.')}</p>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="secondary" onClick={() => { void draft.refetch() }} disabled={draft.isFetching}><RefreshCw size={14} aria-hidden />{t('crm.leads.proposal_again', 'Draft again')}</Button>
-          <Button variant="secondary" onClick={() => { void copy() }} disabled={!ok}><Copy size={14} aria-hidden />{t('crm.common.copy', 'Copy')}</Button>
-          <Button onClick={() => draft.data && onUse({ type: 'email', subject: draft.data.subject, body: draft.data.body })} disabled={!ok}>
-            <ListPlus size={14} aria-hidden />{t('crm.leads.proposal_use_short', 'Use it')}
-          </Button>
-        </div>
-      </div>
-    </Dialog>
   )
 }
 

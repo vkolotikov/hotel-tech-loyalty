@@ -149,18 +149,6 @@ export interface Attachment {
 
 export interface LostReason { id: number; label: string; slug?: string; sort_order?: number }
 
-/** `POST inquiries/{id}/ai-brief`. A failure still answers 200 with `error`. */
-export interface AiBrief {
-  brief: string | null
-  intent: string | null
-  win_probability: number | null
-  going_cold_risk: string | null
-  suggested_action: string | null
-  generated_at: string | null
-  cached: boolean
-  error?: string
-}
-
 /** `POST inquiries/{id}/guess-lost-reason`. */
 export interface LostGuess {
   lost_reason_id: number | null
@@ -169,9 +157,6 @@ export interface LostGuess {
   reasoning: string | null
   error?: string
 }
-
-/** `POST inquiries/{id}/draft-proposal`. */
-export interface ProposalDraft { subject: string; body: string; error?: string }
 
 export interface ChatMessage {
   id: number

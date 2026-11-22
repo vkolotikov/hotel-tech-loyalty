@@ -359,3 +359,28 @@ their sources. Proposal planning notes stay in the CRM.
 The matching lead and contact routes share `BusinessProfile` and `guest_business_profiles`. Profile versions protect
 concurrent edits. CRM discovery uses the `ai` worker queue and records its searches and model usage under `crm_discovery`.
 Only the public company name, website and CRM language are sent for discovery.
+
+## Lead AI assistant and our business
+
+Open a lead's **AI assistant** tab. It offers an AI brief, a sales strategy, a marketing strategy, a proposal email
+and a response email. The lead's **AI brief** and **Proposal** buttons open the corresponding tools.
+Add a focus before generating when a particular question or scope matters.
+
+Save a reviewed sales or marketing strategy with **Save strategy for drafts**. Both saved plans can inform later
+proposal and response drafts. A new AI strategy leaves the reviewed plan in place until staff edit and save it.
+Review the subject, message and verification notes before using an email draft. **Open in Activity** fills the
+lead's activity form, and **Open in email** starts a compose window in the user's email client. Open the original
+email from **Emails** to reply in its thread.
+
+In **Settings → Our business**, managers can add the brand's offers, unique selling proposition, audiences, markets,
+proof, terms, voice and guidance. A brand with Content Planner uses its existing profile, active audience and
+voice information, and saved text snippets. The CRM values take precedence field by field. Clear a CRM value to
+use the Planner's value again. In **All brands**, this settings page shows the default available brand. The lead
+assistant always reads the lead's own brand profile.
+
+The assistant takes recent lead activities, linked chat, the reviewed customer profile, and the current business
+profile. FDS leads also use matched email and WhatsApp history when available. The result shows its coverage.
+Generation sends a bounded context to OpenAI Responses, with storage disabled and without web tools. Jobs run
+on the `ai` queue, using the organisation's AI allowance under `crm_sales_assistant`. The assistant stores the
+latest generated result for each mode and the staff-reviewed strategies on the lead. It drafts emails for staff
+review.

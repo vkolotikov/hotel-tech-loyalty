@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, Check, Trophy, XCircle } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
+import type { Result } from '../sales/assistantData'
 import { CustomFieldsCard, ContactCard, AiCard, StayCard } from './LeadSide'
 import { DetailsCard, KeyFacts } from './LeadFacts'
 import { useLeadFields } from './leadData'
 import { activeFields, hasStay, kindOf } from './leadLogic'
 import { stageSteps } from './listLogic'
-import type { AiRead } from './recordData'
 import type { LeadDetail, Stage } from './leadTypes'
 
 /**
@@ -15,12 +15,13 @@ import type { LeadDetail, Stage } from './leadTypes'
  * move, changed where they stand, what the AI made of it, then who it is, its details, a hotel's stay and the
  * organisation's own fields.
  */
-export function OverviewTab({ lead, stages, onPick, busy, ai, onEdit, onDeal }: {
+export function OverviewTab({ lead, stages, onPick, busy, brief, onBrief, onEdit, onDeal }: {
   lead: LeadDetail
   stages: Stage[]
   onPick: (stage: Stage) => void
   busy: boolean
-  ai: AiRead
+  brief?: Result
+  onBrief: () => void
   onEdit: () => void
   /** To the Deal tab (a won lead). */
   onDeal: () => void
@@ -46,7 +47,7 @@ export function OverviewTab({ lead, stages, onPick, busy, ai, onEdit, onDeal }: 
         <StageBar lead={lead} stages={stages} onPick={onPick} busy={busy} />
         <KeyFacts lead={lead} />
       </section>
-      <AiCard ai={ai} />
+      <AiCard lead={lead} brief={brief} onOpen={onBrief} />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <ContactCard lead={lead} />
         <DetailsCard lead={lead} onEdit={onEdit} />

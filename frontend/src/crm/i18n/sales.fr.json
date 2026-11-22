@@ -1,0 +1,108 @@
+{
+  "title": "Assistant IA",
+  "open_brief": "Ouvrir le brief",
+  "focus": "Point à privilégier (facultatif)",
+  "generate": "Générer",
+  "regenerate": "Générer à nouveau",
+  "working": "Génération en cours · {{mode}}…",
+  "result": "Brouillon IA",
+  "review": "À vérifier",
+  "reload": "Charger la dernière version",
+  "modes": {
+    "brief": "Brief IA",
+    "sales_strategy": "Stratégie commerciale",
+    "marketing_strategy": "Stratégie marketing",
+    "proposal": "E-mail de proposition",
+    "reply": "E-mail de réponse"
+  },
+  "describe": {
+    "brief": "Résumez la demande, les échanges et les décisions en attente.",
+    "sales_strategy": "Préparez un plan pour qualifier cette opportunité, positionner votre offre et conclure la vente.",
+    "marketing_strategy": "Recommandez des messages, des canaux et des services adaptés aux marchés du client.",
+    "proposal": "Rédigez une proposition qui relie vos services aux objectifs du client.",
+    "reply": "Rédigez une réponse au dernier e-mail entrant enregistré ou à la dernière demande du client."
+  },
+  "examples": {
+    "brief": "Mettre l’accent sur la demande et les points à confirmer.",
+    "sales_strategy": "Aborder les priorités de l’acheteur et l’objection sur le prix.",
+    "marketing_strategy": "Proposer une première campagne pour le marché belge du client.",
+    "proposal": "Proposer un périmètre par étapes et un court appel de découverte.",
+    "reply": "Répondre aux questions sur la livraison et les échantillons."
+  },
+  "context": {
+    "title": "Sources utilisées",
+    "customer_fields": "Champs du profil client",
+    "business_fields": "Champs sur notre entreprise",
+    "activities": "Activités CRM",
+    "chats": "Messages de chat",
+    "emails": "E-mails",
+    "whatsapp": "Messages WhatsApp"
+  },
+  "mail": {
+    "empty": "Aucun e-mail n’a encore été enregistré pour ce contact.",
+    "partial": "Le contenu de certains e-mails enregistrés était indisponible.",
+    "unavailable": "L’historique des e-mails était indisponible lors de cette génération.",
+    "address_required": "Ajoutez l’adresse e-mail du contact pour inclure ses e-mails enregistrés.",
+    "review_required": "La correspondance e-mail de ce contact doit être vérifiée.",
+    "not_connected": "L’historique des e-mails n’est pas connecté à ce prospect."
+  },
+  "strategy": {
+    "title": "Stratégie pour les brouillons",
+    "edit": "Stratégie relue",
+    "placeholder": "Générez un brouillon ci-dessus ou saisissez ici le plan de votre équipe.",
+    "save": "Enregistrer la stratégie pour les brouillons",
+    "saved": "Stratégie enregistrée",
+    "saved_label": "Enregistrée",
+    "use_ai": "Utiliser le dernier brouillon IA",
+    "changed": "La stratégie a changé. Chargez la dernière version avant d’enregistrer.",
+    "available": "Disponibles pour ce brouillon · {{plans}}",
+    "none": "Enregistrez une stratégie commerciale ou marketing relue pour l’inclure dans l’e-mail.",
+    "used": "Stratégies utilisées · {{plans}}"
+  },
+  "email": {
+    "draft": "Brouillon d’e-mail",
+    "subject": "Objet",
+    "body": "Message",
+    "open": "Ouvrir dans la messagerie",
+    "use_activity": "Ouvrir dans Activité",
+    "view_history": "Voir l’historique des e-mails",
+    "reply_to": "Réponse basée sur {{subject}}",
+    "reply_missing": "Ce brouillon utilise l’historique du prospect. Aucun e-mail entrant enregistré n’était disponible.",
+    "edit_hint": "Relisez le brouillon avant l’envoi. Le CRM conserve la version générée."
+  },
+  "profile": {
+    "title": "Notre entreprise",
+    "caption": "Ajoutez les informations que l’IA doit utiliser. Les champs vides peuvent reprendre les données de cette marque dans Content Planner.",
+    "read_only": "Un responsable peut modifier les informations de l’entreprise.",
+    "planner": "Content Planner",
+    "crm_value": "Valeur CRM",
+    "view_planner": "Voir la valeur de Content Planner",
+    "saved": "Profil de l’entreprise enregistré",
+    "changed": "Le profil a changé. Chargez la dernière version avant d’enregistrer.",
+    "groups": {
+      "business": "Identité de l’entreprise",
+      "selling": "Services et vente"
+    },
+    "fields": {
+      "name": "Nom de l’entreprise",
+      "website": "Site web",
+      "overview": "Présentation de l’entreprise",
+      "usp": "Proposition de vente unique",
+      "values": "Valeurs et mission",
+      "audiences": "Publics cibles",
+      "markets": "Marchés",
+      "offerings": "Produits et services",
+      "positioning": "Positionnement et différenciation",
+      "proof": "Références et études de cas",
+      "terms": "Tarifs et conditions commerciales",
+      "voice": "Voix de la marque",
+      "guidelines": "Consignes commerciales et promesses",
+      "next_step": "Prochaine étape privilégiée"
+    }
+  },
+  "errors": {
+    "assistant_timed_out": "Le délai de génération a expiré. Relancez la génération.",
+    "assistant_unavailable": "L’assistant est indisponible dans cet espace.",
+    "assistant_access_changed": "L’accès à ce prospect a changé pendant la génération."
+  }
+}

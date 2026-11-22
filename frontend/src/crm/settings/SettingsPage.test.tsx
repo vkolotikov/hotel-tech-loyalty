@@ -61,10 +61,10 @@ function render(at: string, data: Partial<Bootstrap> = {}) {
 const staff = { staff: { ...boot.staff, role: 'staff', can: { ...boot.staff.can, manage_canned: false, manage_pipelines: false, manage_team: false } } }
 
 describe('SettingsPage', () => {
-  it('shows its six sections and opens on the canned replies: a compact list a manager edits in place, read only for staff', () => {
+  it('shows its seven sections and opens on the canned replies: a compact list a manager edits in place, read only for staff', () => {
     const html = render('/crm/settings')
-    for (const label of ['Canned replies', 'Pipelines', 'Lead forms', 'Custom fields', 'Templates', 'Account']) expect(html).toContain(label)
-    expect(html.match(/role="tab"/g)).toHaveLength(6)
+    for (const label of ['Canned replies', 'Pipelines', 'Lead forms', 'Custom fields', 'Templates', 'crm.sales.profile.title', 'Account']) expect(html).toContain(label)
+    expect(html.match(/role="tab"/g)).toHaveLength(7)
     expect(html).toContain('aria-labelledby="settings-section-canned"')
     expect(html).toContain('Short answers the team inserts in the inbox.')
     // Rows show the name and the first line; a press opens the row in place (no text boxes until then).

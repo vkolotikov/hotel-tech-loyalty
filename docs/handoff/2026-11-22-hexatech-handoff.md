@@ -1,5 +1,14 @@
 # Handoff — 22 November 2026
 
+## CRM lead AI assistant
+
+Leads have an **AI assistant** for briefs, sales and marketing plans, proposals and response emails. Staff can
+save either strategy after review and use it in later drafts. **Settings → Our business** holds each brand's
+business profile. It reuses the brand's available Content Planner information and supports CRM-only teams.
+The assistant uses reviewed customer discovery fields and recent conversation history, including matched
+FDS email or WhatsApp messages when available. Results show which sources were used. See the
+[CRM assistant runbook](../crm-workspace.md#lead-ai-assistant-and-our-business).
+
 ## CRM WhatsApp and AI Discovery
 
 The FDS Cards Contacts DB production check found an active webhook verification and zero connected accounts,

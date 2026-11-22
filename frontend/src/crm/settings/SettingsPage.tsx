@@ -1,9 +1,10 @@
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Building2, ClipboardList, Columns3, Mails, MessageSquareReply, Settings2, SlidersHorizontal } from 'lucide-react'
+import { Building2, ClipboardList, Columns3, Mails, MessageSquareReply, Settings2, SlidersHorizontal, Store } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { Page } from '../ui/Page'
 import { SectionNav, type Section } from '../ui/SectionNav'
+import { SalesProfileTab } from '../sales/SalesProfileTab'
 import { AccountTab } from './AccountTab'
 import { CannedTab } from './CannedTab'
 import { CustomFieldsTab } from './CustomFieldsTab'
@@ -20,7 +21,7 @@ const PANEL_ID = 'settings-panel'
 /**
  * Settings (HexaTech CRM; round 2 "structured sections"): the inbox's canned replies, the pipelines and why leads are
  * lost, the lead forms for the website, the venue's own fields, the email templates (round 5: a CRM-only organisation
- * has no full admin to make them in) and the account's pages — six sections in `?tab=` (Get started links to
+ * has no full admin to make them in), the brand's business profile and the account's pages in `?tab=` (Get started links to
  * `?tab=pipelines`). Rights are the server's, mirrored by the bootstrap: canned replies `manage_canned`, pipelines and
  * custom fields `manage_pipelines`, templates `manage_templates`; lead forms are everyone's, as in the full admin.
  */
@@ -40,6 +41,7 @@ export function SettingsPage() {
     { key: 'forms', icon: ClipboardList, tone: 'success', title: t('crm.settings.tab.forms', 'Lead forms'), caption: t('crm.settings.caption.forms', 'Forms on your website that send you leads.') },
     { key: 'fields', icon: SlidersHorizontal, tone: 'pending', title: t('crm.settings.tab.fields', 'Custom fields'), caption: t('crm.settings.caption.fields', 'Your own fields on leads, contacts and tasks.') },
     { key: 'templates', icon: Mails, tone: 'ai', title: t('crm.settings.tab.templates', 'Templates'), caption: t('crm.settings.caption.templates', 'Email templates your team sends from a lead.') },
+    { key: 'business', icon: Store, tone: 'accent', title: t('crm.sales.profile.title'), caption: t('crm.sales.profile.caption') },
     { key: 'account', icon: Building2, tone: 'neutral', title: t('crm.settings.tab.account', 'Account'), caption: t('crm.settings.caption.account', 'Your team, and your plan.') },
   ]
 
@@ -52,6 +54,7 @@ export function SettingsPage() {
         {tab === 'forms' && <LeadFormsTab />}
         {tab === 'fields' && <CustomFieldsTab canManage={can.manage_pipelines} />}
         {tab === 'templates' && <TemplatesTab canManage={can.manage_templates === true} />}
+        {tab === 'business' && <SalesProfileTab canEdit={can.manage_integrations === true} />}
         {tab === 'account' && <AccountTab />}
       </div>
     </Page>
