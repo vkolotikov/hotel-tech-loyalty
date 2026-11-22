@@ -19,7 +19,7 @@ class WhatsAppCaptureTest extends TestCase
         config(['crm_mail.token' => 'test-token-for-local-whatsapp-outbound-fake']);
         DB::table('brands')->insert([
             'id' => 23, 'organization_id' => $this->org->id, 'name' => 'FDS Test', 'slug' => 'fds-test',
-            'is_default' => false, 'created_at' => now(), 'updated_at' => now(),
+            'is_default' => false, 'widget_token' => 'fds-test-whatsapp', 'created_at' => now(), 'updated_at' => now(),
         ]);
         $lead = $this->lead(['brand_id' => 23]);
         $other = $this->lead();
