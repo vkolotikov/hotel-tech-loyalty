@@ -28,6 +28,7 @@ final class LeadAssistantContext
     {
         $guest = $lead->guest;
         $account = $lead->corporateAccount;
+        $stage = $lead->pipelineStage;
         $customer = $guest ? GuestBusinessProfile::find($guest->id) : null;
         $profile = $this->profiles->data($org, $brand);
         $activities = $this->activities($lead, $brand);
@@ -47,7 +48,7 @@ final class LeadAssistantContext
         $reviewed = in_array($mode, ['proposal', 'reply'], true) ? $strategies : [];
         $company = Arr::only($customer?->fields ?? [], array_keys(BusinessProfile::definitions()));
         $enquiry = $lead->only([
-            'inquiry_type', 'source', 'status', 'num_rooms', 'num_adults', 'num_children', 'room_type_requested',
+            'inquiry_type', 'source', 'status', 'priority', 'num_rooms', 'num_adults', 'num_children', 'room_type_requested',
             'event_type', 'event_name', 'event_pax', 'function_space', 'catering_required', 'av_required',
         ]);
 
@@ -64,6 +65,7 @@ final class LeadAssistantContext
                     'recorded_rate' => $lead->rate_offered,
                     'internal_estimated_deal_value' => $lead->total_value,
                     'currency' => $lead->currency ?: PortalBootstrap::currency($org),
+                    'pipeline_stage' => $stage?->only(['name', 'kind', 'default_win_probability']),
                 ],
                 'contact' => array_map(fn ($value) => $this->text($value, 350), $guest?->only([
                     'full_name', 'company', 'position_title', 'country', 'preferred_language',

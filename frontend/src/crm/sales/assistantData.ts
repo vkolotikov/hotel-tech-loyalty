@@ -33,6 +33,12 @@ export type Result = {
   review_notes: string[]
   summary?: string
   sections?: { title: string; body: string }[]
+  signals?: {
+    intent: string | null
+    win_probability: number | null
+    going_cold_risk: string | null
+    suggested_action: string | null
+  }
   subject?: string
   body?: string
 }

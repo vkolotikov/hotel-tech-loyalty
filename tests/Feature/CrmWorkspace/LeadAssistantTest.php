@@ -30,7 +30,15 @@ class LeadAssistantTest extends TestCase
         $this->setUpCrmWorkspace();
         $this->org->forceFill(['entitled_products' => ['crm_chat']])->save();
         foreach ([
-            'inquiries' => ['notes' => fn ($table) => $table->text('notes')->nullable()],
+            'inquiries' => [
+                'notes' => fn ($table) => $table->text('notes')->nullable(),
+                'ai_brief' => fn ($table) => $table->text('ai_brief')->nullable(),
+                'ai_brief_at' => fn ($table) => $table->timestamp('ai_brief_at')->nullable(),
+                'ai_intent' => fn ($table) => $table->string('ai_intent')->nullable(),
+                'ai_win_probability' => fn ($table) => $table->unsignedInteger('ai_win_probability')->nullable(),
+                'ai_going_cold_risk' => fn ($table) => $table->string('ai_going_cold_risk')->nullable(),
+                'ai_suggested_action' => fn ($table) => $table->text('ai_suggested_action')->nullable(),
+            ],
             'visitors' => ['guest_id' => fn ($table) => $table->unsignedBigInteger('guest_id')->nullable()],
         ] as $table => $columns) {
             foreach ($columns as $column => $definition) {
@@ -63,6 +71,26 @@ class LeadAssistantTest extends TestCase
         Http::preventStrayRequests();
         Queue::fake();
         Mail::fake();
+    }
+
+    public function test_the_richer_brief_also_updates_the_existing_pipeline_signals(): void
+    {
+        $lead = $this->lead(['notes' => 'Customer asked about lead time and sample options.']);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->providerOutput([
+            'summary' => 'The client is reviewing a sample.', 'sections' => [], 'review_notes' => [],
+            'signals' => ['intent' => 'info_request', 'win_probability' => 72, 'going_cold_risk' => 'low',
+                'suggested_action' => 'Confirm the sample lead time.'],
+        ]))]);
+
+        $this->asStaffMember()->postJson($path, ['mode' => 'brief', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.brief.signals.win_probability', 72)
+            ->assertJsonPath('results.brief.signals.going_cold_risk', 'low');
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $lead, 'ai_brief' => 'The client is reviewing a sample.', 'ai_intent' => 'info_request',
+            'ai_win_probability' => 72, 'ai_going_cold_risk' => 'low', 'ai_suggested_action' => 'Confirm the sample lead time.',
+        ]);
     }
 
     public function test_reviewed_strategies_and_customer_context_feed_drafts_for_the_right_brand(): void

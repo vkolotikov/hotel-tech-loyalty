@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -99,6 +99,10 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
   const pipelines = usePipelines()
   const settings = useLeadSettings()
   const assistant = useAssistant(lead.id)
+  const briefSignalId = assistant.data?.results.brief?.signals ? assistant.data.results.brief.id : null
+  useEffect(() => {
+    if (briefSignalId) changed()
+  }, [briefSignalId, changed])
   const activities = useLeadActivities(lead.id)
   const files = useLeadFiles(lead.id)
   const chats = useLeadChats(lead.id)

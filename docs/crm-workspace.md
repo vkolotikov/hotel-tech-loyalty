@@ -365,6 +365,7 @@ Only the public company name, website and CRM language are sent for discovery.
 Open a lead's **AI assistant** tab. It offers an AI brief, a sales strategy, a marketing strategy, a proposal email
 and a response email. The lead's **AI brief** and **Proposal** buttons open the corresponding tools.
 Add a focus before generating when a particular question or scope matters.
+The brief also refreshes the lead's intent, win estimate, going-cold risk and suggested next action.
 
 Save a reviewed sales or marketing strategy with **Save strategy for drafts**. Both saved plans can inform later
 proposal and response drafts. A new AI strategy leaves the reviewed plan in place until staff edit and save it.

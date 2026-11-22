@@ -2,15 +2,18 @@
 
 namespace App\Services\Crm;
 
+use App\Enums\InquiryCategory;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 final class LeadAssistantWriter
 {
+    private const COLD_RISKS = ['low', 'medium', 'high'];
+
     public function write(string $mode, string $language, string $focus, array $context): array
     {
         $task = match ($mode) {
-            'brief' => 'Write an internal brief with the situation, confirmed requirements, open questions and next actions.',
+            'brief' => 'Write an internal brief with the situation, confirmed requirements, open questions and next actions. Provide a lead intent, an approximate win probability from 0 to 100, a going-cold risk, and one suggested next action. Use the pipeline stage and history. Use null for scores that the available evidence cannot support.',
             'sales_strategy' => 'Write an internal sales plan for this lead. Cover fit, buyer priorities, relevant offers and differentiators, objections, likely decision steps, and a phased follow-up plan.',
             'marketing_strategy' => 'Write an internal marketing plan for the opportunity. Connect the customer audience, markets and positioning to our relevant services. Propose messages, channels, deliverables, a first test, and how to measure it. Identify expansion ideas worth validating.',
             'proposal' => 'Draft a complete, customer-facing proposal email with a specific subject, scope, customer outcomes, relevant proof and a practical next step. Include commercial details only when confirmed for this lead. Add missing details for the CRM user to check in review_notes.',
@@ -22,6 +25,14 @@ final class LeadAssistantWriter
         $fields = $email
             ? ['subject' => $str, 'body' => $str, 'review_notes' => $reviewNotes]
             : ['summary' => $str, 'sections' => ['type' => 'array', 'items' => $this->object(['title' => $str, 'body' => $str])], 'review_notes' => $reviewNotes];
+        if ($mode === 'brief') {
+            $fields['signals'] = $this->object([
+                'intent' => ['type' => 'string', 'enum' => InquiryCategory::values()],
+                'win_probability' => ['type' => ['integer', 'null']],
+                'going_cold_risk' => ['type' => ['string', 'null'], 'enum' => [...self::COLD_RISKS, null]],
+                'suggested_action' => $str,
+            ]);
+        }
 
         $response = Http::acceptJson()->withToken((string) config('openai.api_key'))
             ->connectTimeout(6)->timeout(65)->withoutRedirecting()
@@ -56,7 +67,20 @@ PROMPT,
             ->where('type', 'output_text')->pluck('text')->implode('');
         $result = json_decode($output, true);
 
-        return ['result' => $this->clean($result, $email), 'usage' => $data['usage'] ?? []];
+        $clean = $this->clean($result, $email);
+        if ($mode === 'brief') {
+            $signals = $result['signals'] ?? [];
+            $probability = $signals['win_probability'] ?? null;
+            $cold = $signals['going_cold_risk'] ?? null;
+            $clean['signals'] = [
+                'intent' => InquiryCategory::normalise($this->text($signals['intent'] ?? null, 32))->value,
+                'win_probability' => is_int($probability) && $probability >= 0 && $probability <= 100 ? $probability : null,
+                'going_cold_risk' => in_array($cold, self::COLD_RISKS, true) ? $cold : null,
+                'suggested_action' => $this->text($signals['suggested_action'] ?? null, 500) ?: null,
+            ];
+        }
+
+        return ['result' => $clean, 'usage' => $data['usage'] ?? []];
     }
 
     private function clean(mixed $result, bool $email): array

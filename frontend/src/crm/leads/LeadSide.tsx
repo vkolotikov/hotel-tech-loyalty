@@ -112,9 +112,15 @@ export function AiCard({ lead, brief, onOpen }: { lead: LeadDetail; brief?: Resu
   const { t, i18n } = useTranslation()
   const summary = brief?.summary || lead.ai_brief
   const generatedAt = brief?.generated_at || lead.ai_brief_at
-  const tone = winTone(lead.ai_win_probability)
-  const intent = intentLabel(t, lead.ai_intent)
-  const cold = coldLabel(t, lead.ai_going_cold_risk)
+  const signals = brief?.signals ?? {
+    win_probability: lead.ai_win_probability,
+    intent: lead.ai_intent,
+    going_cold_risk: lead.ai_going_cold_risk,
+    suggested_action: lead.ai_suggested_action,
+  }
+  const tone = winTone(signals.win_probability)
+  const intent = intentLabel(t, signals.intent)
+  const cold = coldLabel(t, signals.going_cold_risk)
   return (
     <section aria-label={t('crm.leads.ai_title', 'AI brief')} className="crm-ai-border min-w-0 rounded-2xl border bg-a-surface shadow-a-sm">
       <div className="flex min-h-12 flex-wrap items-center gap-2 px-4 py-2">
@@ -132,16 +138,12 @@ export function AiCard({ lead, brief, onOpen }: { lead: LeadDetail; brief?: Resu
       {summary && (
         <div className="space-y-2 border-t border-a-border px-4 py-3">
           <p className="whitespace-pre-wrap break-words text-sm text-a-text">{summary}</p>
-          {!brief && (
-            <>
-              <div className="flex flex-wrap gap-1.5">
-                {typeof lead.ai_win_probability === 'number' && tone && <Pill tone={tone}>{t('crm.leads.ai_win', '{{percent}} % likely to win', { percent: lead.ai_win_probability })}</Pill>}
-                {intent && <Pill tone="ai">{intent}</Pill>}
-                {cold && <Pill tone={lead.ai_going_cold_risk === 'high' ? 'danger' : lead.ai_going_cold_risk === 'medium' ? 'pending' : 'success'}>{cold}</Pill>}
-              </div>
-              {lead.ai_suggested_action && <p className="text-sm"><span className="crm-ai-text font-medium">{t('crm.leads.ai_next', 'Next:')}</span> <span className="text-a-text">{lead.ai_suggested_action}</span></p>}
-            </>
-          )}
+          <div className="flex flex-wrap gap-1.5">
+            {typeof signals.win_probability === 'number' && tone && <Pill tone={tone}>{t('crm.leads.ai_win', '{{percent}} % likely to win', { percent: signals.win_probability })}</Pill>}
+            {intent && <Pill tone="ai">{intent}</Pill>}
+            {cold && <Pill tone={signals.going_cold_risk === 'high' ? 'danger' : signals.going_cold_risk === 'medium' ? 'pending' : 'success'}>{cold}</Pill>}
+          </div>
+          {signals.suggested_action && <p className="text-sm"><span className="crm-ai-text font-medium">{t('crm.leads.ai_next', 'Next:')}</span> <span className="text-a-text">{signals.suggested_action}</span></p>}
         </div>
       )}
     </section>

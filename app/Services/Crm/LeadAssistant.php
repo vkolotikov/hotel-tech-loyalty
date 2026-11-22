@@ -116,6 +116,8 @@ final class LeadAssistant
     public function complete(int $leadId, int $brandId, string $runId, ?array $result = null, ?string $error = null): void
     {
         DB::transaction(function () use ($leadId, $brandId, $runId, $result, $error): void {
+            $lead = isset($result['signals'])
+                ? Inquiry::withoutGlobalScope(BrandScope::class)->lockForUpdate()->find($leadId) : null;
             $state = $this->query($leadId, $brandId)->lockForUpdate()->first();
             $run = $state?->run;
             if (($run['id'] ?? null) !== $runId || ! $this->active($run)) {
@@ -125,6 +127,14 @@ final class LeadAssistant
             $finished = now()->toISOString();
             if ($result !== null) {
                 $results[$run['mode']] = ['id' => $runId, ...$result, 'generated_at' => $finished];
+            }
+            if ($lead && SalesBrand::leadBrandId($lead) === $brandId) {
+                $signals = $result['signals'];
+                $lead->forceFill([
+                    'ai_brief' => $result['summary'], 'ai_brief_at' => now(), 'ai_intent' => $signals['intent'],
+                    'ai_win_probability' => $signals['win_probability'], 'ai_going_cold_risk' => $signals['going_cold_risk'],
+                    'ai_suggested_action' => $signals['suggested_action'],
+                ])->save();
             }
             $state->update([
                 'run' => [
