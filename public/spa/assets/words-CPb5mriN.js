@@ -1,0 +1,1 @@
+import{er as e}from"./index-BranxDfp.js";import{Bt as t}from"./LoyaltyApp-D80sa77N.js";function n(){let{t:n}=e();return(e,r)=>n(`loyalty.scandesign.${e}`,{defaultValue:t[e],...r})}export{n as t};
