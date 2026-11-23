@@ -14,7 +14,12 @@
   "newer": "Более новые сообщения",
   "older": "Более ранние сообщения",
   "import_progress": "Импорт истории",
+  "review_count": "Проверить совпадения ({{total}})",
+  "review_matches": "Проверить совпадения WhatsApp",
+  "contact_details": "Данные контакта",
   "state": {
+    "contact_link_required": "Свяжите контакт CRM",
+    "phone_sync_required": "Синхронизируйте номер WhatsApp",
     "setup_required": "Требуется настройка",
     "awaiting_messages": "Ожидание сообщений",
     "connected": "Подключено",
@@ -26,6 +31,8 @@
     "not_available": "История недоступна"
   },
   "detail": {
+    "contact_link_required": "Загрузите контакты CRM в Contacts DB и свяжите эту запись с существующим контактом.",
+    "phone_sync_required": "Сохраните один и тот же номер WhatsApp в международном формате в обеих записях, затем обновите контакты CRM в Contacts DB.",
     "setup_required": "Завершите подключение WhatsApp Business в Contacts DB.",
     "awaiting_messages": "Подключение настроено. Contacts DB ожидает первые сообщения.",
     "needs_attention": "Проверьте подключение WhatsApp в Contacts DB.",

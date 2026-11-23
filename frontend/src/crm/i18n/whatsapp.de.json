@@ -14,7 +14,12 @@
   "newer": "Neuere Nachrichten",
   "older": "Ältere Nachrichten",
   "import_progress": "Verlaufsimport",
+  "review_count": "Zuordnungen prüfen ({{total}})",
+  "review_matches": "WhatsApp-Zuordnungen prüfen",
+  "contact_details": "Kontaktdetails",
   "state": {
+    "contact_link_required": "CRM-Kontakt verknüpfen",
+    "phone_sync_required": "WhatsApp-Nummer synchronisieren",
     "setup_required": "Einrichtung erforderlich",
     "awaiting_messages": "Wartet auf Nachrichten",
     "connected": "Verbunden",
@@ -26,6 +31,8 @@
     "not_available": "Verlauf nicht verfügbar"
   },
   "detail": {
+    "contact_link_required": "Rufen Sie die CRM-Kontakte in Contacts DB ab und verknüpfen Sie diesen Datensatz mit dem vorhandenen Kontakt.",
+    "phone_sync_required": "Speichern Sie dieselbe internationale WhatsApp-Nummer in beiden Datensätzen und rufen Sie dann die aktuellen CRM-Kontakte in Contacts DB ab.",
     "setup_required": "Schließen Sie die Verbindung mit WhatsApp Business in der Kontaktdatenbank ab.",
     "awaiting_messages": "Die Verbindung ist eingerichtet. Die Kontaktdatenbank wartet auf die ersten Nachrichten.",
     "needs_attention": "Prüfen Sie die WhatsApp-Verbindung in der Kontaktdatenbank.",

@@ -14,7 +14,12 @@
   "newer": "Newer messages",
   "older": "Older messages",
   "import_progress": "History import",
+  "review_count": "Review matches ({{total}})",
+  "review_matches": "Review WhatsApp matches",
+  "contact_details": "Contact details",
   "state": {
+    "contact_link_required": "Link this CRM contact",
+    "phone_sync_required": "Sync the WhatsApp number",
     "setup_required": "Setup required",
     "awaiting_messages": "Waiting for messages",
     "connected": "Connected",
@@ -26,6 +31,8 @@
     "not_available": "History unavailable"
   },
   "detail": {
+    "contact_link_required": "Fetch CRM contacts in Contacts DB and link this record to the existing contact.",
+    "phone_sync_required": "Save the same international WhatsApp number in both records, then fetch the latest CRM contacts in Contacts DB.",
     "setup_required": "Complete the WhatsApp Business connection in Contacts DB.",
     "awaiting_messages": "The connection is configured. Contacts DB is waiting for the first messages.",
     "needs_attention": "Check the WhatsApp connection in Contacts DB.",

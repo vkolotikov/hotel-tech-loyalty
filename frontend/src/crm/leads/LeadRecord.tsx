@@ -235,7 +235,8 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
           </div>
         )}
         {shown === 'files' && <FilesTab leadId={lead.id} />}
-        {shown === 'whatsapp' && <WhatsAppHistory key={lead.id} resource="inquiries" id={lead.id} />}
+        {shown === 'whatsapp' && <WhatsAppHistory key={lead.id} resource="inquiries" id={lead.id}
+          onContactDetails={can.contact ? () => records.open('contact', lead.guest_id as number) : undefined} />}
         {shown === 'chat' && <ChatTab leadId={lead.id} />}
       </RecordFrame>
 

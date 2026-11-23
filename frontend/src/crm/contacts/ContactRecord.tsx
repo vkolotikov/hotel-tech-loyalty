@@ -140,7 +140,7 @@ export function ContactFrame({ id, tab, onTab, tools, titleId, onGone, onOpenCon
       tabs={tabs} tab={shown} onTab={choose}>
       {shown === 'overview' && <ContactOverview guest={g} idPrefix={idPrefix} />}
       {shown === 'business' && <BusinessProfilePanel resource="guests" id={id} />}
-      {shown === 'whatsapp' && <WhatsAppHistory key={id} resource="guests" id={id} />}
+      {shown === 'whatsapp' && <WhatsAppHistory key={id} resource="guests" id={id} onContactDetails={() => onTab('overview')} />}
       {tab === 'leads' && <ContactLeads id={id} rows={leadRows} loading={leads.isLoading} error={leads.error} onRetry={() => { void leads.refetch() }} />}
       {tab === 'activity' && <ContactActivity id={id} rows={timelineRows} loading={timeline.isLoading} error={timeline.error} onRetry={() => { void timeline.refetch() }} />}
       {tab === 'emails' && (

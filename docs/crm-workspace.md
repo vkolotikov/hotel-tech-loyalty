@@ -345,9 +345,14 @@ durable deduplication, shared hourly budgets and permanent marketing opt-out are
 the captured message count and most recent event. Open **Contacts DB → Integrations** to complete Meta Embedded Signup
 for the business number. The lead and contact **WhatsApp** tabs read incoming messages, business-app echoes and imported
 history from Contacts DB. Open original media in WhatsApp. The CRM uses the existing FDS Cards server bridge, and
-Contacts DB requires an active linked contact and the same international number in both systems. Ambiguous matches
-stay in Contacts DB for review. A changed phone takes effect when the Contacts DB CRM feed has the updated record.
-The CRM history reads the stored messages as Contacts DB receives them.
+Contacts DB requires an active linked contact and the same international number in both systems. Captured history
+becomes visible as soon as the saved number identifies one contact and the CRM feed has the updated record.
+If the WhatsApp tab shows **Link this CRM contact** or **Sync the WhatsApp number**, open Contacts DB, use
+**Fetch contacts** on the FDS Cards CRM card and review the relevant change. Existing verified links and explicit
+exclusions take precedence. Conversations with a shared or reassigned number stay available for review.
+
+Use **Review matches** in **Integrations → Channels** to open the Contacts DB queue directly. Search by the full
+number or its last four digits. Only conversations containing captured messages count toward the review total.
 
 **AI Discovery.** Open a lead or contact and select **AI Discovery**. Enter the company or its official website and press
 **Research with AI**. Discovery queues a public-company search, then returns field-level sources, possible follow-up

@@ -14,7 +14,12 @@
   "newer": "Mensajes más recientes",
   "older": "Mensajes anteriores",
   "import_progress": "Importación del historial",
+  "review_count": "Revisar coincidencias ({{total}})",
+  "review_matches": "Revisar coincidencias de WhatsApp",
+  "contact_details": "Datos del contacto",
   "state": {
+    "contact_link_required": "Vincule este contacto del CRM",
+    "phone_sync_required": "Sincronice el número de WhatsApp",
     "setup_required": "Configuración pendiente",
     "awaiting_messages": "En espera de mensajes",
     "connected": "Conectado",
@@ -26,6 +31,8 @@
     "not_available": "Historial no disponible"
   },
   "detail": {
+    "contact_link_required": "Importe los contactos del CRM en Contacts DB y vincule este registro al contacto existente.",
+    "phone_sync_required": "Guarde el mismo número internacional de WhatsApp en ambos registros y vuelva a importar los contactos del CRM en Contacts DB.",
     "setup_required": "Complete la conexión de WhatsApp Business en Contacts DB.",
     "awaiting_messages": "La conexión está configurada. Contacts DB espera los primeros mensajes.",
     "needs_attention": "Revise la conexión de WhatsApp en Contacts DB.",
