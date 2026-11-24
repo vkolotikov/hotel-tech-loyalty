@@ -1,1 +1,0 @@
-import{er as e}from"./index-K47X4Bvg.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
