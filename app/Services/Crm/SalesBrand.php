@@ -17,7 +17,7 @@ final class SalesBrand
     public function forLead(User $user, Inquiry $lead): Brand
     {
         $id = self::leadBrandId($lead);
-        abort_unless($id, 404);
+        abort_unless(($id ?? 0) > 0, 404);
 
         $brand = $this->resolve($user, $id);
         abort_unless((int) $brand->organization_id === (int) $lead->organization_id, 404);

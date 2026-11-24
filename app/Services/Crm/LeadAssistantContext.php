@@ -61,7 +61,7 @@ final class LeadAssistantContext
                     'next_task' => $this->text($lead->next_task_notes, 1200),
                     'check_in' => $lead->check_in?->toDateString(),
                     'check_out' => $lead->check_out?->toDateString(),
-                    'property' => $this->text($lead->property?->getAttribute('name'), 200),
+                    'property' => $this->text($lead->property?->name, 200),
                     'recorded_rate' => $lead->rate_offered,
                     'internal_estimated_deal_value' => $lead->total_value,
                     'currency' => $lead->currency ?: PortalBootstrap::currency($org),

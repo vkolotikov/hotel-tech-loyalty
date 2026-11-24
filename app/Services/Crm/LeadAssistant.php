@@ -9,6 +9,7 @@ use App\Models\CrmLeadAssistant;
 use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Scopes\BrandScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -36,10 +37,10 @@ final class LeadAssistant
 
         return [
             'brand' => ['id' => (int) $brand->id, 'name' => $brand->name],
-            'revision' => $state?->revision ?? 0,
+            'revision' => $state->revision ?? 0,
             'run' => $run ? array_diff_key($run, array_flip(['requested_by', 'language', 'focus'])) : null,
-            'results' => (object) ($state?->results ?? []),
-            'strategies' => (object) ($state?->strategies ?? []),
+            'results' => (object) ($state->results ?? []),
+            'strategies' => (object) ($state->strategies ?? []),
         ];
     }
 
@@ -82,7 +83,7 @@ final class LeadAssistant
             $current = Inquiry::withoutGlobalScope(BrandScope::class)->lockForUpdate()->findOrFail($lead->id);
             abort_unless(SalesBrand::leadBrandId($current) === (int) $brand->id, 409);
             $state = $this->query($lead->id, $brand->id)->lockForUpdate()->first();
-            if (($state?->revision ?? 0) !== (int) $input['revision']
+            if (($state->revision ?? 0) !== (int) $input['revision']
                 || (! $state && CrmLeadAssistant::query()->whereKey($lead->id)->exists())) {
                 throw new AiHelperRefused('strategy_changed', 'The strategy changed. Reload it before saving.', 409);
             }
@@ -154,7 +155,8 @@ final class LeadAssistant
         AiHelperRefused::unlessAllowanceLeft($org);
     }
 
-    private function query(int $leadId, int $brandId): \Illuminate\Database\Eloquent\Builder
+    /** @return Builder<CrmLeadAssistant> */
+    private function query(int $leadId, int $brandId): Builder
     {
         return CrmLeadAssistant::query()->whereKey($leadId)->where('brand_id', $brandId);
     }

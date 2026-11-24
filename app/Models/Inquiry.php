@@ -130,11 +130,13 @@ class Inquiry extends Model
         return $this->hasMany(Task::class)->whereNull('completed_at')->orderBy('due_at');
     }
 
+    /** @return BelongsTo<CorporateAccount, $this> */
     public function corporateAccount(): BelongsTo
     {
         return $this->belongsTo(CorporateAccount::class);
     }
 
+    /** @return BelongsTo<Property, $this> */
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);

@@ -95,10 +95,10 @@ final class BusinessProfile
 
         return [
             'groups' => self::GROUPS,
-            'fields' => (object) ($profile?->fields ?? []),
+            'fields' => (object) ($profile->fields ?? []),
             'suggested_company' => $company ?: $guest->company,
-            'sources' => (object) ($profile?->sources ?? []),
-            'revision' => $profile?->revision ?? 0,
+            'sources' => (object) ($profile->sources ?? []),
+            'revision' => $profile->revision ?? 0,
             'updated_at' => $profile?->updated_at?->toISOString(),
             'discovery' => $discovery ? array_diff_key($discovery, array_flip(['identity', 'requested_by'])) : null,
         ];

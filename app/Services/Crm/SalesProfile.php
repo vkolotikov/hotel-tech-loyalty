@@ -124,7 +124,7 @@ final class SalesProfile
         $snippets = $profile->snippets()->withoutGlobalScope(BrandScope::class)->where('brand_id', $brand->id)
             ->where('kind', 'text')->orderBy('sort_order')->orderBy('id')->limit(6)->get();
         $positioning = [$profile->brand_promise, $profile->differentiators, ...array_values($profile->positioning ?? [])];
-        $guidelines = [...array_values($profile->content_rules ?? []), ...($voice?->claims_to_avoid ?? [])];
+        $guidelines = [...array_values($profile->content_rules ?? []), ...($voice->claims_to_avoid ?? [])];
 
         return array_filter([
             'name' => $this->text($profile->name),
@@ -137,7 +137,7 @@ final class SalesProfile
             'offerings' => $this->lines($snippets->map(fn ($row) => $row->name.': '.$row->body)->all()),
             'positioning' => $this->lines($positioning),
             'proof' => $this->lines($profile->proof_points ?? []),
-            'voice' => $this->lines([$voice?->tone ?? $profile->default_tone, $voice?->formality_level, $voice?->style]),
+            'voice' => $this->lines([$voice->tone ?? $profile->default_tone, $voice?->formality_level, $voice?->style]),
             'guidelines' => $this->lines($guidelines),
             'next_step' => $this->text($profile->main_cta),
         ], fn ($value) => $value !== '');
