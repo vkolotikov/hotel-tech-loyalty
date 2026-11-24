@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Mail, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Mail, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { groupBySubject, messageParties, splitMailBody } from './mailPresentation'
 import { api } from '../lib/api'
 import i18n from 'i18next'
 import { useBrandStore } from '../stores/brandStore'
@@ -46,12 +47,54 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
       <p className="mb-3 break-all text-xs text-a-text-2">{query.data.email} · {t('crm.mail.read_only')}</p>
       {query.data.connected === false && <p className="text-sm text-a-text-2">{t('crm.mail.disconnected')}</p>}
       {!query.data.messages?.length && !query.isFetching && !refresh.isPending && !query.error && !refresh.error && <p role="status" className="py-3 text-sm text-a-text-2">{t(refresh.isSuccess ? 'crm.mail.no_matches' : 'crm.mail.empty')}</p>}
-      <div className="divide-y divide-a-border">{query.data.messages?.map(message => <article key={message.id} className="py-3">
-        <button type="button" aria-expanded={selected === message.id} onClick={() => select(selected === message.id ? null : message.id)} className="w-full break-words text-left text-sm font-medium text-a-text"><span>{message.subject || t('crm.mail.no_subject')}</span><span className="mt-1 block break-all text-xs font-normal text-a-text-2">{message.participants.from.join(', ')} → {message.participants.to.join(', ')}</span><time className="mt-1 block text-xs font-normal text-a-text-2">{message.sent_at ? new Date(message.sent_at).toLocaleString(i18n.language, { timeZone: query.data?.timezone || 'UTC' }) : t('crm.mail.unknown_date')}</time></button>
-        {selected === message.id && <div className="mt-3 max-h-96 overflow-auto rounded-lg border border-a-border p-3 text-sm">{body.isLoading ? <p role="status">{t('crm.mail.loading')}</p> : body.error ? <p role="alert">{t('crm.mail.error')}</p> : body.data?.code ? <p role="alert">{t(`crm.mail.${body.data.code}`, t('crm.mail.error'))}</p> : <pre className="whitespace-pre-wrap break-words font-sans">{body.data?.body}</pre>}</div>}
-      </article>)}</div>
-      <nav aria-label={t('crm.mail.pages')} className="mt-3 flex items-center justify-between gap-2 text-xs"><button type="button" disabled={page === 1} onClick={() => { select(null); setPage(page - 1) }} className="rounded-lg border border-a-border p-2 disabled:opacity-40" aria-label={t('crm.mail.previous')}><ChevronLeft size={15} /></button><span>{t('crm.mail.count', { count: query.data.total ?? 0 })}</span><button type="button" disabled={page * 25 >= (query.data.total ?? 0)} onClick={() => { select(null); setPage(page + 1) }} className="rounded-lg border border-a-border p-2 disabled:opacity-40" aria-label={t('crm.mail.next')}><ChevronRight size={15} /></button></nav>
+      <div className="space-y-4">{groupBySubject(query.data.messages ?? []).map(group => <section key={group.messages[0].id} className="overflow-hidden rounded-xl border border-a-border">
+        <header className="flex items-start justify-between gap-3 border-b border-a-border bg-a-surface-2 px-3 py-3 sm:px-4">
+          <h3 className="min-w-0 break-words text-sm font-semibold leading-5">{group.subject || t('crm.mail.no_subject')}</h3>
+          <span className="shrink-0 text-xs leading-5 text-a-text-2">{t('crm.mail.count', { count: group.messages.length })}</span>
+        </header>
+        <div className="divide-y divide-a-border">{group.messages.map(message => {
+          const { direction, sender } = messageParties(message.participants, query.data?.email)
+          const expanded = selected === message.id
+          const Icon = direction === 'incoming' ? ArrowDownLeft : direction === 'outgoing' ? ArrowUpRight : Mail
+          const date = message.sent_at ? new Date(message.sent_at) : null
+          return <article key={message.id}>
+            <button type="button" aria-expanded={expanded} onClick={() => select(expanded ? null : message.id)}
+              className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-a-surface-2 focus-visible:-outline-offset-2 sm:px-4 ${expanded ? 'bg-a-surface-2/60' : ''}`}>
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${direction === 'incoming' ? 'bg-a-accent/10 text-a-accent-text' : 'border border-a-border text-a-text-2'}`}><Icon size={16} aria-hidden /></span>
+              <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <span className="min-w-0"><span className="block text-xs text-a-text-2">{t(`crm.mail.${direction}`)}</span><span className="block break-words text-sm font-semibold [overflow-wrap:anywhere]">{sender || t('crm.mail.unknown_sender')}</span></span>
+                <time dateTime={message.sent_at ?? undefined} className="text-xs tabular-nums text-a-text-2">{date && Number.isFinite(date.getTime()) ? date.toLocaleString(i18n.language, { timeZone: query.data?.timezone || 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : t('crm.mail.unknown_date')}</time>
+              </span>
+              <ChevronDown size={16} aria-hidden className={`shrink-0 text-a-text-2 ${expanded ? 'rotate-180' : ''}`} />
+            </button>
+            {expanded && <div className="border-t border-a-border px-3 py-4 sm:px-6">
+              <dl className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs text-a-text-2">
+                {(['from', 'to', 'cc'] as const).filter(field => message.participants[field]?.length).map(field => <Fragment key={field}><dt className="font-medium">{t(`crm.mail.${field}`)}</dt><dd className="break-words [overflow-wrap:anywhere]">{message.participants[field].join(', ')}</dd></Fragment>)}
+              </dl>
+              {body.isLoading ? <p role="status">{t('crm.mail.loading')}</p> : body.error ? <div role="alert">{t('crm.mail.error')} <button type="button" className="underline" onClick={() => void body.refetch()}>{t('crm.mail.retry')}</button></div> : body.data?.code ? <p role="alert">{t(`crm.mail.${body.data.code}`, t('crm.mail.error'))}</p> : <MailText text={body.data?.body ?? ''} />}
+            </div>}
+          </article>
+        })}</div>
+      </section>)}</div>
+      {(query.data.total ?? 0) > 25 && <nav aria-label={t('crm.mail.pages')} className="mt-3 flex items-center justify-between gap-2 text-xs">
+        <button type="button" disabled={page === 1} onClick={() => { select(null); setPage(page - 1) }} className="rounded-lg border border-a-border p-2 disabled:opacity-40" aria-label={t('crm.mail.previous')}><ChevronLeft size={15} /></button>
+        <span>{t('crm.mail.range', { start: (page - 1) * 25 + 1, end: Math.min(page * 25, query.data.total ?? 0), total: query.data.total })}</span>
+        <button type="button" disabled={page * 25 >= (query.data.total ?? 0)} onClick={() => { select(null); setPage(page + 1) }} className="rounded-lg border border-a-border p-2 disabled:opacity-40" aria-label={t('crm.mail.next')}><ChevronRight size={15} /></button>
+      </nav>}
       {cursor && <button type="button" onClick={() => refresh.mutate(true)} disabled={refresh.isPending} className="mt-3 text-xs underline">{t('crm.mail.older')}</button>}
     </>}
   </section>
+}
+
+function MailText({ text }: { text: string }) {
+  const { t } = useTranslation()
+  const { current, quoted } = splitMailBody(text)
+  return <div className="max-w-[72ch] text-sm leading-6 [overflow-wrap:anywhere]">
+    {current && <div className="whitespace-pre-wrap">{current}</div>}
+    {quoted && <details className="mt-3 border-l-2 border-a-border pl-3 text-a-text-2" open={current ? undefined : true}>
+      <summary className="cursor-pointer text-xs font-medium">{t('crm.mail.quoted')}</summary>
+      <div className="mt-2 whitespace-pre-wrap">{quoted}</div>
+    </details>}
+    {!current && !quoted && <p className="text-a-text-2">{t('crm.mail.no_text')}</p>}
+  </div>
 }

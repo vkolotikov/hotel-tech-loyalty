@@ -14,3 +14,7 @@ An acceptance check exercised the queued CRM response and the full-admin proposa
 and synthetic correspondence. The buyer requested 250 cards in French, then corrected the quantity to 300
 on WhatsApp. Both drafts used the approved €420 price and kept the delivery date open. The response was 40
 words and the proposal 60. Both recorded usage against the selected model in the test database.
+
+The Emails tab groups messages by subject on each page of history. Sender and direction appear on the
+collapsed row. Opening a message reveals addressing details and its body, with quoted correspondence
+behind a disclosure. Lead, contact and full-admin records share the reader.
