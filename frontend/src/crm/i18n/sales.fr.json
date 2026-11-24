@@ -20,7 +20,7 @@
     "sales_strategy": "Préparez un plan pour qualifier cette opportunité, positionner votre offre et conclure la vente.",
     "marketing_strategy": "Recommandez des messages, des canaux et des services adaptés aux marchés du client.",
     "proposal": "Rédigez une proposition qui relie vos services aux objectifs du client.",
-    "reply": "Rédigez une réponse au dernier e-mail entrant enregistré ou à la dernière demande du client."
+    "reply": "Rédigez une réponse professionnelle concise dans la langue et le style du client."
   },
   "examples": {
     "brief": "Mettre l’accent sur la demande et les points à confirmer.",
@@ -36,7 +36,11 @@
     "activities": "Activités CRM",
     "chats": "Messages de chat",
     "emails": "E-mails",
-    "whatsapp": "Messages WhatsApp"
+    "whatsapp": "Messages WhatsApp",
+    "other_logged_emails": "E-mails antérieurs consignés",
+    "discovery_fields": "Résultats de recherche à vérifier",
+    "writing_samples": "Exemples de messages du client",
+    "history_limited": "Ce brouillon utilise une sélection de l’historique enregistré."
   },
   "mail": {
     "empty": "Aucun e-mail n’a encore été enregistré pour ce contact.",

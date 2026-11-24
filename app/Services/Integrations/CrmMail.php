@@ -16,6 +16,8 @@ use Throwable;
 class CrmMail
 {
     public const BRAND = 23;
+    private const HEADER_PAGES = 4;
+    private const BODY_LIMIT = 12;
 
     public function available(User $user): bool
     {
@@ -66,6 +68,7 @@ class CrmMail
     /** Only already-captured messages for the saved CRM contact can go into the lead assistant. */
     public function assistantHistory(Guest $guest): array
     {
+        $deadline = microtime(true) + 25;
         try {
             $page = $this->read($guest, ['action' => 'list', 'page' => 1], 7);
         } catch (HttpExceptionInterface) {
@@ -82,35 +85,75 @@ class CrmMail
                 'reply_to' => null,
             ];
         }
-        $email = strtolower(trim((string) $guest->email));
-        $rows = collect($page['messages'] ?? [])->filter(fn ($row) => is_array($row) && Str::isUuid($row['id'] ?? ''));
-        $reply = $rows->first(fn ($row) => $this->senderMatches($row, $email));
-        $recent = $rows->take(6);
-        if ($reply && ! $recent->contains('id', $reply['id'])) {
-            $recent = $recent->take(5)->push($reply);
+        $rows = $page['messages'] ?? [];
+        $total = max(count($rows), (int) ($page['total'] ?? 0));
+        for ($number = 2; $number <= self::HEADER_PAGES && count($rows) < $total; $number++) {
+            // Reserve most of the time for bodies, including the message being answered.
+            if (microtime(true) > $deadline - 15) {
+                break;
+            }
+            try {
+                $older = $this->read($guest, ['action' => 'list', 'page' => $number], 4);
+            } catch (HttpExceptionInterface) {
+                break;
+            }
+            if (($older['code'] ?? null) === 'crm_contact_review_required') {
+                return ['state' => 'review_required', 'messages' => [], 'reply_to' => null];
+            }
+            if (empty($older['messages'])) {
+                break;
+            }
+            array_push($rows, ...$older['messages']);
         }
+        $email = strtolower(trim((string) $guest->email));
+        $rows = collect($rows)->filter(fn ($row) => is_array($row) && Str::isUuid($row['id'] ?? ''))->unique('id')->values();
+        $inbound = $rows->filter(fn ($row) => $this->senderMatches($row, $email));
+        $reply = $inbound->first();
+        $thread = $reply ? $this->threadSubject($reply) : '';
+        $sameThread = $thread !== '' ? $rows->filter(fn ($row) => $this->threadSubject($row) === $thread) : collect();
+        // Fetch the target first even if it is buried under outgoing mail. Reserve space for the original
+        // request in its thread and for earlier samples of the customer's own writing.
+        $selected = $inbound->take(1)->concat($rows->take(4))->concat($sameThread->take(3))
+            ->concat($sameThread->take(-1))->concat($inbound->take(4))->concat($rows)->unique('id')->take(self::BODY_LIMIT);
         $messages = [];
         $missing = false;
-        foreach ($recent as $row) {
+        foreach ($selected as $row) {
+            $remaining = (int) floor($deadline - microtime(true));
+            if ($remaining < 1) {
+                $missing = true;
+                break;
+            }
             try {
-                $body = $this->read($guest, ['action' => 'content', 'message_id' => $row['id']], 7)['body'] ?? null;
+                $content = $this->read($guest, ['action' => 'content', 'message_id' => $row['id']], min(7, $remaining));
+                if (($content['code'] ?? null) === 'crm_contact_review_required') {
+                    return ['state' => 'review_required', 'messages' => [], 'reply_to' => null];
+                }
+                $body = $content['body'] ?? null;
             } catch (HttpExceptionInterface) {
                 $body = null;
             }
             $missing = $missing || ! is_string($body) || trim($body) === '';
-            $messages[] = [
+            $messages[$row['id']] = [
                 'direction' => $this->senderMatches($row, $email) ? 'from_customer' : 'other',
                 'subject' => mb_substr((string) ($row['subject'] ?? ''), 0, 300),
                 'sent_at' => $row['sent_at'] ?? null,
-                'body' => is_string($body) ? mb_substr(trim($body), 0, 3200) : '',
+                'body' => is_string($body) ? mb_substr(trim($body), 0, 6000) : '',
             ];
         }
 
         return [
             'state' => $missing ? 'partial' : ($messages ? 'captured' : 'empty'),
-            'messages' => $messages,
+            'messages' => $rows->pluck('id')->filter(fn ($id) => isset($messages[$id]))->map(fn ($id) => $messages[$id])->values()->all(),
+            'total' => $total,
             'reply_to' => $reply ? mb_substr((string) ($reply['subject'] ?? ''), 0, 300) : null,
         ];
+    }
+
+    private function threadSubject(array $row): string
+    {
+        $subject = mb_strtolower(trim((string) ($row['subject'] ?? '')));
+
+        return trim(preg_replace('/^(?:(?:re|fw|fwd|aw|wg|sv|tr|rv)\s*:\s*)+/u', '', $subject));
     }
 
     private function senderMatches(array $row, string $email): bool

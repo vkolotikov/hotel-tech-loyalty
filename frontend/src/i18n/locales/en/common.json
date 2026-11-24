@@ -1552,7 +1552,8 @@
     },
     "proposal": {
       "title": "AI proposal draft",
-      "subtitle": "Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.",
+      "subtitle": "Review the proposal against the customer’s request before sending.",
+      "review": "To verify",
       "drafting": "Drafting…",
       "subject": "Subject",
       "body": "Body",

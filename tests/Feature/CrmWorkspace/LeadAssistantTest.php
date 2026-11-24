@@ -29,44 +29,7 @@ class LeadAssistantTest extends TestCase
         parent::setUp();
         $this->setUpCrmWorkspace();
         $this->org->forceFill(['entitled_products' => ['crm_chat']])->save();
-        foreach ([
-            'inquiries' => [
-                'notes' => fn ($table) => $table->text('notes')->nullable(),
-                'ai_brief' => fn ($table) => $table->text('ai_brief')->nullable(),
-                'ai_brief_at' => fn ($table) => $table->timestamp('ai_brief_at')->nullable(),
-                'ai_intent' => fn ($table) => $table->string('ai_intent')->nullable(),
-                'ai_win_probability' => fn ($table) => $table->unsignedInteger('ai_win_probability')->nullable(),
-                'ai_going_cold_risk' => fn ($table) => $table->string('ai_going_cold_risk')->nullable(),
-                'ai_suggested_action' => fn ($table) => $table->text('ai_suggested_action')->nullable(),
-            ],
-            'visitors' => ['guest_id' => fn ($table) => $table->unsignedBigInteger('guest_id')->nullable()],
-        ] as $table => $columns) {
-            foreach ($columns as $column => $definition) {
-                if (! Schema::hasColumn($table, $column)) {
-                    Schema::table($table, $definition);
-                }
-            }
-        }
-        if (! Schema::hasTable('activities')) {
-            Schema::create('activities', function ($table) {
-                $table->id();
-                $table->foreignId('organization_id');
-                $table->foreignId('brand_id')->nullable();
-                $table->foreignId('inquiry_id')->nullable();
-                $table->foreignId('guest_id')->nullable();
-                $table->string('type');
-                $table->string('direction')->nullable();
-                $table->string('subject')->nullable();
-                $table->text('body')->nullable();
-                $table->timestamp('occurred_at');
-            });
-        }
-        if (! Schema::hasTable('guest_business_profiles')) {
-            (require database_path('migrations/2026_11_22_100000_create_guest_business_profiles.php'))->up();
-        }
-        if (! Schema::hasTable('crm_lead_assistant')) {
-            (require database_path('migrations/2026_11_22_150000_add_crm_sales_assistant.php'))->up();
-        }
+        $this->setUpLeadAssistantTables();
         config(['openai.api_key' => 'fake-key-for-sales-assistant']);
         Http::preventStrayRequests();
         Queue::fake();
@@ -145,6 +108,8 @@ class LeadAssistantTest extends TestCase
             ->assertJsonPath('strategies.marketing_strategy.body', 'Approved marketing approach');
         $recorded = Http::recorded();
         $input = $recorded[1][0]['input'];
+        $this->assertSame('gpt-5-mini', $recorded[0][0]['model']);
+        $this->assertSame('gpt-6.2-astra', $recorded[1][0]['model']);
         foreach (['Customer needs 100 engraved samples.', 'matte finish', 'recyclable packaging by email', 'Independent design shops',
             'Engraving and recyclable packaging', 'Local production', 'Discuss the approved sample plan', 'Approved marketing approach'] as $fact) {
             $this->assertStringContainsString($fact, $input);
@@ -177,7 +142,8 @@ class LeadAssistantTest extends TestCase
                 return $request['action'] === 'list' ? Http::response(['connected' => true, 'messages' => [
                     ['id' => $outbound, 'subject' => 'Our initial reply', 'participants' => ['from' => ['desk@example.test']]],
                     ['id' => $inbound, 'subject' => 'Prototype timing', 'participants' => ['from' => ["Customer <$email>"]]],
-                ]]) : Http::response(['body' => $request['message_id'] === $inbound ? 'Please confirm prototype timing' : 'We are checking.']);
+                ]]) : Http::response(['body' => $request['message_id'] === $inbound
+                    ? "Please confirm prototype timing\n\nOn Tue, our sales desk wrote:\n> Staff boilerplate." : 'We are checking.']);
             },
             'contacts.hexa-tech.uk/api/integrations/crm-whatsapp/*' => Http::response(['state' => 'connected', 'messages' => [
                 ['direction' => 'inbound', 'body' => 'I can approve the artwork Friday.'],
@@ -191,12 +157,114 @@ class LeadAssistantTest extends TestCase
         $this->runLatest();
         $this->getJson($path)->assertOk()
             ->assertJsonPath('results.reply.coverage.reply_to.subject', 'Prototype timing')
+            ->assertJsonPath('results.reply.coverage.writing_samples', 2)
             ->assertJsonPath('results.reply.coverage.emails', 2)->assertJsonPath('results.reply.coverage.whatsapp', 1);
         Http::assertSent(fn (Request $request) => $request->url() === 'https://api.openai.com/v1/responses'
             && str_contains($request['input'], 'Please confirm prototype timing')
             && str_contains($request['input'], 'We are checking.')
             && str_contains($request['input'], 'I can approve the artwork Friday.')
-            && json_decode($request['input'], true)['language'] === 'fr');
+            && json_decode($request['input'], true)['language'] === 'fr'
+            && json_decode($request['input'], true)['conversation']['customer_writing_samples'] === [
+                ['channel' => 'email', 'words' => 'Please confirm prototype timing'],
+                ['channel' => 'whatsapp', 'words' => 'I can approve the artwork Friday.'],
+            ]);
+        $this->assertDatabaseHas('ai_usage_logs', ['model' => 'gpt-6.2-astra', 'feature' => 'crm_sales_assistant', 'cost_cents' => 3]);
+        Mail::assertNothingSent();
+    }
+
+    public function test_customer_history_and_sourced_discovery_stay_distinct_from_the_current_request(): void
+    {
+        $lead = $this->lead(['notes' => 'Current matte sample']);
+        $guest = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        $earlier = $this->lead(['guest_id' => $guest]);
+        $this->activity($earlier, $this->brandId, 'Prior order was glossy.');
+        $this->activity($this->lead(), $this->brandId, 'Another contact order.');
+        $this->activity($this->lead(['guest_id' => $guest, 'brand_id' => $this->brand()]), $this->brandId, 'Wrong parent brand.');
+        $this->chat(['inquiry_id' => $lead], [['visitor', 'Friday works for the matte proof.', 5], ['agent', 'Desk wording', 2]]);
+        GuestBusinessProfile::create(['guest_id' => $guest, 'fields' => ['industry' => 'Design studio'],
+            'discovery' => ['status' => 'ready', 'fields' => ['industry' => 'Wrong industry', 'services' => ['Letterpress'], 'markets' => ['Unsourced market']],
+                'sources' => ['industry' => [['url' => 'https://example.org/about']], 'services' => [['url' => 'https://example.org/studio']]]]]);
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->providerOutput([
+            'subject' => 'Matte proof', 'body' => 'Friday works.', 'review_notes' => [],
+        ]))]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.reply.coverage.reply_to.channel', 'chat')
+            ->assertJsonPath('results.reply.coverage.other_logged_emails', 1)->assertJsonPath('results.reply.coverage.discovery_fields', 1);
+        $input = json_decode(Http::recorded()->sole()[0]['input'], true);
+        $this->assertSame(['services' => ['value' => ['Letterpress'], 'sources' => ['https://example.org/studio']]], $input['unreviewed_discovery']);
+        $this->assertSame('Design studio', $input['reviewed_customer_business']['industry']);
+        $this->assertSame(['Prior order was glossy.'], array_column($input['conversation']['other_logged_customer_emails'], 'body'));
+        $this->assertSame([['channel' => 'chat', 'words' => 'Friday works for the matte proof.']], $input['conversation']['customer_writing_samples']);
+    }
+
+    public function test_an_inbound_email_on_an_older_page_is_the_target_even_when_newer_messages_are_all_outgoing(): void
+    {
+        $brand = $this->brand(23);
+        $lead = $this->lead(['brand_id' => $brand]);
+        $guest = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        $email = DB::table('guests')->where('id', $guest)->value('email');
+        config(['crm_mail.token' => 'fake-crm-mail-token-for-sales-assistant']);
+        $out = collect(range(1, 25))->map(fn ($i) => ['id' => (string) Str::uuid(), 'subject' => "Update $i", 'participants' => ['from' => ['desk@example.test']]])->all();
+        $in = ['id' => (string) Str::uuid(), 'subject' => 'New print run', 'participants' => ['from' => [$email]]];
+        Http::fake([
+            'contacts.hexa-tech.uk/api/integrations/crm-mail/*' => function (Request $req) use ($out, $in) {
+                if ($req['action'] === 'list') {
+                    return Http::response(['connected' => true, 'total' => 26, 'messages' => $req['page'] === 1 ? $out : [$in]]);
+                }
+
+                return $req['message_id'] === $in['id'] ? Http::response([], 502) : Http::response(['body' => 'A staff update.']);
+            },
+            'api.openai.com/v1/responses' => Http::response($this->providerOutput(['subject' => 'New print run', 'body' => 'Could you confirm the run size?', 'review_notes' => []])),
+        ]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.reply.coverage.reply_to.subject', 'New print run')
+            ->assertJsonPath('results.reply.coverage.emails', 12)->assertJsonPath('results.reply.coverage.email_state', 'partial')
+            ->assertJsonPath('results.reply.coverage.writing_samples', 0)->assertJsonPath('results.reply.coverage.history_limited', true);
+        Http::assertSent(fn (Request $req) => $req->url() === 'https://api.openai.com/v1/responses'
+            && json_decode($req['input'], true)['conversation']['reply_target']['body'] === '');
+    }
+
+    public function test_whatsapp_only_reply_uses_the_latest_customer_text_and_keeps_older_confirmations(): void
+    {
+        $lead = $this->lead(['brand_id' => $this->brand(23)]);
+        $guest = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        DB::table('guests')->where('id', $guest)->update(['phone' => '+32 470 82 60 01']);
+        config(['crm_mail.token' => 'fake-crm-mail-token-for-sales-assistant']);
+        Http::fake([
+            'contacts.hexa-tech.uk/api/integrations/crm-mail/*' => Http::response(['connected' => true, 'messages' => []]),
+            'contacts.hexa-tech.uk/api/integrations/crm-whatsapp/*' => Http::sequence()
+                ->push(['state' => 'connected', 'has_more' => true, 'messages' => [
+                    ['direction' => 'inbound', 'body' => '[image message - open WhatsApp for the original]'],
+                    ['direction' => 'outbound', 'body' => 'Desk phrasing'],
+                    ['direction' => 'inbound', 'body' => 'Friday please.', 'sent_at' => '2026-11-03T09:00:00Z'],
+                ]])->push(['state' => 'connected', 'has_more' => false, 'messages' => [
+                    ['direction' => 'inbound', 'body' => 'Already approved the matte finish.', 'sent_at' => '2026-11-02T09:00:00Z'],
+                ]]),
+            'api.openai.com/v1/responses' => Http::response($this->providerOutput(['subject' => 'Matte proof', 'body' => 'Friday works.', 'review_notes' => []])),
+        ]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.reply.coverage.reply_to.channel', 'whatsapp')
+            ->assertJsonPath('results.reply.coverage.whatsapp', 3)->assertJsonPath('results.reply.coverage.writing_samples', 2);
+        $input = json_decode(Http::recorded()->last()[0]['input'], true);
+        $this->assertSame('Friday please.', $input['conversation']['reply_target']['body']);
+        $this->assertSame(['Friday please.', 'Already approved the matte finish.'], array_column($input['conversation']['customer_writing_samples'], 'words'));
+    }
+
+    public function test_provider_usage_is_recorded_for_an_incomplete_paid_email_generation(): void
+    {
+        $lead = $this->lead();
+        Http::fake(['api.openai.com/v1/responses' => Http::response(['status' => 'incomplete', 'usage' => ['input_tokens' => 1000, 'output_tokens' => 1000]])]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('run.error', 'ai_failed')->assertJsonMissingPath('results.reply');
+        $this->assertDatabaseHas('ai_usage_logs', ['model' => 'gpt-6.2-astra', 'feature' => 'crm_sales_assistant', 'cost_cents' => 5]);
         Mail::assertNothingSent();
     }
 

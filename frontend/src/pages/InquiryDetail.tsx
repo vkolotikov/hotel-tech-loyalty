@@ -1332,7 +1332,8 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
   onClose: () => void
   onUseAsEmail: (draft: { subject: string; body: string }) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const [reviewNotes, setReviewNotes] = useState<string[]>([])
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
 
@@ -1340,7 +1341,9 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
   // when the agent wants a different angle. Editable fields so the
   // human can tighten before pasting into the composer.
   const draft = useMutation({
-    mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal`).then(r => r.data),
+    mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal?brand_id=${inq.brand_id ?? 'all'}`, {
+      language: (i18n.resolvedLanguage ?? 'en').split('-')[0],
+    }).then(r => r.data),
     onSuccess: (data) => {
       if (data.error) {
         toast.error(data.error)
@@ -1348,6 +1351,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
       }
       setSubject(data.subject ?? '')
       setBody(data.body ?? '')
+      setReviewNotes(data.review_notes ?? [])
     },
     onError: () => toast.error('Could not draft proposal'),
   })
@@ -1376,7 +1380,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
           </button>
         </div>
         <p className="text-xs text-t-secondary mb-3">
-          {t('inquiryDetail.proposal.subtitle', "Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.")}
+          {t('inquiryDetail.proposal.subtitle')}
         </p>
 
         {draft.isPending && !body ? (
@@ -1407,6 +1411,10 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
               />
             </div>
+            {reviewNotes.length > 0 && <div className="text-sm text-t-secondary">
+              <p className="font-semibold">{t('inquiryDetail.proposal.review')}</p>
+              <ul className="list-disc pl-5">{reviewNotes.map((note, index) => <li key={index}>{note}</li>)}</ul>
+            </div>}
           </div>
         )}
 

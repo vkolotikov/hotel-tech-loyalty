@@ -1552,7 +1552,8 @@
     },
     "proposal": {
       "title": "Borrador IA",
-      "subtitle": "Generado a partir de los detalles de la estancia y peticiones especiales. Revísalo antes de enviar — el modelo ayuda pero no hace magia.",
+      "subtitle": "Antes de enviar la propuesta, compruebe que responde a la solicitud del cliente.",
+      "review": "Por verificar",
       "drafting": "Redactando…",
       "subject": "Asunto",
       "body": "Cuerpo",

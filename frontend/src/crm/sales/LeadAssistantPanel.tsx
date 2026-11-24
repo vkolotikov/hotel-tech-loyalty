@@ -212,10 +212,15 @@ function StrategyEditor({ leadId, mode, data, result }: { leadId: number; mode: 
 
 function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage']; mode: Mode; onEmails: () => void }) {
   const { t } = useTranslation()
+  const fields = [...CONTEXT_FIELDS, ...(['other_logged_emails', 'discovery_fields', 'writing_samples'] as const).filter(key => coverage[key])]
+  const target = coverage.reply_to
+  const channelLabels = { whatsapp: 'crm.whatsapp.title', chat: 'crm.sales.context.chats', activity: 'crm.sales.context.activities' } as const
+  const replySource = target?.channel === 'email' ? target.subject || t('crm.mail.no_subject')
+    : target ? t(channelLabels[target.channel]) : null
   return (
     <Card title={t('crm.sales.context.title')} icon={BookOpen} tone="neutral">
       <dl className="space-y-1.5 text-sm">
-        {CONTEXT_FIELDS.map(key => (
+        {fields.map(key => (
           <div key={key} className="flex items-baseline justify-between gap-3">
             <dt className="text-a-text-2">{t(`crm.sales.context.${key}`)}</dt><dd className="tabular-nums text-a-text">{coverage[key]}</dd>
           </div>
@@ -223,9 +228,11 @@ function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage
       </dl>
       <div className="mt-3 space-y-2 border-t border-a-border pt-3 text-xs text-a-text-2">
         {coverage.email_state !== 'captured' && <p>{t(`crm.sales.mail.${coverage.email_state}`)}</p>}
+        {coverage.whatsapp_state && coverage.whatsapp_state !== 'connected' && <p>{t('crm.whatsapp.title')} · {t(`crm.whatsapp.state.${coverage.whatsapp_state}`)}</p>}
+        {coverage.history_limited && <p>{t('crm.sales.context.history_limited')}</p>}
         {coverage.strategies.length > 0 && <p>{t('crm.sales.strategy.used', { plans: coverage.strategies.map(item => t(`crm.sales.modes.${item}`)).join(' · ') })}</p>}
-        {mode === 'reply' && <p className="break-words">{coverage.reply_to
-          ? t('crm.sales.email.reply_to', { subject: coverage.reply_to.subject || t('crm.mail.no_subject') })
+        {mode === 'reply' && <p className="break-words">{replySource
+          ? t('crm.sales.email.reply_to', { subject: replySource })
           : t('crm.sales.email.reply_missing')}</p>}
         {(coverage.emails > 0 || mode === 'reply') && (
           <button type="button" className="text-left font-medium text-a-accent-text hover:underline" onClick={onEmails}>{t('crm.sales.email.view_history')}</button>

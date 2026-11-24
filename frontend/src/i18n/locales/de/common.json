@@ -1552,7 +1552,8 @@
     },
     "proposal": {
       "title": "KI-Angebotsentwurf",
-      "subtitle": "Erstellt aus den Aufenthaltsdetails und Sonderwünschen dieser Anfrage. Vor dem Senden überprüfen — das Modell hilft, ist aber nicht magisch.",
+      "subtitle": "Prüfen Sie vor dem Senden, ob das Angebot zur Kundenanfrage passt.",
+      "review": "Zu prüfen",
       "drafting": "Entwurf wird erstellt…",
       "subject": "Betreff",
       "body": "Inhalt",

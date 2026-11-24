@@ -1552,7 +1552,8 @@
     },
     "proposal": {
       "title": "Brouillon IA",
-      "subtitle": "Issu des détails du séjour et des demandes spéciales. Vérifiez avant d'envoyer — le modèle aide, sans faire de magie.",
+      "subtitle": "Avant l’envoi, vérifiez que la proposition répond à la demande du client.",
+      "review": "À vérifier",
       "drafting": "Rédaction…",
       "subject": "Objet",
       "body": "Corps",

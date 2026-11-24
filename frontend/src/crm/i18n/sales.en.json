@@ -20,7 +20,7 @@
     "sales_strategy": "Plan how to qualify, position, and win this opportunity.",
     "marketing_strategy": "Recommend messages, channels, and services for this customer’s markets.",
     "proposal": "Draft a proposal that ties your services to the customer’s goals.",
-    "reply": "Draft a reply based on the latest captured inbound email or customer request."
+    "reply": "Draft a short business reply in the customer’s language and style."
   },
   "examples": {
     "brief": "Focus on the request and what we still need to confirm.",
@@ -36,7 +36,11 @@
     "activities": "CRM activities",
     "chats": "Chat messages",
     "emails": "Emails",
-    "whatsapp": "WhatsApp messages"
+    "whatsapp": "WhatsApp messages",
+    "other_logged_emails": "Earlier logged emails",
+    "discovery_fields": "Discovery findings to verify",
+    "writing_samples": "Customer writing samples",
+    "history_limited": "This draft uses a selection from the captured history."
   },
   "mail": {
     "empty": "No emails have been captured for this contact yet.",

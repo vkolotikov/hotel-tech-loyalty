@@ -9,10 +9,6 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Schema;
-use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Resources\Chat;
-use OpenAI\Responses\Chat\CreateResponse;
 use Tests\Concerns\SetsUpCrmWorkspace;
 use Tests\TestCase;
 
@@ -24,20 +20,8 @@ class BusinessProfileTest extends TestCase
     {
         parent::setUp();
         $this->setUpCrmWorkspace();
-        if (! Schema::hasColumn('inquiries', 'notes')) {
-            Schema::table('inquiries', fn ($table) => $table->text('notes')->nullable());
-        }
-        if (! Schema::hasTable('activities')) {
-            Schema::create('activities', function ($table) {
-                $table->id();
-                $table->foreignId('organization_id');
-                $table->foreignId('inquiry_id')->nullable();
-                $table->timestamp('occurred_at')->nullable();
-            });
-        }
-        if (! Schema::hasTable('guest_business_profiles')) {
-            (require database_path('migrations/2026_11_22_100000_create_guest_business_profiles.php'))->up();
-        }
+        $this->setUpLeadAssistantTables();
+        $this->org->setWorkspace('content', false);
         config(['openai.api_key' => 'test-key-for-http-fake']);
         Http::preventStrayRequests();
         Queue::fake();
@@ -47,7 +31,7 @@ class BusinessProfileTest extends TestCase
     {
         [$lead, $guest] = $this->record();
         $source = 'https://studio.example.com/about';
-        Http::fake(['api.openai.com/v1/responses' => Http::response([
+        Http::fake(['api.openai.com/v1/responses' => Http::sequence()->push([
             'status' => 'completed',
             'output' => [
                 ['type' => 'web_search_call', 'action' => ['type' => 'search', 'sources' => [['url' => $source]]]],
@@ -66,6 +50,10 @@ class BusinessProfileTest extends TestCase
                 ]]],
             ],
             'usage' => ['input_tokens' => 1250, 'output_tokens' => 150],
+        ])->push([
+            'status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text',
+                'text' => '{"subject":"Cards for your studio","body":"A draft for you.","review_notes":["Check the finish."]}']]]],
+            'usage' => ['input_tokens' => 1500, 'output_tokens' => 150],
         ])]);
 
         $path = $this->adminApi("inquiries/$lead/business-profile");
@@ -90,17 +78,15 @@ class BusinessProfileTest extends TestCase
             ->assertJsonMissingPath('discovery.fields.markets')
             ->assertJsonMissingPath('fields.services');
 
-        $proposal = OpenAI::fake([CreateResponse::fake(['choices' => [['message' => [
-            'role' => 'assistant', 'content' => '{"subject":"Cards for your studio","body":"A draft for you."}',
-        ]]]])]);
         $this->putJson($contact, ['revision' => 0, 'discovery_id' => $first, 'fields' => [
             'company_name' => 'Sample Studio', 'services' => ['Web design'], 'service_opportunities' => ['Sample packaging'],
         ]])->assertOk()->assertJsonPath('sources.services.0.url', $source)->assertJsonPath('revision', 1);
-        $this->postJson($this->adminApi("inquiries/$lead/draft-proposal"))->assertOk()->assertJsonPath('subject', 'Cards for your studio');
-        $proposal->assertSent(Chat::class, fn (string $method, array $args): bool => $method === 'create'
-            && str_contains($args['messages'][0]['content'], 'Web design')
-            && str_contains($args['messages'][0]['content'], 'Private enquiry for 100 cards')
-            && ! str_contains($args['messages'][0]['content'], 'Worldwide'));
+        $this->postJson($this->adminApi("inquiries/$lead/draft-proposal"))->assertOk()->assertJsonPath('subject', 'Cards for your studio')
+            ->assertJsonPath('review_notes.0', 'Check the finish.');
+        Http::assertSent(fn (Request $request): bool => $request['model'] === 'gpt-6.2-astra' && $request['store'] === false
+            && str_contains($request['input'], 'Web design') && str_contains($request['input'], 'Private enquiry for 100 cards')
+            && ! str_contains($request['input'], 'Worldwide'));
+        $this->assertDatabaseHas('ai_usage_logs', ['brand_id' => $this->brandId, 'feature' => 'inquiry_proposal_draft', 'model' => 'gpt-6.2-astra', 'cost_cents' => 2]);
         $this->assertDatabaseHas('ai_usage_logs', ['organization_id' => $this->org->id, 'user_id' => $this->staffMember->id, 'feature' => 'crm_discovery']);
 
         $this->putJson($path, ['revision' => 0, 'fields' => ['services' => ['Old text']]])

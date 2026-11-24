@@ -20,7 +20,7 @@
     "sales_strategy": "Planen Sie, wie Sie diese Chance bewerten, positionieren und gewinnen.",
     "marketing_strategy": "Empfehlen Sie Botschaften, Kanäle und Leistungen für die Märkte dieses Kunden.",
     "proposal": "Entwerfen Sie ein Angebot, das Ihre Leistungen mit den Kundenzielen verbindet.",
-    "reply": "Entwerfen Sie eine Antwort auf die letzte erfasste eingehende E-Mail oder Kundenanfrage."
+    "reply": "Eine kurze geschäftliche Antwort in Sprache und Stil des Kunden entwerfen."
   },
   "examples": {
     "brief": "Die Anfrage und offene Punkte hervorheben.",
@@ -36,7 +36,11 @@
     "activities": "CRM-Aktivitäten",
     "chats": "Chatnachrichten",
     "emails": "E-Mails",
-    "whatsapp": "WhatsApp-Nachrichten"
+    "whatsapp": "WhatsApp-Nachrichten",
+    "other_logged_emails": "Frühere protokollierte E-Mails",
+    "discovery_fields": "Zu prüfende Rechercheergebnisse",
+    "writing_samples": "Schreibproben des Kunden",
+    "history_limited": "Dieser Entwurf nutzt eine Auswahl aus dem erfassten Verlauf."
   },
   "mail": {
     "empty": "Für diesen Kontakt wurden noch keine E-Mails erfasst.",

@@ -21,9 +21,14 @@ export type Coverage = {
   chats: number
   emails: number
   whatsapp: number
+  whatsapp_state?: string | null
+  history_limited?: boolean
+  other_logged_emails?: number
+  writing_samples?: number
+  discovery_fields?: number
   email_state: 'captured' | 'empty' | 'partial' | 'unavailable' | 'address_required' | 'review_required' | 'not_connected'
   strategies: Strategy[]
-  reply_to: { channel: 'email'; subject: string } | null
+  reply_to: { channel: 'email' | 'whatsapp' | 'chat' | 'activity'; subject?: string } | null
 }
 
 export type Result = {

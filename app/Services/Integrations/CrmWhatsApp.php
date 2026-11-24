@@ -28,6 +28,43 @@ final class CrmWhatsApp
         return $this->request((string) $guest->id, ['phones' => $phones, 'page' => $page]);
     }
 
+    /** The bridge orders each page newest first and rechecks the contact match on every read. */
+    public function assistantHistory(Guest $guest): array
+    {
+        $messages = [];
+        $seen = [];
+        $state = null;
+        $more = false;
+        for ($page = 1; $page <= 3; $page++) {
+            $batch = $this->messages($guest, $page);
+            $state = $batch['match_issue'] ?? $batch['state'];
+            if (! in_array($batch['state'], ['connected', 'needs_attention', 'awaiting_messages'], true)) {
+                if ($batch['state'] !== 'bridge_unavailable') {
+                    $messages = [];
+                }
+                break;
+            }
+            foreach ($batch['messages'] ?? [] as $row) {
+                $body = trim((string) ($row['body'] ?? ''));
+                $id = $row['id'] ?? null;
+                if ($body === '' || $body === 'Message removed in WhatsApp.' || str_ends_with($body, ' message - open WhatsApp for the original]')
+                    || ! in_array($row['direction'] ?? null, ['inbound', 'outbound'], true) || ($id !== null && isset($seen[$id]))) {
+                    continue;
+                }
+                if ($id !== null) {
+                    $seen[$id] = true;
+                }
+                $messages[] = ['direction' => $row['direction'], 'sent_at' => $row['sent_at'] ?? null, 'body' => mb_substr($body, 0, 1400)];
+            }
+            $more = (bool) ($batch['has_more'] ?? false);
+            if (! $more) {
+                break;
+            }
+        }
+
+        return ['state' => $state, 'messages' => array_reverse($messages), 'has_more' => $more];
+    }
+
     private function phone(?string $value): ?string
     {
         $value = trim($value ?? '');

@@ -20,7 +20,7 @@
     "sales_strategy": "Planifique cómo cualificar, posicionar y ganar esta oportunidad.",
     "marketing_strategy": "Recomiende mensajes, canales y servicios para los mercados de este cliente.",
     "proposal": "Redacte una propuesta que relacione sus servicios con los objetivos del cliente.",
-    "reply": "Redacte una respuesta al último correo entrante registrado o a la solicitud del cliente."
+    "reply": "Redacte una respuesta comercial breve en el idioma y el estilo del cliente."
   },
   "examples": {
     "brief": "Centrarse en la solicitud y los datos pendientes de confirmar.",
@@ -36,7 +36,11 @@
     "activities": "Actividades del CRM",
     "chats": "Mensajes de chat",
     "emails": "Correos",
-    "whatsapp": "Mensajes de WhatsApp"
+    "whatsapp": "Mensajes de WhatsApp",
+    "other_logged_emails": "Correos anteriores registrados",
+    "discovery_fields": "Hallazgos de investigación por verificar",
+    "writing_samples": "Muestras de escritura del cliente",
+    "history_limited": "Este borrador utiliza una selección del historial registrado."
   },
   "mail": {
     "empty": "Aún no se han registrado correos para este contacto.",

@@ -45,6 +45,48 @@ trait SetsUpCrmWorkspace
         app()->forgetScopedInstances();
     }
 
+    protected function setUpLeadAssistantTables(): void
+    {
+        foreach ([
+            'inquiries' => [
+                'notes' => fn ($table) => $table->text('notes')->nullable(),
+                'ai_brief' => fn ($table) => $table->text('ai_brief')->nullable(),
+                'ai_brief_at' => fn ($table) => $table->timestamp('ai_brief_at')->nullable(),
+                'ai_intent' => fn ($table) => $table->string('ai_intent')->nullable(),
+                'ai_win_probability' => fn ($table) => $table->unsignedInteger('ai_win_probability')->nullable(),
+                'ai_going_cold_risk' => fn ($table) => $table->string('ai_going_cold_risk')->nullable(),
+                'ai_suggested_action' => fn ($table) => $table->text('ai_suggested_action')->nullable(),
+            ],
+            'visitors' => ['guest_id' => fn ($table) => $table->unsignedBigInteger('guest_id')->nullable()],
+        ] as $table => $columns) {
+            foreach ($columns as $column => $definition) {
+                if (! Schema::hasColumn($table, $column)) {
+                    Schema::table($table, $definition);
+                }
+            }
+        }
+        if (! Schema::hasTable('activities')) {
+            Schema::create('activities', function ($table) {
+                $table->id();
+                $table->foreignId('organization_id');
+                $table->foreignId('brand_id')->nullable();
+                $table->foreignId('inquiry_id')->nullable();
+                $table->foreignId('guest_id')->nullable();
+                $table->string('type');
+                $table->string('direction')->nullable();
+                $table->string('subject')->nullable();
+                $table->text('body')->nullable();
+                $table->timestamp('occurred_at');
+            });
+        }
+        if (! Schema::hasTable('guest_business_profiles')) {
+            (require database_path('migrations/2026_11_22_100000_create_guest_business_profiles.php'))->up();
+        }
+        if (! Schema::hasTable('crm_lead_assistant')) {
+            (require database_path('migrations/2026_11_22_150000_add_crm_sales_assistant.php'))->up();
+        }
+    }
+
     /** On the admin host, as an absolute address. */
     protected function crmApi(string $path): string
     {

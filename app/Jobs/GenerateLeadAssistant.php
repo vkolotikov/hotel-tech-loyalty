@@ -7,10 +7,8 @@ use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Models\User;
 use App\Scopes\BrandScope;
-use App\Services\AiUsageService;
 use App\Services\Crm\CrmAccess;
 use App\Services\Crm\LeadAssistant;
-use App\Services\Crm\LeadAssistantContext;
 use App\Services\Crm\LeadAssistantWriter;
 use App\Services\Crm\SalesBrand;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,7 +30,7 @@ final class GenerateLeadAssistant implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(LeadAssistant $assistant, SalesBrand $scope, LeadAssistantContext $context, LeadAssistantWriter $writer, AiUsageService $usage): void
+    public function handle(LeadAssistant $assistant, SalesBrand $scope, LeadAssistantWriter $writer): void
     {
         $priorOrg = app()->bound('current_organization_id') ? app('current_organization_id') : null;
         $priorBrand = app()->bound('current_brand_id') ? app('current_brand_id') : null;
@@ -53,15 +51,8 @@ final class GenerateLeadAssistant implements ShouldQueue
                 throw new AiHelperRefused('assistant_access_changed', 'Access to this lead has changed.', 403);
             }
             $brand = $scope->forLead($user, $lead);
-            LeadAssistant::checkAvailability($org);
-            $snapshot = $context->collect($lead, $brand, $org, $user, $claimed['strategies'], $run['mode']);
-            LeadAssistant::checkAvailability($org);
-            $response = $writer->write($run['mode'], $run['language'], $run['focus'], $snapshot['input']);
-            $usage->recordUsage(
-                $this->orgId, LeadAssistant::MODEL, (int) ($response['usage']['input_tokens'] ?? 0),
-                (int) ($response['usage']['output_tokens'] ?? 0), 'crm_sales_assistant', userId: $run['requested_by'],
-            );
-            $assistant->complete($this->leadId, $this->brandId, $this->runId, [...$response['result'], 'coverage' => $snapshot['coverage']]);
+            $result = $writer->generate($lead, $brand, $org, $user, $run, $claimed['strategies']);
+            $assistant->complete($this->leadId, $this->brandId, $this->runId, $result);
         } catch (AiHelperRefused $error) {
             $assistant->complete($this->leadId, $this->brandId, $this->runId, error: $error->errorCode);
         } catch (HttpExceptionInterface $error) {

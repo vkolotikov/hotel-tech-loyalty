@@ -3,16 +3,21 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\AiHelperRefused;
 use App\Models\Activity;
 use App\Models\AuditLog;
 use App\Models\Inquiry;
 use App\Models\InquiryAttachment;
 use App\Models\InquiryLostReason;
+use App\Models\Organization;
 use App\Models\CustomField;
 use App\Models\PipelineStage;
 use App\Models\Reservation;
 use App\Models\Task;
 use App\Services\CustomFieldService;
+use App\Services\Crm\LeadAssistant;
+use App\Services\Crm\LeadAssistantWriter;
+use App\Services\Crm\SalesBrand;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
@@ -1289,9 +1294,25 @@ class InquiryController extends Controller
      * subject + body the agent can paste into an email composer or
      * the activity timeline. CRM Phase 5.
      */
-    public function draftProposal(int $id): JsonResponse
+    public function draftProposal(Request $request, int $id, SalesBrand $scope, LeadAssistant $assistant, LeadAssistantWriter $writer): JsonResponse
     {
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
-        return response()->json($this->ai->draftProposal($inquiry));
+        $user = $request->user();
+        $brand = $scope->forLead($user, $inquiry);
+        $org = Organization::findOrFail($inquiry->organization_id);
+        $input = $request->validate(['language' => 'sometimes|in:en,de,fr,es,ru']);
+        $run = ['mode' => 'proposal', 'language' => $input['language'] ?? app()->getLocale()];
+        try {
+            $draft = $writer->generate($inquiry, $brand, $org, $user, $run,
+                (array) $assistant->data($inquiry, $brand)['strategies'], 'inquiry_proposal_draft');
+        } catch (AiHelperRefused $error) {
+            throw $error;
+        } catch (\Throwable $error) {
+            \Illuminate\Support\Facades\Log::warning('CRM proposal failed', ['inquiry_id' => $id, 'exception' => $error::class]);
+
+            return response()->json(['subject' => '', 'body' => '', 'error' => 'Could not draft proposal. Please try again.']);
+        }
+
+        return response()->json(['subject' => $draft['subject'], 'body' => $draft['body'], 'review_notes' => $draft['review_notes']]);
     }
 }

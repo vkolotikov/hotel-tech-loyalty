@@ -391,6 +391,31 @@ on the `ai` queue, using the organisation's AI allowance under `crm_sales_assist
 latest generated result for each mode and the staff-reviewed strategies on the lead. It drafts emails for staff
 review.
 
+### Customer email drafts
+
+Under **AI assistant**, choose **Response email** to answer a customer or **Proposal email** to make an offer.
+Both use GPT-6.2 Astra with high reasoning. The full admin's **Draft proposal** uses the same writer. A reply
+normally takes 35–90 words and a proposal 70–120. A simple confirmation may take one sentence. A customer
+asking for more detail can get a longer answer. Type a language or focus in the optional instruction to override
+the usual choice. The customer’s own correspondence and saved language guide the default.
+
+The writer reads the current request, the customer's role and location, the account's industry, saved business
+profiles and reviewed strategy. Once AI Discovery finishes, sourced public findings can identify details for
+staff to check. The customer's own statements and reviewed profile take precedence. **To verify** stays with
+staff when a draft is copied or opened in email.
+
+For a response, the latest matched incoming email normally supplies the subject and request. Later corrections
+in WhatsApp or chat can change the answer. Without a matched incoming email, the writer uses the newest incoming
+WhatsApp text, visitor chat or recorded inbound activity, then the lead request. The writer looks for the customer's
+greeting, vocabulary and level of detail in their own messages. With little evidence, it uses a neutral business tone.
+
+**Sources used** shows the material available to that draft and flags limited or unavailable history. The FDS
+integration checks up to 100 captured email headers and selects up to 12 bodies, prioritising the incoming message,
+its thread and earlier customer wording. WhatsApp supplies up to 75 recent matched messages. Removed messages and
+media without text or a caption are skipped. Other brands can use their own logged emails and linked chat.
+Earlier logged email is restricted to the same contact and brand. Drafting reads existing records and leaves delivery
+to the person reviewing the message.
+
 ### Business profile setup
 
 **Settings → Our business** guides a manager through **Sources**, **Company**, **Market**, **Sales**, and **Review**.
