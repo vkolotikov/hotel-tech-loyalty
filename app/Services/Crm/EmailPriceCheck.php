@@ -64,6 +64,10 @@ final class EmailPriceCheck
 
     private static function amounts(string $text, string $currency): array
     {
+        // "All 100 printed cards" is a quantity. Keep ALL 100, 100 ALL and "all 100 per card" as currency claims.
+        $counted = 'cards|units|items|pieces|copies|profiles|pens|products|orders|seats|guests|rooms|nights|tickets|people|licen[cs]es';
+        $modifier = '(?!(?:per|each|for|plus|net|gross|before|after|including|excluding)\b)[\pL-]+\h+';
+        $text = preg_replace('/\b[Aa]ll(?=\h+\d+\h+(?:'.$modifier.'){0,3}(?:'.$counted.')\b)/u', 'all of the', $text);
         $aliases = ['euros?' => 'EUR', 'pounds?(?: sterling)?' => 'GBP', 'dollars?' => '$', 'руб(?:лей|ля|ль)?' => 'RUB'];
         $symbols = implode('|', array_map(fn ($s) => preg_quote($s, '~'), array_keys(self::SYMBOLS)));
         $marker = '(?:(?<![\pL])(?:'.str_replace(' ', '|', self::CODES).'|'.implode('|', array_keys($aliases)).')(?![\pL])|'.$symbols.'|[$¥]|\p{Sc})';

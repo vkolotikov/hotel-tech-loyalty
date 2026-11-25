@@ -27,3 +27,5 @@ An hourly sync puts public builder prices into the FDS Cards knowledge library u
 The lead header groups communication, stage changes and AI tools. Direct links still open the requested view.
 The [CRM runbook](../crm-workspace.md#lead-navigation-and-fds-cards-pricing) covers navigation, source ownership,
 refresh timing and price validity.
+In two synthetic enquiries using the real email model and published rates, the standard 100-card reply gave £249
+before VAT and the encoded door-card enquiry asked for the specification needed for a bespoke quote.
