@@ -496,6 +496,8 @@ class LeadAssistantTest extends TestCase
         $context['project_evidence']['approved_quote'] = $quote;
         $this->assertTrue(\App\Services\Crm\EmailPriceCheck::supported('{{quote.total}} before tax.', $context));
         $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('{{quote.total}} including VAT.', $context));
+        $localized = \App\Services\Crm\LeadQuote::fillAmounts('{{quote.total}}', $quote, 'fr-FR');
+        $this->assertMatchesRegularExpression('/64,85\s*€/u', $localized);
         $this->assertNull(\App\Services\Crm\LeadQuote::fillAmounts('We offer {{quote.discount}}.', $quote));
         $this->assertNull(\App\Services\Crm\LeadQuote::fillAmounts('Total {{quote.total}}.', [...$quote, 'status' => 'expired']));
     }

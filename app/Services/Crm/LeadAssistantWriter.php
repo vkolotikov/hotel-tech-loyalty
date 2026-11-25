@@ -47,8 +47,8 @@ final class LeadAssistantWriter
         $result = $this->result($data, $mode, $email);
         if ($email && $result['decision'] === 'draft') {
             $quote = $snapshot['input']['project_evidence']['approved_quote'];
-            $subject = LeadQuote::fillAmounts($result['subject'], $quote);
-            $body = LeadQuote::fillAmounts($result['body'], $quote);
+            $subject = LeadQuote::fillAmounts($result['subject'], $quote, $result['email_language']);
+            $body = LeadQuote::fillAmounts($result['body'], $quote, $result['email_language']);
             $result = $subject === null || $body === null || ! EmailPriceCheck::supported($result['subject']."\n".$result['body'], $snapshot['input'])
                 ? LeadEmailEvidence::hold('unverified_price', $run['language']) : [...$result, 'subject' => $subject, 'body' => $body];
         }
@@ -71,7 +71,7 @@ final class LeadAssistantWriter
         $reviewNotes = ['type' => 'array', 'items' => $str];
         $fields = $email
             ? ['decision' => ['type' => 'string', 'enum' => ['draft', 'wait', 'internal_action', 'stop']], 'reason' => $str,
-                'intent' => $str, 'next_step' => $str, 'unanswered' => $reviewNotes,
+                'intent' => $str, 'next_step' => $str, 'unanswered' => $reviewNotes, 'email_language' => $str,
                 'subject' => $str, 'body' => $str, 'review_notes' => $reviewNotes]
             : ['summary' => $str, 'sections' => ['type' => 'array', 'items' => $this->object(['title' => $str, 'body' => $str])], 'review_notes' => $reviewNotes];
         if ($mode === 'brief') {
@@ -133,7 +133,8 @@ Prefer valid authorised terms for this opportunity, then staff focus within its 
 Other projects, writing examples, partner terms and internal estimates never establish a price, technical promise, policy or order here.
 Use a valid approved_quote only for its stated scope, quantity, currency, tax basis and validity. Use its precalculated decimal values.
 For structured quote figures write the appropriate placeholder {{quote.unit_price}}, {{quote.charges}}, {{quote.subtotal}} or {{quote.total}}.
-The CRM inserts the verified currency and amount. Do not add a second currency marker. Format other verified monetary figures with a currency code.
+Set email_language to the BCP 47 language tag of the customer-facing text. The CRM inserts the verified currency and amount in that language.
+Do not add a second currency marker. Format other verified monetary figures in the customer's usual convention with an unambiguous currency.
 Never calculate or extrapolate a new price, discount, tax or total. If the quote expired or conflicts
 with the actual request, omit the amounts and flag a new quote for staff. Do not infer VAT from location or a registration number.
 Distinguish production, dispatch, transit and delivery. Check stock, schedule and authorisation before making commitments or offering exceptions.
@@ -213,7 +214,7 @@ PROMPT;
                 $body = trim($parts[0]);
             }
             if ($subject !== '' && $body !== '') {
-                return [...$strategy, 'subject' => $subject, 'body' => $body, 'review_notes' => $notes];
+                return [...$strategy, 'subject' => $subject, 'body' => $body, 'email_language' => $this->text($result['email_language'] ?? '', 25), 'review_notes' => $notes];
             }
         } else {
             $summary = $this->text($result['summary'] ?? null, 1800);

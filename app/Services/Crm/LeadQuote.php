@@ -38,7 +38,7 @@ final class LeadQuote
     }
 
     /** Insert approved amounts into the model's prose with their currency. Unknown markers require review. */
-    public static function fillAmounts(string $text, ?array $quote): ?string
+    public static function fillAmounts(string $text, ?array $quote, string $locale = ''): ?string
     {
         if (! str_contains($text, '{{quote.')) {
             return $text;
@@ -48,11 +48,33 @@ final class LeadQuote
         }
         $tokens = [];
         foreach (['unit_price', 'subtotal', 'charges', 'total'] as $field) {
-            $tokens['{{quote.'.$field.'}}'] = $quote['currency'].' '.$quote[$field];
+            $tokens['{{quote.'.$field.'}}'] = self::formatAmount($quote[$field], $quote['currency'], $locale);
         }
         $filled = strtr($text, $tokens);
 
         return str_contains($filled, '{{quote.') ? null : $filled;
+    }
+
+    private static function formatAmount(string $amount, string $currency, string $locale): string
+    {
+        $fallback = $currency.' '.$amount;
+        if (! preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/iD', $locale) || ! class_exists(\NumberFormatter::class)) {
+            return $fallback;
+        }
+        $money = new \NumberFormatter($locale, \NumberFormatter::CURRENCY);
+        $decimal = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+        // Format only an integer and a one-unit currency pattern through ICU. The approved fraction stays exact.
+        $pattern = $money->formatCurrency(1, $currency);
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+        $number = $decimal->format((int) $whole, \NumberFormatter::TYPE_INT64);
+        if ($pattern === false || $number === false) {
+            return $fallback;
+        }
+        if ($fraction !== '') {
+            $number .= $decimal->getSymbol(\NumberFormatter::DECIMAL_SEPARATOR_SYMBOL).$fraction;
+        }
+
+        return preg_replace_callback('/\p{N}+(?:[.,\x{066b}]\p{N}+)*/u', fn () => $number, $pattern, 1) ?? $fallback;
     }
 
     public static function forDraft(?array $quote, string $today): ?array
