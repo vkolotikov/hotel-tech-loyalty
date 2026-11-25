@@ -47,6 +47,7 @@ export interface LeadGuest {
 /** A row of `GET inquiries` (the paginator's `data`). */
 export interface LeadRow {
   id: number
+  reply_status?: Partial<Record<'email' | 'whatsapp', 'needs_reply' | 'awaiting_customer'>> | null
   brand_id?: number | null
   guest_id: number | null
   pipeline_id: number | null

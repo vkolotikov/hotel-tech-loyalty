@@ -1,4 +1,7 @@
 {
+  "needs_reply": "Нужен ответ",
+  "awaiting_customer": "Ждём ответа клиента",
+  "auto_sync": "Zoho Mail · Автосинхронизация",
   "incoming": "От клиента",
   "outgoing": "Клиенту",
   "other": "Письмо",

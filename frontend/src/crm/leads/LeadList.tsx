@@ -14,7 +14,7 @@ import { useLeadChanged, useLeadSettings } from './leadData'
 import { amount, customText, dayOf, followUp, kindOf, moveTo, resolveStage } from './leadLogic'
 import { priorityTone, type LeadColumn } from './listLogic'
 import { ActionMenu, type MenuItem } from '../ui/Menu'
-import { AiCell, ContactLinks, FreshChip, NextCell, StagePill } from './parts'
+import { AiCell, ContactLinks, FreshChip, ReplyBadges, NextCell, StagePill } from './parts'
 import type { CustomField, LeadRow, Stage } from './leadTypes'
 import { sourceLabel } from './leadWords'
 import { rowOpens } from './recordLogic'
@@ -195,6 +195,7 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
             <div className="flex flex-wrap items-center gap-1.5">
               <Link to={href(lead.id)} className="truncate font-medium text-a-text hover:underline focus-visible:outline-2 focus-visible:outline-a-accent">{name}</Link>
               <FreshChip lead={lead} closed={closed} now={now} />
+              <ReplyBadges status={lead.reply_status} />
             </div>
             {(lead.guest?.company || country) && (
               <p className="flex items-center gap-1 truncate text-xs text-a-text-2">
@@ -277,6 +278,7 @@ function PhoneCard({ lead, name, stages, now, priorities, chosen, onSelect, acti
             <div className="flex flex-wrap items-center gap-1.5">
               <Link to={href(lead.id)} className="truncate text-sm font-medium text-a-text hover:underline">{name}</Link>
               <FreshChip lead={lead} closed={closed} now={now} />
+              <ReplyBadges status={lead.reply_status} />
             </div>
             {lead.guest?.company && <p className="truncate text-xs text-a-text-2">{lead.guest.company}</p>}
           </div>

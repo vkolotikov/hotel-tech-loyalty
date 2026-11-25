@@ -1,4 +1,6 @@
 {
+  "needs_reply": "Antwort nötig",
+  "awaiting_customer": "Wartet auf Kundenantwort",
   "nav_summary": "Übersicht",
   "nav_messages": "Nachrichten",
   "nav_ai": "KI-Tools",

@@ -20,6 +20,7 @@ use App\Services\Crm\LeadAssistant;
 use App\Services\Crm\LeadAssistantWriter;
 use App\Services\Crm\EmailDraftRevision;
 use App\Services\Crm\LeadEmailEvidence;
+use App\Services\Crm\LeadReplyBadges;
 use App\Services\Crm\SalesBrand;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
@@ -126,7 +127,10 @@ class InquiryController extends Controller
         // stable among equal values. `$sort` is one of the names above.
         $query->orderByRaw("{$sort} IS NULL")->orderBy($sort, $dir)->orderBy('id', $dir);
 
-        return response()->json($query->paginate($request->get('per_page', 25)));
+        $page = $query->paginate($request->get('per_page', 25));
+        LeadReplyBadges::attach($page->getCollection(), $request->user());
+
+        return response()->json($page);
     }
 
     public function store(Request $request): JsonResponse
@@ -302,6 +306,8 @@ class InquiryController extends Controller
                 ->limit(50),
             'openTasks'  => fn($q) => $q->with('assignee:id,name'),
         ]);
+        LeadReplyBadges::attach(collect([$inquiry]), request()->user());
+
         return response()->json($inquiry);
     }
 

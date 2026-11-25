@@ -1,4 +1,6 @@
 {
+  "needs_reply": "Нужен ответ",
+  "awaiting_customer": "Ждём ответа клиента",
   "nav_summary": "Сводка",
   "nav_messages": "Сообщения",
   "nav_ai": "ИИ",

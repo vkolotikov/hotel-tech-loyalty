@@ -24,7 +24,7 @@ import { LostDialog, WonDialog } from './LeadClose'
 import { useLeadChanged, useLeadSettings, usePipelines } from './leadData'
 import { amount, defaultPipeline, followUp, ownerOptions, resolveStage, sortedStages, stageColor, type LeadFilters } from './leadLogic'
 import { ownerColumns, phoneOwner, priorityTone, withOwner, type OwnerColumn } from './listLogic'
-import { AiCell, FreshChip, StagePill } from './parts'
+import { AiCell, FreshChip, ReplyBadges, StagePill } from './parts'
 import { boardOrder, rowOpens } from './recordLogic'
 import type { LeadRow, Paginated, Pipeline, Stage } from './leadTypes'
 
@@ -35,7 +35,7 @@ function useBoardLeads(filters: LeadFilters) {
   const boot = useBoot()
   const query = boardQuery(filters, boot.staff.name)
   const key = ['crm', 'leads', 'board', query] as const
-  return { key, leads: useQuery({ queryKey: key, queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(query)}`) }) }
+  return { key, leads: useQuery({ queryKey: key, refetchInterval: 60_000, queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(query)}`) }) }
 }
 
 /**
@@ -359,6 +359,7 @@ function LeadCard({ lead, name, lang, now, stage, action, busy, draggable = fals
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-a-text-2">
         <FreshChip lead={lead} now={now} />
+        <ReplyBadges status={lead.reply_status} />
         {stage !== undefined && <StagePill stage={stage} fallback={lead.status} />}
         {value !== null && <span className="inline-flex items-center gap-1 font-medium text-a-text"><Coins size={12} aria-hidden className="text-a-text-2" />{money(value, boot.venue.currency, lang)}</span>}
         {next?.day && (

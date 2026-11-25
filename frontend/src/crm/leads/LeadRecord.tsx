@@ -34,7 +34,7 @@ import { ChatTab, FilesTab } from './LeadSide'
 import { LeadTasks } from './LeadTasks'
 import { LeadTimeline, type ComposerSeed } from './LeadTimeline'
 import { contactLinks, priorityTone } from './listLogic'
-import { FreshChip, StagePill } from './parts'
+import { FreshChip, ReplyBadges, StagePill } from './parts'
 import { fullPagePath, headerActions, leadSections, leadTabs, tabShown, type LeadSection, type LeadTab } from './recordLogic'
 import { useLeadActivities, useLeadChats, useLeadDetail, useLeadFiles } from './recordData'
 import { SendTemplate } from './SendTemplate'
@@ -213,6 +213,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
             <StagePill stage={stage} fallback={lead.status} />
             {lead.priority && tone && <Pill tone={tone}>{lead.priority}</Pill>}
             <FreshChip lead={lead} closed={kind !== 'open'} now={now} />
+            <ReplyBadges status={lead.reply_status} onOpen={onTab} />
           </span>
         )}
         subtitle={subtitle}

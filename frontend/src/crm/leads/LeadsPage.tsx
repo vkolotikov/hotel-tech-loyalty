@@ -184,6 +184,7 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
   const list = useQuery({
     queryKey: ['crm', 'leads', 'list', query],
     queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(query)}`),
+    refetchInterval: 60_000,
     enabled: sections.length === 0,
     placeholderData: previous => previous,
   })
@@ -191,6 +192,7 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
     queries: sections.map(section => ({
       queryKey: ['crm', 'leads', 'due', section.key, section.query],
       queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(section.query)}`),
+      refetchInterval: 60_000,
     })),
   })
 

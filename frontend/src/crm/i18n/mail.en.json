@@ -1,4 +1,7 @@
 {
+  "needs_reply": "Needs reply",
+  "awaiting_customer": "Awaiting customer",
+  "auto_sync": "Zoho Mail · Syncs automatically",
   "incoming": "From customer",
   "outgoing": "To customer",
   "other": "Email",

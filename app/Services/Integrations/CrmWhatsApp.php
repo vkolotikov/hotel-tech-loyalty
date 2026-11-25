@@ -15,17 +15,24 @@ final class CrmWhatsApp
         return $this->request('status');
     }
 
-    public function messages(Guest $guest, int $page): array
+    public function messages(Guest $guest, int $page, bool $summary = false): array
     {
-        $phones = array_values(array_unique(array_filter([
-            $this->phone($guest->phone),
-            $this->phone($guest->mobile),
-        ])));
+        $phones = self::phones($guest);
         if (! $phones) {
             return ['available' => true, 'state' => 'phone_required', 'messages' => [], 'has_more' => false];
         }
 
-        return $this->request((string) $guest->id, ['phones' => $phones, 'page' => $page]);
+        $input = $summary ? ['phones' => $phones, 'summary' => true] : ['phones' => $phones, 'page' => $page];
+
+        return $this->request((string) $guest->id, $input);
+    }
+
+    public static function phones(Guest $guest): array
+    {
+        $phones = array_values(array_unique(array_filter([self::phone($guest->phone), self::phone($guest->mobile)])));
+        sort($phones);
+
+        return $phones;
     }
 
     /** The bridge orders each page newest first and rechecks the contact match on every read. */
@@ -65,7 +72,7 @@ final class CrmWhatsApp
         return ['state' => $state, 'messages' => array_reverse($messages), 'has_more' => $more];
     }
 
-    private function phone(?string $value): ?string
+    private static function phone(?string $value): ?string
     {
         $value = trim($value ?? '');
         if (! preg_match('/^(\+|00)[0-9 ().-]+$/D', $value)) {

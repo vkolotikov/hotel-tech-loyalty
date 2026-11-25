@@ -110,12 +110,14 @@ describe('Leads', () => {
     const html = render('/crm/leads', qc => {
       qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
       qc.setQueryData(['crm', 'leads', 'kpis'], { total: 12, due_today: 2, overdue: 3, estimated_value: 9800, new_this_week: 4, new_delta_pct: 25 })
-      qc.setQueryData(['crm', 'leads', 'list', listQuery(readFilters(new URLSearchParams('')), 'Anna')], page([{ ...ada, ai_win_probability: 72, ai_going_cold_risk: 'high', phone_calls_made: 2 }]))
+      qc.setQueryData(['crm', 'leads', 'list', listQuery(readFilters(new URLSearchParams('')), 'Anna')], page([{ ...ada, ai_win_probability: 72, ai_going_cold_risk: 'high', phone_calls_made: 2, reply_status: { email: 'needs_reply', whatsapp: 'awaiting_customer' } }]))
     })
     for (const figure of ['Open leads', '€9,800', 'Follow-ups due', '3 overdue', 'New this week', '+25 %']) expect(html).toContain(figure)
     expect(html).toContain('<thead>')
     expect(html).toMatch(/>AI<\/th>/)
     expect(html).toContain('72 %')
+    expect(html).toContain('Needs reply')
+    expect(html).toContain('Awaiting customer')
     expect(html).toContain('More for Ada Lovelace')
     expect(html).toContain('Change the stage of Ada Lovelace')
     expect(html).toContain('aria-pressed="true"') // the List view is the one chosen

@@ -12,7 +12,6 @@ use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Visitor;
-use App\Scopes\BrandScope;
 use App\Services\Integrations\CrmMail;
 use App\Services\Integrations\CrmWhatsApp;
 use App\Services\KnowledgeService;
@@ -235,25 +234,7 @@ final class LeadAssistantContext
 
     private function projectSubjects(Inquiry $lead, Brand $brand): array
     {
-        // Only the subject match is used across projects, including other brands. Their content is never selected.
-        $projects = Inquiry::withoutGlobalScope(BrandScope::class)->where('organization_id', $lead->organization_id)
-            ->where('guest_id', $lead->guest_id)->select('id');
-        $subjects = Activity::withoutGlobalScope(BrandScope::class)->where('organization_id', $lead->organization_id)->where('type', 'email')
-            ->whereIn('inquiry_id', $projects)->whereNotNull('subject')->distinct()->get(['inquiry_id', 'brand_id', 'subject']);
-        $current = [];
-        $others = [];
-        foreach ($subjects as $row) {
-            $subject = CrmMail::threadSubject(['subject' => $row->subject]);
-            if ($subject === '') {
-                continue;
-            }
-            if ((int) $row->inquiry_id === (int) $lead->id && ($row->brand_id === null || (int) $row->brand_id === (int) $brand->id)) {
-                $current[$subject] = true;
-            } else {
-                $others[$subject] = true;
-            }
-        }
-        return array_diff_key($current, $others);
+        return LeadProjectSubjects::forGuests((int) $brand->organization_id, [$lead->guest_id])[$lead->guest_id][$lead->id] ?? [];
     }
 
     private function chat(Inquiry $lead, Brand $brand, bool $multiple): array

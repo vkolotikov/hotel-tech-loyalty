@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Guest;
 use App\Models\Inquiry;
+use App\Services\Crm\LeadReplyBadges;
 use App\Services\Integrations\CrmMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class CrmMailController extends Controller
             return $this->json(['available' => false]);
         }
 
-        return $this->json($mail->read($guest, $this->input($request)));
+        return $this->json(LeadReplyBadges::emailPage($guest, null, $mail->read($guest, $this->input($request))));
     }
 
     public function inquiry(Request $request, Inquiry $inquiry, CrmMail $mail): JsonResponse
@@ -27,7 +28,7 @@ class CrmMailController extends Controller
         }
         $guest = Guest::findOrFail($inquiry->guest_id);
 
-        return $this->json($mail->read($guest, $this->input($request)));
+        return $this->json(LeadReplyBadges::emailPage($guest, $inquiry, $mail->read($guest, $this->input($request))));
     }
 
     private function input(Request $request): array

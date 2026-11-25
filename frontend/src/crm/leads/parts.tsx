@@ -19,6 +19,24 @@ export function StagePill({ stage, fallback }: { stage: Stage | null; fallback: 
   )
 }
 
+export function ReplyBadges({ status, onOpen }: { status: LeadRow['reply_status']; onOpen?: (tab: string) => void }) {
+  const { t } = useTranslation()
+  return (['email', 'whatsapp'] as const).map(channel => {
+    const state = status?.[channel]
+    if (!state) return null
+    const Icon = channel === 'email' ? Mail : MessageCircle
+    const name = channel === 'email' ? t('crm.leads.emails', 'Emails') : t('crm.whatsapp.title', 'WhatsApp')
+    const label = state === 'needs_reply' ? t('crm.leads.needs_reply') : t('crm.leads.awaiting_customer')
+    const content = <Pill tone={state === 'needs_reply' ? 'pending' : 'neutral'} title={name + ' · ' + label}>
+      <Icon size={12} aria-hidden /><span className="sr-only">{name} · </span>{label}
+    </Pill>
+    return onOpen
+      ? <button key={channel} type="button" className="inline-flex rounded-full hover:brightness-90 focus-visible:outline-2 focus-visible:outline-a-accent"
+          onClick={() => onOpen(channel === 'email' ? 'emails' : 'whatsapp')}>{content}</button>
+      : <span key={channel} className="inline-flex">{content}</span>
+  })
+}
+
 /** How fresh a lead is: new today, its age, or cold since the last touch (open leads only). */
 export function FreshChip({ lead, closed = false, now }: { lead: Pick<LeadRow, 'created_at' | 'last_contacted_at'>; closed?: boolean; now: Date }) {
   const { t } = useTranslation()

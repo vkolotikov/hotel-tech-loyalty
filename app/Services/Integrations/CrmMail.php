@@ -15,6 +15,7 @@ use Throwable;
 
 class CrmMail
 {
+    public const ORGANIZATION = 19;
     public const BRAND = 23;
     private const HEADER_PAGES = 4;
     private const BODY_LIMIT = 12;
@@ -56,6 +57,12 @@ class CrmMail
                 ->post('https://contacts.hexa-tech.uk/api/integrations/crm-mail/'.$guest->id, [...$input, 'email' => $email]);
         } catch (Throwable) {
             abort(502, 'mail_unavailable');
+        }
+        if (in_array($response->status(), [401, 403], true) && ($input['action'] ?? '') === 'capture') {
+            return ['available' => true, 'code' => 'mail_setup_required'];
+        }
+        if ($response->status() === 422 && ($input['action'] ?? '') === 'capture' && ! empty($input['cursor'])) {
+            return ['available' => true, 'code' => 'mail_cursor_expired'];
         }
         if ($response->status() === 409) {
             return ['available' => true, 'code' => 'crm_contact_review_required', 'messages' => []];

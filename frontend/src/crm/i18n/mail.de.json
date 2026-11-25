@@ -1,4 +1,7 @@
 {
+  "needs_reply": "Antwort nötig",
+  "awaiting_customer": "Wartet auf Kundenantwort",
+  "auto_sync": "Zoho Mail · Automatischer Abgleich",
   "incoming": "Vom Kunden",
   "outgoing": "An den Kunden",
   "other": "E-Mail",

@@ -341,6 +341,19 @@ durable deduplication, shared hourly budgets and permanent marketing opt-out are
 
 ## WhatsApp history and AI Discovery
 
+**Lead reply badges.** FDS Cards lead email is captured from the connected Zoho mailbox in the background.
+WhatsApp receives messages through the connected business number. The lead list, pipeline and record show
+**Needs reply** when the latest message in a matched conversation came from the customer. **Awaiting customer**
+means the team's message is the latest in every matched thread for that channel. Select a badge in the lead header
+to open the channel. Email history marks the latest message of each thread. Opening a draft leaves the badge in place.
+
+The scheduler runs `crm:sync-lead-correspondence` every minute and checks up to 12 due contacts per run. A full pass
+depends on the number of contacts and provider availability. Each contact's Zoho cursor resumes older pages in the
+background. The CRM keeps reply metadata and hashed contact identifiers. Message content stays in the existing channel
+history. Zoho's Sent folder confirms outgoing email, including mail sent from a connected email app. A shared contact
+needs an exclusive, logged project subject to put an email badge on an opportunity. WhatsApp matching uses the reviewed
+contact and business number. Staff can review uncertain matches in Contacts DB.
+
 **FDS Cards WhatsApp.** In **Integrations → Channels**, the WhatsApp card reads the Contacts DB connection and reports
 the captured message count and most recent event. Open **Contacts DB → Integrations** to complete Meta Embedded Signup
 for the business number. The lead and contact **WhatsApp** tabs read incoming messages, business-app echoes and imported

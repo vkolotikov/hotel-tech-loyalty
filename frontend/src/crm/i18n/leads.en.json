@@ -1,4 +1,6 @@
 {
+  "needs_reply": "Needs reply",
+  "awaiting_customer": "Awaiting customer",
   "nav_summary": "Summary",
   "nav_messages": "Messages",
   "nav_ai": "AI tools",

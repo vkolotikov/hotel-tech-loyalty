@@ -1,5 +1,12 @@
 # Handoff — 25 November 2026
 
+## Automatic FDS lead correspondence
+
+The CRM scheduler checks due FDS Cards lead contacts for Zoho email and reads the latest verified WhatsApp activity.
+The Contacts bridge supplies per-thread reply metadata from the selected mailbox and business number. The CRM lead
+list, boards and detail use the same saved state. See the [CRM runbook](../crm-workspace.md) for timing, badge
+meanings and the rules for a contact with several opportunities.
+
 ## CRM email decisions and approved quotes
 
 The lead assistant now supports a follow-up decision, opportunity-specific quote arithmetic, file metadata, task outcomes

@@ -18,7 +18,7 @@ function registerMailWords() {
 if (i18n.isInitialized) registerMailWords()
 else i18n.on('initialized', registerMailWords)
 
-export interface EmailItem { id: string; subject: string; sent_at: string | null; participants: { from: string[]; to: string[]; cc: string[] } }
+export interface EmailItem { id: string; subject: string; sent_at: string | null; reply_status?: 'needs_reply' | 'awaiting_customer'; participants: { from: string[]; to: string[]; cc: string[] } }
 export interface EmailHistory { available: boolean; code?: string; connected?: boolean; messages?: EmailItem[]; total?: number; page?: number; email?: string; timezone?: string; last_fetched_at?: string | null }
 export interface MailTransport { read: <T>(path: string) => Promise<T>; refresh: <T>(path: string, data: unknown) => Promise<T> }
 const defaultTransport: MailTransport = { read: path => api.get(`/v1/admin/${path}`).then(r => r.data), refresh: (path, data) => api.post(`/v1/admin/${path}`, data).then(r => r.data) }
@@ -32,7 +32,8 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
   const [cursor, setCursor] = useState<string | null>(null)
   const path = `${resource}/${id}/email-history`
   const key = ['crm-mail', scope ?? `admin:${brand}`, resource, id]
-  const query = useQuery({ queryKey: [...key, page], queryFn: () => transport.read<EmailHistory>(`${path}?page=${page}`), retry: false, staleTime: 30_000 })
+  const query = useQuery({ queryKey: [...key, page], queryFn: () => transport.read<EmailHistory>(`${path}?page=${page}`), retry: false, staleTime: 30_000,
+    refetchInterval: q => page === 1 && q.state.data?.connected ? 30_000 : false, })
   const body = useQuery({ queryKey: [...key, 'body', selected], queryFn: () => transport.read<{ body?: string; code?: string }>(`${path}?message_id=${encodeURIComponent(selected!)}`), enabled: !!selected && query.data?.available === true, retry: false })
   const refresh = useMutation({ mutationFn: (older: boolean) => transport.refresh<{ next_cursor: string | null }>(path, older ? { cursor } : {}), onSuccess: result => { setCursor(result.next_cursor ?? null); setPage(1); void qc.invalidateQueries({ queryKey: key }) } })
   const denied = [403, 404].includes((query.error as { response?: { status?: number } } | null)?.response?.status ?? 0)
@@ -44,9 +45,9 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
     {(query.error || refresh.error) && <div role="alert" className="text-sm text-a-text-2"><p>{t('crm.mail.error')}</p><button type="button" onClick={() => { if (refresh.isError) refresh.mutate(refresh.variables ?? false); else void query.refetch() }} disabled={query.isFetching || refresh.isPending} className="mt-2 underline disabled:opacity-50">{t('crm.mail.retry')}</button></div>}
     {code && <p className="text-sm text-a-text-2">{t(`crm.mail.${code}`, t('crm.mail.error'))}</p>}
     {query.data?.available && !code && <>
-      <p className="mb-3 break-all text-xs text-a-text-2">{query.data.email} · {t('crm.mail.read_only')}</p>
+      <p className="mb-3 break-all text-xs text-a-text-2">{query.data.email} · {t(resource === 'inquiries' && query.data.connected ? 'crm.mail.auto_sync' : 'crm.mail.read_only')}</p>
       {query.data.connected === false && <p className="text-sm text-a-text-2">{t('crm.mail.disconnected')}</p>}
-      {!query.data.messages?.length && !query.isFetching && !refresh.isPending && !query.error && !refresh.error && <p role="status" className="py-3 text-sm text-a-text-2">{t(refresh.isSuccess ? 'crm.mail.no_matches' : 'crm.mail.empty')}</p>}
+      {!query.data.messages?.length && !query.isFetching && !refresh.isPending && !query.error && !refresh.error && <p role="status" className="py-3 text-sm text-a-text-2">{t(refresh.isSuccess || resource === 'inquiries' ? 'crm.mail.no_matches' : 'crm.mail.empty')}</p>}
       <div className="space-y-4">{groupBySubject(query.data.messages ?? []).map(group => <section key={group.messages[0].id} className="overflow-hidden rounded-xl border border-a-border">
         <header className="flex items-start justify-between gap-3 border-b border-a-border bg-a-surface-2 px-3 py-3 sm:px-4">
           <h3 className="min-w-0 break-words text-sm font-semibold leading-5">{group.subject || t('crm.mail.no_subject')}</h3>
@@ -62,7 +63,10 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
               className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-a-surface-2 focus-visible:-outline-offset-2 sm:px-4 ${expanded ? 'bg-a-surface-2/60' : ''}`}>
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${direction === 'incoming' ? 'bg-a-accent/10 text-a-accent-text' : 'border border-a-border text-a-text-2'}`}><Icon size={16} aria-hidden /></span>
               <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                <span className="min-w-0"><span className="block text-xs text-a-text-2">{t(`crm.mail.${direction}`)}</span><span className="block break-words text-sm font-semibold [overflow-wrap:anywhere]">{sender || t('crm.mail.unknown_sender')}</span></span>
+                <span className="min-w-0"><span className="flex flex-wrap items-center gap-2 text-xs text-a-text-2">
+                  {t(`crm.mail.${direction}`)}
+                  {message.reply_status && <span className={`rounded-full px-2 py-0.5 font-medium ${message.reply_status === 'needs_reply' ? 'bg-a-st-pending/12 text-a-st-pending' : 'bg-a-surface-2 text-a-text-2'}`}>{t(`crm.mail.${message.reply_status}`)}</span>}
+                </span><span className="block break-words text-sm font-semibold [overflow-wrap:anywhere]">{sender || t('crm.mail.unknown_sender')}</span></span>
                 <time dateTime={message.sent_at ?? undefined} className="text-xs tabular-nums text-a-text-2">{date && Number.isFinite(date.getTime()) ? date.toLocaleString(i18n.language, { timeZone: query.data?.timezone || 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : t('crm.mail.unknown_date')}</time>
               </span>
               <ChevronDown size={16} aria-hidden className={`shrink-0 text-a-text-2 ${expanded ? 'rotate-180' : ''}`} />
