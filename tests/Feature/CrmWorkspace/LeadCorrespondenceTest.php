@@ -42,7 +42,7 @@ class LeadCorrespondenceTest extends TestCase
             $brand = new Brand(['organization_id' => $this->org->id, 'name' => 'Brand '.$id, 'slug' => 'capture-'.$id]);
             $brand->forceFill(['id' => $id, 'widget_token' => str()->random(32)])->saveQuietly();
         }
-        $this->staffMember = $this->staffUser($this->org, ['role' => 'staff']);
+        $this->staffMember = $this->staffUser($this->org);
         $this->travelTo(now()->startOfMinute());
         config(['crm_mail.token' => str_repeat('t', 40)]);
         Http::preventStrayRequests();
@@ -70,7 +70,7 @@ class LeadCorrespondenceTest extends TestCase
         $lead = Inquiry::with('guest')->findOrFail($id);
         LeadReplyBadges::attach(collect([$lead]), $this->staffMember);
 
-        return $lead->reply_status;
+        return $lead->getAttribute('reply_status');
     }
 
     public function test_background_capture_tracks_channels_and_threads_independently_and_preserves_stage(): void
