@@ -93,7 +93,7 @@ class KnowledgeService
     {
         $brand = $this->resolveBrand($orgId, $brandId);
 
-        return $this->rankedItems($this->items($orgId, $brand), $this->words($query), $limit);
+        return $this->rankedItems($this->items($orgId, $brand), $this->words($query), $limit, $brand);
     }
 
     private function resolveBrand(int $orgId, ?int $id): ?Brand
@@ -119,7 +119,7 @@ class KnowledgeService
     }
 
     /** @param Builder<KnowledgeItem> $base */
-    private function rankedItems(Builder $base, array $words, int $limit): Collection
+    private function rankedItems(Builder $base, array $words, int $limit, ?Brand $brand = null): Collection
     {
         if (empty($words)) {
             return $base->orderByDesc('priority')->orderByDesc('use_count')->orderBy('id')->limit($limit)->get();
@@ -128,18 +128,22 @@ class KnowledgeService
         // Pull a broader candidate set so the scoring step has material to work
         // with — a single matching token shouldn't exclude an item that would
         // have scored high on others.
-        $candidates = $base
+        $matches = $base
             ->where(function ($q) use ($words) {
                 foreach ($words as $word) {
                     $q->orWhereLike('question', "%{$word}%")
                       ->orWhereLike('answer', "%{$word}%")
                       ->orWhereJsonContains('keywords', $word);
                 }
-            })
-            ->orderByDesc('priority')
-            ->orderByDesc('use_count')
-            ->limit(max(25, $limit * 5))
-            ->get();
+            });
+        $candidates = (clone $matches)->orderByDesc('priority')->orderByDesc('use_count')
+            ->limit(max(25, $limit * 5))->get();
+        if (FdsBuilderKnowledge::owns($brand)) {
+            // Existing FAQs can have years of use counts. Let fresh catalog matches compete on relevance from day one.
+            $catalog = (clone $matches)->where('source_key', 'like', FdsBuilderKnowledge::PREFIX.'%')
+                ->orderBy('id')->limit(64)->get();
+            $candidates = $candidates->concat($catalog)->unique('id')->values();
+        }
 
         if ($candidates->isEmpty()) {
             return $candidates;
@@ -235,7 +239,7 @@ class KnowledgeService
             }
         }
         $base = $this->items((int) $brand->organization_id, $brand);
-        $matched = $words ? $this->rankedItems(clone $base, $words, 12) : collect();
+        $matched = $words ? $this->rankedItems(clone $base, $words, 12, $brand) : collect();
         $exact = collect();
         if ($ids) {
             $candidates = (clone $base)->where(function ($q) use ($ids) {
@@ -281,7 +285,7 @@ class KnowledgeService
         $brand = $this->resolveBrand($orgId, $brandId);
         $base = $this->items($orgId, $brand);
         $words = $this->words($query);
-        $items = $this->rankedItems(clone $base, $words, 5);
+        $items = $this->rankedItems(clone $base, $words, 5, $brand);
         if ($countUse && $items->isNotEmpty()) {
             $base->whereKey($items->pluck('id')->all())->increment('use_count');
         }

@@ -97,6 +97,15 @@ class FdsBuilderKnowledgeTest extends TestCase
         $this->assertStringNotContainsString('FDS builder', json_encode($knowledge->forSales($query, $this->sibling)));
         $this->assertStringNotContainsString('FDS builder', $knowledge->getKnowledgeContext($query, $this->sibling->organization_id, $this->sibling->id, false));
         $this->assertSame([], $knowledge->captureSources($this->fds));
+
+        // Popular manual FAQs used to fill every candidate slot before a newly imported price could be ranked.
+        for ($i = 0; $i < 65; $i++) {
+            KnowledgeItem::withoutGlobalScopes()->create(['organization_id' => $this->fds->organization_id,
+                'brand_id' => $this->fds->id, 'question' => 'Cards FAQ '.$i, 'answer' => 'General business information.',
+                'keywords' => ['cards'], 'use_count' => 14, 'is_active' => true]);
+        }
+        $this->assertStringContainsString('GBP 249.00', $knowledge->getKnowledgeContext($query, $this->fds->organization_id, $this->fds->id, false));
+        $this->assertStringContainsString('GBP 249.00', json_encode($knowledge->forSales($query, $this->fds)));
     }
 
     public function test_refresh_preserves_manual_answers_and_staff_switches_and_retires_withdrawn_offers(): void
