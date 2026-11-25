@@ -263,6 +263,7 @@ function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data }
 }) {
   const { t } = useTranslation()
   const toast = useToast()
+  const fieldId = useId()
   const [draft, setDraft] = useState<Email>({ subject: initial.subject, body: initial.body })
   const [revision, setRevision] = useState(data.revision)
   const cache = useQueryClient()
@@ -291,12 +292,12 @@ function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data }
   return (
     <div className="space-y-3">
       <label className="block space-y-1 text-sm font-medium text-a-text">
-        <span>{t('crm.sales.email.subject')}</span>
-        <input className={SALES_FIELD} value={draft.subject} maxLength={240} onChange={event => setDraft({ ...draft, subject: event.target.value })} />
+        <span id={`${fieldId}-subject`}>{t('crm.sales.email.subject')}</span>
+        <input aria-labelledby={`${fieldId}-subject`} className={SALES_FIELD} value={draft.subject} maxLength={240} onChange={event => setDraft({ ...draft, subject: event.target.value })} />
       </label>
       <label className="block space-y-1 text-sm font-medium text-a-text">
-        <span>{t('crm.sales.email.body')}</span>
-        <textarea className={`${SALES_FIELD} min-h-56 resize-y leading-relaxed`} value={draft.body} maxLength={10000}
+        <span id={`${fieldId}-body`}>{t('crm.sales.email.body')}</span>
+        <textarea aria-labelledby={`${fieldId}-body`} className={`${SALES_FIELD} min-h-56 resize-y leading-relaxed`} value={draft.body} maxLength={10000}
           rows={12} onChange={event => setDraft({ ...draft, body: event.target.value })} />
       </label>
       <div className="flex flex-wrap items-center justify-end gap-2">

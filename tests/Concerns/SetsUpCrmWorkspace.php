@@ -85,6 +85,19 @@ trait SetsUpCrmWorkspace
         if (! Schema::hasTable('crm_lead_assistant')) {
             (require database_path('migrations/2026_11_22_150000_add_crm_sales_assistant.php'))->up();
         }
+        if (! Schema::hasTable('reservations')) {
+            Schema::create('reservations', function (Blueprint $table) {
+                $table->id();
+                foreach (['organization_id', 'brand_id', 'guest_id', 'inquiry_id', 'property_id'] as $id) {
+                    $table->unsignedBigInteger($id)->nullable();
+                }
+                $table->date('check_in');
+                $table->date('check_out');
+                $table->string('room_type')->nullable();
+                $table->string('status')->nullable();
+                $table->string('payment_status')->nullable();
+            });
+        }
         if (! Schema::hasColumn('crm_lead_assistant', 'approved_quote')) {
             (require database_path('migrations/2026_11_25_160000_add_reviewed_email_records.php'))->up();
         }

@@ -484,6 +484,20 @@ class LeadAssistantTest extends TestCase
             ->assertJsonPath('results.reply.coverage.reply_to.subject', 'AW: Studio fit-out')->assertJsonPath('results.reply.coverage.project_history_limited', true);
     }
 
+    public function test_linked_reservations_obey_booking_entitlement_and_the_opportunity_contact(): void
+    {
+        $id = $this->lead();
+        $lead = \App\Models\Inquiry::findOrFail($id);
+        $brand = \App\Models\Brand::findOrFail($this->brandId);
+        DB::table('reservations')->insert($this->reservationRequired(['organization_id' => $this->org->id,
+            'inquiry_id' => $id, 'guest_id' => $lead->guest_id, 'brand_id' => $this->brandId, 'room_type' => 'Studio room']));
+        $this->assertSame([], \App\Services\Crm\LeadEmailEvidence::collect($lead, $brand, $this->org)['linked_reservations']);
+        $this->org->forceFill(['entitled_products' => null])->save();
+        $rows = \App\Services\Crm\LeadEmailEvidence::collect($lead, $brand, $this->org)['linked_reservations'];
+        $this->assertSame(['Studio room'], array_column($rows, 'room_type'));
+        $this->assertArrayNotHasKey('confirmation_no', $rows[0]);
+    }
+
     public function test_amount_checks_distinguish_currency_tax_and_reviewed_facts_from_a_budget(): void
     {
         $context = ['lead' => ['currency' => 'EUR', 'notes' => 'The buyer requested EUR 520. Approved current fee is EUR 1250.50.'],
