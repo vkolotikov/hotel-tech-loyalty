@@ -17,12 +17,12 @@ const original: Coverage = {
   email_state: 'captured', strategies: [], reply_to: { channel: 'email', subject: 'Prototype timing' },
 }
 
-function render(coverage: Coverage) {
+function render(coverage: Coverage, decision: 'draft' | 'internal_action' = 'draft') {
   const client = new QueryClient()
   client.setQueryData<Assistant>(assistantKey(41), {
     brand: { id: 1, name: 'Studio' }, revision: 1, strategies: {}, run: null,
     results: { reply: { id: 'reply', generated_at: '2026-11-24T10:00:00Z', subject: 'Proof', body: 'Friday works.',
-      review_notes: ['Verify the finish internally.'], coverage } },
+      review_notes: ['Verify the finish internally.'], decision, reason: 'Engineering owes an answer.', coverage } },
   })
   function Panel() {
     return <LeadAssistantPanel leadId={41} recipient="buyer@example.org" mode="reply" query={useAssistant(41)}
@@ -38,6 +38,15 @@ describe('response email sources', () => {
     expect(html).toContain('Verify the finish internally.')
     expect(html.match(/href="mailto:[^"]+"/)?.[0]).toBe('href="mailto:buyer@example.org?subject=Proof&amp;body=Friday%20works."')
     expect(html).not.toContain('crm.sales.context.history_limited')
+  })
+
+  it('shows the internal next action and removes compose and copy actions for a held email', () => {
+    const html = render(original, 'internal_action')
+    expect(html).toContain('Engineering owes an answer.')
+    expect(html).toContain('crm.sales.email.internal_action')
+    expect(html).not.toContain('href="mailto:')
+    expect(html).not.toContain('crm.sales.email.use_activity')
+    expect(html).not.toContain('Friday works.')
   })
 
   it('identifies a WhatsApp request, writing samples and incomplete history', () => {

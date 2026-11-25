@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Exceptions\AiHelperRefused;
 use App\Models\Activity;
 use App\Models\AuditLog;
+use App\Models\CrmLeadAssistant;
 use App\Models\Inquiry;
 use App\Models\InquiryAttachment;
 use App\Models\InquiryLostReason;
@@ -17,6 +18,7 @@ use App\Models\Task;
 use App\Services\CustomFieldService;
 use App\Services\Crm\LeadAssistant;
 use App\Services\Crm\LeadAssistantWriter;
+use App\Services\Crm\LeadEmailEvidence;
 use App\Services\Crm\SalesBrand;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
@@ -25,6 +27,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -1313,6 +1316,15 @@ class InquiryController extends Controller
             return response()->json(['subject' => '', 'body' => '', 'error' => 'Could not draft proposal. Please try again.']);
         }
 
-        return response()->json(['subject' => $draft['subject'], 'body' => $draft['body'], 'review_notes' => $draft['review_notes']]);
+        $current = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+        abort_unless($current->guest_id === $inquiry->guest_id && $scope->forLead($user, $current)->is($brand), 409);
+        $state = CrmLeadAssistant::query()->whereKey($current->id)->where('brand_id', $brand->id)->first();
+        $quote = LeadEmailEvidence::currentQuote($state, $current);
+        if ($reason = LeadEmailEvidence::recheck(LeadEmailEvidence::policy($current), 'proposal', $quote, (int) $org->id, $draft)) {
+            $draft = LeadEmailEvidence::hold($reason, $run['language']);
+        }
+
+        return response()->json(Arr::only($draft, ['subject', 'body', 'decision', 'reason', 'review_notes']))
+            ->header('Cache-Control', 'private, no-store');
     }
 }

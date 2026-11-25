@@ -9,6 +9,7 @@
   "review": "To verify",
   "reload": "Reload latest version",
   "modes": {
+    "follow_up": "Follow-up",
     "brief": "AI brief",
     "sales_strategy": "Sales strategy",
     "marketing_strategy": "Marketing strategy",
@@ -16,6 +17,7 @@
     "reply": "Response email"
   },
   "describe": {
+    "follow_up": "Check whether to follow up and what would help the customer next.",
     "brief": "Summarise the request, conversation, and decisions still open.",
     "sales_strategy": "Plan how to qualify, position, and win this opportunity.",
     "marketing_strategy": "Recommend messages, channels, and services for this customer’s markets.",
@@ -23,6 +25,7 @@
     "reply": "Draft a short business reply in the customer’s language and style."
   },
   "examples": {
+    "follow_up": "Check the agreed decision date and whether we owe an answer.",
     "brief": "Focus on the request and what we still need to confirm.",
     "sales_strategy": "Focus on the buyer’s priorities and how to handle the price objection.",
     "marketing_strategy": "Suggest a first campaign for the customer’s Belgian market.",
@@ -30,6 +33,10 @@
     "reply": "Answer the questions about delivery and samples."
   },
   "context": {
+    "project_files": "Project files",
+    "recorded_tasks": "Tasks and outcomes",
+    "prior_orders": "Earlier won opportunities",
+    "project_history_limited": "This contact has several projects. Only messages linked to this project were used for the current request.",
     "title": "Sources used",
     "customer_fields": "Customer profile fields",
     "business_fields": "Our business fields",
@@ -66,6 +73,15 @@
     "used": "Strategies used · {{plans}}"
   },
   "email": {
+    "wait": "Wait before emailing",
+    "internal_action": "Internal action needed",
+    "stop": "Stop email contact",
+    "assessment": "Conversation assessment",
+    "intent": "Customer intent",
+    "next_step": "Next step",
+    "unanswered": "Open questions",
+    "approve": "Save reviewed wording",
+    "reviewed": "Reviewed wording saved",
     "draft": "Email draft",
     "subject": "Subject",
     "body": "Message",
@@ -75,6 +91,22 @@
     "reply_to": "Reply based on {{subject}}",
     "reply_missing": "This draft uses the lead history. No captured inbound email was available.",
     "edit_hint": "Review the draft before sending. The CRM retains the generated version."
+  },
+  "quote": {
+    "title": "Approved quote for this opportunity",
+    "reference": "Quote reference",
+    "scope": "Products or services covered",
+    "quantity": "Quantity",
+    "unit_price": "Unit price",
+    "charges": "Fixed charges (optional)",
+    "currency": "Currency code",
+    "valid_until": "Valid through",
+    "tax_basis": "Tax treatment",
+    "unspecified": "Unspecified",
+    "included": "Tax included",
+    "excluded": "Tax excluded",
+    "save": "Save approved quote",
+    "remove": "Remove quote"
   },
   "profile": {
     "title": "Our business",

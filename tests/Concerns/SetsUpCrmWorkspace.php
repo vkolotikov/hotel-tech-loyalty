@@ -85,6 +85,14 @@ trait SetsUpCrmWorkspace
         if (! Schema::hasTable('crm_lead_assistant')) {
             (require database_path('migrations/2026_11_22_150000_add_crm_sales_assistant.php'))->up();
         }
+        if (! Schema::hasColumn('crm_lead_assistant', 'approved_quote')) {
+            (require database_path('migrations/2026_11_25_160000_add_reviewed_email_records.php'))->up();
+        }
+        foreach (['inquiry_attachments' => '2026_05_18_120000_create_inquiry_attachments_table', 'email_suppressions' => '2026_08_14_090000_create_email_suppressions_table'] as $table => $migration) {
+            if (! Schema::hasTable($table)) {
+                (require database_path('migrations/'.$migration.'.php'))->up();
+            }
+        }
     }
 
     /** On the admin host, as an absolute address. */

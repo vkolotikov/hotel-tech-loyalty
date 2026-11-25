@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Models\Organization;
 use App\Models\Staff;
 use App\Models\User;
 use App\Support\AdminAccess\AccessMap;
@@ -29,6 +30,13 @@ final class CrmAccess
         }
 
         return in_array(self::staff($user)?->role, AccessMap::MANAGER_ROLES, true);
+    }
+
+    public static function seesBookings(Organization $org): bool
+    {
+        $modules = $org->planModules();
+
+        return $modules === null || in_array('booking', AccessMap::productsFor($modules), true);
     }
 
     public static function role(User $user): ?string

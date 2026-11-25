@@ -204,20 +204,58 @@ class KnowledgeService
         return $sources;
     }
 
-    /** Read the same approved answers as chat. Small libraries fit in full; larger ones put matching answers first. */
+    private function identifierHit(string $text, string $id): bool
+    {
+        return (bool) preg_match('/(?<![\pL\d-])'.preg_quote($id, '/').'(?![\pL\d-])/iu', $text);
+    }
+
+    /** Match exact model references first, then rank relevant brand answers and document passages. */
     public function forSales(string $query, Brand $brand): array
     {
+        $query = mb_strtolower(mb_substr($query, 0, 8000));
+        preg_match_all('/(?<![\pL\d-])(?=[\pL\d.-]{1,40}(?![\pL\d.-]))(?=[\pL\d.-]*\d)\pL[\pL\d]*(?:[-.][\pL\d]+)*(?![\pL\d-])/u', $query, $matches);
+        $ids = array_slice(array_unique($matches[0]), 0, 12);
         $words = $this->words($query);
+        foreach ([
+            ['pricing', 'price', 'tarif', 'precio', 'prix', 'preis', 'цена'],
+            ['shipping', 'delivery', 'livraison', 'entrega', 'versand', 'доставка'],
+            ['sample', 'échantillon', 'muestra', 'muster', 'образец'],
+            ['invoice', 'facture', 'factura', 'rechnung', 'счёт'],
+        ] as $terms) {
+            if (array_intersect($words, $terms)) {
+                $words = array_values(array_unique([...$words, ...$terms]));
+            }
+        }
         $base = $this->items((int) $brand->organization_id, $brand);
-        $matched = $this->rankedItems(clone $base, $words, 24);
-        $rest = $this->rankedItems(clone $base, [], 80);
+        $matched = $words ? $this->rankedItems(clone $base, $words, 12) : collect();
+        $exact = collect();
+        if ($ids) {
+            $candidates = (clone $base)->where(function ($q) use ($ids) {
+                foreach ($ids as $id) {
+                    $q->orWhereLike('question', "%{$id}%")->orWhereLike('answer', "%{$id}%")->orWhereJsonContains('keywords', $id);
+                }
+            })->orderByDesc('priority')->orderBy('id')->cursor();
+            foreach ($candidates as $item) {
+                $content = $item->question.' '.$item->answer.' '.implode(' ', $item->keywords ?? []);
+                if (array_any($ids, fn ($id) => $this->identifierHit($content, $id))) {
+                    $exact->push($item);
+                    if ($exact->count() >= 12) {
+                        break;
+                    }
+                }
+            }
+        }
+        $items = $exact->concat($matched)->unique('id');
+        if ($items->isEmpty() && ! $ids) {
+            $items = $this->rankedItems($base, [], 4);
+        }
         $answers = [];
-        $remaining = 40000;
-        foreach ($matched->concat($rest)->unique('id') as $item) {
+        $remaining = 22000;
+        foreach ($items->take(12) as $item) {
             $question = mb_substr((string) $item->question, 0, 500);
             $answer = mb_substr((string) $item->answer, 0, 4500);
             $length = mb_strlen($question) + mb_strlen($answer);
-            if (count($answers) >= 80 || $remaining < 1) {
+            if ($remaining < 1) {
                 break;
             }
             if ($length > $remaining) {
@@ -227,7 +265,7 @@ class KnowledgeService
             $remaining -= $length;
         }
 
-        return ['answers' => $answers, 'documents' => $this->excerpts($words, (int) $brand->organization_id, $brand)];
+        return ['answers' => $answers, 'documents' => $this->excerpts(array_unique([...$ids, ...$words]), (int) $brand->organization_id, $brand, $ids)];
     }
 
     public function getKnowledgeContext(string $query, int $orgId, ?int $brandId = null, bool $countUse = true): string
@@ -254,7 +292,7 @@ class KnowledgeService
         return implode("\n\n", $parts);
     }
 
-    private function excerpts(array $words, int $orgId, ?Brand $brand): array
+    private function excerpts(array $words, int $orgId, ?Brand $brand, array $ids = []): array
     {
         if (! $words) {
             return [];
@@ -274,7 +312,8 @@ class KnowledgeService
             foreach ($chunks as $index => $chunk) {
                 $passage = $chunk.mb_substr($chunks[$index + 1] ?? '', 0, 300);
                 $lower = mb_strtolower($passage);
-                $hits = count(array_filter($words, fn ($word) => str_contains($lower, $word)));
+                $hits = count(array_filter(array_diff($words, $ids), fn ($word) => str_contains($lower, $word)))
+                    + 20 * count(array_filter($ids, fn ($id) => $this->identifierHit($lower, $id)));
                 if ($hits > $score) {
                     $score = $hits;
                     $excerpt = $passage;

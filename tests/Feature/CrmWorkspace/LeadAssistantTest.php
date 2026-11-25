@@ -376,6 +376,148 @@ class LeadAssistantTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_a_reviewed_quote_is_scoped_calculated_and_rechecked_before_reuse(): void
+    {
+        $lead = $this->lead(['notes' => 'Buyer requested a EUR 40 budget.']);
+        $url = fn ($suffix = '') => $this->crmApi("leads/$lead/assistant$suffix?brand_id=all");
+        $quote = ['reference' => 'Q-203', 'scope' => 'Three facade samples', 'currency' => 'EUR', 'quantity' => 3,
+            'unit_price' => '19.95', 'charges' => '5', 'valid_until' => '2026-11-05', 'tax_basis' => 'excluded'];
+        $this->asStaffMember()->putJson($url('/quote'), ['revision' => 0, 'quote' => $quote])->assertForbidden();
+        $this->asManager()->putJson($url('/quote'), ['revision' => 0, 'quote' => []])->assertUnprocessable();
+        $this->putJson($url('/quote'), ['revision' => 0, 'quote' => $quote])->assertOk()->assertJsonPath('quote.total', '64.85');
+        $this->putJson($url('/quote'), ['revision' => 0, 'quote' => null])->assertConflict();
+        DB::table('inquiry_attachments')->insert(['organization_id' => $this->org->id, 'inquiry_id' => $lead,
+            'filename' => 'drawings.pdf', 'url' => '/private/signed-download?access=fixture', 'note' => 'Received, awaiting engineering review']);
+        $draft = ['subject' => 'Facade samples', 'body' => 'The quoted total is €64.85 before tax.', 'review_notes' => []];
+        Http::fake(['api.openai.com/v1/responses' => Http::sequence()
+            ->push($this->providerOutput([...$draft, 'body' => 'The quoted total is {{quote.total}} before tax.']))->push($this->providerOutput([...$draft, 'body' => 'We can offer EUR 40.']))
+            ->push($this->providerOutput($draft))]);
+        $this->postJson($url(), ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $response = $this->getJson($url())->assertOk()->assertJsonPath('results.reply.decision', 'draft')->assertJsonPath('results.reply.coverage.project_files', 1);
+        $response->assertJsonPath('results.reply.body', 'The quoted total is EUR 64.85 before tax.');
+        $id = $response->json('results.reply.id');
+        $review = ['mode' => 'reply', 'revision' => 1, 'source_id' => $id, 'subject' => 'Your facade samples', 'body' => 'The three samples come to EUR 64.85 before tax.'];
+        $this->asStaffMember()->putJson($url('/review'), $review)->assertForbidden();
+        $this->asManager()->putJson($url('/review'), $review)->assertOk()->assertJsonPath('reviews.reply.body', $review['body']);
+        $this->putJson($url('/review'), $review)->assertConflict();
+        $this->postJson($url(), ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($url())->assertOk()->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
+        $input = json_decode(Http::recorded()[1][0]['input'], true);
+        $evidence = $input['project_evidence'];
+        $this->assertSame('64.85', $evidence['approved_quote']['total']);
+        $this->assertSame('drawings.pdf', $evidence['lead_files_metadata_only'][0]['filename']);
+        $this->assertSame([], $evidence['attachments_in_outgoing_email']);
+        $this->assertSame($review['body'], $evidence['approved_writing_examples_this_lead'][0]['reviewed_wording']);
+        $this->assertStringNotContainsString('signed-download', json_encode($evidence));
+        $this->travel(2)->days();
+        $this->getJson($url())->assertOk()->assertJsonPath('results.reply.reason_code', 'quote_changed')
+            ->assertJsonPath('results.reply.body', '')->assertJsonMissingPath('reviews.reply');
+        $this->postJson($this->adminApi("inquiries/$lead/draft-proposal?brand_id=all"))->assertOk()
+            ->assertJsonPath('decision', 'internal_action')->assertJsonPath('body', '');
+        $expired = json_decode(Http::recorded()[2][0]['input'], true)['project_evidence']['approved_quote'];
+        $this->assertSame('expired', $expired['status']);
+        $this->assertArrayNotHasKey('total', $expired);
+        Mail::assertNothingSent();
+    }
+
+    public function test_follow_up_holds_and_suppression_never_offer_an_email_to_send(): void
+    {
+        $lead = $this->lead();
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->activity($lead, $this->brandId, 'Please wait until our board meets next month.');
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->providerOutput([
+            'decision' => 'wait', 'reason' => 'Their board meets next month.', 'next_step' => 'Revisit after the board meeting.',
+            'subject' => 'Discard this', 'body' => 'Checking in early', 'review_notes' => [],
+        ]))]);
+        $this->asStaffMember()->postJson($path, ['mode' => 'follow_up', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.follow_up.decision', 'wait')->assertJsonPath('results.follow_up.subject', '')
+            ->assertJsonPath('results.follow_up.body', '')->assertJsonPath('results.follow_up.reason', 'Their board meets next month.');
+        DB::table('inquiries')->where('id', $lead)->update(['status' => 'Lost']);
+        $this->postJson($path, ['mode' => 'follow_up', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.follow_up.reason_code', 'declined');
+        $contact = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        $email = DB::table('guests')->where('id', $contact)->value('email');
+        \App\Models\EmailSuppression::create(['email' => $email, 'organization_id' => $this->org->id, 'reason' => 'unsubscribe', 'source' => 'test']);
+        $this->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.reply.reason_code', 'suppressed')->assertJsonPath('results.reply.body', '');
+        Http::assertSentCount(1);
+        Mail::assertNothingSent();
+    }
+
+    public function test_multi_project_mail_is_filtered_before_reading_message_bodies(): void
+    {
+        $brand = $this->brand(23);
+        $lead = $this->lead(['brand_id' => $brand]);
+        $guest = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        $email = DB::table('guests')->where('id', $guest)->value('email');
+        $other = $this->lead(['guest_id' => $guest, 'brand_id' => $brand]);
+        foreach ([[$lead, 'Studio fit-out'], [$other, 'Reception'], [$lead, 'Proposal'], [$other, 'Proposal']] as [$id, $name]) {
+            DB::table('activities')->insert(['organization_id' => $this->org->id, 'inquiry_id' => $id, 'brand_id' => $brand,
+                'type' => 'email', 'direction' => 'outbound', 'subject' => $name, 'occurred_at' => now()]);
+        }
+        $ids = [(string) Str::uuid(), (string) Str::uuid(), (string) Str::uuid()];
+        $headers = [];
+        foreach (['Re: Reception', 'Re: Proposal', 'AW: Studio fit-out'] as $i => $subject) {
+            $headers[] = ['id' => $ids[$i], 'participants' => ['from' => [$email]], 'subject' => $subject, 'sent_at' => now()->subHours($i)->toISOString()];
+        }
+        config(['crm_mail.token' => str_repeat('x', 40)]);
+        Http::fake([
+            'contacts.hexa-tech.uk/api/integrations/crm-mail/*' => function (Request $req) use ($headers, $ids) {
+                if ($req['action'] === 'list') {
+                    return Http::response(['connected' => true, 'total' => 3, 'messages' => $headers]);
+                }
+                $this->assertSame($ids[2], $req['message_id']);
+
+                return Http::response(['body' => 'Could we review the studio drawings?']);
+            },
+            'api.openai.com/v1/responses' => Http::response($this->providerOutput(['subject' => 'Studio', 'body' => 'Which day suits you?', 'review_notes' => []])),
+        ]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertOk()->assertJsonPath('results.reply.coverage.emails', 1)
+            ->assertJsonPath('results.reply.coverage.reply_to.subject', 'AW: Studio fit-out')->assertJsonPath('results.reply.coverage.project_history_limited', true);
+    }
+
+    public function test_amount_checks_distinguish_currency_tax_and_reviewed_facts_from_a_budget(): void
+    {
+        $context = ['lead' => ['currency' => 'EUR', 'notes' => 'The buyer requested EUR 520. Approved current fee is EUR 1250.50.'],
+            'brand_knowledge' => ['answers' => [], 'documents' => []], 'project_evidence' => []];
+        $this->assertTrue(\App\Services\Crm\EmailPriceCheck::supported('The fee is 1 250,50 €.', $context));
+        $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('We can do this for EUR 520.', $context));
+        $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('We can do this for USD 1250.50.', $context));
+        $quote = ['status' => 'valid', 'currency' => 'EUR', 'charges' => '5', 'subtotal' => '59.85',
+            'unit_price' => '19.95', 'total' => '64.85', 'tax_basis' => 'excluded'];
+        $context['project_evidence']['approved_quote'] = $quote;
+        $this->assertTrue(\App\Services\Crm\EmailPriceCheck::supported('{{quote.total}} before tax.', $context));
+        $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('{{quote.total}} including VAT.', $context));
+        $this->assertNull(\App\Services\Crm\LeadQuote::fillAmounts('We offer {{quote.discount}}.', $quote));
+        $this->assertNull(\App\Services\Crm\LeadQuote::fillAmounts('Total {{quote.total}}.', [...$quote, 'status' => 'expired']));
+    }
+
+    public function test_brand_knowledge_prioritises_exact_models_and_matches_commercial_topics_across_languages(): void
+    {
+        $brand = \App\Models\Brand::findOrFail($this->brandId);
+        $rows = [
+            ['XR-10 limits', 'Outdoor unit only', 10],
+            ['XR-1 limits', 'Dry indoor spaces only', 1],
+            ['Shipping', 'Allow three days in transit after dispatch.', 1],
+            ['Cleaning', 'Use a clean cloth.', 10],
+        ];
+        foreach ($rows as [$question, $answer, $priority]) {
+            DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $brand->id,
+                'question' => $question, 'answer' => $answer, 'priority' => $priority, 'is_active' => true]);
+        }
+        $service = app(\App\Services\KnowledgeService::class);
+        $this->assertSame(['XR-1 limits'], array_column($service->forSales('XR-1', $brand)['answers'], 'question'));
+        $this->assertSame(['Shipping'], array_column($service->forSales('Livraison ?', $brand)['answers'], 'question'));
+    }
+
     private function brand(?int $id = null): int
     {
         return DB::table('brands')->insertGetId(array_filter(['id' => $id]) + [

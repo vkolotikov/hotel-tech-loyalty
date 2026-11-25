@@ -9,6 +9,7 @@
   "review": "À vérifier",
   "reload": "Charger la dernière version",
   "modes": {
+    "follow_up": "Relance",
     "brief": "Brief IA",
     "sales_strategy": "Stratégie commerciale",
     "marketing_strategy": "Stratégie marketing",
@@ -16,6 +17,7 @@
     "reply": "E-mail de réponse"
   },
   "describe": {
+    "follow_up": "Vérifier si une relance est opportune et quelle suite serait utile au client.",
     "brief": "Résumez la demande, les échanges et les décisions en attente.",
     "sales_strategy": "Préparez un plan pour qualifier cette opportunité, positionner votre offre et conclure la vente.",
     "marketing_strategy": "Recommandez des messages, des canaux et des services adaptés aux marchés du client.",
@@ -23,6 +25,7 @@
     "reply": "Rédigez une réponse professionnelle concise dans la langue et le style du client."
   },
   "examples": {
+    "follow_up": "Vérifier la date de décision et si le client attend une réponse de notre part.",
     "brief": "Mettre l’accent sur la demande et les points à confirmer.",
     "sales_strategy": "Aborder les priorités de l’acheteur et l’objection sur le prix.",
     "marketing_strategy": "Proposer une première campagne pour le marché belge du client.",
@@ -30,6 +33,10 @@
     "reply": "Répondre aux questions sur la livraison et les échantillons."
   },
   "context": {
+    "project_files": "Fichiers du projet",
+    "recorded_tasks": "Tâches et résultats",
+    "prior_orders": "Affaires gagnées précédentes",
+    "project_history_limited": "Ce contact a plusieurs projets. Seuls les messages liés à ce projet ont servi à identifier la demande actuelle.",
     "title": "Sources utilisées",
     "customer_fields": "Champs du profil client",
     "business_fields": "Champs sur notre entreprise",
@@ -66,6 +73,15 @@
     "used": "Stratégies utilisées · {{plans}}"
   },
   "email": {
+    "wait": "Attendre avant d’écrire",
+    "internal_action": "Action interne requise",
+    "stop": "Arrêter les envois",
+    "assessment": "Point sur l’échange",
+    "intent": "Intention du client",
+    "next_step": "Prochaine étape",
+    "unanswered": "Questions en suspens",
+    "approve": "Enregistrer le texte validé",
+    "reviewed": "Texte validé enregistré",
     "draft": "Brouillon d’e-mail",
     "subject": "Objet",
     "body": "Message",
@@ -75,6 +91,22 @@
     "reply_to": "Réponse basée sur {{subject}}",
     "reply_missing": "Ce brouillon utilise l’historique du prospect. Aucun e-mail entrant enregistré n’était disponible.",
     "edit_hint": "Relisez le brouillon avant l’envoi. Le CRM conserve la version générée."
+  },
+  "quote": {
+    "title": "Devis validé pour cette affaire",
+    "reference": "Référence du devis",
+    "scope": "Produits ou prestations concernés",
+    "quantity": "Quantité",
+    "unit_price": "Prix unitaire",
+    "charges": "Frais fixes (facultatif)",
+    "currency": "Code devise",
+    "valid_until": "Valable jusqu’au",
+    "tax_basis": "Traitement fiscal",
+    "unspecified": "Non précisé",
+    "included": "Taxes comprises",
+    "excluded": "Hors taxes",
+    "save": "Enregistrer le devis validé",
+    "remove": "Retirer le devis"
   },
   "profile": {
     "title": "Notre entreprise",

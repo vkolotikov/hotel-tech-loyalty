@@ -13,10 +13,10 @@ final class CrmLeadAssistant extends Model
 
     public $incrementing = false;
 
-    protected $fillable = ['inquiry_id', 'brand_id', 'revision', 'run', 'results', 'strategies'];
+    protected $fillable = ['inquiry_id', 'brand_id', 'revision', 'run', 'results', 'strategies', 'approved_quote', 'email_reviews'];
 
     protected $casts = [
         'inquiry_id' => 'integer', 'brand_id' => 'integer', 'revision' => 'integer',
-        'run' => 'array', 'results' => 'array', 'strategies' => 'array',
+        'run' => 'array', 'results' => 'array', 'strategies' => 'array', 'approved_quote' => 'array', 'email_reviews' => 'array',
     ];
 }

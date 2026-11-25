@@ -1334,6 +1334,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
 }) {
   const { t, i18n } = useTranslation()
   const [reviewNotes, setReviewNotes] = useState<string[]>([])
+  const [holdReason, setHoldReason] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
 
@@ -1352,6 +1353,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
       setSubject(data.subject ?? '')
       setBody(data.body ?? '')
       setReviewNotes(data.review_notes ?? [])
+      setHoldReason(data.decision && data.decision !== 'draft' ? data.reason || t('inquiryDetail.proposal.review') : '')
     },
     onError: () => toast.error('Could not draft proposal'),
   })
@@ -1390,6 +1392,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
+            {holdReason ? <p role="status" className="text-sm text-t-secondary">{holdReason}</p> : <>
             <div>
               <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
                 {t('inquiryDetail.proposal.subject', 'Subject')}
@@ -1411,7 +1414,8 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
               />
             </div>
-            {reviewNotes.length > 0 && <div className="text-sm text-t-secondary">
+            </>}
+            {reviewNotes.filter(note => note !== holdReason).length > 0 && <div className="text-sm text-t-secondary">
               <p className="font-semibold">{t('inquiryDetail.proposal.review')}</p>
               <ul className="list-disc pl-5">{reviewNotes.map((note, index) => <li key={index}>{note}</li>)}</ul>
             </div>}
@@ -1435,14 +1439,14 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
             >
               Cancel
             </button>
-            <button
+            {!holdReason && <button
               onClick={() => onUseAsEmail({ subject, body })}
               disabled={!body.trim()}
               className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 hover:bg-accent/90 flex items-center gap-2"
             >
               <Mail size={14} />
               Use as email draft
-            </button>
+            </button>}
           </div>
         </div>
       </div>

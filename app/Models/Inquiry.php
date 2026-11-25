@@ -104,6 +104,7 @@ class Inquiry extends Model
         return $this->belongsTo(Pipeline::class);
     }
 
+    /** @return BelongsTo<PipelineStage, $this> */
     public function pipelineStage(): BelongsTo
     {
         return $this->belongsTo(PipelineStage::class);
@@ -148,6 +149,7 @@ class Inquiry extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    /** @return HasMany<InquiryAttachment, $this> */
     public function attachments(): HasMany
     {
         return $this->hasMany(InquiryAttachment::class)->orderByDesc('created_at');

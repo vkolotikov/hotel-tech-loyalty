@@ -9,6 +9,7 @@ use App\Models\CrmLeadAssistant;
 use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Scopes\BrandScope;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,7 +20,9 @@ final class LeadAssistant
 {
     public const MODEL = 'gpt-5-mini';
 
-    public const MODES = ['brief', 'sales_strategy', 'marketing_strategy', 'proposal', 'reply'];
+    public const EMAIL_MODES = ['proposal', 'reply', 'follow_up'];
+
+    public const MODES = ['brief', 'sales_strategy', 'marketing_strategy', ...self::EMAIL_MODES];
 
     public const STRATEGIES = ['sales_strategy', 'marketing_strategy'];
 
@@ -35,11 +38,32 @@ final class LeadAssistant
             $run = [...$run, 'status' => 'failed', 'error' => 'assistant_timed_out'];
         }
 
+        $results = $state->results ?? [];
+        $quote = LeadEmailEvidence::currentQuote($state, $lead);
+        $mailResults = array_intersect(self::EMAIL_MODES, array_keys($results));
+        if ($mailResults) {
+            $policy = LeadEmailEvidence::policy($lead);
+            foreach ($mailResults as $mode) {
+                $result = $results[$mode];
+                if (array_key_exists('contact_id', $result) && $result['contact_id'] !== $lead->guest_id) {
+                    unset($results[$mode]);
+                    continue;
+                }
+                if ($code = LeadEmailEvidence::recheck($policy, $mode, $quote, (int) $brand->organization_id, $result)) {
+                    $results[$mode] = [...$result, ...LeadEmailEvidence::hold($code, $result['language'] ?? 'en')];
+                }
+            }
+        }
+
         return [
             'brand' => ['id' => (int) $brand->id, 'name' => $brand->name],
             'revision' => $state->revision ?? 0,
             'run' => $run ? array_diff_key($run, array_flip(['requested_by', 'language', 'focus'])) : null,
-            'results' => (object) ($state->results ?? []),
+            'results' => (object) $results,
+            'quote' => $quote,
+            'reviews' => (object) collect($state->email_reviews ?? [])->whereStrict('contact_id', $lead->guest_id)
+                ->filter(fn ($review, $mode) => ($results[$mode]['id'] ?? '') === $review['source_id'] && ! empty($results[$mode]['body']))
+                ->map(fn ($review) => array_intersect_key($review, array_flip(['source_id', 'subject', 'body', 'approved_at'])))->all(),
             'strategies' => (object) ($state->strategies ?? []),
         ];
     }
@@ -56,7 +80,7 @@ final class LeadAssistant
                 return null;
             }
             if ($state && $state->brand_id !== (int) $brand->id) {
-                $state->fill(['brand_id' => $brand->id, 'revision' => 0, 'results' => null, 'strategies' => null]);
+                $state->fill(['brand_id' => $brand->id, 'revision' => 0, 'results' => null, 'strategies' => null, 'approved_quote' => null, 'email_reviews' => null]);
             }
             $state ??= new CrmLeadAssistant(['inquiry_id' => $lead->id, 'brand_id' => $brand->id, 'revision' => 0]);
             $id = (string) Str::uuid();
@@ -79,15 +103,7 @@ final class LeadAssistant
 
     public function saveStrategy(Inquiry $lead, Brand $brand, array $input): void
     {
-        DB::transaction(function () use ($lead, $brand, $input): void {
-            $current = Inquiry::withoutGlobalScope(BrandScope::class)->lockForUpdate()->findOrFail($lead->id);
-            abort_unless(SalesBrand::leadBrandId($current) === (int) $brand->id, 409);
-            $state = $this->query($lead->id, $brand->id)->lockForUpdate()->first();
-            if (($state->revision ?? 0) !== (int) $input['revision']
-                || (! $state && CrmLeadAssistant::query()->whereKey($lead->id)->exists())) {
-                throw new AiHelperRefused('strategy_changed', 'The strategy changed. Reload it before saving.', 409);
-            }
-            $state ??= new CrmLeadAssistant(['inquiry_id' => $lead->id, 'brand_id' => $brand->id, 'revision' => 0]);
+        $this->edit($lead, $brand, (int) $input['revision'], function (CrmLeadAssistant $state) use ($input) {
             $strategies = $state->strategies ?? [];
             $mode = $input['mode'];
             $body = trim((string) ($input['body'] ?? ''));
@@ -96,7 +112,51 @@ final class LeadAssistant
             } else {
                 $strategies[$mode] = ['body' => $body, 'saved_at' => now()->toISOString()];
             }
-            $state->fill(['strategies' => $strategies, 'revision' => $state->revision + 1])->save();
+            $state->strategies = $strategies;
+        });
+    }
+
+    public function saveQuote(Inquiry $lead, Brand $brand, array $input, int $actor): void
+    {
+        $this->edit($lead, $brand, (int) $input['revision'], function (CrmLeadAssistant $state) use ($input, $actor, $lead) {
+            $state->approved_quote = $input['quote'] === null ? null : [...LeadQuote::approved($input['quote'], $actor), 'contact_id' => $lead->guest_id];
+        });
+    }
+
+    public function reviewEmail(Inquiry $lead, Brand $brand, array $input, int $actor): void
+    {
+        $this->edit($lead, $brand, (int) $input['revision'], function (CrmLeadAssistant $state) use ($lead, $input, $actor) {
+            $mode = $input['mode'];
+            $original = $state->results[$mode] ?? [];
+            if (($original['id'] ?? '') !== $input['source_id'] || empty($original['body'])
+                || (array_key_exists('contact_id', $original) && $original['contact_id'] !== $lead->guest_id)
+                || LeadEmailEvidence::recheck(LeadEmailEvidence::policy($lead), $mode, LeadEmailEvidence::currentQuote($state, $lead), (int) $lead->organization_id, $original)) {
+                throw new AiHelperRefused('strategy_changed', 'This draft changed. Reload it before reviewing.', 409);
+            }
+            $reviews = $state->email_reviews ?? [];
+            $reviews[$mode] = [
+                'source_id' => $original['id'], 'contact_id' => $lead->guest_id, 'subject' => trim($input['subject']), 'body' => trim($input['body']),
+                'original' => ['subject' => $original['subject'], 'body' => $original['body']],
+                'reply_to' => $original['coverage']['reply_to'] ?? null, 'generated_at' => $original['generated_at'],
+                'approved_by' => $actor, 'approved_at' => now()->toISOString(),
+            ];
+            $state->email_reviews = $reviews;
+        });
+    }
+
+    private function edit(Inquiry $lead, Brand $brand, int $revision, Closure $change): void
+    {
+        DB::transaction(function () use ($lead, $brand, $revision, $change) {
+            $current = Inquiry::withoutGlobalScope(BrandScope::class)->lockForUpdate()->findOrFail($lead->id);
+            abort_unless(SalesBrand::leadBrandId($current) === (int) $brand->id, 409);
+            $state = CrmLeadAssistant::query()->lockForUpdate()->find($lead->id);
+            if ($current->guest_id !== $lead->guest_id || ($state && $state->brand_id !== (int) $brand->id) || ($state->revision ?? 0) !== $revision) {
+                throw new AiHelperRefused('strategy_changed', 'The lead assistant changed. Reload it before saving.', 409);
+            }
+            $state ??= new CrmLeadAssistant(['inquiry_id' => $lead->id, 'brand_id' => $brand->id]);
+            $change($state);
+            $state->revision = $revision + 1;
+            $state->save();
         });
     }
 

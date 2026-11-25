@@ -368,7 +368,7 @@ Only the public company name, website and CRM language are sent for discovery.
 ## Lead AI assistant and our business
 
 Open a lead's **AI assistant** tab. It offers an AI brief, a sales strategy, a marketing strategy, a proposal email
-and a response email. The lead's **AI brief** and **Proposal** buttons open the corresponding tools.
+a response email and a follow-up. The lead's **AI brief** and **Proposal** buttons open the corresponding tools.
 Add a focus before generating when a particular question or scope matters.
 The brief also refreshes the lead's intent, win estimate, going-cold risk and suggested next action.
 
@@ -394,15 +394,17 @@ review.
 
 ### Customer email drafts
 
-Under **AI assistant**, choose **Response email** to answer a customer or **Proposal email** to make an offer.
-Both use GPT-6.2 Astra with high reasoning. The full admin's **Draft proposal** uses the same writer. A reply
-normally takes 35–90 words and a proposal 70–120. A simple confirmation may take one sentence. A customer
+Under **AI assistant**, choose **Response email** to answer a customer, **Proposal email** to make an offer, or
+**Follow-up** to check whether another email would help. All three use GPT-6.2 Astra with high reasoning.
+The full admin's **Draft proposal** uses the same writer. A reply normally takes 35–90 words, a proposal 70–150
+and a follow-up 40–100. A simple confirmation may take one sentence. A customer
 asking for more detail can get a longer answer. Type a language or focus in the optional instruction to override
 the usual choice. The customer’s own correspondence and saved language guide the default.
 
 The writer reads the current request, customer role and location, the account's industry, reviewed strategy and
-brand knowledge. It ranks active chatbot answers against the request and includes up to 80 within a 40,000-character
-budget. Matching passages can come from up to four indexed documents. Private email instructions guide the writing.
+brand knowledge. It looks for exact model references and matches commercial topics across languages. It selects up to
+12 active answers within 22,000 characters and relevant passages from up to four indexed documents. When an ordinary
+enquiry has no matching answers, it can consult four priority entries. Private email instructions guide the writing.
 The draft ends at the last useful sentence so the email app can add its signature. Once AI Discovery finishes, sourced public findings can identify details for
 staff to check. The customer's own statements and reviewed profile take precedence. **To verify** stays with
 staff when a draft is copied or opened in email.
@@ -416,8 +418,27 @@ greeting, vocabulary and level of detail in their own messages. With little evid
 integration checks up to 100 captured email headers and selects up to 12 bodies, prioritising the incoming message,
 its thread and earlier customer wording. WhatsApp supplies up to 75 recent matched messages. Removed messages and
 media without text or a caption are skipped. Other brands can use their own logged emails and linked chat.
-Earlier logged email is restricted to the same contact and brand. Drafting reads existing records and leaves delivery
-to the person reviewing the message.
+Earlier logged email is restricted to the same contact and brand. When a contact has several opportunities, a unique
+subject logged on this opportunity can link a captured email thread. Contact-only WhatsApp and unassigned visitor
+chats are excluded from the current request. The lead’s own activities and linked conversations remain available.
+
+**Follow-up** considers the customer's decision date, who owes the next action, previous outreach and task outcomes.
+The result can recommend waiting, completing an internal action or stopping contact. A held result has no email body.
+A lost opportunity or a recorded marketing refusal stops a sales follow-up. An address on the applicable suppression
+list stops all three email modes. Staff can review the intent, open questions and next step alongside a draft.
+
+A manager can open **Approved quote for this opportunity** and record a reference, scope, quantity, unit price,
+fixed charges, currency, tax treatment and validity date. The server computes the subtotal and total using decimal
+arithmetic. The validity date is inclusive in the organisation's time zone. Changing the quote or reaching its expiry
+holds an existing draft for regeneration. An expired quote supplies its reference and scope for review.
+The lead's recorded commercial fields, intake reference, custom fields, task outcomes, file metadata and linked reservations in workspaces with booking access can also inform
+a reply. This workflow reads existing CRM records. A file listing identifies received materials. Its contents and any
+live amounts in an external invoicing or order system require separate verification.
+
+After editing an email, a manager can select **Save reviewed wording**. The CRM keeps the original and reviewed text
+for the most recently reviewed email of each type on this lead and uses it as a writing example in future drafts
+for the same contact and opportunity. Update approved terms in the quote or **Settings → Our business** when a
+correction changes a fact. Copying, opening an email or composing an activity leaves delivery with the staff member.
 
 ### Business profile setup
 

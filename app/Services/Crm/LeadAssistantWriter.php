@@ -22,10 +22,18 @@ final class LeadAssistantWriter
     public function generate(Inquiry $lead, Brand $brand, Organization $org, User $user, array $run, array $strategies, string $feature = 'crm_sales_assistant'): array
     {
         $mode = $run['mode'];
-        $email = in_array($mode, ['proposal', 'reply'], true);
+        $email = in_array($mode, LeadAssistant::EMAIL_MODES, true);
         $model = $email ? self::EMAIL_MODEL : LeadAssistant::MODEL;
         LeadAssistant::checkAvailability($org);
         $snapshot = $this->context->collect($lead, $brand, $org, $user, $strategies, $mode, $run['focus'] ?? '');
+        $meta = ['coverage' => $snapshot['coverage']];
+        if ($email) {
+            $evidence = $snapshot['input']['project_evidence'];
+            $meta += ['quote_stamp' => $evidence['quote_stamp'], 'contact_id' => $lead->guest_id, 'language' => $run['language']];
+            if ($code = LeadEmailEvidence::stopReason($evidence['contact_policy'], $mode)) {
+                return [...LeadEmailEvidence::hold($code, $run['language']), ...$meta];
+            }
+        }
         LeadAssistant::checkAvailability($org);
         $data = $this->request($mode, $model, $email, $run['language'], $run['focus'] ?? '', $snapshot['input']);
         if (isset($data['usage'])) {
@@ -36,7 +44,16 @@ final class LeadAssistantWriter
             throw new RuntimeException('The CRM assistant provider did not complete the output.');
         }
 
-        return [...$this->result($data, $mode, $email), 'coverage' => $snapshot['coverage']];
+        $result = $this->result($data, $mode, $email);
+        if ($email && $result['decision'] === 'draft') {
+            $quote = $snapshot['input']['project_evidence']['approved_quote'];
+            $subject = LeadQuote::fillAmounts($result['subject'], $quote);
+            $body = LeadQuote::fillAmounts($result['body'], $quote);
+            $result = $subject === null || $body === null || ! EmailPriceCheck::supported($result['subject']."\n".$result['body'], $snapshot['input'])
+                ? LeadEmailEvidence::hold('unverified_price', $run['language']) : [...$result, 'subject' => $subject, 'body' => $body];
+        }
+
+        return [...$result, ...$meta];
     }
 
     private function request(string $mode, string $model, bool $email, string $language, string $focus, array $context): array
@@ -45,14 +62,17 @@ final class LeadAssistantWriter
             'brief' => 'Write an internal brief with the situation, confirmed requirements, open questions and next actions. Provide a lead intent, an approximate win probability from 0 to 100, a going-cold risk, and one suggested next action. Use the pipeline stage and history. Use null for scores that the available evidence cannot support.',
             'sales_strategy' => 'Write an internal sales plan for this lead. Cover fit, buyer priorities, relevant offers and differentiators, objections, likely decision steps, and a phased follow-up plan.',
             'marketing_strategy' => 'Write an internal marketing plan for the opportunity. Connect the customer audience, markets and positioning to our relevant services. Propose messages, channels, deliverables, a first test, and how to measure it. Identify expansion ideas worth validating.',
-            'proposal' => 'Write a short proposal email. Connect the requested scope to one concrete benefit for this customer. Include a price or timing only if confirmed for this opportunity. Aim for 70–120 words or fewer. Give the subject a specific topic.',
+            'proposal' => 'Prepare a concise offer for the actual scope and stage. Use the verified quote when applicable. Give the subject a specific topic. Most proposals fit in 70–150 words; allow more for a multi-part procurement enquiry.',
+            'follow_up' => 'Decide whether to follow up today. Check last meaningful exchanges on each channel, prior follow-ups and their outcomes, restrictions, and which side owes the next action. Choose wait for a future decision date or a premature repeat, internal_action if we owe an answer or work, stop for a decline or request to stop. Draft only when appropriate. In about 40–100 words, offer a specific useful next step without pressure. Do not repeat the previous pitch. A follow-up assessment never creates an automatic send or task.',
             'reply' => 'Answer the customer in conversation.reply_target. Keep the existing email subject when it makes sense. Use later messages across channels to resolve changes and avoid repeating answers or asking for details already supplied. With no target, use the current enquiry and put any uncertainty in review_notes. Most replies take 35–90 words. A simple answer can be one sentence.',
             default => throw new \InvalidArgumentException('Unknown CRM assistant mode.'),
         };
         $str = ['type' => 'string'];
         $reviewNotes = ['type' => 'array', 'items' => $str];
         $fields = $email
-            ? ['subject' => $str, 'body' => $str, 'review_notes' => $reviewNotes]
+            ? ['decision' => ['type' => 'string', 'enum' => ['draft', 'wait', 'internal_action', 'stop']], 'reason' => $str,
+                'intent' => $str, 'next_step' => $str, 'unanswered' => $reviewNotes,
+                'subject' => $str, 'body' => $str, 'review_notes' => $reviewNotes]
             : ['summary' => $str, 'sections' => ['type' => 'array', 'items' => $this->object(['title' => $str, 'body' => $str])], 'review_notes' => $reviewNotes];
         if ($mode === 'brief') {
             $fields['signals'] = $this->object([
@@ -103,7 +123,24 @@ Match an established salutation when appropriate. Include at most one practical 
 Apply our_business.email_instructions to style, wording and next steps, subject to accuracy and the customer's explicit request.
 Finish at the last useful sentence. The email app adds the signature. Never append a closing salutation, "Best regards",
 "Thanks", a sender or team name, job title, signature block or footer, even if correspondence contains one.
-Put only actionable uncertainties in review_notes.
+Use project_evidence.today and business_timezone to interpret dates. Choose the purpose from the conversation and the actual stage:
+a technical assessment, an approval, an order, a billing question, a complaint, a repeat purchase and a sales follow-up need different answers.
+Acknowledge all material questions. Retain enquiry-only restrictions. Use an existing submission or file record before asking for it again.
+File names and staff descriptions are metadata, not inspected content. No outgoing attachments are included in this composer.
+Distinguish a customer's requested specification or budget from a verified capability and an agreed scope. A family or similar identifier is
+not an exact model match. Offer only documented, feasible alternatives. Never turn interest, an estimate or a mock-up into approval.
+Prefer valid authorised terms for this opportunity, then staff focus within its authority, current matching brand facts, then this project's history.
+Other projects, writing examples, partner terms and internal estimates never establish a price, technical promise, policy or order here.
+Use a valid approved_quote only for its stated scope, quantity, currency, tax basis and validity. Use its precalculated decimal values.
+For structured quote figures write the appropriate placeholder {{quote.unit_price}}, {{quote.charges}}, {{quote.subtotal}} or {{quote.total}}.
+The CRM inserts the verified currency and amount. Do not add a second currency marker. Format other verified monetary figures with a currency code.
+Never calculate or extrapolate a new price, discount, tax or total. If the quote expired or conflicts
+with the actual request, omit the amounts and flag a new quote for staff. Do not infer VAT from location or a registration number.
+Distinguish production, dispatch, transit and delivery. Check stock, schedule and authorisation before making commitments or offering exceptions.
+Reviewed writing examples are guidance on wording only. Mark unverifiable details privately. Keep intent, next_step, unanswered, reason and
+review_notes in the staff language. Return a short reason for a hold, and empty subject and body whenever the decision is not draft.
+Read the result as the staff member responsible for this account. Check material answers, exact identifiers, dates, currency, attachment claims,
+customer language and restrictions; remove repetition and routine marketing language. Put only actionable uncertainties in review_notes.
 Leave them empty when there is nothing for staff to check.
 Answer every material question the evidence supports. If a missing fact matters, ask one focused question or flag
 it privately for staff. Only expand for an explicit request for detail or to cover essential answers. Read the draft
@@ -157,6 +194,16 @@ PROMPT;
         }
         $notes = array_values(array_filter(array_map(fn ($note) => $this->text($note, 500), array_slice((array) ($result['review_notes'] ?? []), 0, 6))));
         if ($email) {
+            $decision = $result['decision'] ?? 'draft';
+            if (! in_array($decision, ['draft', 'wait', 'internal_action', 'stop'], true)) {
+                throw new RuntimeException('Invalid CRM email decision.');
+            }
+            $strategy = ['decision' => $decision, 'reason' => $this->text($result['reason'] ?? null, 500),
+                'intent' => $this->text($result['intent'] ?? null, 280), 'next_step' => $this->text($result['next_step'] ?? null, 500),
+                'unanswered' => collect($result['unanswered'] ?? [])->take(6)->map(fn ($item) => $this->text($item, 300))->filter()->values()->all()];
+            if ($decision !== 'draft') {
+                return [...$strategy, 'subject' => '', 'body' => '', 'review_notes' => $notes];
+            }
             $subject = trim(str_replace(["\r", "\n"], ' ', $this->text($result['subject'] ?? null, 240)));
             $body = $this->text($result['body'] ?? null, 10000);
             // The mail client adds the signature. Remove a conventional closing copied from the correspondence.
@@ -166,7 +213,7 @@ PROMPT;
                 $body = trim($parts[0]);
             }
             if ($subject !== '' && $body !== '') {
-                return ['subject' => $subject, 'body' => $body, 'review_notes' => $notes];
+                return [...$strategy, 'subject' => $subject, 'body' => $body, 'review_notes' => $notes];
             }
         } else {
             $summary = $this->text($result['summary'] ?? null, 1800);

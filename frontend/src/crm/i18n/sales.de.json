@@ -9,6 +9,7 @@
   "review": "Zu prüfen",
   "reload": "Aktuelle Version laden",
   "modes": {
+    "follow_up": "Nachfassen",
     "brief": "KI-Kurzbriefing",
     "sales_strategy": "Vertriebsstrategie",
     "marketing_strategy": "Marketingstrategie",
@@ -16,6 +17,7 @@
     "reply": "Antwort-E-Mail"
   },
   "describe": {
+    "follow_up": "Prüfen, ob eine Nachfrage sinnvoll ist und welcher nächste Schritt hilft.",
     "brief": "Fassen Sie die Anfrage, das Gespräch und offene Entscheidungen zusammen.",
     "sales_strategy": "Planen Sie, wie Sie diese Chance bewerten, positionieren und gewinnen.",
     "marketing_strategy": "Empfehlen Sie Botschaften, Kanäle und Leistungen für die Märkte dieses Kunden.",
@@ -23,6 +25,7 @@
     "reply": "Eine kurze geschäftliche Antwort in Sprache und Stil des Kunden entwerfen."
   },
   "examples": {
+    "follow_up": "Entscheidungstermin prüfen. Schulden wir dem Kunden noch eine Antwort?",
     "brief": "Die Anfrage und offene Punkte hervorheben.",
     "sales_strategy": "Auf Kaufprioritäten und den Preiseinwand eingehen.",
     "marketing_strategy": "Eine erste Kampagne für den belgischen Markt des Kunden vorschlagen.",
@@ -30,6 +33,10 @@
     "reply": "Fragen zu Lieferung und Mustern beantworten."
   },
   "context": {
+    "project_files": "Projektdateien",
+    "recorded_tasks": "Aufgaben und Ergebnisse",
+    "prior_orders": "Frühere gewonnene Projekte",
+    "project_history_limited": "Dieser Kontakt hat mehrere Projekte. Für die aktuelle Anfrage wurden nur zugeordnete Nachrichten verwendet.",
     "title": "Verwendete Quellen",
     "customer_fields": "Felder im Kundenprofil",
     "business_fields": "Felder zum eigenen Unternehmen",
@@ -66,6 +73,15 @@
     "used": "Verwendete Strategien · {{plans}}"
   },
   "email": {
+    "wait": "Mit der E-Mail warten",
+    "internal_action": "Interner Schritt erforderlich",
+    "stop": "E-Mail-Kontakt beenden",
+    "assessment": "Gesprächseinschätzung",
+    "intent": "Kundenanliegen",
+    "next_step": "Nächster Schritt",
+    "unanswered": "Offene Fragen",
+    "approve": "Geprüfte Fassung speichern",
+    "reviewed": "Geprüfte Fassung gespeichert",
     "draft": "E-Mail-Entwurf",
     "subject": "Betreff",
     "body": "Nachricht",
@@ -75,6 +91,22 @@
     "reply_to": "Antwort auf Grundlage von {{subject}}",
     "reply_missing": "Dieser Entwurf verwendet den Lead-Verlauf. Es gab keine erfasste eingehende E-Mail.",
     "edit_hint": "Prüfen Sie den Entwurf vor dem Senden. Das CRM speichert die erstellte Version."
+  },
+  "quote": {
+    "title": "Freigegebenes Angebot für dieses Projekt",
+    "reference": "Angebotsreferenz",
+    "scope": "Produkte oder Leistungen",
+    "quantity": "Menge",
+    "unit_price": "Stückpreis",
+    "charges": "Feste Zuschläge (optional)",
+    "currency": "Währungscode",
+    "valid_until": "Gültig bis",
+    "tax_basis": "Steuerbehandlung",
+    "unspecified": "Keine Angabe",
+    "included": "Inklusive Steuer",
+    "excluded": "Zuzüglich Steuer",
+    "save": "Freigegebenes Angebot speichern",
+    "remove": "Angebot entfernen"
   },
   "profile": {
     "title": "Unser Unternehmen",

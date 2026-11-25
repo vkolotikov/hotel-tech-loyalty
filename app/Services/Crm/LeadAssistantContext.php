@@ -12,6 +12,7 @@ use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Visitor;
+use App\Scopes\BrandScope;
 use App\Services\Integrations\CrmMail;
 use App\Services\Integrations\CrmWhatsApp;
 use App\Services\KnowledgeService;
@@ -36,17 +37,25 @@ final class LeadAssistantContext
         $behavior = ChatbotBehaviorConfig::getForOrg((int) $org->id, (int) $brand->id);
         $profile = $this->profiles->data($org, $brand, $behavior);
         $activities = $this->activities($lead, $brand);
-        $chat = $this->chat($lead, $brand);
+        $draft = in_array($mode, LeadAssistant::EMAIL_MODES, true);
+        $evidence = $draft ? LeadEmailEvidence::collect($lead, $brand, $org) : [];
+        if ($draft) {
+            $evidence['reviewed_brand_terms'] = ((array) $profile['manual'])['terms'] ?? null;
+        }
+        $multiple = $evidence['multiple_projects'] ?? false;
+        $chat = $this->chat($lead, $brand, $multiple);
         $email = ['state' => 'not_connected', 'messages' => [], 'reply_to' => null];
         $whatsapp = ['state' => null, 'messages' => [], 'has_more' => false];
         if ($guest && (int) $lead->brand_id === CrmMail::BRAND && $this->mail->available($user)) {
-            $email = $this->mail->assistantHistory($guest);
-            $whatsapp = $this->whatsapp->assistantHistory($guest);
+            $email = $this->mail->assistantHistory($guest, $multiple ? $this->projectSubjects($lead, $brand) : null);
+            // The WhatsApp bridge identifies a contact, with no opportunity linkage.
+            if (! $multiple) {
+                $whatsapp = $this->whatsapp->assistantHistory($guest);
+            }
         }
-        $draft = in_array($mode, ['proposal', 'reply'], true);
         $reviewed = $draft ? $strategies : [];
         $previous = $draft && $guest ? $this->previousEmails($lead, $brand) : [];
-        $correspondence = $draft ? CustomerCorrespondence::forDraft($email['messages'], $whatsapp['messages'], $chat, $activities, $previous) : [];
+        $correspondence = $draft ? CustomerCorrespondence::forDraft($email['messages'], $whatsapp['messages'], $chat, $activities, $multiple ? [] : $previous) : [];
         $target = $correspondence['reply_target'] ?? null;
         $topic = implode("\n", [$focus, $target['subject'] ?? '', $target['body'] ?? '',
             ...array_column(array_slice($whatsapp['messages'], -3), 'body'), $lead->special_requests, $lead->notes,
@@ -70,7 +79,7 @@ final class LeadAssistantContext
                     'check_in' => $lead->check_in?->toDateString(),
                     'check_out' => $lead->check_out?->toDateString(),
                     'property' => $this->text($lead->property?->name, 200),
-                    'recorded_rate' => $lead->rate_offered,
+                    'recorded_rate' => $lead->rate_offered, 'recorded_currency' => $lead->currency,
                     'internal_estimated_deal_value' => $lead->total_value,
                     'currency' => $lead->currency ?: PortalBootstrap::currency($org),
                     'pipeline_stage' => $stage?->only(['name', 'kind', 'default_win_probability']),
@@ -92,6 +101,7 @@ final class LeadAssistantContext
                 ],
                 'our_business' => (array) $profile['fields'],
                 'brand_knowledge' => $knowledge,
+                'project_evidence' => $evidence,
                 'chatbot_guidance' => $behavior->exists ? $behavior->only(['identity', 'goal', 'tone', 'core_rules', 'custom_instructions', 'sales_style']) : [],
                 'content_planner_fields' => array_values(array_diff(array_keys((array) $profile['inherited']), array_keys((array) $profile['manual']))),
                 'reviewed_strategies' => array_map(fn ($strategy) => $strategy['body'], $reviewed),
@@ -101,6 +111,8 @@ final class LeadAssistantContext
                 'knowledge_answers' => count($knowledge['answers']),
                 'knowledge_documents' => count($knowledge['documents']),
                 'business_fields' => count(array_diff_key((array) $profile['fields'], ['name' => true])),
+                'project_history_limited' => $multiple, 'project_files' => count($evidence['lead_files_metadata_only'] ?? []),
+                'recorded_tasks' => count($evidence['lead_tasks'] ?? []), 'prior_orders' => count($evidence['prior_won_projects_background_only'] ?? []),
                 'activities' => count($activities),
                 'chats' => count($chat),
                 'emails' => count($email['messages']),
@@ -132,8 +144,7 @@ final class LeadAssistantContext
 
     private function previousEmails(Inquiry $lead, Brand $brand): array
     {
-        $otherLeads = Inquiry::query()->where('organization_id', $lead->organization_id)->where('brand_id', $brand->id)
-            ->where('guest_id', $lead->guest_id)->where('id', '<>', $lead->id)->select('id');
+        $otherLeads = LeadEmailEvidence::projects($lead, $brand)->whereKeyNot($lead->id)->select('id');
 
         return Activity::query()->where('organization_id', $lead->organization_id)->where('brand_id', $brand->id)->where('type', 'email')
             ->where(fn ($query) => $query->whereNull('guest_id')->orWhere('guest_id', $lead->guest_id))
@@ -164,12 +175,35 @@ final class LeadAssistantContext
         return $findings;
     }
 
-    private function chat(Inquiry $lead, Brand $brand): array
+    private function projectSubjects(Inquiry $lead, Brand $brand): array
+    {
+        // Only the subject match is used across projects, including other brands. Their content is never selected.
+        $projects = Inquiry::withoutGlobalScope(BrandScope::class)->where('organization_id', $lead->organization_id)
+            ->where('guest_id', $lead->guest_id)->select('id');
+        $subjects = Activity::withoutGlobalScope(BrandScope::class)->where('organization_id', $lead->organization_id)->where('type', 'email')
+            ->whereIn('inquiry_id', $projects)->whereNotNull('subject')->distinct()->get(['inquiry_id', 'brand_id', 'subject']);
+        $current = [];
+        $others = [];
+        foreach ($subjects as $row) {
+            $subject = CrmMail::threadSubject(['subject' => $row->subject]);
+            if ($subject === '') {
+                continue;
+            }
+            if ((int) $row->inquiry_id === (int) $lead->id && ($row->brand_id === null || (int) $row->brand_id === (int) $brand->id)) {
+                $current[$subject] = true;
+            } else {
+                $others[$subject] = true;
+            }
+        }
+        return array_diff_key($current, $others);
+    }
+
+    private function chat(Inquiry $lead, Brand $brand, bool $multiple): array
     {
         $conversations = ChatConversation::query()->where('organization_id', $lead->organization_id)->where('brand_id', $brand->id)
-            ->where(function ($query) use ($lead, $brand) {
+            ->where(function ($query) use ($lead, $brand, $multiple) {
                 $query->where('inquiry_id', $lead->id);
-                if ($lead->guest_id) {
+                if ($lead->guest_id && ! $multiple) {
                     $visitors = Visitor::query()->where('organization_id', $lead->organization_id)
                         ->where('brand_id', $brand->id)->where('guest_id', $lead->guest_id)->select('id');
                     $query->orWhere(fn ($unassigned) => $unassigned->whereNull('inquiry_id')->whereIn('visitor_id', $visitors));

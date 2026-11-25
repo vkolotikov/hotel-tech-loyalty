@@ -9,6 +9,7 @@
   "review": "Por verificar",
   "reload": "Cargar la última versión",
   "modes": {
+    "follow_up": "Seguimiento",
     "brief": "Resumen de IA",
     "sales_strategy": "Estrategia de ventas",
     "marketing_strategy": "Estrategia de marketing",
@@ -16,6 +17,7 @@
     "reply": "Correo de respuesta"
   },
   "describe": {
+    "follow_up": "Comprueba si conviene escribir al cliente y qué paso le ayudaría a avanzar.",
     "brief": "Resuma la solicitud, la conversación y las decisiones pendientes.",
     "sales_strategy": "Planifique cómo cualificar, posicionar y ganar esta oportunidad.",
     "marketing_strategy": "Recomiende mensajes, canales y servicios para los mercados de este cliente.",
@@ -23,6 +25,7 @@
     "reply": "Redacte una respuesta comercial breve en el idioma y el estilo del cliente."
   },
   "examples": {
+    "follow_up": "Comprueba cuándo decidirá el cliente y si espera una respuesta nuestra.",
     "brief": "Centrarse en la solicitud y los datos pendientes de confirmar.",
     "sales_strategy": "Abordar las prioridades de compra y la objeción al precio.",
     "marketing_strategy": "Sugerir una primera campaña para el mercado belga del cliente.",
@@ -30,6 +33,10 @@
     "reply": "Responder a las preguntas sobre la entrega y las muestras."
   },
   "context": {
+    "project_files": "Archivos del proyecto",
+    "recorded_tasks": "Tareas y resultados",
+    "prior_orders": "Oportunidades ganadas anteriores",
+    "project_history_limited": "Este contacto tiene varios proyectos. Solo los mensajes vinculados a este proyecto se usaron para identificar la solicitud actual.",
     "title": "Fuentes utilizadas",
     "customer_fields": "Campos del perfil del cliente",
     "business_fields": "Campos de nuestra empresa",
@@ -66,6 +73,15 @@
     "used": "Estrategias utilizadas · {{plans}}"
   },
   "email": {
+    "wait": "Esperar antes de escribir",
+    "internal_action": "Se requiere una acción interna",
+    "stop": "Suspender el contacto por correo",
+    "assessment": "Evaluación de la conversación",
+    "intent": "Intención del cliente",
+    "next_step": "Próximo paso",
+    "unanswered": "Preguntas pendientes",
+    "approve": "Guardar texto revisado",
+    "reviewed": "Texto revisado guardado",
     "draft": "Borrador de correo",
     "subject": "Asunto",
     "body": "Mensaje",
@@ -75,6 +91,22 @@
     "reply_to": "Respuesta basada en {{subject}}",
     "reply_missing": "Este borrador se basa en el historial del contacto potencial. No había ningún correo entrante registrado.",
     "edit_hint": "Revise el borrador antes de enviarlo. El CRM conserva la versión generada."
+  },
+  "quote": {
+    "title": "Presupuesto aprobado para esta oportunidad",
+    "reference": "Referencia del presupuesto",
+    "scope": "Productos o servicios incluidos",
+    "quantity": "Cantidad",
+    "unit_price": "Precio unitario",
+    "charges": "Cargos fijos (opcional)",
+    "currency": "Código de moneda",
+    "valid_until": "Válido hasta",
+    "tax_basis": "Impuestos",
+    "unspecified": "Sin especificar",
+    "included": "Impuestos incluidos",
+    "excluded": "Impuestos excluidos",
+    "save": "Guardar presupuesto aprobado",
+    "remove": "Quitar presupuesto"
   },
   "profile": {
     "title": "Nuestra empresa",

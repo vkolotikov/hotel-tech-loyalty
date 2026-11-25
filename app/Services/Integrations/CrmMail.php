@@ -66,7 +66,7 @@ class CrmMail
     }
 
     /** Only already-captured messages for the saved CRM contact can go into the lead assistant. */
-    public function assistantHistory(Guest $guest): array
+    public function assistantHistory(Guest $guest, ?array $projectSubjects = null): array
     {
         $deadline = microtime(true) + 25;
         try {
@@ -107,6 +107,9 @@ class CrmMail
         }
         $email = strtolower(trim((string) $guest->email));
         $rows = collect($rows)->filter(fn ($row) => is_array($row) && Str::isUuid($row['id'] ?? ''))->unique('id')->values();
+        if ($projectSubjects !== null) {
+            $rows = $rows->filter(fn ($row) => isset($projectSubjects[self::threadSubject($row)]))->values();
+        }
         $inbound = $rows->filter(fn ($row) => $this->senderMatches($row, $email));
         $reply = $inbound->first();
         $thread = $reply ? $this->threadSubject($reply) : '';
@@ -149,7 +152,7 @@ class CrmMail
         ];
     }
 
-    private function threadSubject(array $row): string
+    public static function threadSubject(array $row): string
     {
         $subject = mb_strtolower(trim((string) ($row['subject'] ?? '')));
 

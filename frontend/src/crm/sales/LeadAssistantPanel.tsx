@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, BookOpen, Clipboard, FileText, ListPlus, Mail, Megaphone, Save, Sparkles, Target } from 'lucide-react'
+import { ArrowUpRight, BookOpen, Clipboard, Clock3, FileText, ListPlus, Mail, Megaphone, Save, Sparkles, Target } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf, send } from '../lib/api'
@@ -15,7 +15,9 @@ import { SectionNav } from '../ui/SectionNav'
 import { useToast } from '../ui/Toast'
 import { assistantKey, MODES, SALES_FIELD, strategyMode, working, type Assistant, type Mode, type Result, type Strategy, type useAssistant } from './assistantData'
 
-const ICONS = { brief: Sparkles, sales_strategy: Target, marketing_strategy: Megaphone, proposal: FileText, reply: Mail }
+import { OpportunityQuote } from './OpportunityQuote'
+
+const ICONS = { brief: Sparkles, sales_strategy: Target, marketing_strategy: Megaphone, proposal: FileText, reply: Mail, follow_up: Clock3 }
 const CONTEXT_FIELDS = ['customer_fields', 'business_fields', 'activities', 'chats', 'emails', 'whatsapp'] as const
 const OUTPUT_TEXT = 'whitespace-pre-wrap [overflow-wrap:anywhere] text-sm leading-relaxed text-a-text'
 type Email = { subject: string; body: string }
@@ -61,7 +63,9 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
   const key = assistantKey(leadId)
   const generating = working(data.run)
   const result = data.results[mode]
-  const emailMode = mode === 'proposal' || mode === 'reply'
+  const emailMode = mode === 'proposal' || mode === 'reply' || mode === 'follow_up'
+  const held = result?.decision && result.decision !== 'draft'
+  const review = data.reviews?.[mode]
   const strategies = Object.keys(data.strategies)
   const generate = useMutation({
     mutationFn: () => send<Assistant>('post', `crm/leads/${leadId}/assistant`, {
@@ -101,18 +105,28 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
           {failure && <div role="status"><Notice tone="warning">{jobError(t, failure)}</Notice></div>}
         </div>
       </Card>
+      {emailMode && (data.can_review || data.quote) && <OpportunityQuote leadId={leadId} data={data} />}
       {result && (
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(250px,0.42fr)]">
-          <Card title={t(emailMode ? 'crm.sales.email.draft' : 'crm.sales.result')} icon={emailMode ? Mail : FileText} tone="ai"
+          <Card title={t(held ? `crm.sales.email.${result.decision}` : emailMode ? 'crm.sales.email.draft' : 'crm.sales.result')} icon={held ? Clock3 : emailMode ? Mail : FileText} tone="ai"
             hint={timeAgo(result.generated_at, i18n.language)}>
-            {emailMode
-              ? <DraftEditor key={result.id} initial={{ subject: result.subject ?? '', body: result.body ?? '' }}
-                recipient={recipient} onUse={onUse} />
+            {held ? <p role="status" className={OUTPUT_TEXT}>{result.reason}</p> : emailMode
+              ? <DraftEditor key={`${result.id}:${review?.approved_at ?? ''}`} initial={review?.source_id === result.id ? review : { subject: result.subject ?? '', body: result.body ?? '' }}
+                recipient={recipient} onUse={onUse} leadId={leadId} mode={mode} resultId={result.id} data={data} />
               : <Insight result={result} />}
           </Card>
           <div className="space-y-4">
             <CoverageCard coverage={result.coverage} mode={mode} onEmails={onEmails} />
-            {result.review_notes.length > 0 && (
+            {(result.intent || result.next_step || Boolean(result.unanswered?.length)) && (
+              <Card title={t('crm.sales.email.assessment')} icon={Target} tone="neutral">
+                <dl className="space-y-2 text-sm">{(['intent', 'next_step', 'unanswered'] as const).map(field => {
+                  const value = result[field]
+                  return value?.length ? <div key={field}><dt className="font-medium text-a-text">{t(`crm.sales.email.${field}`)}</dt>
+                    <dd className="whitespace-pre-line text-a-text-2">{Array.isArray(value) ? value.join('\n') : value}</dd></div> : null
+                })}</dl>
+              </Card>
+            )}
+            {result.review_notes.some(note => !held || note !== result.reason) && (
               <Card title={t('crm.sales.review')} icon={Clipboard} tone="pending">
                 <ul className="list-disc space-y-1 pl-4 text-sm text-a-text-2">{result.review_notes.map((note, index) => <li key={index} className="[overflow-wrap:anywhere]">{note}</li>)}</ul>
               </Card>
@@ -121,7 +135,7 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
         </div>
       )}
       {strategyMode(mode) && <StrategyEditor leadId={leadId} mode={mode} data={data} result={result} />}
-      {emailMode && result && (
+      {emailMode && result && !held && (
         <p className="text-xs text-a-text-2">{t('crm.sales.email.edit_hint')}</p>
       )}
     </div>
@@ -213,7 +227,7 @@ function StrategyEditor({ leadId, mode, data, result }: { leadId: number; mode: 
 function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage']; mode: Mode; onEmails: () => void }) {
   const { t } = useTranslation()
   const fields = [...CONTEXT_FIELDS, ...(['knowledge_answers', 'knowledge_documents'] as const).filter(key => coverage[key] !== undefined),
-    ...(['other_logged_emails', 'discovery_fields', 'writing_samples'] as const).filter(key => coverage[key])]
+    ...(['other_logged_emails', 'discovery_fields', 'writing_samples', 'project_files', 'recorded_tasks', 'prior_orders'] as const).filter(key => coverage[key])]
   const target = coverage.reply_to
   const channelLabels = { whatsapp: 'crm.whatsapp.title', chat: 'crm.sales.context.chats', activity: 'crm.sales.context.activities' } as const
   const replySource = target?.channel === 'email' ? target.subject || t('crm.mail.no_subject')
@@ -231,6 +245,7 @@ function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage
         {coverage.email_state !== 'captured' && <p>{t(`crm.sales.mail.${coverage.email_state}`)}</p>}
         {coverage.whatsapp_state && coverage.whatsapp_state !== 'connected' && <p>{t('crm.whatsapp.title')} · {t(`crm.whatsapp.state.${coverage.whatsapp_state}`)}</p>}
         {coverage.history_limited && <p>{t('crm.sales.context.history_limited')}</p>}
+        {coverage.project_history_limited && <p>{t('crm.sales.context.project_history_limited')}</p>}
         {coverage.strategies.length > 0 && <p>{t('crm.sales.strategy.used', { plans: coverage.strategies.map(item => t(`crm.sales.modes.${item}`)).join(' · ') })}</p>}
         {mode === 'reply' && <p className="break-words">{replySource
           ? t('crm.sales.email.reply_to', { subject: replySource })
@@ -243,10 +258,21 @@ function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage
   )
 }
 
-function DraftEditor({ initial, recipient, onUse }: { initial: Email; recipient?: string | null; onUse: Actions['onUse'] }) {
+function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data }: {
+  initial: Email; recipient?: string | null; onUse: Actions['onUse']; leadId: number; resultId: string; mode: Mode; data: Assistant
+}) {
   const { t } = useTranslation()
   const toast = useToast()
-  const [draft, setDraft] = useState(initial)
+  const [draft, setDraft] = useState<Email>({ subject: initial.subject, body: initial.body })
+  const [revision, setRevision] = useState(data.revision)
+  const cache = useQueryClient()
+  const key = assistantKey(leadId)
+  const save = useMutation({
+    mutationFn: () => send<Assistant>('put', `crm/leads/${leadId}/assistant/review`, {
+      mode, revision, source_id: resultId, subject: draft.subject, body: draft.body,
+    }),
+    onSuccess: next => { cache.setQueryData(key, next); toast(t('crm.sales.email.reviewed')) },
+  })
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(`${draft.subject}\n\n${draft.body}`)
@@ -274,10 +300,19 @@ function DraftEditor({ initial, recipient, onUse }: { initial: Email; recipient?
           rows={12} onChange={event => setDraft({ ...draft, body: event.target.value })} />
       </label>
       <div className="flex flex-wrap items-center justify-end gap-2">
+        {data.can_review && <Button type="button" size="sm" variant="secondary" loading={save.isPending} disabled={!ready || (data.reviews?.[mode]?.source_id === resultId && draft.subject === initial.subject && draft.body === initial.body)}
+          onClick={() => save.mutate()}><Save size={15} aria-hidden />{t('crm.sales.email.approve')}</Button>}
         <Button type="button" size="sm" variant="secondary" disabled={!ready} onClick={() => void copy()}><Clipboard size={15} aria-hidden />{t('crm.common.copy')}</Button>
         <Button type="button" size="sm" variant="secondary" disabled={!ready} onClick={() => onUse(draft)}><ListPlus size={15} aria-hidden />{t('crm.sales.email.use_activity')}</Button>
         {href && <a href={href} className="crm-ai-soft inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold"><Mail size={15} aria-hidden />{t('crm.sales.email.open')}</a>}
       </div>
+      {save.error && <Notice tone="danger">{failureOf(save.error).code === 'strategy_changed'
+        ? <button type="button" className="underline" onClick={async () => {
+          await cache.invalidateQueries({ queryKey: key })
+          setRevision(cache.getQueryData<Assistant>(key)?.revision ?? data.revision)
+          save.reset()
+        }}>{t('crm.sales.reload')}</button>
+        : errorText(t, save.error)}</Notice>}
     </div>
   )
 }

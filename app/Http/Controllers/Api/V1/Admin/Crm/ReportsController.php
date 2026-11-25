@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Crm;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Services\Crm\SalesReports;
-use App\Support\AdminAccess\AccessMap;
+use App\Services\Crm\CrmAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -75,9 +75,7 @@ class ReportsController extends Controller
     /** Whether an organisation reaches the bookings product: a full customer does; one on modules only if they hold it. */
     public static function seesBookings(Organization $org): bool
     {
-        $modules = $org->planModules();
-
-        return $modules === null || in_array('booking', AccessMap::productsFor($modules), true);
+        return CrmAccess::seesBookings($org);
     }
 
     private function months(Request $request, int $max): int

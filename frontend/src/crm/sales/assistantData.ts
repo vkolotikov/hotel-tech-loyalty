@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { get } from '../lib/api'
 import { brandParam } from '../lib/brand'
 
-export const MODES = ['brief', 'sales_strategy', 'marketing_strategy', 'proposal', 'reply'] as const
+export const MODES = ['brief', 'sales_strategy', 'marketing_strategy', 'proposal', 'reply', 'follow_up'] as const
 export const SALES_FIELD = 'w-full rounded-xl border border-a-border bg-a-surface-2 px-3 py-2 text-sm text-a-text placeholder:text-a-text-2 focus-visible:outline-2 focus-visible:outline-a-accent'
 export type Mode = (typeof MODES)[number]
 export type Strategy = Extract<Mode, 'sales_strategy' | 'marketing_strategy'>
@@ -25,6 +25,10 @@ export type Coverage = {
   whatsapp: number
   whatsapp_state?: string | null
   history_limited?: boolean
+  project_history_limited?: boolean
+  project_files?: number
+  recorded_tasks?: number
+  prior_orders?: number
   other_logged_emails?: number
   writing_samples?: number
   discovery_fields?: number
@@ -38,6 +42,11 @@ export type Result = {
   generated_at: string
   coverage: Coverage
   review_notes: string[]
+  decision?: 'draft' | 'wait' | 'internal_action' | 'stop'
+  reason?: string
+  intent?: string
+  next_step?: string
+  unanswered?: string[]
   summary?: string
   sections?: { title: string; body: string }[]
   signals?: {
@@ -50,7 +59,23 @@ export type Result = {
   body?: string
 }
 
+export type Quote = {
+  reference: string
+  scope: string
+  quantity: number
+  unit_price: string
+  charges: string
+  currency: string
+  valid_until: string
+  tax_basis: 'included' | 'excluded' | 'unspecified'
+  total: string
+  approved_at: string
+}
+
 export type Assistant = {
+  can_review?: boolean
+  quote?: Quote | null
+  reviews?: Partial<Record<Mode, { source_id: string; subject: string; body: string; approved_at: string }>>
   brand: { id: number; name: string }
   revision: number
   run: Run | null

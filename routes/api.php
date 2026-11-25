@@ -1683,6 +1683,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     ->whereNumber('inquiry');
                 Route::post('leads/{inquiry}/assistant', \App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class)
                     ->whereNumber('inquiry')->middleware('throttle:12,1,crm-lead-assistant');
+                Route::put('leads/{inquiry}/assistant/quote', [\App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class, 'quote'])->whereNumber('inquiry');
+                Route::put('leads/{inquiry}/assistant/review', [\App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class, 'review'])->whereNumber('inquiry');
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'bootstrap']);
                 Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);
