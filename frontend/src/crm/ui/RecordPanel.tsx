@@ -57,7 +57,7 @@ function TabStrip({ idPrefix, tabs, tab, onTab, label, variant }: TabStripProps 
           ? (on ? 'bg-a-surface text-a-text shadow-sm' : 'text-a-text-2 hover:text-a-text')
           : (on ? 'border-a-accent text-a-text' : 'border-transparent text-a-text-2 hover:text-a-text')
         const layout = secondary ? 'min-h-9 shrink-0 gap-1.5 rounded-lg px-3 text-xs sm:text-sm'
-          : grouped ? 'min-h-12 min-w-0 flex-1 flex-col justify-center gap-1 border-b-2 px-0.5 text-[11px] sm:min-h-10 sm:flex-none sm:flex-row sm:gap-2 sm:px-3 sm:text-sm'
+          : grouped ? 'min-h-12 min-w-0 flex-1 flex-col justify-center gap-1 border-b-2 px-0.5 text-xs sm:min-h-10 sm:flex-none sm:flex-row sm:gap-2 sm:px-3 sm:text-sm'
             : 'shrink-0 gap-1.5 border-b-2 px-2.5 pb-2.5 pt-1.5 text-sm'
         return (
           <button key={key} type="button" role="tab" id={`${idPrefix}-tab-${key}`} aria-selected={on} aria-controls={`${idPrefix}-panel`}
@@ -93,19 +93,20 @@ export function RecordFrame({ idPrefix, title, avatar, subtitle, badges, actions
   const current = tabs.some(item => item.key === tab) ? tab : tabs[0]?.key
   const secondaryId = `${idPrefix}-section`
   const nested = secondary && secondary.tabs.length > 1
+  const compactIdentity = grouped && !!tools
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-a-border px-4 pt-4 sm:px-5">
-        <div className="flex items-start gap-3">
-          {avatar}
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <h2 id={titleId} className="min-w-0 truncate font-a-display text-2xl leading-tight text-a-text">{title}</h2>
-              {badges}
+        <div className={compactIdentity ? 'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 sm:flex sm:gap-3' : 'flex items-start gap-3'}>
+          {compactIdentity ? <div className="hidden sm:block">{avatar}</div> : avatar}
+          <div className={compactIdentity ? 'contents sm:block sm:min-w-0 sm:flex-1' : 'min-w-0 flex-1'}>
+            <div className={`${compactIdentity ? 'contents sm:flex' : 'flex'} min-w-0 flex-wrap items-center gap-x-2 gap-y-1`}>
+              <h2 id={titleId} className={`min-w-0 font-a-display text-2xl leading-tight text-a-text ${compactIdentity ? 'col-start-1 row-start-1 self-center break-words sm:truncate' : 'truncate'}`}>{title}</h2>
+              {badges && <div className="col-span-2 row-start-2">{badges}</div>}
             </div>
-            {subtitle && <div className="mt-0.5 min-w-0 truncate text-sm text-a-text-2">{subtitle}</div>}
+            {subtitle && <div className="col-span-2 row-start-3 mt-0.5 min-w-0 truncate text-sm text-a-text-2">{subtitle}</div>}
           </div>
-          {tools && <div className="-mr-1.5 -mt-1 flex shrink-0 items-center">{tools}</div>}
+          {tools && <div className="col-start-2 row-start-1 -mr-1.5 -mt-1 flex shrink-0 items-center">{tools}</div>}
         </div>
         {actions && <div className="mt-3 flex flex-wrap items-center gap-2">{actions}</div>}
         <TabStrip idPrefix={idPrefix} tabs={tabs} tab={current} onTab={onTab}

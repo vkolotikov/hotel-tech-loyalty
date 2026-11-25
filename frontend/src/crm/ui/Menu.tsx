@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Check, MoreHorizontal } from 'lucide-react'
 
@@ -84,6 +84,9 @@ export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, b
   className?: string
   align?: 'left' | 'right'
 }) {
+  const focusMenu = useCallback((menu: HTMLDivElement | null) => {
+    menu?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus({ preventScroll: true })
+  }, [])
   const move = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return
     const buttons = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')]
@@ -99,12 +102,12 @@ export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, b
       className={className ?? 'grid h-9 w-9 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'}
       button={button ?? <Icon size={16} aria-hidden />}>
       {(
-        <div role="menu" aria-label={label} onKeyDown={move}>
+        <div ref={focusMenu} role="menu" aria-label={label} onKeyDown={move}>
           {items.map((item, i) => {
             if (item === 'divider') return <div key={`d${i}`} role="separator" className="my-1 h-px bg-a-border" />
             if ('heading' in item) return <p key={`h${i}`} className="px-2.5 pb-1 pt-1.5 text-xs font-semibold text-a-text-2">{item.heading}</p>
             const ItemIcon = item.icon
-            const focusFirst = i === items.findIndex(x => typeof x === 'object' && 'key' in x && !x.disabled)
+
             const itemClass = `flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent ${item.danger ? 'text-a-danger hover:bg-a-danger/12' : 'text-a-text hover:bg-a-surface-2'}`
             const content = <>
               {ItemIcon ? <ItemIcon size={15} aria-hidden className="shrink-0" /> : <span aria-hidden className="w-[15px] shrink-0" />}
@@ -112,11 +115,11 @@ export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, b
               {item.checked && <Check size={14} aria-hidden className="shrink-0 text-a-accent-text" />}
             </>
             if (item.href !== undefined) {
-              return <a key={item.key} role="menuitem" data-close href={item.href} autoFocus={focusFirst}
+              return <a key={item.key} role="menuitem" data-close href={item.href}
                 target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined}
                 className={itemClass}>{content}</a>
             }
-            return <button key={item.key} type="button" role="menuitem" disabled={item.disabled} data-close autoFocus={focusFirst}
+            return <button key={item.key} type="button" role="menuitem" disabled={item.disabled} data-close
               onClick={item.onSelect} className={itemClass}>{content}</button>
           })}
         </div>
