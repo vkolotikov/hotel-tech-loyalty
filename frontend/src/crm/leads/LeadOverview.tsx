@@ -48,11 +48,17 @@ export function OverviewTab({ lead, stages, onPick, busy, brief, onBrief, onEdit
         <KeyFacts lead={lead} />
       </section>
       <AiCard lead={lead} brief={brief} onOpen={onBrief} />
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        <ContactCard lead={lead} />
-        <DetailsCard lead={lead} onEdit={onEdit} />
-        {hasStay(lead) && <StayCard lead={lead} />}
-        {fields.length > 0 && <CustomFieldsCard lead={lead} fields={fields} />}
+      <div className="@container">
+        <div className="grid items-start gap-4 @2xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="grid min-w-0 gap-4">
+            <ContactCard lead={lead} />
+            {fields.length > 0 && <CustomFieldsCard lead={lead} fields={fields} />}
+            {hasStay(lead) && <StayCard lead={lead} />}
+          </div>
+          <div className="min-w-0 [overflow-wrap:anywhere]">
+            <DetailsCard lead={lead} onEdit={onEdit} />
+          </div>
+        </div>
       </div>
     </div>
   )

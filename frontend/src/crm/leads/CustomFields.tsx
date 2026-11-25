@@ -77,13 +77,13 @@ export function CustomFieldInputs({ fields, values, onChange, invalid = [] }: {
 export function CustomFieldsView({ fields, values }: { fields: readonly CustomField[]; values: Record<string, unknown> | null | undefined }) {
   const { t } = useTranslation()
   return (
-    <dl className="space-y-2.5">
+    <dl className="divide-y divide-a-border">
       {fields.map(field => {
         const text = customText(field, values?.[field.key], t('crm.common.yes', 'Yes'), t('crm.common.no', 'No'))
         return (
-          <div key={field.key}>
+          <div key={field.key} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-baseline gap-3 py-2 first:pt-0 last:pb-0 [overflow-wrap:anywhere]">
             <dt className="text-xs text-a-text-2">{field.label}</dt>
-            <dd className={`text-sm ${text ? 'text-a-text' : 'text-a-text-2'}`}>
+            <dd className={`text-right text-sm ${text ? 'text-a-text' : 'text-a-text-2'}`}>
               {text && field.type === 'url' && /^https?:\/\//i.test(text)
                 ? <a href={text} target="_blank" rel="noreferrer noopener" className="break-all text-a-accent-text hover:underline">{text}</a>
                 : (text || '—')}
