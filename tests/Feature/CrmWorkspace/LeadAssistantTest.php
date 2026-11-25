@@ -593,6 +593,8 @@ class LeadAssistantTest extends TestCase
                     'question' => $need, 'answer' => $answer, 'is_active' => true]);
             }
         }
+        DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'is_active' => true,
+            'question' => 'PVC and metal NFC cards retail price', 'answer' => 'The public unit price for a retail card is USD 65.']);
         $other = $this->brand();
         foreach ([[$other, true], [$this->brandId, false]] as [$brand, $active]) {
             DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $brand, 'is_active' => $active,
@@ -636,6 +638,7 @@ class LeadAssistantTest extends TestCase
             $this->assertContains($ref, array_column($result['knowledge_trace']['questions'][$i]['matches'], 'id'));
         }
         $this->assertStringNotContainsString('80%', json_encode($captured));
+        $this->assertStringNotContainsString('USD 65', json_encode($captured));
         $this->assertSame('open', $result['knowledge_trace']['assessment'][3]['status']);
         $this->assertSame('partial', $result['knowledge_trace']['assessment'][7]['status']);
         $bad = true;

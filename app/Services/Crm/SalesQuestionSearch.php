@@ -53,7 +53,7 @@ final class SalesQuestionSearch
                 }
             }
             foreach ($plan['questions'] as $q) {
-                if ($plan['partner_purchase'] && $q['scope'] !== 'retail' && $source['kind'] === 'public_catalog') {
+                if ($plan['partner_purchase'] && $q['scope'] !== 'retail' && in_array($source['kind'], ['public_catalog', 'retail_price_list'], true)) {
                     continue;
                 }
                 foreach ($queries[$q['id']] as $pass => $words) {
@@ -114,7 +114,7 @@ final class SalesQuestionSearch
         $answers = $docs = [];
         foreach ($sources as $source) {
             $meta = ['id' => $source['id'], 'kind' => $source['kind'], 'updated' => $source['updated']];
-            if ($source['kind'] === 'brand_document') {
+            if (str_starts_with($source['id'], 'doc-')) {
                 $docs[] = $meta + ['title' => $source['title'], 'excerpt' => $source['text']];
             } else {
                 $answers[] = $meta + ['question' => $source['title'], 'answer' => $source['text']];
@@ -122,6 +122,15 @@ final class SalesQuestionSearch
         }
 
         return ['answers' => $answers, 'documents' => $docs, 'plan' => $plan];
+    }
+
+    private function priceScope(string $title, string $passage, string $default): string
+    {
+        $text = $title.' '.$passage;
+        $retailOnly = preg_match('/\b(?:(?:retail|public|consumer|list)\s+(?:unit\s+)?pric(?:es?|ing)|rrp|prix public|tarif public|precio (?:público|minorista)|einzelhandelspreis|розничн\pL*\s+цен\pL*)\b/iu', $text);
+        $partner = preg_match('/\b(?:wholesale|reseller|distributor|partner pric\pL*|revendeur|grossiste|wiederverkäufer|mayorista|оптов\pL*)\b/iu', $text);
+
+        return $retailOnly && ! $partner ? 'retail_price_list' : $default;
     }
 
     /** Iterate brand-scoped sources twice without retaining a tenant's full document library in memory. */
@@ -135,15 +144,17 @@ final class SalesQuestionSearch
                 yield ['id' => 'product-'.$item->id, 'kind' => 'public_product_quantity', 'title' => $product, 'keywords' => $keywords,
                     'text' => $product.'. The published product list includes a quantity of one card.', 'updated' => $item->source_checked_at];
             }
-            yield ['id' => 'faq-'.$item->id, 'kind' => $catalog ? 'public_catalog' : 'active_brand_answer',
+            $kind = $this->priceScope($item->question.' '.$keywords, (string) $item->answer, 'active_brand_answer');
+            yield ['id' => 'faq-'.$item->id, 'kind' => $catalog ? 'public_catalog' : $kind,
                 'title' => (string) $item->question, 'keywords' => $keywords, 'text' => (string) $item->answer,
                 'updated' => $item->source_checked_at ?? $item->updated_at?->toDateString()];
         }
         foreach ((clone $documents)->select(['id', 'file_name', 'extracted_text', 'updated_at'])->lazyById(8) as $doc) {
             $chunks = mb_str_split((string) $doc->extracted_text, 1100);
             foreach ($chunks as $index => $chunk) {
-                yield ['id' => 'doc-'.$doc->id.'-'.($index + 1), 'kind' => 'brand_document', 'title' => (string) $doc->file_name, 'keywords' => '',
-                    'text' => trim($chunk.mb_substr($chunks[$index + 1] ?? '', 0, 300)), 'updated' => $doc->updated_at?->toDateString()];
+                $passage = trim($chunk.mb_substr($chunks[$index + 1] ?? '', 0, 300));
+                yield ['id' => 'doc-'.$doc->id.'-'.($index + 1), 'kind' => $this->priceScope($doc->file_name, $passage, 'brand_document'),
+                    'title' => (string) $doc->file_name, 'keywords' => '', 'text' => $passage, 'updated' => $doc->updated_at?->toDateString()];
             }
         }
     }
