@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CrmContext } from '../CrmProvider'
+import leadWords from '../i18n/leads.en.json'
 import type { Bootstrap } from '../lib/types'
 import { boardQuery } from './board'
 import { dueSections, listQuery, readFilters } from './leadLogic'
@@ -14,7 +15,8 @@ import type { LeadDetail, LeadRow, Paginated, Pipeline } from './leadTypes'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string | Record<string, unknown>, vars?: Record<string, unknown>) => {
-      const text = typeof fallback === 'string' ? fallback : key
+      const words: Record<string, string> = leadWords
+      const text = typeof fallback === 'string' ? fallback : (key.startsWith('crm.leads.') ? words[key.slice('crm.leads.'.length)] : null) ?? key
       return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String((vars ?? {})[name] ?? ''))
     },
     i18n: { language: 'en' },
@@ -196,21 +198,14 @@ describe('Leads', () => {
     })
     expect(html).toContain('Ada Lovelace')
     expect(html).toContain('href="/crm/leads"') // All leads
-    // The header: the badges, the subtitle, the actions.
     expect(html).toContain('Analytical Engines · Website chat · came in')
     expect(html).toContain('Change the stage')
-    expect(html).toContain('Won')
-    expect(html).toContain('Lost')
     expect(html).toContain('Send email')
-    expect(html).toContain('href="mailto:ada@example.org"')
-    expect(html).toContain('AI brief')
-    expect(html).toContain('Proposal')
+    expect(html).toContain('aria-label="Other ways to contact"')
     expect(html).toContain('More for this lead')
-    // The tabs, with what they hold; no Deal (not won) and no Chat (no chat known).
-    expect(html).toContain('role="tablist"')
-    for (const tab of ['Overview', 'Activity', 'Tasks', 'Emails', 'Files']) expect(html).toContain(`>${tab}</span>`)
-    expect(html).not.toContain('lead-record-tab-deal')
-    expect(html).not.toContain('lead-record-tab-chat')
+    for (const tab of ['Overview', 'Messages', 'Tasks', 'Files', 'AI tools', 'Summary', 'Activity']) expect(html).toContain(`>${tab}</span>`)
+    expect(html).not.toContain('lead-record-section-tab-deal')
+    expect(html).not.toContain('lead-record-section-tab-chat')
     expect(html).toMatch(/Tasks<\/span><span[^>]*>2<\/span>/)
     // The Overview: the stage bar, the facts changed in place, the AI in violet, the contact, the details.
     expect(html).toContain('Proposal, where the lead is')
@@ -233,7 +228,8 @@ describe('Leads', () => {
       qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
       qc.setQueryData(['crm', 'leads', 'detail', 41], detail)
     })
-    expect(html).toMatch(/id="lead-record-tab-activity" aria-selected="true"/)
+    expect(html).toMatch(/id="lead-record-tab-overview" aria-selected="true"/)
+    expect(html).toMatch(/id="lead-record-section-tab-activity" aria-selected="true"/)
     expect(html).toContain('title="Ctrl or ⌘ + Enter adds it"')
     expect(html).toContain('Log a touch')
     expect(html).not.toContain('Proposal, where the lead is')
@@ -266,7 +262,8 @@ describe('Leads', () => {
       qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
       qc.setQueryData(['crm', 'leads', 'detail', 41], won)
     })
-    expect(html).toMatch(/id="lead-record-tab-deal" aria-selected="true"/)
+    expect(html).toMatch(/id="lead-record-tab-overview" aria-selected="true"/)
+    expect(html).toMatch(/id="lead-record-section-tab-deal" aria-selected="true"/)
     expect(html).toContain('Preparation, where the deal is')
     expect(html).toContain('Move Ada Lovelace on to Review')
     expect(html).toContain('Partly paid')
