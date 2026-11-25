@@ -108,24 +108,26 @@ final class LeadAssistantWriter
             $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
             $review = function (array $candidate, array $prior = []) use (&$input, $ask, $run, $snapshot) {
                 return $ask(CommercialEmailCheck::REVIEW, [
-                'language' => $run['language'], 'request' => $snapshot['plan_request'], 'staff_focus' => $run['focus'] ?? '',
-                'draft' => ['subject' => $candidate['subject'], 'body' => $candidate['body']], 'knowledge' => $input['brand_knowledge'],
-                'previous_objections' => $prior,
-                'reviewed_profile' => $input['reviewed_profile_evidence'], 'project_evidence' => $input['project_evidence'],
-                'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
-                'lead_requests' => $input['lead']['requests'],
-            ], EmailQuestionPlan::object(['issues' => ['type' => 'array', 'items' => ['type' => 'string']]]),
-                'crm_email_commercial_review', 'low', 1500, 45);
+                    'language' => $run['language'], 'request' => $snapshot['plan_request'], 'staff_focus' => $run['focus'] ?? '',
+                    'draft' => ['subject' => $candidate['subject'], 'body' => $candidate['body']], 'knowledge' => $input['brand_knowledge'],
+                    'previous_objections' => $prior,
+                    'reviewed_profile' => $input['reviewed_profile_evidence'], 'project_evidence' => $input['project_evidence'],
+                    'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
+                    'lead_requests' => $input['lead']['requests'],
+                ], EmailQuestionPlan::object(['issues' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'suggestions' => ['type' => 'array', 'items' => ['type' => 'string']]]),
+                    'crm_email_commercial_review', 'low', 1500, 45);
             };
             $editor = $review($result);
             $objections = array_slice($editor['issues'], 0, 4);
             $issues = array_merge($check['issues'], $objections);
+            $suggestions = array_slice($editor['suggestions'] ?? [], 0, 2);
             $knowledge = $this->context->resolveKnowledgeGaps($brand, $knowledge, $check['answers'], $objections);
             $newSources = count($knowledge['answers']) + count($knowledge['documents'])
                 > count($input['brand_knowledge']['answers']) + count($input['brand_knowledge']['documents']);
             $input['brand_knowledge'] = $knowledge;
-            if (($issues || $newSources) && microtime(true) - $started < 285) {
-                $raw = $write($input + ['corrections' => $issues, 'candidate_to_correct' => $result['body']], true);
+            if (($issues || $newSources || $suggestions) && microtime(true) - $started < 285) {
+                $raw = $write($input + ['corrections' => $issues, 'editor_suggestions' => $suggestions, 'candidate_to_correct' => $result['body']], true);
                 $result = $this->result($raw, $mode, true);
                 if ($result['decision'] === 'draft') {
                     $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
