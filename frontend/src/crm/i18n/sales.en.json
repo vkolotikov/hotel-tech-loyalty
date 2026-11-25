@@ -141,6 +141,7 @@
     }
   },
   "errors": {
+    "draft_revision_failed": "The revision still needs verification. Your previous draft is available.",
     "assistant_timed_out": "The assistant timed out. Generate again to retry.",
     "assistant_unavailable": "The assistant is unavailable for this workspace.",
     "assistant_access_changed": "Access to this lead changed before AI generation could finish."

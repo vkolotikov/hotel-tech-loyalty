@@ -6,4 +6,5 @@ return [
     'declined' => 'Diese Verkaufschance wurde abgelehnt oder verloren.',
     'quote_changed' => 'Das Angebot wurde geändert oder ist abgelaufen. Erstellen Sie einen neuen Entwurf.',
     'unverified_price' => 'Prüfen Sie Betrag und Währung anhand einer freigegebenen Quelle.',
+    'commercial_review' => 'Dieser Entwurf benötigt eine kaufmännische Prüfung. Prüfen Sie die offenen Fragen und erstellen Sie einen neuen Entwurf.',
 ];

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inquiry;
 use App\Models\Brand;
 use App\Services\Crm\CrmAccess;
+use App\Services\Crm\EmailDraftRevision;
 use App\Services\Crm\LeadAssistant;
 use App\Services\Crm\LeadQuote;
 use App\Services\Crm\SalesBrand;
@@ -22,7 +23,7 @@ final class LeadAssistantController extends Controller
             $assistant->start($inquiry, $brand, $request->attributes->get('workspace_org'), $request->validate([
                 'mode' => ['required', Rule::in(LeadAssistant::MODES)],
                 'language' => 'required|in:en,de,fr,es,ru',
-                'focus' => 'nullable|string|max:600',
+                ...EmailDraftRevision::rules(true),
             ]), (int) $request->user()->id);
         }
         if ($request->isMethod('PUT')) {

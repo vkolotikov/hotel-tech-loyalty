@@ -36,6 +36,7 @@ describe('response email sources', () => {
     const html = render(original)
     expect(html).toContain('Prototype timing')
     expect(html).toContain('Verify the finish internally.')
+    for (const action of ['comment', 'revise', 'fresh']) expect(html).toContain(`inquiryDetail.proposal.${action}`)
     expect(html.match(/href="mailto:[^"]+"/)?.[0]).toBe('href="mailto:buyer@example.org?subject=Proof&amp;body=Friday%20works."')
     expect(html).not.toContain('crm.sales.context.history_limited')
   })
@@ -47,6 +48,7 @@ describe('response email sources', () => {
     expect(html).not.toContain('href="mailto:')
     expect(html).not.toContain('crm.sales.email.use_activity')
     expect(html).not.toContain('Friday works.')
+    expect(html).not.toContain('inquiryDetail.proposal.revise')
   })
 
   it('identifies a WhatsApp request, writing samples and incomplete history', () => {

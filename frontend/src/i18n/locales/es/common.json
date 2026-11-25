@@ -1558,7 +1558,12 @@
       "subject": "Asunto",
       "body": "Cuerpo",
       "regenerate": "Regenerar",
-      "regenerate_tooltip": "Probar otro borrador"
+      "regenerate_tooltip": "Probar otro borrador",
+      "comment": "Comentario para la IA",
+      "comment_hint": "Por ejemplo, acorte la introducción y explique las opciones de muestras.",
+      "revise": "Revisar este borrador",
+      "fresh": "Generar un borrador nuevo",
+      "evidence": "Ver las preguntas y las fuentes"
     }
   },
   "inquiries": {

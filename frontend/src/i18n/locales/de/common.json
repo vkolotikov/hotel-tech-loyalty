@@ -1558,7 +1558,12 @@
       "subject": "Betreff",
       "body": "Inhalt",
       "regenerate": "Neu erzeugen",
-      "regenerate_tooltip": "Anderen Entwurf versuchen"
+      "regenerate_tooltip": "Anderen Entwurf versuchen",
+      "comment": "Kommentar für die KI",
+      "comment_hint": "Zum Beispiel: Kürzen Sie die Einleitung und erläutern Sie die Musteroptionen.",
+      "revise": "Diesen Entwurf überarbeiten",
+      "fresh": "Neuen Entwurf erstellen",
+      "evidence": "Fragen und Quellen ansehen"
     }
   },
   "inquiries": {

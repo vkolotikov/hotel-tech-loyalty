@@ -1337,19 +1337,21 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
   const [holdReason, setHoldReason] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [comment, setComment] = useState('')
+  const [sourceId, setSourceId] = useState('')
 
-  // Phase 5 — kick off the draft on mount, plus a refresh button for
-  // when the agent wants a different angle. Editable fields so the
-  // human can tighten before pasting into the composer.
   const draft = useMutation({
-    mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal?brand_id=${inq.brand_id ?? 'all'}`, {
-      language: (i18n.resolvedLanguage ?? 'en').split('-')[0],
+    mutationFn: (action?: 'revise' | 'fresh') => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal?brand_id=${inq.brand_id ?? 'all'}`, {
+      language: (i18n.resolvedLanguage ?? 'en').split('-')[0], focus: action ? comment.trim() : '',
+      ...(action === 'revise' ? { revise: { source_id: sourceId, subject, body } } : {}),
     }).then(r => r.data),
     onSuccess: (data) => {
       if (data.error) {
         toast.error(data.error)
         return
       }
+      setComment('')
+      setSourceId(data.source_id ?? '')
       setSubject(data.subject ?? '')
       setBody(data.body ?? '')
       setReviewNotes(data.review_notes ?? [])
@@ -1398,7 +1400,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 {t('inquiryDetail.proposal.subject', 'Subject')}
               </label>
               <input
-                value={subject}
+                value={subject} maxLength={240} disabled={draft.isPending}
                 onChange={e => setSubject(e.target.value)}
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent"
               />
@@ -1408,12 +1410,18 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 {t('inquiryDetail.proposal.body', 'Body')}
               </label>
               <textarea
-                value={body}
+                value={body} maxLength={10000} disabled={draft.isPending}
                 onChange={e => setBody(e.target.value)}
                 rows={14}
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
               />
             </div>
+            {sourceId && <label className="block space-y-1 text-sm text-t-secondary">
+              <span>{t('inquiryDetail.proposal.comment')}</span>
+              <textarea value={comment} rows={2} maxLength={600} disabled={draft.isPending} onChange={e => setComment(e.target.value)}
+                placeholder={t('inquiryDetail.proposal.comment_hint')}
+                className="w-full rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white focus:border-accent" />
+            </label>}
             </>}
             {reviewNotes.filter(note => note !== holdReason).length > 0 && <div className="text-sm text-t-secondary">
               <p className="font-semibold">{t('inquiryDetail.proposal.review')}</p>
@@ -1422,16 +1430,21 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
           </div>
         )}
 
-        <div className="flex justify-between items-center gap-2 pt-3 mt-3 border-t border-dark-border">
+        <div className="flex flex-wrap justify-between items-center gap-2 pt-3 mt-3 border-t border-dark-border">
+          <div className="flex flex-wrap items-center gap-1">
+            {sourceId && <button type="button" disabled={draft.isPending || !comment.trim() || !body.trim() || !subject.trim()}
+              className="flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-purple-300 hover:bg-dark-surface2 disabled:opacity-50"
+              onClick={() => draft.mutate('revise')}><Wand2 size={13} />{t('inquiryDetail.proposal.revise')}</button>}
           <button
-            onClick={() => draft.mutate()}
+            onClick={() => draft.mutate('fresh')}
             disabled={draft.isPending}
             className="flex items-center gap-1.5 px-3 py-2 text-xs text-t-secondary hover:text-white disabled:opacity-50"
             title={t('inquiryDetail.proposal.regenerate_tooltip', 'Try a different draft')}
           >
             <RefreshCw size={12} className={draft.isPending ? 'animate-spin' : ''} />
-            {t('inquiryDetail.proposal.regenerate', 'Regenerate')}
+            {t('inquiryDetail.proposal.fresh')}
           </button>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={onClose}

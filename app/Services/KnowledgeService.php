@@ -9,6 +9,7 @@ use App\Models\KnowledgeItem;
 use App\Models\Organization;
 use App\Scopes\BrandScope;
 use App\Services\Crm\SalesProfile;
+use App\Services\Crm\SalesQuestionSearch;
 use App\Services\Integrations\FdsBuilderKnowledge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -219,6 +220,14 @@ class KnowledgeService
     private function identifierHit(string $text, string $id): bool
     {
         return (bool) preg_match('/(?<![\pL\d-])'.preg_quote($id, '/').'(?![\pL\d-])/iu', $text);
+    }
+
+    public function forSalesQuestions(Brand $brand, array $plan): array
+    {
+        $orgId = (int) $brand->organization_id;
+
+        return (new SalesQuestionSearch)->retrieve($plan, $this->items($orgId, $brand),
+            $this->documents($orgId, $brand), $this->tokeniseQuery(...));
     }
 
     /** Match exact model references first, then rank relevant brand answers and document passages. */

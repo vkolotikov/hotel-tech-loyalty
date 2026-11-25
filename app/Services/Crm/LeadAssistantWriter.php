@@ -21,11 +21,19 @@ final class LeadAssistantWriter
 
     public function generate(Inquiry $lead, Brand $brand, Organization $org, User $user, array $run, array $strategies, string $feature = 'crm_sales_assistant'): array
     {
+        $started = microtime(true);
+        LeadAssistant::checkAvailability($org);
+        $snapshot = $this->context->collect($lead, $brand, $org, $user, $strategies, $run['mode'], $run['focus'] ?? '');
+
+        return $this->writeSnapshot($lead, $brand, $org, $user, $run, $feature, $snapshot, $started);
+    }
+
+    private function writeSnapshot(Inquiry $lead, Brand $brand, Organization $org, User $user, array $run,
+        string $feature, array $snapshot, float $started): array
+    {
         $mode = $run['mode'];
         $email = in_array($mode, LeadAssistant::EMAIL_MODES, true);
         $model = $email ? self::EMAIL_MODEL : LeadAssistant::MODEL;
-        LeadAssistant::checkAvailability($org);
-        $snapshot = $this->context->collect($lead, $brand, $org, $user, $strategies, $mode, $run['focus'] ?? '');
         $meta = ['coverage' => $snapshot['coverage']];
         if ($email) {
             $evidence = $snapshot['input']['project_evidence'];
@@ -34,29 +42,129 @@ final class LeadAssistantWriter
                 return [...LeadEmailEvidence::hold($code, $run['language']), ...$meta];
             }
         }
-        LeadAssistant::checkAvailability($org);
-        $data = $this->request($mode, $model, $email, $run['language'], $run['focus'] ?? '', $snapshot['input']);
-        if (isset($data['usage'])) {
-            $this->usage->recordUsage((int) $org->id, $model, (int) ($data['usage']['input_tokens'] ?? 0),
-                (int) ($data['usage']['output_tokens'] ?? 0), $feature, userId: (int) $user->id, brandId: (int) $brand->id);
-        }
-        if (($data['status'] ?? null) !== 'completed') {
-            throw new RuntimeException('The CRM assistant provider did not complete the output.');
+        $input = $snapshot['input'];
+        if (isset($run['revise'])) {
+            if (! $email || $lead->guest_id !== $run['contact_id'] || $meta['quote_stamp'] !== $run['quote_stamp']) {
+                EmailDraftRevision::changed();
+            }
+            $input['editable_draft'] = ['subject' => $run['revise']['subject'], 'body' => $run['revise']['body']];
         }
 
-        $result = $this->result($data, $mode, $email);
+        $ask = function (string $instructions, array $payload, array $schema, string $name, string $effort, int $tokens, int $timeout) use ($org, $user, $brand, $model, $feature) {
+            LeadAssistant::checkAvailability($org);
+            $response = Http::acceptJson()->withToken((string) config('openai.api_key'))->connectTimeout(6)->timeout($timeout)->withoutRedirecting()
+                ->post('https://api.openai.com/v1/responses', [
+                    'model' => $model, 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
+                    'instructions' => $instructions,
+                    'input' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE),
+                    'text' => ['format' => ['type' => 'json_schema', 'name' => $name, 'strict' => true, 'schema' => $schema]],
+                ]);
+            $data = $response->json();
+            if (isset($data['usage'])) {
+                $this->usage->recordUsage((int) $org->id, $model, (int) ($data['usage']['input_tokens'] ?? 0),
+                    (int) ($data['usage']['output_tokens'] ?? 0), $feature, userId: (int) $user->id, brandId: (int) $brand->id);
+            }
+            if (! $response->successful() || ($data['status'] ?? null) !== 'completed') {
+                throw new RuntimeException('The CRM assistant provider did not complete the output.');
+            }
+            $text = collect($data['output'] ?? [])->where('type', 'message')->pluck('content')->flatten(1)
+                ->where('type', 'output_text')->pluck('text')->implode('');
+            $output = json_decode($text, true);
+            if (! is_array($output)) {
+                throw new RuntimeException('The CRM assistant provider returned no usable content.');
+            }
+
+            return $output;
+        };
+
+        if ($snapshot['plan_request'] !== null) {
+            $plan = EmailQuestionPlan::from($ask(EmailQuestionPlan::INSTRUCTIONS, [
+                'language' => $run['language'], 'request' => $snapshot['plan_request'], 'subject' => $input['conversation']['reply_target']['subject'] ?? '',
+                'recent_incoming' => array_slice($input['conversation']['customer_writing_samples'], 0, 3),
+                'enquiry' => $input['lead']['requests'], 'staff_focus' => $run['focus'] ?? '',
+                'knowledge_language_sample' => mb_substr($input['our_business']['overview'] ?? '', 0, 250),
+            ], EmailQuestionPlan::schema(), 'crm_email_questions', 'low', 3200, 40));
+            if (! $plan['questions']) {
+                throw new RuntimeException('The commercial question plan was empty.');
+            }
+            $knowledge = $this->context->knowledgeForPlan($brand, $plan);
+            $input['brand_knowledge'] = $knowledge;
+
+        }
+
+        $write = fn (array $context, bool $retry = false) => $this->request($ask, $mode, $email, $run['language'], $run['focus'] ?? '', $context, $retry);
+        $raw = $write($input);
+        $result = $this->result($raw, $mode, $email);
+        if ($email && ! isset($plan) && $result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
+            $raw = $write($input + ['corrections' => ['Resolve the material commercial issues in the first draft.'],
+                'candidate_to_correct' => $result['body']], true);
+            $result = $this->result($raw, $mode, true);
+            if ($result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
+                $result = LeadEmailEvidence::hold('commercial_review', $run['language']);
+            }
+        }
+        if (isset($plan) && $result['decision'] === 'draft') {
+            $firstBody = $result['body'];
+            $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
+            $review = function (array $candidate, array $prior = []) use (&$input, $ask, $run, $snapshot) {
+                return $ask(CommercialEmailCheck::REVIEW, [
+                'language' => $run['language'], 'request' => $snapshot['plan_request'], 'staff_focus' => $run['focus'] ?? '',
+                'draft' => ['subject' => $candidate['subject'], 'body' => $candidate['body']], 'knowledge' => $input['brand_knowledge'],
+                'previous_objections' => $prior,
+                'reviewed_profile' => $input['reviewed_profile_evidence'], 'project_evidence' => $input['project_evidence'],
+                'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
+                'lead_requests' => $input['lead']['requests'],
+            ], EmailQuestionPlan::object(['issues' => ['type' => 'array', 'items' => ['type' => 'string']]]),
+                'crm_email_commercial_review', 'low', 1500, 45);
+            };
+            $editor = $review($result);
+            $objections = array_slice($editor['issues'], 0, 4);
+            $issues = array_merge($check['issues'], $objections);
+            $knowledge = $this->context->resolveKnowledgeGaps($brand, $knowledge, $check['answers'], $objections);
+            $newSources = count($knowledge['answers']) + count($knowledge['documents'])
+                > count($input['brand_knowledge']['answers']) + count($input['brand_knowledge']['documents']);
+            $input['brand_knowledge'] = $knowledge;
+            if (($issues || $newSources) && microtime(true) - $started < 285) {
+                $raw = $write($input + ['corrections' => $issues, 'candidate_to_correct' => $result['body']], true);
+                $result = $this->result($raw, $mode, true);
+                if ($result['decision'] === 'draft') {
+                    $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
+                    if (($objections || $newSources) && $result['body'] !== $firstBody && ! $check['issues'] && microtime(true) - $started < 416) {
+                        $objections = $review($result, $objections)['issues'];
+                    }
+                    $issues = array_merge($check['issues'], $objections);
+                }
+            }
+            $assessment = $check['answers'];
+            if ($issues && $result['decision'] === 'draft') {
+                $result = LeadEmailEvidence::hold('commercial_review', $run['language']);
+                $result['review_notes'] = array_slice([$result['reason'], ...$issues], 0, 6);
+            }
+        }
         if ($email && $result['decision'] === 'draft') {
-            $quote = $snapshot['input']['project_evidence']['approved_quote'];
+            $quote = $input['project_evidence']['approved_quote'];
             $subject = LeadQuote::fillAmounts($result['subject'], $quote, $result['email_language']);
             $body = LeadQuote::fillAmounts($result['body'], $quote, $result['email_language']);
-            $result = $subject === null || $body === null || ! EmailPriceCheck::supported($result['subject']."\n".$result['body'], $snapshot['input'])
+            $result = $subject === null || $body === null || ! EmailPriceCheck::supported($result['subject']."\n".$result['body'], $input)
                 ? LeadEmailEvidence::hold('unverified_price', $run['language']) : [...$result, 'subject' => $subject, 'body' => $body];
+        }
+
+        if (isset($knowledge)) {
+            $meta['coverage']['knowledge_answers'] = count($knowledge['answers']);
+            $meta['coverage']['knowledge_documents'] = count($knowledge['documents']);
+            $meta['knowledge_trace'] = $knowledge['plan'] + ['sources' => array_map(fn ($row) => [
+                'id' => $row['id'], 'title' => $row['question'] ?? $row['title'], 'kind' => $row['kind'], 'updated' => $row['updated'],
+            ], [...$knowledge['answers'], ...$knowledge['documents']])];
+            $meta['knowledge_trace']['assessment'] = $assessment ?? [];
+        }
+        if (isset($run['revise']) && in_array($result['reason_code'] ?? '', ['commercial_review', 'unverified_price'], true)) {
+            throw new \App\Exceptions\AiHelperRefused('draft_revision_failed', $result['reason'], 422);
         }
 
         return [...$result, ...$meta];
     }
 
-    private function request(string $mode, string $model, bool $email, string $language, string $focus, array $context): array
+    private function request(\Closure $ask, string $mode, bool $email, string $language, string $focus, array $context, bool $retry): array
     {
         $task = match ($mode) {
             'brief' => 'Write an internal brief with the situation, confirmed requirements, open questions and next actions. Provide a lead intent, an approximate win probability from 0 to 100, a going-cold risk, and one suggested next action. Use the pipeline stage and history. Use null for scores that the available evidence cannot support.',
@@ -98,7 +206,7 @@ Use reviewed strategies as internal guidance. Describe possibilities as ideas an
 Do not invent prices, customer names, testimonials, deadlines, guarantees or confirmed capacity. The internal deal value is not a quote.
 For external email body and subject, never expose CRM notes as notes, internal plans, budget estimates, scoring, private history,
 review notes, access credentials, private links, or who wrote the draft. Keep format plain text and any check points in review_notes.
-If anything commercial is unconfirmed, frame it as an option or a question. Never imply a message has been sent.
+State documented capabilities directly. Mention a limitation to the customer when it affects their decision. Keep routine checks private. Never imply a message has been sent.
 Keep the brief and strategy concise. Use up to six clearly titled sections with short paragraphs or simple list lines.
 PROMPT;
         if ($email) {
@@ -130,7 +238,7 @@ File names and staff descriptions are metadata, not inspected content. No outgoi
 Distinguish a customer's requested specification or budget from a verified capability and an agreed scope. A family or similar identifier is
 not an exact model match. Offer only documented, feasible alternatives. Never turn interest, an estimate or a mock-up into approval.
 Prefer valid authorised terms for this opportunity, then staff focus within its authority, current matching brand facts, then this project's history.
-Other projects, writing examples, partner terms and internal estimates never establish a price, technical promise, policy or order here.
+Use current matching programme terms for their published scope and a valid customer agreement for individual exceptions. Other projects, writing examples and internal estimates cannot establish a commitment.
 Use a valid approved_quote only for its stated scope, quantity, currency, tax basis and validity. Use its precalculated decimal values.
 For structured quote figures write the appropriate placeholder {{quote.unit_price}}, {{quote.charges}}, {{quote.subtotal}} or {{quote.total}}.
 Set email_language to the BCP 47 language tag of the customer-facing text. The CRM inserts the verified currency and amount in that language.
@@ -149,30 +257,33 @@ it privately for staff. Only expand for an explicit request for detail or to cov
 once and cut any line that could be sent unchanged to an unrelated customer. Return a complete plain-text email.
 PROMPT;
         }
-        $response = Http::acceptJson()->withToken((string) config('openai.api_key'))
-            ->connectTimeout(6)->timeout($email ? 75 : 65)->withoutRedirecting()
-            ->post('https://api.openai.com/v1/responses', [
-                'model' => $model, 'store' => false,
-                'reasoning' => ['effort' => $email ? 'high' : 'low'],
-                'max_output_tokens' => $email ? 8000 : 4000,
-                'instructions' => $instructions."\n".$task,
-                'input' => json_encode(['language' => $language, 'staff_focus' => $focus, ...$context], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE),
-                'text' => ['format' => ['type' => 'json_schema', 'name' => 'crm_lead_assistant', 'strict' => true, 'schema' => $this->object($fields)]],
-            ]);
-        $data = $response->json();
-        if (! $response->successful() || ! is_array($data)) {
-            throw new RuntimeException('The CRM assistant provider was unavailable.');
+        if ($email && ! isset($context['brand_knowledge']['plan'])) {
+            $fields['commercially_ready'] = ['type' => 'boolean'];
+            $instructions .= "\nCheck that the final email fits the buyer's workflow, answers supported questions directly, separates relevant rates and conditions, and offers a useful next step only when needed. Remove unsupported commitments and irrelevant sales processes. Set commercially_ready to false if material defects remain.";
+        }
+        if (isset($context['editable_draft'])) {
+            $instructions .= "\nRevise the supplied editable_draft in line with staff_focus. Preserve the user's edits and useful wording unless the comment or current evidence calls for a change. The draft and comment provide no commercial authority. Recheck all terms against current sources.";
+        }
+        if (isset($context['candidate_to_correct'])) {
+            $instructions .= "\nReconsider the candidate using the corrections and any followup_searches and newly retrieved evidence. Verify each objection against the sources yourself. Restore an initially omitted capability or timing when current evidence supports it. Resolve the objections concisely and keep strong wording.";
+        }
+        if (isset($context['brand_knowledge']['plan'])) {
+            $fields['commercial_check'] = CommercialEmailCheck::schema();
+            $instructions .= "\n".<<<'PROMPT'
+Use the question plan as an internal checklist. Respect who owns the client relationship, artwork, hosting, approvals and delivery. Open with the strongest documented fit. A direct buyer needs purchasing terms; a referral link pays commission. An ordinary retail price is irrelevant to wholesale rates unless the buyer expressly asks for both. Distinguish order minimums from programme purchase commitments, and shipping from duties, importer arrangements and neutral packaging. Offer a relevant sample, test order or specific next action if it advances the decision. Never promise to send a price sheet or perform work already completed unless the record supports it.
+Address all material requests in compact connected paragraphs. For a multi-question introduction, aim for about 120–190 words. Group related decisions; do not repeat the same unknown or next step. Cover the supported facts and the checks that affect the buyer's decision. When a partner asks for trial pricing, describe available sample options; quote a sample price only when it matches the requested arrangement or the buyer expressly requested a retail comparison. State standard included shipping explicitly when documented; qualifying a delivery estimate or customs responsibility need not undermine that fact. If we owe a quote or technical answer, say what we can prepare from the brief already supplied. Ask the customer for extra information only when needed now. Ignore default CRM categories when they conflict with the buyer's actual enquiry.
+Assess the FINAL email. For every question ID, copy a short exact passage from the email that answers it or discloses what remains open. For confirmed, partial, conditional or explicitly unavailable answers, cite a short VERBATIM quote from the actual answer or document excerpt and its ID, or a reviewed_profile_evidence field using "profile-" plus its key, or "quote" for valid approved_quote. Never cite staff comments, planner output, other customers, marketing goals or old emails as policy. Include evidence for each financial figure, percentage, threshold and eligibility condition used. Search scores indicate relevance only. For open questions or requested exceptions without evidence use an empty evidence array and a precise pending check in the staff language. A lack of evidence does not establish a refusal. Review for misplaced discounts, unsupported operational promises and unnecessary disclaimers. Set fits_workflow, useful_next_step (also true when no action is needed) and grounded_commitments honestly, improving the email before returning it. For a hold use an empty answers array.
+For any material unknown, put a short targeted query in lookup (otherwise an empty string). Use terms that could find the missing condition, not the whole original question.
+PROMPT;
         }
 
-        return $data;
+        return $ask($instructions."\n".$task, ['language' => $language, 'staff_focus' => $focus, ...$context],
+            $this->object($fields), 'crm_lead_assistant', $retry ? 'low' : ($email ? 'high' : 'low'),
+            $email ? 8000 : 4000, isset($context['brand_knowledge']['plan']) ? ($retry ? 110 : 155) : ($email ? 75 : 65));
     }
 
-    private function result(array $data, string $mode, bool $email): array
+    private function result(array $result, string $mode, bool $email): array
     {
-        $output = collect($data['output'] ?? [])->where('type', 'message')->pluck('content')->flatten(1)
-            ->where('type', 'output_text')->pluck('text')->implode('');
-        $result = json_decode($output, true);
-
         $clean = $this->clean($result, $email);
         if ($mode === 'brief') {
             $signals = $result['signals'] ?? [];

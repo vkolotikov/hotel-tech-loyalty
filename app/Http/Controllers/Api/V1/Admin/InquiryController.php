@@ -18,6 +18,7 @@ use App\Models\Task;
 use App\Services\CustomFieldService;
 use App\Services\Crm\LeadAssistant;
 use App\Services\Crm\LeadAssistantWriter;
+use App\Services\Crm\EmailDraftRevision;
 use App\Services\Crm\LeadEmailEvidence;
 use App\Services\Crm\SalesBrand;
 use App\Services\InquiryAiService;
@@ -1303,8 +1304,16 @@ class InquiryController extends Controller
         $user = $request->user();
         $brand = $scope->forLead($user, $inquiry);
         $org = Organization::findOrFail($inquiry->organization_id);
-        $input = $request->validate(['language' => 'sometimes|in:en,de,fr,es,ru']);
-        $run = ['mode' => 'proposal', 'language' => $input['language'] ?? app()->getLocale()];
+        $input = $request->validate(['language' => 'sometimes|in:en,de,fr,es,ru', ...EmailDraftRevision::rules(false)]);
+        $run = ['mode' => 'proposal', 'language' => $input['language'] ?? app()->getLocale(), 'focus' => $input['focus'] ?? ''];
+        if (isset($input['revise'])) {
+            $state = CrmLeadAssistant::query()->whereKey($id)->where('brand_id', $brand->id)->first();
+            $stamp = LeadEmailEvidence::quoteStamp(LeadEmailEvidence::currentQuote($state, $inquiry), (int) $org->id);
+            if (! hash_equals(EmailDraftRevision::token($inquiry, $brand, $stamp), $input['revise']['source_id'])) {
+                EmailDraftRevision::changed();
+            }
+            $run += ['revise' => $input['revise'], 'contact_id' => $inquiry->guest_id, 'quote_stamp' => $stamp];
+        }
         try {
             $draft = $writer->generate($inquiry, $brand, $org, $user, $run,
                 (array) $assistant->data($inquiry, $brand)['strategies'], 'inquiry_proposal_draft');
@@ -1324,7 +1333,12 @@ class InquiryController extends Controller
             $draft = LeadEmailEvidence::hold($reason, $run['language']);
         }
 
-        return response()->json(Arr::only($draft, ['subject', 'body', 'decision', 'reason', 'review_notes']))
+        $response = Arr::only($draft, ['subject', 'body', 'decision', 'reason', 'review_notes']);
+        if (! empty($draft['body'])) {
+            $response['source_id'] = EmailDraftRevision::token($current, $brand, $draft['quote_stamp']);
+        }
+
+        return response()->json($response)
             ->header('Cache-Control', 'private, no-store');
     }
 }

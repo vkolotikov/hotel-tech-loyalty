@@ -21,6 +21,7 @@ const ICONS = { brief: Sparkles, sales_strategy: Target, marketing_strategy: Meg
 const CONTEXT_FIELDS = ['customer_fields', 'business_fields', 'activities', 'chats', 'emails', 'whatsapp'] as const
 const OUTPUT_TEXT = 'whitespace-pre-wrap [overflow-wrap:anywhere] text-sm leading-relaxed text-a-text'
 type Email = { subject: string; body: string }
+type DraftAction = { focus: string; revise?: Email & { source_id: string; revision: number } }
 type Actions = { onEmails: () => void; onUse: (email: Email) => void }
 
 export function LeadAssistantPanel({ leadId, recipient, mode, onMode, query, onEmails, onUse }: {
@@ -68,10 +69,13 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
   const review = data.reviews?.[mode]
   const strategies = Object.keys(data.strategies)
   const generate = useMutation({
-    mutationFn: () => send<Assistant>('post', `crm/leads/${leadId}/assistant`, {
-      mode, language: (i18n.resolvedLanguage ?? 'en').split('-')[0], focus: focus.trim(),
+    mutationFn: (action?: DraftAction) => send<Assistant>('post', `crm/leads/${leadId}/assistant`, {
+      mode, language: (i18n.resolvedLanguage ?? 'en').split('-')[0], ...(action ?? { focus: focus.trim() }),
     }),
     onSuccess: next => cache.setQueryData(key, next),
+    onError: error => {
+      if (failureOf(error).code === 'strategy_changed') void cache.invalidateQueries({ queryKey: key })
+    },
   })
   const failure = data.run?.mode === mode && data.run.status === 'failed' ? data.run.error : null
   return (
@@ -84,19 +88,19 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
               ? t('crm.sales.strategy.available', { plans: strategies.map(item => t(`crm.sales.modes.${item}`)).join(' · ') })
               : t('crm.sales.strategy.none')}</p>
           )}
-          <label className="block space-y-1 text-sm font-medium text-a-text">
+          {(!emailMode || !result || held) && <label className="block space-y-1 text-sm font-medium text-a-text">
             <span>{t('crm.sales.focus')}</span>
             <textarea className={SALES_FIELD} rows={2} maxLength={600} value={focus} onChange={event => setFocus(event.target.value)}
               placeholder={t(`crm.sales.examples.${mode}`)} />
-          </label>
+          </label>}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to={`/crm/settings?tab=business&for_brand=${data.brand.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-a-accent-text hover:underline">
               <ArrowUpRight size={15} aria-hidden />{t('crm.sales.profile.title')}
             </Link>
-            <Button size="sm" className="crm-ai-fill" loading={generate.isPending || (generating && data.run?.mode === mode)}
+            {(!emailMode || !result || held) && <Button size="sm" className="crm-ai-fill" loading={generate.isPending || (generating && data.run?.mode === mode)}
               disabled={generating} onClick={() => generate.mutate()}>
               <Sparkles size={15} aria-hidden />{t(result ? 'crm.sales.regenerate' : 'crm.sales.generate')}
-            </Button>
+            </Button>}
           </div>
           {generating && data.run && (
             <p role="status" className="text-sm text-a-text-2">{t('crm.sales.working', { mode: t(`crm.sales.modes.${data.run.mode}`) })}</p>
@@ -112,11 +116,25 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
             hint={timeAgo(result.generated_at, i18n.language)}>
             {held ? <p role="status" className={OUTPUT_TEXT}>{result.reason}</p> : emailMode
               ? <DraftEditor key={`${result.id}:${review?.approved_at ?? ''}`} initial={review?.source_id === result.id ? review : { subject: result.subject ?? '', body: result.body ?? '' }}
-                recipient={recipient} onUse={onUse} leadId={leadId} mode={mode} resultId={result.id} data={data} />
+                recipient={recipient} onUse={onUse} leadId={leadId} mode={mode} resultId={result.id} data={data}
+                busy={generate.isPending || generating} onGenerate={action => generate.mutate(action)} />
               : <Insight result={result} />}
           </Card>
           <div className="space-y-4">
             <CoverageCard coverage={result.coverage} mode={mode} onEmails={onEmails} />
+            {result.knowledge_trace && <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
+              <summary className="cursor-pointer font-medium">{t('inquiryDetail.proposal.evidence')}</summary>
+              <ul className="mt-3 space-y-3">
+                {result.knowledge_trace.questions.map(q => {
+                  const trace = result.knowledge_trace!
+                  const answer = trace.assessment?.find(row => row.id === q.id)
+                  const titles = trace.sources.filter(row => (answer?.sources ?? []).includes(row.id)).map(row => row.title)
+                  return <li key={q.id}><p>{q.need}</p>
+                    {titles.length > 0 && <p className="text-xs text-a-text-2">{titles.join(' · ')}</p>}
+                    {answer?.pending && <p className="text-xs text-a-text-2">{answer.pending}</p>}</li>
+                })}
+              </ul>
+            </details>}
             {(result.intent || result.next_step || Boolean(result.unanswered?.length)) && (
               <Card title={t('crm.sales.email.assessment')} icon={Target} tone="neutral">
                 <dl className="space-y-2 text-sm">{(['intent', 'next_step', 'unanswered'] as const).map(field => {
@@ -143,12 +161,15 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
 
   function jobError(translate: typeof t, code: string) {
     return code === 'ai_budget_used_up' ? translate('crm.errors.ai_budget_used_up')
-      : ['assistant_timed_out', 'assistant_unavailable', 'assistant_access_changed'].includes(code) ? translate(`crm.sales.errors.${code}`)
+      : code === 'strategy_changed' ? translate('crm.sales.reload')
+      : ['assistant_timed_out', 'assistant_unavailable', 'assistant_access_changed', 'draft_revision_failed'].includes(code) ? translate(`crm.sales.errors.${code}`)
       : translate('crm.errors.ai_failed')
   }
 
   function assistantError(translate: typeof t, error: unknown) {
-    return failureOf(error).code === 'assistant_unavailable' ? translate('crm.sales.errors.assistant_unavailable') : errorText(translate, error)
+    const code = failureOf(error).code
+    if (code === 'strategy_changed') return translate('crm.sales.reload')
+    return code === 'assistant_unavailable' ? translate('crm.sales.errors.assistant_unavailable') : errorText(translate, error)
   }
 }
 
@@ -258,13 +279,15 @@ function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage
   )
 }
 
-function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data }: {
+function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data, busy, onGenerate }: {
   initial: Email; recipient?: string | null; onUse: Actions['onUse']; leadId: number; resultId: string; mode: Mode; data: Assistant
+  busy: boolean; onGenerate: (action: DraftAction) => void
 }) {
   const { t } = useTranslation()
   const toast = useToast()
   const fieldId = useId()
   const [draft, setDraft] = useState<Email>({ subject: initial.subject, body: initial.body })
+  const [comment, setComment] = useState('')
   const [revision, setRevision] = useState(data.revision)
   const cache = useQueryClient()
   const key = assistantKey(leadId)
@@ -293,15 +316,29 @@ function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data }
     <div className="space-y-3">
       <label className="block space-y-1 text-sm font-medium text-a-text">
         <span id={`${fieldId}-subject`}>{t('crm.sales.email.subject')}</span>
-        <input aria-labelledby={`${fieldId}-subject`} className={SALES_FIELD} value={draft.subject} maxLength={240} onChange={event => setDraft({ ...draft, subject: event.target.value })} />
+        <input aria-labelledby={`${fieldId}-subject`} className={SALES_FIELD} value={draft.subject} disabled={busy} maxLength={240} onChange={event => setDraft({ ...draft, subject: event.target.value })} />
       </label>
       <label className="block space-y-1 text-sm font-medium text-a-text">
         <span id={`${fieldId}-body`}>{t('crm.sales.email.body')}</span>
         <textarea aria-labelledby={`${fieldId}-body`} className={`${SALES_FIELD} min-h-56 resize-y leading-relaxed`} value={draft.body} maxLength={10000}
-          rows={12} onChange={event => setDraft({ ...draft, body: event.target.value })} />
+          rows={12} disabled={busy} onChange={event => setDraft({ ...draft, body: event.target.value })} />
       </label>
+      <div className="space-y-2 rounded-xl border border-a-border p-3">
+        <label className="block space-y-1 text-sm font-medium text-a-text">
+          <span>{t('inquiryDetail.proposal.comment')}</span>
+          <textarea className={SALES_FIELD} rows={2} maxLength={600} value={comment} disabled={busy}
+            placeholder={t('inquiryDetail.proposal.comment_hint')} onChange={event => setComment(event.target.value)} />
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          {data.results[mode]?.can_revise !== false && <Button type="button" size="sm" className="crm-ai-fill" disabled={busy || save.isPending || !ready || !comment.trim()}
+            onClick={() => onGenerate({ focus: comment.trim(), revise: { source_id: resultId, revision, ...draft } })}>
+            <Sparkles size={15} aria-hidden />{t('inquiryDetail.proposal.revise')}</Button>}
+          <Button type="button" size="sm" variant="secondary" disabled={busy || save.isPending}
+            onClick={() => onGenerate({ focus: comment.trim() })}>{t('inquiryDetail.proposal.fresh')}</Button>
+        </div>
+      </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {data.can_review && <Button type="button" size="sm" variant="secondary" loading={save.isPending} disabled={!ready || (data.reviews?.[mode]?.source_id === resultId && draft.subject === initial.subject && draft.body === initial.body)}
+        {data.can_review && <Button type="button" size="sm" variant="secondary" loading={save.isPending} disabled={busy || !ready || (data.reviews?.[mode]?.source_id === resultId && draft.subject === initial.subject && draft.body === initial.body)}
           onClick={() => save.mutate()}><Save size={15} aria-hidden />{t('crm.sales.email.approve')}</Button>}
         <Button type="button" size="sm" variant="secondary" disabled={!ready} onClick={() => void copy()}><Clipboard size={15} aria-hidden />{t('crm.common.copy')}</Button>
         <Button type="button" size="sm" variant="secondary" disabled={!ready} onClick={() => onUse(draft)}><ListPlus size={15} aria-hidden />{t('crm.sales.email.use_activity')}</Button>

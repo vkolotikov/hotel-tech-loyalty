@@ -141,6 +141,7 @@
     }
   },
   "errors": {
+    "draft_revision_failed": "La revisión requiere verificación. El borrador anterior sigue disponible.",
     "assistant_timed_out": "Se agotó el tiempo de espera. Vuelva a generar el contenido.",
     "assistant_unavailable": "El asistente no está disponible en este espacio de trabajo.",
     "assistant_access_changed": "El acceso a este contacto potencial cambió durante la generación."

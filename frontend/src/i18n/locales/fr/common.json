@@ -1558,7 +1558,12 @@
       "subject": "Objet",
       "body": "Corps",
       "regenerate": "Régénérer",
-      "regenerate_tooltip": "Essayer un autre brouillon"
+      "regenerate_tooltip": "Essayer un autre brouillon",
+      "comment": "Commentaire pour l’IA",
+      "comment_hint": "Par exemple, raccourcissez l’introduction et expliquez les options d’échantillons.",
+      "revise": "Réviser ce brouillon",
+      "fresh": "Créer un nouveau brouillon",
+      "evidence": "Consulter les questions et les sources"
     }
   },
   "inquiries": {

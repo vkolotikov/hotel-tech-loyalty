@@ -21,6 +21,23 @@ final class EmailPriceCheck
         $quote = $context['project_evidence']['approved_quote'] ?? null;
         $currency = $quote['currency'] ?? $context['lead']['currency'] ?? '';
         $claims = self::amounts($text, $currency);
+        $rates = self::commercialRates($text);
+        if ($rates) {
+            $verified = [];
+            foreach ($context['brand_knowledge']['answers'] ?? [] as $row) {
+                array_push($verified, ...self::commercialRates($row['answer'], $row['question'] ?? ''));
+            }
+            foreach ($context['brand_knowledge']['documents'] ?? [] as $row) {
+                array_push($verified, ...self::commercialRates($row['excerpt'], $row['title'] ?? ''));
+            }
+            array_push($verified, ...self::commercialRates($context['project_evidence']['reviewed_brand_terms'] ?? ''));
+            if ($quote && $quote['status'] === 'valid') {
+                array_push($verified, ...self::commercialRates($quote['scope'] ?? ''));
+            }
+            if (array_diff($rates, $verified)) {
+                return false;
+            }
+        }
         if (! $claims && ! str_contains($text, '{{quote.')) {
             return true;
         }
@@ -60,6 +77,48 @@ final class EmailPriceCheck
         }
 
         return array_diff($claims, $allowed) === [];
+    }
+
+    /** Pair each percentage with its nearest commercial term, so a commission cannot verify a discount. */
+    private static function commercialRates(string $text, string $title = ''): array
+    {
+        $types = [
+            'referral' => 'referral|commission|affiliate|provision|comisi[oó]n|комисси\pL*',
+            'discount' => 'discount|rabatt|remise|descuento|скидк\pL*',
+            'deposit' => 'deposit|acompte|anzahlung|anticipo|предоплат\pL*',
+            'tax' => 'vat|tax|tva|mwst|iva|ндс',
+        ];
+        $out = [];
+        foreach (preg_split('/\R|;|(?<=[.!?])\s+/u', $text) ?: [] as $line) {
+            preg_match_all('/\b(\d+(?:[.,]\d+)?)\h*(?:%|percent\b|per cent\b|pour cent\b|prozent\b|por ciento\b|процент\pL*)/iu', $line, $values, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+            foreach ($values as [$match, $number]) {
+                $best = null;
+                $distance = PHP_INT_MAX;
+                foreach ($types as $type => $terms) {
+                    preg_match_all('/\b(?:'.$terms.')\pL*\b/iu', $line, $labels, PREG_OFFSET_CAPTURE);
+                    foreach ($labels[0] as [$label, $pos]) {
+                        $gap = max($pos - $match[1] - strlen($match[0]), $match[1] - $pos - strlen($label), 0);
+                        if ($gap < $distance) {
+                            $best = $type;
+                            $distance = $gap;
+                        }
+                    }
+                }
+                if ($best === null) {
+                    foreach ($types as $type => $terms) {
+                        if (preg_match('/\b(?:'.$terms.')\pL*\b/iu', $title)) {
+                            $best = $type;
+                            break;
+                        }
+                    }
+                }
+                if ($best !== null) {
+                    $out[] = $best.' '.BigDecimal::of(str_replace(',', '.', $number[0]))->strippedOfTrailingZeros();
+                }
+            }
+        }
+
+        return $out;
     }
 
     private static function amounts(string $text, string $currency): array

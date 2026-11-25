@@ -49,6 +49,7 @@ final class LeadAssistant
                     unset($results[$mode]);
                     continue;
                 }
+                $results[$mode]['can_revise'] = array_key_exists('contact_id', $result);
                 if ($code = LeadEmailEvidence::recheck($policy, $mode, $quote, (int) $brand->organization_id, $result)) {
                     $results[$mode] = [...$result, ...LeadEmailEvidence::hold($code, $result['language'] ?? 'en')];
                 }
@@ -58,7 +59,7 @@ final class LeadAssistant
         return [
             'brand' => ['id' => (int) $brand->id, 'name' => $brand->name],
             'revision' => $state->revision ?? 0,
-            'run' => $run ? array_diff_key($run, array_flip(['requested_by', 'language', 'focus'])) : null,
+            'run' => $run ? array_intersect_key($run, array_flip(['id', 'mode', 'status', 'error', 'started_at', 'finished_at'])) : null,
             'results' => (object) $results,
             'quote' => $quote,
             'reviews' => (object) collect($state->email_reviews ?? [])->whereStrict('contact_id', $lead->guest_id)
@@ -77,16 +78,32 @@ final class LeadAssistant
             abort_unless(SalesBrand::leadBrandId($current) === (int) $brand->id, 409);
             $state = CrmLeadAssistant::query()->lockForUpdate()->find($lead->id);
             if ($state?->brand_id === (int) $brand->id && $this->active($state->run) && ! $this->expired($state->run)) {
+                if (isset($input['revise'])) {
+                    EmailDraftRevision::changed();
+                }
                 return null;
             }
             if ($state && $state->brand_id !== (int) $brand->id) {
                 $state->fill(['brand_id' => $brand->id, 'revision' => 0, 'results' => null, 'strategies' => null, 'approved_quote' => null, 'email_reviews' => null]);
             }
             $state ??= new CrmLeadAssistant(['inquiry_id' => $lead->id, 'brand_id' => $brand->id, 'revision' => 0]);
+            $revision = [];
+            if (isset($input['revise'])) {
+                $original = $state->results[$input['mode']] ?? [];
+                if (! in_array($input['mode'], self::EMAIL_MODES, true) || empty($original['body'])
+                    || (int) $input['revise']['revision'] !== (int) $state->revision
+                    || ($original['id'] ?? null) !== $input['revise']['source_id']
+                    || ! array_key_exists('contact_id', $original) || $original['contact_id'] !== $current->guest_id
+                    || LeadEmailEvidence::recheck(LeadEmailEvidence::policy($current), $input['mode'], LeadEmailEvidence::currentQuote($state, $current), (int) $brand->organization_id, $original)) {
+                    EmailDraftRevision::changed();
+                }
+                $revision = ['revise' => $input['revise'], 'contact_id' => $current->guest_id,
+                    'quote_stamp' => $original['quote_stamp'] ?? LeadEmailEvidence::quoteStamp(null, (int) $brand->organization_id)];
+            }
             $id = (string) Str::uuid();
             $state->fill(['run' => [
                 'id' => $id, 'status' => 'queued', 'mode' => $input['mode'], 'language' => $input['language'],
-                'focus' => $input['focus'] ?? '', 'requested_by' => $userId, 'started_at' => now()->toISOString(),
+                'focus' => $input['focus'] ?? '', 'requested_by' => $userId, 'started_at' => now()->toISOString(), ...$revision,
             ]])->save();
 
             return $id;

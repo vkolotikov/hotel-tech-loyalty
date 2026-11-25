@@ -1558,7 +1558,12 @@
       "subject": "Subject",
       "body": "Body",
       "regenerate": "Regenerate",
-      "regenerate_tooltip": "Try a different draft"
+      "regenerate_tooltip": "Try a different draft",
+      "comment": "Comment for the AI",
+      "comment_hint": "For example, shorten the opening and explain the sample options.",
+      "revise": "Revise this draft",
+      "fresh": "Generate a fresh draft",
+      "evidence": "Review the questions and sources"
     }
   },
   "inquiries": {

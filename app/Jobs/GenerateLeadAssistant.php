@@ -23,7 +23,7 @@ final class GenerateLeadAssistant implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 150;
+    public int $timeout = 475;
 
     public function __construct(public int $leadId, public int $brandId, public int $orgId, public string $runId)
     {

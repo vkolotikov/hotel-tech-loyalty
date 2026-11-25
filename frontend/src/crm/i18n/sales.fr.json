@@ -141,6 +141,7 @@
     }
   },
   "errors": {
+    "draft_revision_failed": "La révision nécessite une vérification. Le brouillon précédent reste disponible.",
     "assistant_timed_out": "Le délai de génération a expiré. Relancez la génération.",
     "assistant_unavailable": "L’assistant est indisponible dans cet espace.",
     "assistant_access_changed": "L’accès à ce prospect a changé pendant la génération."

@@ -60,7 +60,9 @@ final class LeadAssistantContext
         $topic = implode("\n", [$focus, $target['subject'] ?? '', $target['body'] ?? '',
             ...array_column(array_slice($whatsapp['messages'], -3), 'body'), $lead->special_requests, $lead->notes,
             ...array_column(array_slice($chat, -3), 'body')]);
-        $knowledge = $this->knowledge->forSales($topic, $brand);
+        $requestText = trim((string) ($target['body'] ?? '')) ?: trim($lead->special_requests."\n".$lead->notes);
+        $needsPlan = in_array($mode, ['reply', 'proposal'], true) && EmailQuestionPlan::needed($requestText.' '.$focus);
+        $knowledge = $needsPlan ? ['answers' => [], 'documents' => []] : $this->knowledge->forSales($topic, $brand);
         $company = Arr::only($customer->fields ?? [], array_keys(BusinessProfile::definitions()));
         $research = $draft ? $this->discovery($customer, $company) : [];
         $enquiry = $lead->only([
@@ -69,6 +71,7 @@ final class LeadAssistantContext
         ]);
 
         return [
+            'plan_request' => $needsPlan ? mb_substr($requestText, 0, 12000) : null,
             'input' => [
                 'lead' => [
                     ...array_map(fn ($value) => is_string($value) ? $this->text($value, 400) : $value, $enquiry),
@@ -101,6 +104,7 @@ final class LeadAssistantContext
                 ],
                 'our_business' => (array) $profile['fields'],
                 'brand_knowledge' => $knowledge,
+                'reviewed_profile_evidence' => array_intersect_key((array) $profile['manual'], array_flip(SalesProfile::PUBLIC_FIELDS)),
                 'project_evidence' => $evidence,
                 'chatbot_guidance' => $behavior->exists ? $behavior->only(['identity', 'goal', 'tone', 'core_rules', 'custom_instructions', 'sales_style']) : [],
                 'content_planner_fields' => array_values(array_diff(array_keys((array) $profile['inherited']), array_keys((array) $profile['manual']))),
@@ -127,6 +131,60 @@ final class LeadAssistantContext
                 'reply_to' => $mode === 'reply' && $target ? Arr::only($target, ['channel', 'subject']) : null,
             ],
         ];
+    }
+
+    public function knowledgeForPlan(Brand $brand, array $plan): array
+    {
+        return $this->knowledge->forSalesQuestions($brand, $plan);
+    }
+
+    /** Use open conditions and reviewer objections to look for evidence missed by the initial searches. */
+    public function resolveKnowledgeGaps(Brand $brand, array $knowledge, array $assessment, array $objections): array
+    {
+        $plan = $knowledge['plan'];
+        $questions = collect($plan['questions'])->keyBy('id');
+        $followups = [];
+        foreach ($assessment as $row) {
+            if ($row['lookup'] !== '' && in_array($row['status'], ['open', 'partial', 'conditional', 'exception'], true)) {
+                $q = $questions->get($row['id']);
+                $followups[] = [...$q, 'search' => $row['lookup'], 'alternate' => $row['pending']];
+            }
+        }
+        foreach ($objections as $index => $issue) {
+            $followups[] = ['id' => 'review-'.($index + 1), 'need' => $issue, 'scope' => 'operations',
+                'search' => mb_substr($issue, 0, 350), 'alternate' => ''];
+        }
+        if (! $followups) {
+            return $knowledge;
+        }
+        $extra = $this->knowledgeForPlan($brand, [...$plan, 'questions' => $followups]);
+        $rows = collect([...$extra['answers'], ...$extra['documents']])->keyBy('id');
+        $selected = array_flip(array_column([...$knowledge['answers'], ...$knowledge['documents']], 'id'));
+        $remaining = 8000;
+        // Give independent objections first access to the reserved context budget.
+        $traces = array_reverse($extra['plan']['questions']);
+        for ($rank = 0; $rank < 2; $rank++) {
+            foreach ($traces as $q) {
+                $id = $q['matches'][$rank]['id'] ?? null;
+                if (! $id || isset($selected[$id]) || count($selected) >= 32 || $remaining < 180) {
+                    continue;
+                }
+                $row = $rows->get($id);
+                $document = isset($row['excerpt']);
+                $field = $document ? 'excerpt' : 'answer';
+                $row[$field] = mb_substr($row[$field], 0, $remaining);
+                $remaining -= mb_strlen($row[$field]);
+                $knowledge[$document ? 'documents' : 'answers'][] = $row;
+                $selected[$id] = true;
+            }
+        }
+        foreach ($traces as &$q) {
+            $q['matches'] = array_values(array_filter($q['matches'], fn ($hit) => isset($selected[$hit['id']])));
+        }
+        unset($q);
+        $knowledge['plan']['followup_searches'] = $traces;
+
+        return $knowledge;
     }
 
     private function activities(Inquiry $lead, Brand $brand): array

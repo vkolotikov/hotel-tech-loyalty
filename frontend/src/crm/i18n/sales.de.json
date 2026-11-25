@@ -141,6 +141,7 @@
     }
   },
   "errors": {
+    "draft_revision_failed": "Die Überarbeitung muss geprüft werden. Der bisherige Entwurf ist weiterhin verfügbar.",
     "assistant_timed_out": "Die Erstellung hat zu lange gedauert. Starten Sie sie erneut.",
     "assistant_unavailable": "Der Assistent ist in diesem Arbeitsbereich nicht verfügbar.",
     "assistant_access_changed": "Der Zugriff auf diesen Lead hat sich während der KI-Erstellung geändert."

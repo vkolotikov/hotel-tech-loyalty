@@ -534,6 +534,130 @@ class LeadAssistantTest extends TestCase
         $this->assertSame(['Shipping'], array_column($service->forSales('Livraison ?', $brand)['answers'], 'question'));
     }
 
+    public function test_a_comment_revises_the_current_edited_email_and_a_fresh_draft_discards_it(): void
+    {
+        $lead = $this->lead(['notes' => 'Please send an artwork proof.']);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $seen = [];
+        Http::fake(['api.openai.com/v1/responses' => function (Request $request) use (&$seen) {
+            $ctx = json_decode($request['input'], true);
+            $seen[] = $ctx;
+            return Http::response($this->providerOutput(['subject' => 'Artwork proof', 'body' => isset($ctx['editable_draft']) ? 'Edited proof reply.' : 'New proof reply.', 'review_notes' => []]));
+        }]);
+        $base = ['mode' => 'reply', 'language' => 'en'];
+        $this->asStaffMember()->postJson($path, $base)->assertAccepted();
+        $this->runLatest();
+        $original = $this->getJson($path)->json('results.reply');
+        $edit = ['source_id' => $original['id'], 'revision' => 0, 'subject' => 'My edited subject', 'body' => 'Please preserve my opening.'];
+        $this->postJson($path, $base + ['revise' => $edit])->assertUnprocessable();
+        $this->postJson($path, $base + ['focus' => 'Shorten the ending.', 'revise' => $edit])->assertAccepted()
+            ->assertJsonMissingPath('run.revise')->assertJsonMissingPath('run.focus');
+        $this->runLatest();
+        $this->assertSame(['subject' => $edit['subject'], 'body' => $edit['body']], $seen[1]['editable_draft']);
+        $this->assertSame('Shorten the ending.', $seen[1]['staff_focus']);
+        $this->getJson($path)->assertJsonPath('results.reply.body', 'Edited proof reply.');
+        $this->postJson($path, $base + ['focus' => 'Use the old version', 'revise' => $edit])->assertConflict();
+        $this->postJson($path, $base + ['focus' => 'Lead with the proof.'])->assertAccepted();
+        $this->runLatest();
+        $this->assertArrayNotHasKey('editable_draft', $seen[2]);
+        $this->assertSame('Lead with the proof.', $seen[2]['staff_focus']);
+        $proposal = $this->adminApi("inquiries/$lead/draft-proposal?brand_id=all");
+        $handle = $this->asManager()->postJson($proposal)->assertOk()->json('source_id');
+        $editing = ['focus' => 'Keep the proof.', 'revise' => ['source_id' => $handle, 'subject' => 'Proof', 'body' => 'Keep my changes.']];
+        $this->postJson($proposal, $editing)->assertOk()->assertJsonPath('body', 'Edited proof reply.');
+        $other = $this->lead();
+        $this->postJson($this->adminApi("inquiries/$other/draft-proposal?brand_id=all"), $editing)->assertConflict();
+        Mail::assertNothingSent();
+    }
+
+    public function test_kinforge_workflow_checks_nine_needs_against_the_right_brand_and_rejects_an_unhelpful_reply(): void
+    {
+        // Illustrative approved fixture terms. These rows are created only inside the test transaction.
+        $fixture = [
+            ['partner_pricing', 'Programme enrolment and referral', 'reseller enrollment referral commission', 'The programme has no joining fee. Qualifying referrals earn 10% commission.'],
+            ['partner_pricing', 'Direct purchase pricing for PVC and metal', 'wholesale PVC metal tier', 'Direct purchases receive a 5% discount from the second order.'],
+            ['capability', 'Single card artwork', 'single card artwork', 'One card can be made with its own artwork.'],
+            ['operations', 'Neutral parcels and invoices', 'blind parcels packing slips', ''],
+            ['capability', 'External NFC hosting', 'external NFC hosting', 'We encode your own URL without a hosted profile or subscription.'],
+            ['capability', 'Matching QR codes', 'matching QR codes', 'The printed QR can use the same URL as the chip.'],
+            ['operations', 'Manual artwork approval', 'manual artwork approval', 'Email the artwork for a proof before production.'],
+            ['operations', 'US freight and customs', 'US freight customs', 'Standard US shipping is included.'],
+            ['samples', 'Reseller samples and human support', 'reseller samples human support', 'A partner sample pack is available through your reseller contact.'],
+        ];
+        $lead = $this->lead(['notes' => 'KinForge is a US reseller. We own client relationships, artwork and hosting. Please cover '.implode('; ', array_column($fixture, 1))]);
+        $questions = $refs = [];
+        foreach ($fixture as $index => [$scope, $need, $words, $answer]) {
+            $questions[] = ['need' => $need, 'search' => $index === 6 ? 'customer signoff workflow' : $words, 'alternate' => $words, 'scope' => $scope];
+            if ($answer !== '') {
+                $refs[$index] = 'faq-'.DB::table('knowledge_items')->insertGetId(['organization_id' => $this->org->id, 'brand_id' => $this->brandId,
+                    'question' => $need, 'answer' => $answer, 'is_active' => true]);
+            }
+        }
+        $other = $this->brand();
+        foreach ([[$other, true], [$this->brandId, false]] as [$brand, $active]) {
+            DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $brand, 'is_active' => $active,
+                'question' => 'Wholesale PVC metal tier', 'answer' => 'Private negotiated 80% discount.']);
+        }
+        $bad = false;
+        $writes = $reviews = 0;
+        $captured = null;
+        Http::fake(['api.openai.com/v1/responses' => function (Request $req) use ($fixture, $questions, $refs, &$bad, &$writes, &$reviews, &$captured) {
+            $ctx = json_decode($req['input'], true);
+            $format = $req['text']['format']['name'];
+            if ($format === 'crm_email_questions') {
+                $data = ['relationship' => 'Manufacturing and reseller partnership', 'customer_workflow' => 'Client-managed artwork, hosting and approval.',
+                    'partner_purchase' => true, 'questions' => $questions];
+            } elseif ($format === 'crm_email_commercial_review') {
+                $reviews++;
+                $data = ['issues' => $bad ? ['The draft diverts the customer to an unnecessary integration.'] : []];
+            } else {
+                $writes++;
+                $captured = $ctx;
+                $lines = $map = [];
+                foreach ($fixture as $index => [$scope, $need, $terms, $answer]) {
+                    $pending = match ($index) {3 => 'Check neutral parcels and invoices.', 7 => 'Check who handles customs.', default => ''};
+                    $line = trim($answer.' '.$pending);
+                    $lines[] = $line;
+                    $map[] = ['id' => 'q'.($index + 1), 'status' => $answer === '' ? 'open' : ($pending ? 'partial' : 'confirmed'),
+                        'email_excerpt' => $line, 'pending' => $pending, 'evidence' => isset($refs[$index]) ? [['ref' => $refs[$index], 'quote' => $answer]] : []];
+                }
+                $data = ['decision' => 'draft', 'intent' => 'Reseller partnership', 'subject' => 'Your trial order', 'email_language' => 'en',
+                    'body' => implode("\n", $lines).($bad ? "\nIntegrate our builder before we can help." : ''), 'review_notes' => [],
+                    'commercial_check' => ['fits_workflow' => true, 'useful_next_step' => true, 'grounded_commitments' => true, 'answers' => $map]];
+            }
+            return Http::response($this->providerOutput($data));
+        }]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asManager()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $result = $this->getJson($path)->assertJsonPath('results.reply.decision', 'draft')->json('results.reply');
+        $this->assertCount(9, $result['knowledge_trace']['assessment']);
+        foreach ($refs as $i => $ref) {
+            $this->assertContains($ref, array_column($result['knowledge_trace']['questions'][$i]['matches'], 'id'));
+        }
+        $this->assertStringNotContainsString('80%', json_encode($captured));
+        $this->assertSame('open', $result['knowledge_trace']['assessment'][3]['status']);
+        $this->assertSame('partial', $result['knowledge_trace']['assessment'][7]['status']);
+        $bad = true;
+        $this->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.reply.reason_code', 'commercial_review')->assertJsonPath('results.reply.body', '');
+        $this->assertSame(3, $writes);
+        $this->assertSame(2, $reviews);
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_referral_percentage_does_not_authorise_a_reseller_discount(): void
+    {
+        $context = ['brand_knowledge' => ['answers' => [
+            ['question' => 'Affiliate referrals', 'answer' => 'Qualifying referrals earn 10% commission.'],
+            ['question' => 'Direct orders', 'answer' => 'Resellers receive a 5% discount starting with the second order.'],
+        ]]];
+        $this->assertTrue(\App\Services\Crm\EmailPriceCheck::supported('From the second order the discount is 5%. Referrals earn 10% commission.', $context));
+        $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('We offer a 10% discount on your order.', $context));
+        $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('We offer a 30% commission.', $context));
+    }
+
     private function brand(?int $id = null): int
     {
         return DB::table('brands')->insertGetId(array_filter(['id' => $id]) + [

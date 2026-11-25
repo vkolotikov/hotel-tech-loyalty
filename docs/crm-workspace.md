@@ -401,9 +401,22 @@ and a follow-up 40–100. A simple confirmation may take one sentence. A custome
 asking for more detail can get a longer answer. Type a language or focus in the optional instruction to override
 the usual choice. The customer’s own correspondence and saved language guide the default.
 
+After generation, staff can edit the subject and body, enter a comment and choose **Revise this draft**.
+**Generate a fresh draft** uses the current lead and any comment. Both actions reload the brand and opportunity
+evidence. A comment can change the writing or focus. Commercial authority still comes from the current sources.
+The full admin’s proposal editor has the same two actions.
+
 The writer reads the current request, customer role and location, the account's industry, reviewed strategy and
 brand knowledge. It looks for exact model references and matches commercial topics across languages. It selects up to
-12 active answers within 22,000 characters and relevant passages from up to four indexed documents. When an ordinary
+12 active answers within 22,000 characters and relevant passages from up to four indexed documents for ordinary requests.
+For multipart replies and proposals, a separate model pass identifies the buyer's workflow and up to 16 information
+needs. Each need gets a primary and alternate search over the active brand answers and indexed document passages.
+Sources compete per question, with a shared 32,000-character budget. Staff can expand **Review the questions and sources**
+to see which evidence supported each answer and which conditions need attention. The saved trace also records search
+terms, relevance scores and source IDs. Public builder prices have a retail scope. Product availability can inform a
+partner reply independently of those prices. An independent commercial review checks the draft against the enquiry
+and current evidence. Material objections trigger one rewrite and an unresolved objection holds the draft for staff.
+When an ordinary
 enquiry has no matching answers, it can consult four priority entries. Private email instructions guide the writing.
 The draft ends at the last useful sentence so the email app can add its signature. Once AI Discovery finishes, sourced public findings can identify details for
 staff to check. The customer's own statements and reviewed profile take precedence. **To verify** stays with
