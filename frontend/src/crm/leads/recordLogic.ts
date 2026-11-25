@@ -13,6 +13,24 @@ import type { LeadDetail, LeadKpis, StageKind } from './leadTypes'
 export const LEAD_TABS = ['overview', 'deal', 'assistant', 'business', 'activity', 'tasks', 'emails', 'whatsapp', 'files', 'chat'] as const
 export type LeadTab = (typeof LEAD_TABS)[number]
 
+const LEAD_SECTIONS = {
+  overview: ['overview', 'activity', 'deal'],
+  messages: ['emails', 'whatsapp', 'chat'],
+  tasks: ['tasks'],
+  files: ['files'],
+  ai: ['assistant', 'business'],
+} as const satisfies Record<string, readonly LeadTab[]>
+
+export type LeadSection = keyof typeof LEAD_SECTIONS
+
+/** Keep the address on the actual leaf so timeline, email and research links still open the right view. */
+export function leadSections(tabs: ReturnType<typeof leadTabs>) {
+  const available = new Map(tabs.map(tab => [tab.key, tab]))
+  return (Object.keys(LEAD_SECTIONS) as LeadSection[]).map(key => ({
+    key, tabs: LEAD_SECTIONS[key].flatMap(leaf => available.get(leaf) ?? []),
+  })).filter(section => section.tabs.length > 0)
+}
+
 export interface TabFacts {
   /** The lead is won: it is a deal, with its step and payment. */
   won: boolean

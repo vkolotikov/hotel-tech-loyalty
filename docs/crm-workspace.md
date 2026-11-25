@@ -367,7 +367,7 @@ Only the public company name, website and CRM language are sent for discovery.
 
 ## Lead AI assistant and our business
 
-Open a lead's **AI assistant** tab. It offers an AI brief, a sales strategy, a marketing strategy, a proposal email
+Open a lead's **AI tools → AI assistant**. It offers an AI brief, a sales strategy, a marketing strategy, a proposal email
 a response email and a follow-up. The lead's **AI brief** and **Proposal** buttons open the corresponding tools.
 Add a focus before generating when a particular question or scope matters.
 The brief also refreshes the lead's intent, win estimate, going-cold risk and suggested next action.
@@ -439,6 +439,25 @@ After editing an email, a manager can select **Save reviewed wording**. The CRM 
 for the most recently reviewed email of each type on this lead and uses it as a writing example in future drafts
 for the same contact and opportunity. Update approved terms in the quote or **Settings → Our business** when a
 correction changes a fact. Copying, opening an email or composing an activity leaves delivery with the staff member.
+
+### Lead navigation and FDS Cards pricing
+
+Both the lead panel and full page have five sections. **Overview** includes activity and the deal once won. **Messages**
+opens email history and offers WhatsApp or website chat when available. **Tasks** and **Files** open directly.
+**AI tools** includes the assistant and customer research. The arrow beside **Send email** lists the contact's available
+channels. **Stage** includes moving the lead and marking it won or lost. The **…** menu includes editing, adding a
+task and drafting a proposal. Links to individual views continue to open the corresponding section.
+
+In the FDS Cards brand, open **AI assistant → Knowledge** and search for **FDS builder prices**. The same answers
+supply visitor chat, CRM replies and proposals. Hourly at minute 17, `crm:sync-fds-builder-prices` reads the public
+metal and digital builder, the plastic card builder, school lunch cards and engraved pens. Only the configured FDS
+organization and brand receive these rows. A complete refresh updates existing source entries, preserves staff
+deactivations and removes withdrawn offers. Prices older than 48 hours drop out of AI retrieval until the next
+successful refresh. The business setup wizard leaves these changing prices in the live knowledge library.
+
+Business card tables give the net total for a listed quantity, service and currency. Packaging is separate and
+digital plans are recurring per profile. Use the product builder for an unlisted quantity or an approved quote for
+bespoke specifications. Each answer links to its own builder.
 
 ### Business profile setup
 

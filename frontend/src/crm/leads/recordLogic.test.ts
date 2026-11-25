@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DealKpis } from '../deals/dealLogic'
 import {
-  boardOrder, dealFigures, dealOf, factPatch, fullPagePath, headerActions, leadFigures, leadTabs, pageTab, rowOpens, tabShown, withPageTab,
+  boardOrder, dealFigures, dealOf, factPatch, fullPagePath, headerActions, leadFigures, leadSections, leadTabs, pageTab, rowOpens, tabShown, withPageTab,
 } from './recordLogic'
 import type { LeadDetail } from './leadTypes'
 
@@ -21,6 +21,20 @@ describe('a lead\'s record (round 5)', () => {
     expect(counted.find(t => t.key === 'chat')?.count).toBe(1)
     // A count not yet known is left out, not drawn as 0.
     expect(leadTabs({ won: false, chats: 0 }).find(t => t.key === 'files')?.count).toBeUndefined()
+  })
+
+  it('puts each available deep link in exactly one section and keeps the task and file counts', () => {
+    const all = leadTabs({ won: true, chats: 2, business: true, whatsapp: true, openTasks: 3, files: 2 })
+    const sections = leadSections(all)
+    expect(sections.map(group => [group.key, group.tabs.map(tab => tab.key)])).toEqual([
+      ['overview', ['overview', 'activity', 'deal']], ['messages', ['emails', 'whatsapp', 'chat']],
+      ['tasks', ['tasks']], ['files', ['files']], ['ai', ['assistant', 'business']],
+    ])
+    expect(sections.flatMap(group => group.tabs).sort((a, b) => a.key.localeCompare(b.key)))
+      .toEqual([...all].sort((a, b) => a.key.localeCompare(b.key)))
+    const empty = leadSections(leadTabs({ won: false, chats: 0 }))
+    expect(empty.find(group => group.key === 'messages')?.tabs).toEqual([{ key: 'emails' }])
+    expect(empty.find(group => group.key === 'ai')?.tabs).toEqual([{ key: 'assistant' }])
   })
 
   it('shows the tab asked for when the record has it, else Overview', () => {

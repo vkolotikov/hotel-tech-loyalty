@@ -135,6 +135,7 @@ Use a valid approved_quote only for its stated scope, quantity, currency, tax ba
 For structured quote figures write the appropriate placeholder {{quote.unit_price}}, {{quote.charges}}, {{quote.subtotal}} or {{quote.total}}.
 Set email_language to the BCP 47 language tag of the customer-facing text. The CRM inserts the verified currency and amount in that language.
 Do not add a second currency marker. Format other verified monetary figures in the customer's usual convention with an unambiguous currency.
+For a published price list, match the exact product, service, quantity and currency. Distinguish the whole order from a unit price and one-off charges from subscriptions.
 Never calculate or extrapolate a new price, discount, tax or total. If the quote expired or conflicts
 with the actual request, omit the amounts and flag a new quote for staff. Do not infer VAT from location or a registration number.
 Distinguish production, dispatch, transit and delivery. Check stock, schedule and authorisation before making commitments or offering exceptions.

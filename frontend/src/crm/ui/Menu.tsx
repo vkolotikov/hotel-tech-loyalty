@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Check, MoreHorizontal } from 'lucide-react'
 
@@ -22,6 +22,21 @@ export function Popover({ label, title, button, className = '', align = 'right',
   const box = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const id = useId()
+  const panel = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (!open) return
+    const fit = () => {
+      if (!box.current || !panel.current) return
+      const anchor = box.current.getBoundingClientRect()
+      const width = panel.current.offsetWidth
+      const left = Math.max(8, Math.min(align === 'left' ? anchor.left : anchor.right - width, document.documentElement.clientWidth - width - 8))
+      panel.current.style.left = `${left - anchor.left}px`
+      panel.current.style.right = 'auto'
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [align, open])
   useEffect(() => {
     if (!open) return undefined
     const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
@@ -38,7 +53,7 @@ export function Popover({ label, title, button, className = '', align = 'right',
         {button}
       </button>
       {open && (
-        <div id={id} onClick={e => { if ((e.target as HTMLElement).closest('[data-close]')) close() }}
+        <div id={id} ref={panel} onClick={e => { if ((e.target as HTMLElement).closest('[data-close]')) close() }}
           className={`absolute top-full z-30 mt-1.5 max-w-[calc(100vw-2rem)] rounded-xl border border-a-border bg-a-surface p-1.5 shadow-a-lg animate-a-pop ${width} ${align === 'right' ? 'right-0' : 'left-0'}`}>
           {children}
         </div>
@@ -47,16 +62,16 @@ export function Popover({ label, title, button, className = '', align = 'right',
   )
 }
 
-export interface MenuItem {
+export type MenuItem = {
   key: string
   label: string
   icon?: LucideIcon
-  onSelect: () => void
+
   danger?: boolean
   /** Shown with a tick (the current stage, the current priority). */
   checked?: boolean
   disabled?: boolean
-}
+} & ({ onSelect: () => void; href?: never } | { href: string; external?: boolean; onSelect?: never })
 
 /** A list of actions in a popover (a row's "…"): buttons in a menu, the arrow keys move between them. */
 export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, button, className, align = 'right' }: {
@@ -71,10 +86,10 @@ export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, b
 }) {
   const move = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return
-    const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])')]
+    const buttons = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')]
     if (!buttons.length) return
     e.preventDefault()
-    const at = buttons.indexOf(document.activeElement as HTMLButtonElement)
+    const at = buttons.indexOf(document.activeElement as HTMLElement)
     const next = e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1
       : e.key === 'ArrowDown' ? (at + 1) % buttons.length : (at - 1 + buttons.length) % buttons.length
     buttons[next].focus()
@@ -89,17 +104,20 @@ export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, b
             if (item === 'divider') return <div key={`d${i}`} role="separator" className="my-1 h-px bg-a-border" />
             if ('heading' in item) return <p key={`h${i}`} className="px-2.5 pb-1 pt-1.5 text-xs font-semibold text-a-text-2">{item.heading}</p>
             const ItemIcon = item.icon
-            return (
-              <button key={item.key} type="button" role="menuitem" disabled={item.disabled} data-close
-                // The first item takes the focus when the menu opens, so the arrow keys work at once.
-                autoFocus={i === items.findIndex(x => typeof x === 'object' && 'key' in x && !x.disabled)}
-                onClick={() => item.onSelect()}
-                className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent ${item.danger ? 'text-a-danger hover:bg-a-danger/12' : 'text-a-text hover:bg-a-surface-2'}`}>
-                {ItemIcon ? <ItemIcon size={15} aria-hidden className="shrink-0" /> : <span aria-hidden className="w-[15px] shrink-0" />}
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {item.checked && <Check size={14} aria-hidden className="shrink-0 text-a-accent-text" />}
-              </button>
-            )
+            const focusFirst = i === items.findIndex(x => typeof x === 'object' && 'key' in x && !x.disabled)
+            const itemClass = `flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent ${item.danger ? 'text-a-danger hover:bg-a-danger/12' : 'text-a-text hover:bg-a-surface-2'}`
+            const content = <>
+              {ItemIcon ? <ItemIcon size={15} aria-hidden className="shrink-0" /> : <span aria-hidden className="w-[15px] shrink-0" />}
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {item.checked && <Check size={14} aria-hidden className="shrink-0 text-a-accent-text" />}
+            </>
+            if (item.href !== undefined) {
+              return <a key={item.key} role="menuitem" data-close href={item.href} autoFocus={focusFirst}
+                target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener noreferrer' : undefined}
+                className={itemClass}>{content}</a>
+            }
+            return <button key={item.key} type="button" role="menuitem" disabled={item.disabled} data-close autoFocus={focusFirst}
+              onClick={item.onSelect} className={itemClass}>{content}</button>
           })}
         </div>
       )}

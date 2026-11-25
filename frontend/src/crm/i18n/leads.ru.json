@@ -1,4 +1,13 @@
 {
+  "nav_summary": "Сводка",
+  "nav_messages": "Сообщения",
+  "nav_ai": "ИИ",
+  "nav_research": "О клиенте",
+  "nav_mail_app": "Открыть почтовое приложение",
+  "nav_channels": "Другие способы связи",
+  "nav_stage": "Этап",
+  "nav_won": "Отметить как выигранную",
+  "nav_lost": "Отметить как проигранную",
   "actions": "Действия",
   "activity_call": "Звонок",
   "activity_chat": "Чат",

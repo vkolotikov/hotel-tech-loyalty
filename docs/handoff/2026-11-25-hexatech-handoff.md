@@ -20,3 +20,10 @@ CRM proposals and responses retrieve live, brand-scoped chatbot answers, relevan
 The brand selector in CRM setup and AI assistant knowledge uses the signed-in staff member’s available brands. The business wizard accepts existing chatbot knowledge as a source. Website capture uses GPT-6.2 Astra with high reasoning, follows sitemaps and nested links, and lists the public pages it read. Managers can review suggestions, edit the shared conversation goal and select individual company facts for visitor chat. Existing CRM fields become available to visitors when a manager selects them.
 
 The [CRM runbook](../crm-workspace.md#business-profile-setup) covers setup, evidence and publication. The [previous handoff](2026-11-24-hexatech-handoff.md) covers customer correspondence and the email reader.
+
+## FDS Cards builder prices and lead navigation
+
+An hourly sync puts public builder prices into the FDS Cards knowledge library used by chat and CRM.
+The lead header groups communication, stage changes and AI tools. Direct links still open the requested view.
+The [CRM runbook](../crm-workspace.md#lead-navigation-and-fds-cards-pricing) covers navigation, source ownership,
+refresh timing and price validity.

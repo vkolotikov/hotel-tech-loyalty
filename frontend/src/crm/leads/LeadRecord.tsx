@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   ArrowRightLeft, BriefcaseBusiness, CheckSquare, ChevronDown, Globe2, History, LayoutDashboard, ListPlus, Mail, MessageCircle, MessagesSquare, Paperclip,
-  Pencil, Send, Sparkles, Trash2, Trophy, UserRound, Wand2, XCircle, type LucideIcon,
+  MessageSquare, Pencil, Phone, Send, Sparkles, Trash2, Trophy, UserRound, Wand2, XCircle, type LucideIcon,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { BusinessProfilePanel } from '../business/BusinessProfilePanel'
@@ -33,9 +33,9 @@ import { OverviewTab } from './LeadOverview'
 import { ChatTab, FilesTab } from './LeadSide'
 import { LeadTasks } from './LeadTasks'
 import { LeadTimeline, type ComposerSeed } from './LeadTimeline'
-import { priorityTone } from './listLogic'
-import { ContactLinks, FreshChip, StagePill } from './parts'
-import { fullPagePath, headerActions, leadTabs, tabShown, type LeadTab } from './recordLogic'
+import { contactLinks, priorityTone } from './listLogic'
+import { FreshChip, StagePill } from './parts'
+import { fullPagePath, headerActions, leadSections, leadTabs, tabShown, type LeadSection, type LeadTab } from './recordLogic'
 import { useLeadActivities, useLeadChats, useLeadDetail, useLeadFiles } from './recordData'
 import { SendTemplate } from './SendTemplate'
 import type { LeadDetail, Stage } from './leadTypes'
@@ -145,10 +145,10 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
   })
   const tabLabel = (key: LeadTab): string => {
     switch (key) {
-      case 'overview': return t('crm.record.overview', 'Overview')
+      case 'overview': return t('crm.leads.nav_summary')
       case 'deal': return t('crm.leads.tab_deal', 'Deal')
       case 'assistant': return t('crm.sales.title')
-      case 'business': return t('crm.business.tab')
+      case 'business': return t('crm.leads.nav_research')
       case 'activity': return t('crm.leads.tab_activity', 'Activity')
       case 'tasks': return t('crm.leads.tasks', 'Tasks')
       case 'emails': return t('crm.leads.emails', 'Emails')
@@ -157,25 +157,56 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
       default: return t('crm.leads.tab_chat', 'Chat')
     }
   }
-  const frameTabs: RecordTab[] = tabs.map(({ key, count }) => ({ key, count, label: tabLabel(key), icon: TAB_ICON[key] }))
   const shown = tabShown(tab, tabs) as LeadTab
-
-  const stageItems: MenuItem[] = stages.map(s => ({
-    key: `s${s.id}`, label: s.name, checked: stage?.id === s.id, icon: s.kind === 'won' ? Trophy : s.kind === 'lost' ? XCircle : undefined,
-    disabled: move.isPending, onSelect: () => { if (stage?.id !== s.id) pickStage(s) },
+  const groups = leadSections(tabs)
+  const group = groups.find(section => section.tabs.some(item => item.key === shown)) ?? groups[0]
+  const sections: Record<LeadSection, Pick<RecordTab, 'label' | 'icon'>> = {
+    overview: { label: t('crm.record.overview', 'Overview'), icon: LayoutDashboard },
+    messages: { label: t('crm.leads.nav_messages'), icon: MessagesSquare },
+    tasks: { label: tabLabel('tasks'), icon: CheckSquare },
+    files: { label: tabLabel('files'), icon: Paperclip },
+    ai: { label: t('crm.leads.nav_ai'), icon: Sparkles },
+  }
+  const frameTabs = groups.map(({ key, tabs: leaves }) => ({
+    key, ...sections[key], count: key === 'tasks' || key === 'files' ? leaves[0].count : undefined,
   }))
+  const sectionTabs = group.tabs.map(({ key, count }) => ({ key, count, label: tabLabel(key), icon: TAB_ICON[key] }))
+  const changeGroup = (key: string) => {
+    const next = groups.find(section => section.key === key)
+    if (next && next.key !== group.key) onTab(next.tabs[0].key)
+  }
+
+  const links = contactLinks(lead.guest)
+  const channels: MenuItem[] = [
+    ...(links.email ? [{ key: 'mail', label: t('crm.leads.nav_mail_app'), icon: Mail, href: links.email }] : []),
+    ...(links.call ? [{ key: 'call', label: t('crm.leads.call_to', { name }), icon: Phone, href: links.call }] : []),
+    ...(links.whatsapp ? [{ key: 'whatsapp', label: t('crm.whatsapp.title'), icon: MessageCircle, href: links.whatsapp, external: true }] : []),
+    ...(links.sms ? [{ key: 'text', label: t('crm.leads.sms_to', { name }), icon: MessageSquare, href: links.sms }] : []),
+  ]
+  const openStages: MenuItem[] = stages.filter(s => s.kind === 'open').map(s => ({
+    key: `s${s.id}`, label: s.name, checked: stage?.id === s.id, disabled: move.isPending, onSelect: () => pickStage(s),
+  }))
+  const stageItems: (MenuItem | 'divider')[] = [
+    ...openStages, ...(openStages.length ? ['divider' as const] : []),
+    ...(can.won ? [{ key: 'won', label: t('crm.leads.nav_won'), icon: Trophy, disabled: move.isPending, onSelect: () => setClosing('won') }] : []),
+    ...(can.lost ? [{ key: 'lost', label: t('crm.leads.nav_lost'), icon: XCircle, disabled: move.isPending, onSelect: () => setClosing('lost') }] : []),
+  ]
   const more: (MenuItem | 'divider')[] = [
     { key: 'edit', label: t('crm.leads.edit', 'Edit the lead'), icon: Pencil, onSelect: () => setEditing(true) },
     { key: 'task', label: t('crm.leads.task_add_short', 'Add a task'), icon: ListPlus, onSelect: () => setAddingTask(true) },
     ...(can.contact ? [{ key: 'contact', label: t('crm.leads.open_contact', 'Open the contact'), icon: UserRound, onSelect: () => records.open('contact', lead.guest_id as number) }] : []),
+    'divider',
+    { key: 'brief', label: t('crm.sales.modes.brief'), icon: Sparkles, onSelect: () => openAssistant('brief') },
+    { key: 'proposal', label: t('crm.leads.ai_proposal', 'Draft a proposal'), icon: Wand2, onSelect: () => openAssistant('proposal') },
     ...(can.remove ? ['divider' as const, { key: 'delete', label: t('crm.leads.delete', 'Delete the lead'), icon: Trash2, danger: true, onSelect: () => setDeleting(true) }] : []),
   ]
   const subtitle = [lead.guest?.company, sourceLabel(t, lead.source), t('crm.leads.came_in', 'came in {{when}}', { when: timeAgo(lead.created_at, lang) })].filter(Boolean).join(' · ')
-  const aiPill = 'crm-ai-soft inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-a-accent'
+  const actionStyle = 'inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-a-accent'
 
   return (
     <>
-      <RecordFrame idPrefix="lead-record" titleId={titleId} title={name} tools={tools} tabs={frameTabs} tab={shown} onTab={onTab}
+      <RecordFrame idPrefix="lead-record" titleId={titleId} title={name} tools={tools} grouped tabs={frameTabs} tab={group.key} onTab={changeGroup}
+        secondary={{ label: sections[group.key].label, tabs: sectionTabs, tab: shown, onTab }}
         avatar={<Avatar name={name} size="lg" tone={kind === 'won' ? 'accent' : 'neutral'} />}
         badges={(
           <span className="flex flex-wrap items-center gap-1.5">
@@ -187,26 +218,20 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
         subtitle={subtitle}
         actions={(
           <>
-            {stages.length > 0 && (
-              <ActionMenu label={t('crm.leads.change_stage', 'Change the stage')} items={stageItems} align="left"
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-a-border bg-a-surface px-3 text-sm font-medium text-a-text hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:outline-a-accent"
-                button={<><ArrowRightLeft size={14} aria-hidden />{t('crm.pipeline.move_to', 'Move to')}<ChevronDown size={13} aria-hidden className="text-a-text-2" /></>} />
-            )}
-            {can.won && <Button size="sm" className="min-h-9" onClick={() => setClosing('won')}><Trophy size={14} aria-hidden />{t('crm.leads.won', 'Won')}</Button>}
-            {can.lost && <Button size="sm" variant="secondary" className="min-h-9" onClick={() => setClosing('lost')}><XCircle size={14} aria-hidden />{t('crm.leads.lost', 'Lost')}</Button>}
-            <Button size="sm" variant="secondary" className="min-h-9" onClick={() => setMailing(true)} title={t('crm.leads.send_email', 'Send an email')}>
-              <Send size={14} aria-hidden />{t('crm.leads.send_email_short', 'Send email')}
-            </Button>
-            <ContactLinks guest={lead.guest} name={name} />
-            <span className="flex items-center gap-1.5">
-              <button type="button" className={aiPill} onClick={() => openAssistant('brief')}>
-                <Sparkles size={14} aria-hidden />{t('crm.sales.modes.brief')}
+            <div className="inline-flex items-stretch rounded-full bg-a-accent text-a-accent-ink shadow-a-sm">
+              <button type="button" onClick={() => setMailing(true)}
+                className={`${actionStyle} hover:bg-a-accent-deep ${channels.length ? 'rounded-r-none' : ''}`}>
+                <Send size={15} aria-hidden />{t('crm.leads.send_email_short', 'Send email')}
               </button>
-              <button type="button" className={aiPill} onClick={() => openAssistant('proposal')} title={t('crm.sales.modes.proposal')}>
-                <Wand2 size={14} aria-hidden />{t('crm.leads.ai_proposal_short', 'Proposal')}
-              </button>
-            </span>
-            <ActionMenu label={t('crm.leads.more_actions', 'More for this lead')} items={more} />
+              {channels.length > 0 && <ActionMenu label={t('crm.leads.nav_channels')} title={t('crm.leads.nav_channels')} items={channels} align="left"
+                className="grid min-h-10 w-8 place-items-center rounded-r-full border-l border-current/25 hover:bg-a-accent-deep focus-visible:outline-2 focus-visible:outline-a-accent"
+                button={<ChevronDown size={15} aria-hidden />} />}
+            </div>
+            <ActionMenu label={t('crm.leads.change_stage', 'Change the stage')} items={stageItems} align="left"
+              className={`${actionStyle} border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2`}
+              button={<><ArrowRightLeft size={15} aria-hidden />{t('crm.leads.nav_stage')}<ChevronDown size={13} aria-hidden className="text-a-text-2" /></>} />
+            <ActionMenu label={t('crm.leads.more_actions', 'More for this lead')} title={t('crm.leads.more_actions', 'More for this lead')} items={more}
+              className="grid h-10 w-10 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent" />
           </>
         )}>
         {shown === 'overview' && (

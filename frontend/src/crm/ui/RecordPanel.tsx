@@ -26,7 +26,54 @@ export interface RecordHostProps {
   onNext: (() => void) | null
 }
 
-export function RecordFrame({ idPrefix, title, avatar, subtitle, badges, actions, tools, tabs, tab, onTab, children, titleId }: {
+interface TabStripProps {
+  tabs: RecordTab[]
+  tab: string
+  onTab: (key: string) => void
+}
+
+function TabStrip({ idPrefix, tabs, tab, onTab, label, variant }: TabStripProps & {
+  idPrefix: string
+  label?: string
+  variant: 'record' | 'grouped' | 'secondary'
+}) {
+  const keys = tabs.map(t => t.key)
+  const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const next = sectionAfter(keys, tab, e.key)
+    if (!next) return
+    e.preventDefault()
+    onTab(next)
+    document.getElementById(`${idPrefix}-tab-${next}`)?.focus()
+  }
+  const secondary = variant === 'secondary'
+  const grouped = variant === 'grouped'
+  return (
+    <div role="tablist" aria-label={label} className={secondary
+      ? 'mb-4 inline-flex max-w-full gap-0.5 overflow-x-auto rounded-xl bg-a-surface-2 p-1'
+      : `-mb-px mt-3 flex overflow-x-auto [scrollbar-width:none] ${grouped ? 'justify-between sm:justify-start sm:gap-2' : 'gap-1'}`}>
+      {tabs.map(({ key, label: name, icon: Icon, count }) => {
+        const on = key === tab
+        const color = secondary
+          ? (on ? 'bg-a-surface text-a-text shadow-sm' : 'text-a-text-2 hover:text-a-text')
+          : (on ? 'border-a-accent text-a-text' : 'border-transparent text-a-text-2 hover:text-a-text')
+        const layout = secondary ? 'min-h-9 shrink-0 gap-1.5 rounded-lg px-3 text-xs sm:text-sm'
+          : grouped ? 'min-h-12 min-w-0 flex-1 flex-col justify-center gap-1 border-b-2 px-0.5 text-[11px] sm:min-h-10 sm:flex-none sm:flex-row sm:gap-2 sm:px-3 sm:text-sm'
+            : 'shrink-0 gap-1.5 border-b-2 px-2.5 pb-2.5 pt-1.5 text-sm'
+        return (
+          <button key={key} type="button" role="tab" id={`${idPrefix}-tab-${key}`} aria-selected={on} aria-controls={`${idPrefix}-panel`}
+            tabIndex={on ? 0 : -1} onClick={() => onTab(key)} onKeyDown={onKey}
+            className={`flex items-center font-medium transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-a-accent ${layout} ${color}`}>
+            <Icon size={15} aria-hidden className="shrink-0" />
+            <span className="whitespace-nowrap">{name}</span>
+            {count !== undefined && count > 0 && <span className={`rounded-full bg-a-surface-2 px-1.5 text-xs leading-5 text-a-text ${grouped ? 'max-sm:sr-only' : ''}`}>{count}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+export function RecordFrame({ idPrefix, title, avatar, subtitle, badges, actions, tools, tabs, tab, onTab, children, titleId, grouped, secondary }: {
   idPrefix: string
   title: ReactNode
   avatar?: ReactNode
@@ -40,16 +87,12 @@ export function RecordFrame({ idPrefix, title, avatar, subtitle, badges, actions
   onTab: (key: string) => void
   children: ReactNode
   titleId?: string
+  grouped?: boolean
+  secondary?: TabStripProps & { label: string }
 }) {
-  const keys = tabs.map(t => t.key)
-  const current = keys.includes(tab) ? tab : keys[0]
-  const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
-    const next = sectionAfter(keys, current, e.key)
-    if (!next) return
-    e.preventDefault()
-    onTab(next)
-    document.getElementById(`${idPrefix}-tab-${next}`)?.focus()
-  }
+  const current = tabs.some(item => item.key === tab) ? tab : tabs[0]?.key
+  const secondaryId = `${idPrefix}-section`
+  const nested = secondary && secondary.tabs.length > 1
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-a-border px-4 pt-4 sm:px-5">
@@ -65,24 +108,15 @@ export function RecordFrame({ idPrefix, title, avatar, subtitle, badges, actions
           {tools && <div className="-mr-1.5 -mt-1 flex shrink-0 items-center">{tools}</div>}
         </div>
         {actions && <div className="mt-3 flex flex-wrap items-center gap-2">{actions}</div>}
-        <div role="tablist" aria-label={typeof title === 'string' ? title : undefined} className="-mb-px mt-3 flex gap-1 overflow-x-auto [scrollbar-width:none]">
-          {tabs.map(({ key, label, icon: Icon, count }) => {
-            const on = key === current
-            return (
-              <button key={key} type="button" role="tab" id={`${idPrefix}-tab-${key}`} aria-selected={on} aria-controls={`${idPrefix}-panel`} tabIndex={on ? 0 : -1}
-                onClick={() => onTab(key)} onKeyDown={onKey}
-                className={`flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 pb-2.5 pt-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${on ? 'border-a-accent text-a-text' : 'border-transparent text-a-text-2 hover:text-a-text'}`}>
-                <Icon size={15} aria-hidden />
-                <span className="whitespace-nowrap">{label}</span>
-                {count !== undefined && count > 0 && <span className="rounded-full bg-a-surface-2 px-1.5 text-xs leading-5 text-a-text">{count}</span>}
-              </button>
-            )
-          })}
-        </div>
+        <TabStrip idPrefix={idPrefix} tabs={tabs} tab={current} onTab={onTab}
+          label={typeof title === 'string' ? title : undefined} variant={grouped ? 'grouped' : 'record'} />
       </div>
       <div id={`${idPrefix}-panel`} role="tabpanel" aria-labelledby={`${idPrefix}-tab-${current}`} tabIndex={-1}
         className="min-h-0 flex-1 overflow-y-auto px-4 py-4 outline-hidden sm:px-5">
-        {children}
+        {nested ? <>
+          <TabStrip {...secondary} idPrefix={secondaryId} variant="secondary" />
+          <div id={`${secondaryId}-panel`} role="tabpanel" aria-labelledby={`${secondaryId}-tab-${secondary.tab}`}>{children}</div>
+        </> : children}
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ use App\Models\KnowledgeItem;
 use App\Models\Organization;
 use App\Scopes\BrandScope;
 use App\Services\Crm\SalesProfile;
+use App\Services\Integrations\FdsBuilderKnowledge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -106,6 +107,9 @@ class KnowledgeService
     {
         return KnowledgeItem::withoutGlobalScope(BrandScope::class)->where('organization_id', $orgId)
             ->where(fn ($q) => $q->where('brand_id', $brand?->id)->when($brand?->is_default, fn ($q) => $q->orWhereNull('brand_id')))
+            ->when(FdsBuilderKnowledge::owns($brand), fn ($q) => $q->where(fn ($q) => $q->whereNull('source_key')
+                ->orWhere('source_key', 'not like', FdsBuilderKnowledge::PREFIX.'%')
+                ->orWhere('source_checked_at', '>=', now()->subHours(FdsBuilderKnowledge::FRESH_HOURS))))
             ->active();
     }
 
@@ -185,7 +189,11 @@ class KnowledgeService
     {
         $sources = [];
         $remaining = 80000;
-        $items = $this->rankedItems($this->items((int) $brand->organization_id, $brand), [], 80);
+        // Prices stay in the live source. A profile captured today must not turn them into permanent company facts.
+        $base = $this->items((int) $brand->organization_id, $brand)
+            ->when(FdsBuilderKnowledge::owns($brand), fn ($q) => $q->where(fn ($q) => $q->whereNull('source_key')
+                ->orWhere('source_key', 'not like', FdsBuilderKnowledge::PREFIX.'%')));
+        $items = $this->rankedItems($base, [], 80);
         foreach ($items as $item) {
             $text = mb_substr((string) $item->answer, 0, min(4500, $remaining));
             if ($text !== '') {

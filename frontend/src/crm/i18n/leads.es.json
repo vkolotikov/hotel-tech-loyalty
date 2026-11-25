@@ -1,4 +1,13 @@
 {
+  "nav_summary": "Resumen",
+  "nav_messages": "Mensajes",
+  "nav_ai": "IA",
+  "nav_research": "Información del cliente",
+  "nav_mail_app": "Abrir la aplicación de correo",
+  "nav_channels": "Otras formas de contacto",
+  "nav_stage": "Etapa",
+  "nav_won": "Marcar como ganado",
+  "nav_lost": "Marcar como perdido",
   "actions": "Acciones",
   "activity_call": "Llamada",
   "activity_chat": "Chat",

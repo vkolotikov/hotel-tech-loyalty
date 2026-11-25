@@ -78,6 +78,7 @@ Schedule::command('loyalty:reward-nudges')
 // Auto-resolve abandoned chat conversations idle for >4h so the inbox stays
 // clean and "active" / "waiting" stats reflect reality.
 Schedule::command('chat:reap')->hourly();
+Schedule::command('crm:sync-fds-builder-prices')->hourlyAt(17)->withoutOverlapping(5);
 
 // Daily sweep for post-stay review invitations. Each form opts in via
 // config.auto_send_post_stay and sets its own delay via auto_send_delay_days.

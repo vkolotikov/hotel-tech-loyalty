@@ -1,4 +1,13 @@
 {
+  "nav_summary": "Übersicht",
+  "nav_messages": "Nachrichten",
+  "nav_ai": "KI-Tools",
+  "nav_research": "Kundenrecherche",
+  "nav_mail_app": "E-Mail-App öffnen",
+  "nav_channels": "Weitere Kontaktwege",
+  "nav_stage": "Phase",
+  "nav_won": "Als gewonnen markieren",
+  "nav_lost": "Als verloren markieren",
   "actions": "Aktionen",
   "activity_call": "Anruf",
   "activity_chat": "Chat",

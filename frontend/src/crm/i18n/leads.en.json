@@ -1,4 +1,13 @@
 {
+  "nav_summary": "Summary",
+  "nav_messages": "Messages",
+  "nav_ai": "AI tools",
+  "nav_research": "Customer research",
+  "nav_mail_app": "Open email app",
+  "nav_channels": "Other ways to contact",
+  "nav_stage": "Stage",
+  "nav_won": "Mark as won",
+  "nav_lost": "Mark as lost",
   "actions": "Actions",
   "activity_call": "Call",
   "activity_chat": "Chat",
