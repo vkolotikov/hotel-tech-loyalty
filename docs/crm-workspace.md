@@ -381,8 +381,9 @@ email from **Emails** to reply in its thread.
 In **Settings → Our business**, managers can add the brand's offers, unique selling proposition, audiences, markets,
 proof, terms, voice and guidance. A brand with Content Planner uses its existing profile, active audience and
 voice information, and saved text snippets. The CRM values take precedence field by field. Clear a CRM value to
-use the Planner's value again. In **All brands**, this settings page shows the default available brand. The lead
-assistant always reads the lead's own brand profile.
+use the Planner's value again. The brand record supplies its name, website and description where both profiles have a blank.
+The brand picker in setup opens each available brand separately. From **All brands**,
+setup opens the default available brand or the brand of the lead that linked to it. A lead always uses its own brand.
 
 The assistant takes recent lead activities, linked chat, the reviewed customer profile, and the current business
 profile. FDS leads also use matched email and WhatsApp history when available. The result shows its coverage.
@@ -399,8 +400,10 @@ normally takes 35–90 words and a proposal 70–120. A simple confirmation may 
 asking for more detail can get a longer answer. Type a language or focus in the optional instruction to override
 the usual choice. The customer’s own correspondence and saved language guide the default.
 
-The writer reads the current request, the customer's role and location, the account's industry, saved business
-profiles and reviewed strategy. Once AI Discovery finishes, sourced public findings can identify details for
+The writer reads the current request, customer role and location, the account's industry, reviewed strategy and
+brand knowledge. It ranks active chatbot answers against the request and includes up to 80 within a 40,000-character
+budget. Matching passages can come from up to four indexed documents. Private email instructions guide the writing.
+The draft ends at the last useful sentence so the email app can add its signature. Once AI Discovery finishes, sourced public findings can identify details for
 staff to check. The customer's own statements and reviewed profile take precedence. **To verify** stays with
 staff when a draft is copied or opened in email.
 
@@ -419,14 +422,23 @@ to the person reviewing the message.
 ### Business profile setup
 
 **Settings → Our business** guides a manager through **Sources**, **Company**, **Market**, **Sales**, and **Review**.
-Use **Enter manually** to start filling the profile. **Capture with AI** can use a public website, a public web search
-for the company, or uploaded PDF, Word, Excel, PowerPoint, CSV, Markdown, and text files. The Sources step shows the
-current file limits. A website that cannot be read directly can use public search results from the same site.
+Use **Enter manually** or select sources for **Capture with AI**. Existing active chatbot answers and indexed documents
+can supply suggestions on their own or alongside a website, public search or uploaded PDF, Word, Excel, PowerPoint,
+CSV, Markdown and text files. Website capture follows the site's sitemap and links on successive pages. It reads up
+to 24 public pages, respects robots rules and lists the pages it read. An unreadable or very thin site can use indexed
+results from its own domain. GPT-6.2 Astra runs with high reasoning for both extraction and research.
 
 The review shows the proposed value and the page or file it came from. **Fill empty fields** respects existing CRM and
 Content Planner values. Use individual suggestions or edit any field before **Save profile**. Staff can read the
-saved profile. The assistant uses the current reviewed profile for strategies and email drafts. Saved AI values keep
-their references until the value is edited.
+saved profile. The assistant uses the current reviewed profile for strategies and email drafts. Captured fields are
+reviewed snapshots and keep their references until edited. Active chatbot answers and relevant document passages are
+retrieved afresh for each draft, including when the business profile is empty.
+
+**Sales → Shared conversation goal** writes the same goal used in **AI assistant → Behaviour**. **Email writing
+instructions** guide proposals and email responses. Under **Review → Company facts for the public chatbot**, select
+individual fields that visitors may receive. Selected facts follow the current profile and Content Planner values.
+Internal style instructions stay in the CRM. **AI assistant → Knowledge** links to the same wizard and offers a
+brand picker. A new draft's **Sources used** lists the number of answers and documents supplied.
 
 The manager-only `sales-profile/capture` endpoint starts work on the `ai` queue for the selected brand. Public research
 receives only the public business identity. Document extraction uses a tool-free request. Uploaded input is encrypted

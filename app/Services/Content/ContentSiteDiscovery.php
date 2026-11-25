@@ -86,7 +86,7 @@ class ContentSiteDiscovery
      * @param list<string> $named the sitemaps robots.txt names
      * @return list<array{url: string, date: ?string, hint: ?string}>
      */
-    private function sitemaps(string $origin, array $named, string $siteHost): array
+    public function sitemaps(string $origin, array $named, string $siteHost, ?RobotsRules $robots = null, ?float $deadline = null): array
     {
         $queue = [];
         foreach ($named as $url) {
@@ -104,15 +104,19 @@ class ContentSiteDiscovery
         $seen = [];
         $files = 0;
         $defaultFound = false;
-        while ($queue !== [] && $files < self::MAX_SITEMAPS && count($entries) < SitemapReader::MAX_ENTRIES) {
+        while ($queue !== [] && $files < self::MAX_SITEMAPS && count($entries) < SitemapReader::MAX_ENTRIES
+            && ($deadline === null || microtime(true) < $deadline)) {
             [$url, $hint, $isDefault] = array_shift($queue);
-            if (isset($seen[$url]) || ($isDefault && $defaultFound)) {
+            if (isset($seen[$url]) || ($isDefault && $defaultFound) || ($robots && ! $robots->allows(Urls::pathAndQuery($url)))) {
                 continue;
             }
             $seen[$url] = true;
             $files++;
             $file = $this->web->get($url, WebFetcher::XML_BYTES);
-            $read = $file === null ? ['kind' => 'none', 'entries' => []] : SitemapReader::read($file->body);
+            if (! $file || ! UrlRules::sameSite($file->url, $siteHost) || ($robots && ! $robots->allows(Urls::pathAndQuery($file->url)))) {
+                continue;
+            }
+            $read = SitemapReader::read($file->body);
             if ($read['kind'] === 'none') {
                 continue;
             }

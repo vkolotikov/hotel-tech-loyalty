@@ -1,4 +1,17 @@
 {
+  "brand": "Brand",
+  "discard_edits": "Discard the unsaved changes for this brand?",
+  "open_knowledge": "Open chatbot knowledge",
+  "open_profile": "Open business profile",
+  "choose_knowledge_brand": "Choose the brand whose answers and documents you want to manage.",
+  "use_knowledge": "Use this brand’s chatbot knowledge",
+  "knowledge_count": "{{answers}} active answers · {{documents}} indexed documents",
+  "website_depth": "Reads up to 24 public pages, following product links and the website’s sitemap.",
+  "pages_read": "Website pages read ({{total}})",
+  "visitor_facts": "Company facts for the public chatbot",
+  "visitor_hint": "Select the facts visitors may receive in a chat. Saving the profile makes future changes to these values available to the chatbot.",
+  "goal_hint": "Shared with this brand’s chatbot. What should a successful customer conversation achieve?",
+  "email_instructions_hint": "Used for proposals and email replies. For example, lead with the answer and ask one question if artwork is missing. Your email app adds the signature.",
   "steps_label": "Business profile steps",
   "progress": "{{filled}} of {{total}} fields filled",
   "website": "Public website",
@@ -41,7 +54,7 @@
     "review": "Review"
   },
   "intro": {
-    "sources": "Add a website, search for the business, or choose files. You can also enter your details manually.",
+    "sources": "Use existing chatbot knowledge, a website, public search or files to fill this brand’s profile. You can also enter details manually.",
     "company": "Describe the business and what it stands for.",
     "market": "Describe who you serve, where you work, and what makes your offer different.",
     "services": "Record what you sell and the details the AI should use in proposals.",
@@ -49,7 +62,7 @@
   },
   "errors": {
     "capture_bad_website": "Enter a public website address.",
-    "capture_sources_required": "Add a website, a company to search for, or a document.",
+    "capture_sources_required": "Choose chatbot knowledge, add a website or file, or enter a company to search for.",
     "capture_website_unreadable": "This website could not be read. Check the address or use another source.",
     "capture_website_indexed": "The website suggestions come from a public search of its pages.",
     "capture_web_unverified": "The web search found too little information to verify this business. Add its official website to help match it.",

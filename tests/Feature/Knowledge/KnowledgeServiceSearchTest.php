@@ -37,9 +37,7 @@ use Tests\TestCase;
  *     - Empty query is multi-tenant-isolated (org A's items NOT
  *       returned for org B)
  *
- *   Note: ILIKE-based scoring path can't execute on sqlite
- *   (Postgres-only operator). The SQL-inspection trick used in
- *   IndexesResourceTest verifies the SQL is generated correctly.
+ *     - A non-empty query matches questions and answers case-insensitively on both supported databases.
  */
 class KnowledgeServiceSearchTest extends TestCase
 {
@@ -293,32 +291,12 @@ class KnowledgeServiceSearchTest extends TestCase
         $this->assertCount(3, $results);
     }
 
-    /* ─── ILIKE-based search path (SQL inspection) ───────────── */
-
-    public function test_query_with_terms_generates_ILIKE_clauses_per_searchable_column(): void
+    public function test_search_matches_case_insensitive_question_and_answer_on_both_databases(): void
     {
-        // SQLite can't execute ILIKE (Postgres-only operator),
-        // but the service's job is to GENERATE the right SQL;
-        // executing it is Postgres's job in production. Catch
-        // the inevitable PDOException and assert on the
-        // generated SQL via the exception path.
         $orgId = app('current_organization_id');
-        KnowledgeItem::create([
-            'organization_id' => $orgId,
-            'question' => 'Where is the spa?',
-            'answer' => 'On floor 3',
-            'is_active' => true,
-        ]);
-
-        try {
-            $this->service->searchRelevantItems('spa hours', $orgId);
-            $this->fail('SQLite must reject ILIKE syntax.');
-        } catch (\Throwable $e) {
-            // The exception's underlying SQL must include ILIKE
-            // clauses over both question + answer columns.
-            $msg = strtolower($e->getMessage());
-            $this->assertStringContainsString('ilike', $msg,
-                'Search must generate ILIKE clauses.');
+        foreach (['Spa opening hours' => 'Until six', 'Facilities' => 'We have a SPA', 'Unrelated' => 'Breakfast'] as $question => $answer) {
+            KnowledgeItem::create(['organization_id' => $orgId, 'question' => $question, 'answer' => $answer, 'is_active' => true]);
         }
+        $this->assertSame(['Spa opening hours', 'Facilities'], $this->service->searchRelevantItems('spa hours', $orgId)->pluck('question')->all());
     }
 }

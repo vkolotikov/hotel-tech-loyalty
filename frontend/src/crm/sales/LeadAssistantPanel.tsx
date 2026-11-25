@@ -212,7 +212,8 @@ function StrategyEditor({ leadId, mode, data, result }: { leadId: number; mode: 
 
 function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage']; mode: Mode; onEmails: () => void }) {
   const { t } = useTranslation()
-  const fields = [...CONTEXT_FIELDS, ...(['other_logged_emails', 'discovery_fields', 'writing_samples'] as const).filter(key => coverage[key])]
+  const fields = [...CONTEXT_FIELDS, ...(['knowledge_answers', 'knowledge_documents'] as const).filter(key => coverage[key] !== undefined),
+    ...(['other_logged_emails', 'discovery_fields', 'writing_samples'] as const).filter(key => coverage[key])]
   const target = coverage.reply_to
   const channelLabels = { whatsapp: 'crm.whatsapp.title', chat: 'crm.sales.context.chats', activity: 'crm.sales.context.activities' } as const
   const replySource = target?.channel === 'email' ? target.subject || t('crm.mail.no_subject')

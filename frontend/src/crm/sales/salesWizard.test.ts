@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addFiles, effectiveValue, missingSuggestions, websiteAddress, validWebsite, type Profile } from './salesWizard'
+import { addFiles, editedFields, effectiveValue, missingSuggestions, websiteAddress, validWebsite, type Profile } from './salesWizard'
 
 const profile: Profile = {
   brand: { id: 1, name: 'Studio' }, steps: { company: ['name', 'website'], market: ['usp'], services: ['offerings', 'terms'] },
@@ -18,6 +18,13 @@ describe('Our business setup', () => {
     expect(effectiveValue(profile, { ...profile.manual, usp: '' }, 'usp')).toBe('Reviewed offer')
     expect(effectiveValue(profile, { ...profile.manual, usp: 'Manual override' }, 'usp')).toBe('Manual override')
     expect(missingSuggestions(profile, { offerings: '' }, suggestions)).toEqual({ offerings: 'Suggested offer', terms: 'One sample included' })
+  })
+
+  it('reuses brand records and submits only the fields a manager changed', () => {
+    const current = { ...profile, defaults: { website: 'https://studio.example.org', overview: 'A copper studio' } }
+    expect(effectiveValue(current, {}, 'website')).toBe('https://studio.example.org')
+    expect(missingSuggestions(current, {}, { overview: { value: 'Older summary', sources: [] } })).toEqual({})
+    expect(editedFields({ voice: ' Direct ', goal: '' }, { voice: 'Direct', goal: 'Old goal', terms: '10 minimum' })).toEqual({ goal: '' })
   })
 
   it('accepts a bare domain and checks URL schemes before capture', () => {

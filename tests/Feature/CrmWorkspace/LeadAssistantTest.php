@@ -124,6 +124,57 @@ class LeadAssistantTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_company_knowledge_is_live_in_both_directions_and_private_email_instructions_stay_in_crm(): void
+    {
+        $lead = $this->lead(['notes' => 'Can the enamel proof be supplied on a bronze card?']);
+        $other = $this->brand();
+        foreach ([[$this->brandId, 'The enamel code is Cobalt-18.', true], [$other, 'Wrong brand finish.', true],
+            [$this->brandId, 'Withdrawn finish.', false]] as [$brand, $answer, $active]) {
+            DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $brand,
+                'question' => 'Which enamel finish?', 'answer' => $answer, 'is_active' => $active]);
+        }
+        DB::table('knowledge_documents')->insert(['organization_id' => $this->org->id, 'brand_id' => $this->brandId,
+            'file_name' => 'Material guide', 'file_path' => 'guide.txt', 'mime_type' => 'text/plain', 'size_bytes' => 5000,
+            'processing_status' => 'completed', 'extracted_text' => str_repeat('Introduction. ', 250).'Bronze enamel uses finish B72.']);
+        $profile = $this->crmApi('sales-profile?brand_id='.$this->brandId);
+        $this->asManager()->putJson($profile, ['profile_brand' => $this->brandId, 'revision' => 0,
+            'fields' => ['offerings' => 'Recycled bronze cards', 'goal' => 'Help buyers compare samples', 'email_instructions' => 'Always lead with the finish code'],
+            'shared_fields' => ['offerings']])->assertOk()->assertJsonPath('knowledge.answers', 1);
+        $this->assertDatabaseHas('chatbot_behavior_configs', ['brand_id' => $this->brandId, 'goal' => 'Help buyers compare samples']);
+        $kb = app(\App\Services\KnowledgeService::class);
+        $public = $kb->getKnowledgeContext('enamel', $this->org->id, $this->brandId);
+        $this->assertStringContainsString('Recycled bronze cards', $public);
+        $this->assertStringContainsString('Cobalt-18', $public);
+        $this->assertStringNotContainsString('lead with the finish', $public);
+        $this->assertStringNotContainsString('Recycled bronze', $kb->getKnowledgeContext('enamel', $this->org->id, $other));
+
+        $this->asManager()->putJson($profile, ['profile_brand' => $this->brandId, 'revision' => 1, 'fields' => ['goal' => 'Outdated'],
+            'expected_goal' => 'A stale goal'])->assertConflict();
+        $this->putJson($this->adminApi('chatbot-config/behavior?brand_id='.$this->brandId), ['goal' => 'Check artwork before quoting'])->assertOk();
+        $this->getJson($profile)->assertOk()->assertJsonPath('fields.goal', 'Check artwork before quoting');
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->providerOutput([
+            'subject' => 'Bronze proof', 'body' => "The finish is Cobalt-18.\n\nBest regards,\nAnne\nSales Team", 'review_notes' => [],
+        ]))]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        foreach (['reply', 'proposal'] as $mode) {
+            $this->asStaffMember()->postJson($path, ['mode' => $mode, 'language' => 'en'])->assertAccepted();
+            $this->runLatest();
+            $this->getJson($path)->assertOk()->assertJsonPath("results.$mode.coverage.knowledge_answers", 1)
+                ->assertJsonPath("results.$mode.coverage.knowledge_documents", 1)->assertJsonPath("results.$mode.body", 'The finish is Cobalt-18.');
+        }
+        foreach (Http::recorded() as [$request]) {
+            foreach (['Cobalt-18', 'B72', 'Check artwork before quoting', 'Always lead with the finish code'] as $value) {
+                $this->assertStringContainsString($value, $request['input']);
+            }
+            foreach (['Wrong brand finish', 'Withdrawn finish'] as $value) {
+                $this->assertStringNotContainsString($value, $request['input']);
+            }
+        }
+        $this->asManager()->putJson($profile, ['profile_brand' => $this->brandId, 'revision' => 1, 'fields' => [],
+            'shared_fields' => []])->assertOk();
+        $this->assertStringNotContainsString('Recycled bronze cards', $kb->getKnowledgeContext('enamel', $this->org->id, $this->brandId));
+    }
+
     public function test_reply_includes_matched_email_bodies_and_whatsapp_from_the_existing_bridges(): void
     {
         $brand = $this->brand(23);

@@ -61,6 +61,21 @@ describe('AssistantPage', () => {
     expect(html).toContain('aria-labelledby="assistant-section-behaviour"')
   })
 
+  it('requires a specific brand for a multi-brand knowledge library and links to its business profile', () => {
+    const brands = [
+      { id: 1, name: 'Paper Studio', logo: null, color: null, is_default: true },
+      { id: 2, name: 'Copper Studio', logo: null, color: null, is_default: false },
+    ]
+    const all = render('/crm/assistant?tab=knowledge', { brands })
+    expect(all).toContain('Paper Studio')
+    expect(all).toContain('Copper Studio')
+    expect(all).toContain('crm.wizard.choose_knowledge_brand')
+    expect(all).not.toContain('id="assistant-knowledge-answers"')
+    const copper = render('/crm/assistant?tab=knowledge', { brands, brand_id: 2 })
+    expect(copper).toContain('href="/crm/settings?tab=business&amp;for_brand=2"')
+    expect(copper).toContain('id="assistant-knowledge-answers"')
+  })
+
   it('splits the behaviour into parts in the address, says whether it answers, and shows no save bar before a change', () => {
     const html = render('/crm/assistant', {}, qc => qc.setQueryData(BEHAVIOUR_KEY, behaviour))
     for (const title of ['Basics', 'Who it is', 'How it talks', 'Rules', 'Hand over', 'AI model', 'More']) expect(html).toContain(title)

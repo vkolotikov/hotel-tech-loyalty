@@ -1,4 +1,17 @@
 {
+  "brand": "Marke",
+  "discard_edits": "Ungespeicherte Änderungen für diese Marke verwerfen?",
+  "open_knowledge": "Chatbot-Wissen öffnen",
+  "open_profile": "Unternehmensprofil öffnen",
+  "choose_knowledge_brand": "Wählen Sie die Marke aus, deren Antworten und Dokumente Sie verwalten möchten.",
+  "use_knowledge": "Chatbot-Wissen dieser Marke verwenden",
+  "knowledge_count": "{{answers}} aktive Antworten · {{documents}} indexierte Dokumente",
+  "website_depth": "Liest bis zu 24 öffentliche Seiten über Produktlinks und die Sitemap der Website.",
+  "pages_read": "Gelesene Webseiten ({{total}})",
+  "visitor_facts": "Unternehmensinformationen für den öffentlichen Chatbot",
+  "visitor_hint": "Wählen Sie die Angaben aus, die Besucher im Chat erhalten dürfen. Nach dem Speichern stehen auch spätere Änderungen dem Chatbot zur Verfügung.",
+  "goal_hint": "Gilt auch für den Chatbot dieser Marke. Was soll ein erfolgreiches Kundengespräch erreichen?",
+  "email_instructions_hint": "Für Angebote und E-Mail-Antworten. Beginnen Sie beispielsweise mit der Antwort und fragen Sie gezielt nach fehlenden Druckdaten. Ihre E-Mail-App fügt die Signatur hinzu.",
   "steps_label": "Schritte des Unternehmensprofils",
   "progress": "{{filled}} von {{total}} Feldern ausgefüllt",
   "website": "Öffentliche Website",
@@ -41,7 +54,7 @@
     "review": "Prüfen"
   },
   "intro": {
-    "sources": "Geben Sie eine Website an, suchen Sie das Unternehmen oder wählen Sie Dateien aus. Sie können die Angaben auch manuell eingeben.",
+    "sources": "Nutzen Sie Chatbot-Wissen, eine Website, eine Websuche oder Dateien für das Markenprofil. Sie können Angaben auch manuell eingeben.",
     "company": "Beschreiben Sie das Unternehmen und wofür es steht.",
     "market": "Beschreiben Sie Ihre Zielgruppen, Märkte und die Besonderheiten Ihres Angebots.",
     "services": "Halten Sie fest, was Sie anbieten und welche Angaben die KI für Angebote verwenden soll.",
@@ -49,7 +62,7 @@
   },
   "errors": {
     "capture_bad_website": "Geben Sie eine öffentliche Website-Adresse ein.",
-    "capture_sources_required": "Geben Sie eine Website oder ein Unternehmen für die Suche an oder fügen Sie ein Dokument hinzu.",
+    "capture_sources_required": "Wählen Sie Chatbot-Wissen, fügen Sie eine Website oder Datei hinzu oder geben Sie einen Firmennamen für die Suche ein.",
     "capture_website_unreadable": "Diese Website konnte nicht gelesen werden. Prüfen Sie die Adresse oder verwenden Sie eine andere Quelle.",
     "capture_website_indexed": "Die Vorschläge zur Website stammen aus einer öffentlichen Suche auf dieser Website.",
     "capture_web_unverified": "Die Websuche konnte das Unternehmen nicht eindeutig zuordnen. Geben Sie die offizielle Website an.",

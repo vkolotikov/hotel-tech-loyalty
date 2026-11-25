@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { useBoot } from '../CrmProvider'
+import { currentBrand } from '../lib/brand'
+import { KnowledgeBrandPicker } from '../shell/KnowledgeBrandPicker'
 import { BookOpen, FileText, FolderOpen, ListFilter, Pencil, Plus, Sparkles, Tag, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { get, send } from '../lib/api'
@@ -28,7 +32,26 @@ import type { KnowledgeCategory, KnowledgeDocument, KnowledgeItem } from './type
  * then the categories and the documents, each in its own card. A manager adds, edits and deletes; the AI drafts
  * answers from pasted text, reviewed before they are added. A category's row shows its answers in the list above.
  */
-export function KnowledgeTab({ canManage, part, onPart }: { canManage: boolean; part: KnowledgePart; onPart: (next: KnowledgePart) => void }) {
+type KnowledgeTabProps = { canManage: boolean; part: KnowledgePart; onPart: (next: KnowledgePart) => void }
+
+export function KnowledgeTab(props: KnowledgeTabProps) {
+  const { t } = useTranslation()
+  const boot = useBoot()
+  const chosen = boot.brand_id ?? currentBrand()
+  const brand = typeof chosen === 'number' ? chosen : boot.brands?.length === 1 ? boot.brands[0].id : null
+  const needsChoice = (boot.brands?.length ?? 0) > 1 && brand === null
+  return <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-a-border bg-a-surface px-4 py-3">
+      <KnowledgeBrandPicker value={brand} />
+      {needsChoice ? <p className="text-sm text-a-text-2">{t('crm.wizard.choose_knowledge_brand')}</p>
+        : <Link to={`/crm/settings?tab=business${brand ? `&for_brand=${brand}` : ''}`}
+          className="text-sm font-medium text-a-accent-text hover:underline">{t('crm.wizard.open_profile')}</Link>}
+    </div>
+    {!needsChoice && <KnowledgeLibrary key={brand ?? 'default'} {...props} />}
+  </div>
+}
+
+function KnowledgeLibrary({ canManage, part, onPart }: KnowledgeTabProps) {
   const { t } = useTranslation()
   const items = useQuery({ queryKey: [...KNOWLEDGE_KEY, 'items'], queryFn: () => get<KnowledgeItem[]>('knowledge/items') })
   const categories = useQuery({ queryKey: [...KNOWLEDGE_KEY, 'categories'], queryFn: () => get<KnowledgeCategory[]>('knowledge/categories') })

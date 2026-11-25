@@ -33,6 +33,8 @@
     "title": "Sources used",
     "customer_fields": "Customer profile fields",
     "business_fields": "Our business fields",
+    "knowledge_answers": "Chatbot answers used",
+    "knowledge_documents": "Knowledge documents used",
     "activities": "CRM activities",
     "chats": "Chat messages",
     "emails": "Emails",
@@ -101,6 +103,8 @@
       "terms": "Pricing and commercial terms",
       "voice": "Brand voice",
       "guidelines": "Sales and claims guidance",
+      "goal": "Shared conversation goal",
+      "email_instructions": "Email writing instructions",
       "next_step": "Preferred next step"
     }
   },

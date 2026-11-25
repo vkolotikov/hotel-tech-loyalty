@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { ArrowUpRight, Check, FileText, Sparkles } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { useBoot } from '../CrmProvider'
 import { Pill } from '../ui/Pill'
 import { effectiveValue, FIELD_STEPS, missingSuggestions, type Capture, type Evidence, type Fields, type FieldStep, type Profile } from './salesWizard'
 
-export function SalesWizardReview({ profile, draft, capture, captureId, canEdit, onApply, onEdit }: {
+export function SalesWizardReview({ profile, draft, capture, captureId, canEdit, onApply, onEdit, shared, onShare }: {
   profile: Profile
   draft: Fields
+  shared: string[]
+  onShare: (fields: string[]) => void
   capture: Capture | null | undefined
   captureId?: string
   canEdit: boolean
@@ -14,7 +17,9 @@ export function SalesWizardReview({ profile, draft, capture, captureId, canEdit,
   onEdit: (step: FieldStep) => void
 }) {
   const { t } = useTranslation()
-  const suggestions = capture?.status === 'ready' && canEdit ? capture.fields ?? {} : {}
+  const chatbot = useBoot().features.chatbot
+  const suggestions = Object.fromEntries(Object.entries(capture?.status === 'ready' && canEdit ? capture.fields ?? {} : {})
+    .filter(([key]) => chatbot || key !== 'goal'))
   const blanks = missingSuggestions(profile, draft, suggestions)
   const pending = Object.entries(suggestions).filter(([key, suggestion]) => suggestion.value !== effectiveValue(profile, draft, key))
   return (
@@ -60,6 +65,24 @@ export function SalesWizardReview({ profile, draft, capture, captureId, canEdit,
           </div>
         </section>
       )}
+      {chatbot && !!profile.shareable?.length && <fieldset className="space-y-2 rounded-xl border border-a-border p-3">
+        <legend className="px-1 text-sm font-semibold text-a-text">{t('crm.wizard.visitor_facts')}</legend>
+        <p className="text-xs leading-relaxed text-a-text-2">{t('crm.wizard.visitor_hint')}</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {profile.shareable.map(key => {
+            const value = effectiveValue(profile, draft, key)
+            if (!value && !shared.includes(key)) return null
+            return <div key={key} className="min-w-0 space-y-1 rounded-lg bg-a-surface-2 p-2.5">
+              <label className="flex items-center gap-2 text-sm font-medium text-a-text">
+                <input type="checkbox" disabled={!canEdit} checked={shared.includes(key)} className="h-4 w-4 shrink-0 accent-a-accent"
+                  onChange={event => onShare(event.target.checked ? [...shared, key] : shared.filter(item => item !== key))} />
+                {t(`crm.sales.profile.fields.${key}`)}
+              </label>
+              <div className="pl-6"><Value value={value || t('crm.wizard.blank')} /></div>
+            </div>
+          })}
+        </div>
+      </fieldset>}
       <details open={pending.length === 0} className="rounded-xl border border-a-border bg-a-surface-2">
         <summary className="cursor-pointer p-3 text-sm font-semibold text-a-text focus-visible:outline-2 focus-visible:outline-a-accent">
           {t('crm.wizard.profile_summary')}

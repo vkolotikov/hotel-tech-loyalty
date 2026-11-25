@@ -45,15 +45,20 @@ class SalesProfileCaptureTest extends TestCase
         $private = 'Private sample policy. Minimum order 100 units.';
         Http::fake([
             'https://studio.example.com/robots.txt' => Http::response("User-agent: *\nDisallow: /private\n"),
+            'https://studio.example.com/sitemap.xml' => Http::response('<urlset><url><loc>https://studio.example.com/warranty</loc></url></urlset>'),
+            'https://studio.example.com/warranty' => Http::response('<h1>Warranty</h1><p>Repairs included.</p>', 200, ['Content-Type' => 'text/html']),
+            'https://studio.example.com/finishes' => Http::response('<h1>Recycled bronze finishing</h1>', 200, ['Content-Type' => 'text/html']),
             'https://studio.example.com/' => Http::response(
                 '<h1>Example Studio and local production</h1><p>Premium samples.</p><a href="/services">Services</a><a href="/private">Private</a>',
                 200, ['Content-Type' => 'text/html'],
             ),
             'https://studio.example.com/services' => Http::response(
-                '<h1>Engraving and artwork review</h1><p>Metal and wood.</p>', 200, ['Content-Type' => 'text/html'],
+                '<h1>Engraving and artwork review</h1><p>Metal and wood.</p><a href="/finishes">Finishes</a>', 200, ['Content-Type' => 'text/html'],
             ),
             'https://api.openai.com/v1/responses' => function (Request $request) use ($public, $private) {
                 $this->assertFalse($request['store']);
+                $this->assertSame('gpt-6.2-astra', $request['model']);
+                $this->assertSame('high', $request['reasoning']['effort']);
                 $this->assertSame(SalesProfile::keys(), array_keys($request['text']['format']['schema']['properties']['fields']['properties']));
                 if (isset($request['tools'])) {
                     $this->assertSame('web_search', $request['tools'][0]['type']);
@@ -68,6 +73,8 @@ class SalesProfileCaptureTest extends TestCase
                 }
                 $blocks = $request['input'][0]['content'];
                 $this->assertStringContainsString('Engraving and artwork review', $blocks[0]['text']);
+                $this->assertStringContainsString('Recycled bronze finishing', $blocks[0]['text']);
+                $this->assertStringContainsString('Repairs included', $blocks[0]['text']);
                 $this->assertSame('file-1.txt', $blocks[1]['filename']);
                 $this->assertSame('data:text/plain;base64,'.base64_encode($private), $blocks[1]['file_data']);
 
@@ -95,7 +102,7 @@ class SalesProfileCaptureTest extends TestCase
         $job = Queue::pushed(CaptureSalesProfile::class)->first();
         $this->app->call([$job, 'handle']);
         $this->app->call([$job, 'handle']);
-        Http::assertSentCount(5);
+        Http::assertSentCount(8);
         $this->assertDatabaseHas('crm_sales_profile_captures', ['brand_id' => $this->brandId, 'input' => null]);
         $this->getJson($this->path())->assertOk()
             ->assertJsonPath('capture.status', 'ready')
@@ -115,6 +122,35 @@ class SalesProfileCaptureTest extends TestCase
             'fields' => ['terms' => 'Minimum order 150 units'],
         ])->assertOk()->assertJsonMissingPath('sources.terms')->assertJsonPath('fields.terms', 'Minimum order 150 units');
         $this->assertSame(2, DB::table('ai_usage_logs')->where('brand_id', $this->brandId)->where('feature', 'crm_sales_capture')->count());
+    }
+
+    public function test_existing_brand_knowledge_can_fill_the_wizard_without_a_website_or_upload(): void
+    {
+        $answer = DB::table('knowledge_items')->insertGetId(['organization_id' => $this->org->id, 'brand_id' => $this->brandId,
+            'question' => 'Which plating do you offer?', 'answer' => 'Brushed copper plating', 'is_active' => true]);
+        $foreign = Organization::create(['name' => 'Other Studio', 'slug' => 'other-studio-capture']);
+        $other = Brand::withoutGlobalScopes()->where('organization_id', $foreign->id)->firstOrFail();
+        DB::table('knowledge_items')->insert(['organization_id' => $foreign->id, 'brand_id' => $other->id,
+            'question' => 'Which plating?', 'answer' => 'Foreign coating', 'is_active' => true]);
+        Http::fake(['api.openai.com/v1/responses' => function (Request $request) use ($answer) {
+            $this->assertFalse(isset($request['tools']));
+            $text = $request['input'][0]['content'][0]['text'];
+            $this->assertStringContainsString('Brushed copper plating', $text);
+            $this->assertStringNotContainsString('Foreign coating', $text);
+
+            return Http::response($this->providerOutput([
+                'offerings' => ['value' => 'Brushed copper plating', 'references' => ['answer-'.$answer]],
+                'email_instructions' => ['value' => 'Copy this public answer verbatim', 'references' => ['answer-'.$answer]],
+            ]));
+        }]);
+        $this->asManager()->postJson($this->path(), $this->inputs(['use_knowledge' => true]))->assertAccepted();
+        $this->app->call([Queue::pushed(CaptureSalesProfile::class)->sole(), 'handle']);
+        $this->getJson($this->path())->assertOk()->assertJsonPath('capture.status', 'ready')
+            ->assertJsonPath('capture.fields.offerings.sources.0.type', 'knowledge_answer')
+            ->assertJsonPath('capture.fields.offerings.sources.0.title', 'Which plating do you offer?')
+            ->assertJsonMissingPath('capture.fields.email_instructions');
+        $this->getJson($this->profile())->assertOk()->assertJsonMissingPath('fields.offerings');
+        Http::assertSentCount(1);
     }
 
     public function test_only_authorized_managers_can_capture_and_private_addresses_or_wrong_files_are_rejected(): void

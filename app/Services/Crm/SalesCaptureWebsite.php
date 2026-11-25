@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Services\Content\ContentSiteDiscovery;
 use App\Services\Content\Web\PageReader;
 use App\Services\Content\Web\PublicAddress;
 use App\Services\Content\Web\RobotsRules;
@@ -13,7 +14,9 @@ use App\Services\Content\Web\WebResponse;
 /** A bounded read of company pages using the same public address checks as Content Planner. */
 final class SalesCaptureWebsite
 {
-    public function __construct(private readonly WebFetcher $web) {}
+    private const MAX_PAGES = 24;
+
+    public function __construct(private readonly WebFetcher $web, private readonly ContentSiteDiscovery $discovery) {}
 
     public static function clean(mixed $value): ?string
     {
@@ -37,16 +40,41 @@ final class SalesCaptureWebsite
             return [];
         }
         $read = PageReader::read($entry->body, $entry->url, $entry->contentType);
-        $known = array_filter($read['links'], fn ($link) => UrlRules::sameSite($link, $site) && ! UrlRules::skipped($link)
-            && ! UrlRules::looksLikeArticle($link, null));
-        usort($known, fn (string $a, string $b) => UrlRules::pageRank($a) <=> UrlRules::pageRank($b));
+        $origin = (string) Urls::origin($entry->url);
+        $sitemap = $this->discovery->sitemaps($origin, $rules->sitemaps ?: [$origin.'/sitemap.xml'], $site, $rules, $started + 25);
+        $pending = [];
         $pages = [$entry->url => $this->evidence($entry, $read)];
-        foreach (array_slice(array_diff(array_unique($known), [$url, $entry->url]), 0, 4) as $link) {
-            if (microtime(true) - $started > 50) {
+        $visited = [$url => true, $entry->url => true];
+        $links = [...$read['links'], ...array_column($sitemap, 'url')];
+        for ($attempt = 0; $attempt < 40 && count($pages) < self::MAX_PAGES && microtime(true) - $started < 90; $attempt++) {
+            foreach ($links as $link) {
+                if (! isset($visited[$link]) && ! isset($pending[$link])
+                    && UrlRules::sameSite($link, $site) && ! UrlRules::skipped($link) && $rules->allows(Urls::pathAndQuery($link))) {
+                    $rank = UrlRules::pageRank($link);
+                    if (UrlRules::looksLikeArticle($link, null)) {
+                        $rank += 40;
+                    }
+                    $language = UrlRules::languagePrefix($link);
+                    if ($language && $language !== UrlRules::languagePrefix($entry->url)) {
+                        $rank += 30;
+                    }
+                    $pending[$link] = $rank;
+                }
+            }
+            if (! $pending) {
                 break;
             }
-            if (($page = $this->page($link, $site, $rules)) && ! isset($pages[$page->url])) {
-                $pages[$page->url] = $this->evidence($page, PageReader::read($page->body, $page->url, $page->contentType));
+            asort($pending, SORT_NUMERIC);
+            $link = array_key_first($pending);
+            unset($pending[$link]);
+            $visited[$link] = true;
+            $links = [];
+            $page = $this->page($link, $site, $rules);
+            if ($page && ! isset($pages[$page->url])) {
+                $visited[$page->url] = true;
+                $parsed = PageReader::read($page->body, $page->url, $page->contentType);
+                $pages[$page->url] = $this->evidence($page, $parsed);
+                $links = $parsed['links'];
             }
         }
 
@@ -67,7 +95,7 @@ final class SalesCaptureWebsite
     {
         return [
             'type' => 'website', 'title' => $read['title'] ?? $page->url, 'url' => $page->url,
-            'text' => mb_substr(trim(($read['description'] ?? '')."\n".$read['text']), 0, 5400),
+            'text' => mb_substr(trim(($read['description'] ?? '')."\n".$read['text']), 0, 6500),
         ];
     }
 }

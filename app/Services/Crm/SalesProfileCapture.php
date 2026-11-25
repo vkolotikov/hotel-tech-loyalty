@@ -36,15 +36,16 @@ final class SalesProfileCapture
         self::checkAvailability($org);
         $website = SalesCaptureWebsite::clean($input['website'] ?? null);
         $search = (bool) ($input['search_web'] ?? false);
+        $knowledge = (bool) ($input['use_knowledge'] ?? false);
         $name = trim((string) ($input['company_name'] ?? ''));
         if (isset($input['website']) && $website === null) {
             throw new AiHelperRefused('capture_bad_website', 'Enter a public website address.', 422);
         }
-        if (($search && $name === '' && $website === null) || (! $search && $website === null && $uploads === [])) {
-            throw new AiHelperRefused('capture_sources_required', 'Add a website, a business to search for, or a file.', 422);
+        if (($search && $name === '' && $website === null) || (! $knowledge && ! $search && $website === null && $uploads === [])) {
+            throw new AiHelperRefused('capture_sources_required', 'Select brand knowledge or add a website, business name or file.', 422);
         }
         $files = SalesCaptureFiles::read($uploads);
-        $id = DB::transaction(function () use ($brand, $userId, $website, $search, $name, $files, $input): ?string {
+        $id = DB::transaction(function () use ($brand, $userId, $website, $search, $knowledge, $name, $files, $input): ?string {
             $brand = Brand::query()->lockForUpdate()->findOrFail($brand->id);
             $row = CrmSalesProfileCapture::query()->lockForUpdate()->find($brand->id, ['brand_id', 'status', 'queued_at']);
             if ($row && in_array($row->status, self::ACTIVE, true) && ! $this->expired($row)) {
@@ -54,7 +55,7 @@ final class SalesProfileCapture
             $id = (string) Str::uuid();
             $row->fill([
                 'run_id' => $id, 'requested_by' => $userId, 'status' => 'queued', 'queued_at' => now(), 'outcome' => null,
-                'input' => ['name' => $name, 'website' => $website, 'search' => $search, 'language' => $input['language'], 'files' => $files],
+                'input' => ['name' => $name, 'website' => $website, 'search' => $search, 'knowledge' => $knowledge, 'language' => $input['language'], 'files' => $files],
             ])->save();
 
             return $id;

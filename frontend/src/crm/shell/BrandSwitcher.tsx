@@ -30,8 +30,8 @@ export function BrandSwitcher() {
 
   return (
     <Popover align="left" width="w-72" label={t('crm.shell.brand_label', 'Brand: {{name}}. Choose another', { name })}
-      className="inline-flex min-h-8 max-w-56 items-center gap-1.5 rounded-lg px-2 text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent"
-      button={<><BrandMark brand={brand} /><span className="truncate">{name}</span><ChevronDown size={14} aria-hidden className="shrink-0" /></>}>
+      className="inline-flex min-h-8 max-w-56 items-center gap-1.5 rounded-lg border border-a-border bg-a-surface-2 px-2 font-medium text-a-text hover:border-a-accent focus-visible:outline-2 focus-visible:outline-a-accent"
+      button={<><BrandMark brand={brand} /><span className="hidden text-xs text-a-text-2 md:inline">{t('crm.wizard.brand')}</span><span className="truncate">{name}</span><ChevronDown size={14} aria-hidden className="shrink-0" /></>}>
       <p className="px-2.5 pb-1.5 pt-1 text-xs text-a-text-2">{t('crm.shell.brand_line', 'What the CRM shows: every brand, or one of them.')}</p>
       <ul role="listbox" aria-label={t('crm.shell.brand_choose', 'Choose a brand')}>
         {boot.all_brands !== false && (

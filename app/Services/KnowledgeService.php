@@ -3,9 +3,13 @@
 namespace App\Services;
 
 use App\Exceptions\AiHelperRefused;
+use App\Models\Brand;
 use App\Models\KnowledgeDocument;
 use App\Models\KnowledgeItem;
 use App\Models\Organization;
+use App\Scopes\BrandScope;
+use App\Services\Crm\SalesProfile;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -80,32 +84,51 @@ class KnowledgeService
 
     /**
      * Search knowledge items relevant to a query. Fetches a superset by
-     * ILIKE/JSON match, then scores in-memory by how many tokens the item's
+     * case-insensitive text and keyword matches, then scores by how many tokens the item's
      * question/answer/keywords hit (weighted: question > keywords > answer),
      * boosted by the admin-set priority. Returns the top $limit items.
      */
-    public function searchRelevantItems(string $query, int $orgId, int $limit = 5): Collection
+    public function searchRelevantItems(string $query, int $orgId, int $limit = 5, ?int $brandId = null): Collection
     {
-        $words = $this->tokeniseQuery($query);
+        $brand = $this->resolveBrand($orgId, $brandId);
 
+        return $this->rankedItems($this->items($orgId, $brand), $this->words($query), $limit);
+    }
+
+    private function resolveBrand(int $orgId, ?int $id): ?Brand
+    {
+        $id ??= Brand::currentOrDefaultIdForOrg($orgId);
+        return $id === null ? null : Brand::query()->where('organization_id', $orgId)->findOrFail($id);
+    }
+
+    /** @return Builder<KnowledgeItem> */
+    private function items(int $orgId, ?Brand $brand): Builder
+    {
+        return KnowledgeItem::withoutGlobalScope(BrandScope::class)->where('organization_id', $orgId)
+            ->where(fn ($q) => $q->where('brand_id', $brand?->id)->when($brand?->is_default, fn ($q) => $q->orWhereNull('brand_id')))
+            ->active();
+    }
+
+    private function words(string $query): array
+    {
+        return array_slice($this->tokeniseQuery(mb_substr($query, 0, 8000)), 0, 60);
+    }
+
+    /** @param Builder<KnowledgeItem> $base */
+    private function rankedItems(Builder $base, array $words, int $limit): Collection
+    {
         if (empty($words)) {
-            return KnowledgeItem::where('organization_id', $orgId)
-                ->active()
-                ->orderByDesc('priority')
-                ->orderByDesc('use_count')
-                ->limit($limit)
-                ->get();
+            return $base->orderByDesc('priority')->orderByDesc('use_count')->orderBy('id')->limit($limit)->get();
         }
 
         // Pull a broader candidate set so the scoring step has material to work
         // with — a single matching token shouldn't exclude an item that would
         // have scored high on others.
-        $candidates = KnowledgeItem::where('organization_id', $orgId)
-            ->active()
+        $candidates = $base
             ->where(function ($q) use ($words) {
                 foreach ($words as $word) {
-                    $q->orWhere('question', 'ILIKE', "%{$word}%")
-                      ->orWhere('answer', 'ILIKE', "%{$word}%")
+                    $q->orWhereLike('question', "%{$word}%")
+                      ->orWhereLike('answer', "%{$word}%")
                       ->orWhereJsonContains('keywords', $word);
                 }
             })
@@ -144,65 +167,127 @@ class KnowledgeService
             ->values();
     }
 
-    /**
-     * Build knowledge context string for injection into AI prompt.
-     */
-    public function getKnowledgeContext(string $query, int $orgId): string
+    /** @return Builder<KnowledgeDocument> */
+    private function documents(int $orgId, ?Brand $brand): Builder
     {
-        $items = $this->searchRelevantItems($query, $orgId);
-        $words = $this->tokeniseQuery($query);
+        return KnowledgeDocument::withoutGlobalScope(BrandScope::class)->where('organization_id', $orgId)
+            ->where(fn ($q) => $q->where('brand_id', $brand?->id)->when($brand?->is_default, fn ($q) => $q->orWhereNull('brand_id')))
+            ->completed()->whereNotNull('extracted_text');
+    }
 
-        $hasItems = !$items->isEmpty();
-        if ($hasItems) {
-            KnowledgeItem::whereIn('id', $items->pluck('id'))->increment('use_count');
-        }
+    public function inventory(Brand $brand): array
+    {
+        return ['answers' => $this->items((int) $brand->organization_id, $brand)->count(),
+            'documents' => $this->documents((int) $brand->organization_id, $brand)->count()];
+    }
 
-        $context = '';
-        if ($hasItems) {
-            $context .= "Below are the most relevant FAQ entries for this query, ranked by relevance. Treat these as authoritative.\n\n";
-            foreach ($items as $item) {
-                $context .= "Q: {$item->question}\nA: {$item->answer}\n\n";
+    public function captureSources(Brand $brand): array
+    {
+        $sources = [];
+        $remaining = 80000;
+        $items = $this->rankedItems($this->items((int) $brand->organization_id, $brand), [], 80);
+        foreach ($items as $item) {
+            $text = mb_substr((string) $item->answer, 0, min(4500, $remaining));
+            if ($text !== '') {
+                $sources['answer-'.$item->id] = ['type' => 'knowledge_answer', 'title' => $item->question, 'text' => $text];
+                $remaining -= mb_strlen($text);
             }
         }
+        foreach ($this->documents((int) $brand->organization_id, $brand)->latest('updated_at')->limit(8)->cursor() as $doc) {
+            $text = (string) $doc->extracted_text;
+            $length = mb_strlen($text);
+            if ($length > 10000) {
+                $text = mb_substr($text, 0, 4000)."\n…\n".mb_substr($text, intdiv($length, 2) - 1500, 3000)."\n…\n".mb_substr($text, -3000);
+            }
+            $sources['document-'.$doc->id] = ['type' => 'knowledge_document', 'title' => $doc->file_name, 'text' => $text];
+        }
+        return $sources;
+    }
 
-        // Document excerpts — score by overlap instead of first-hit-wins so the
-        // most relevant doc surfaces, and truncate to a reasonable slice.
-        $docs = KnowledgeDocument::where('organization_id', $orgId)
-            ->completed()
-            ->whereNotNull('extracted_text')
-            ->get();
+    /** Read the same approved answers as chat. Small libraries fit in full; larger ones put matching answers first. */
+    public function forSales(string $query, Brand $brand): array
+    {
+        $words = $this->words($query);
+        $base = $this->items((int) $brand->organization_id, $brand);
+        $matched = $this->rankedItems(clone $base, $words, 24);
+        $rest = $this->rankedItems(clone $base, [], 80);
+        $answers = [];
+        $remaining = 40000;
+        foreach ($matched->concat($rest)->unique('id') as $item) {
+            $question = mb_substr((string) $item->question, 0, 500);
+            $answer = mb_substr((string) $item->answer, 0, 4500);
+            $length = mb_strlen($question) + mb_strlen($answer);
+            if (count($answers) >= 80 || $remaining < 1) {
+                break;
+            }
+            if ($length > $remaining) {
+                continue;
+            }
+            $answers[] = ['question' => $question, 'answer' => $answer];
+            $remaining -= $length;
+        }
 
-        if ($docs->isNotEmpty() && !empty($words)) {
-            $docScored = [];
-            foreach ($docs as $doc) {
-                $text = (string) $doc->extracted_text;
-                if ($text === '') continue;
-                $lower = mb_strtolower($text, 'UTF-8');
-                $hits = 0;
-                foreach ($words as $w) {
-                    if (mb_strpos($lower, $w) !== false) $hits++;
+        return ['answers' => $answers, 'documents' => $this->excerpts($words, (int) $brand->organization_id, $brand)];
+    }
+
+    public function getKnowledgeContext(string $query, int $orgId, ?int $brandId = null, bool $countUse = true): string
+    {
+        $brand = $this->resolveBrand($orgId, $brandId);
+        $base = $this->items($orgId, $brand);
+        $words = $this->words($query);
+        $items = $this->rankedItems(clone $base, $words, 5);
+        if ($countUse && $items->isNotEmpty()) {
+            $base->whereKey($items->pluck('id')->all())->increment('use_count');
+        }
+
+        $parts = [];
+        if ($brand && ($facts = app(SalesProfile::class)->publicFacts($brand))) {
+            $parts[] = "Reviewed company facts for customers:\n".json_encode($facts, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        }
+        foreach ($items as $item) {
+            $parts[] = "Q: {$item->question}\nA: {$item->answer}";
+        }
+        foreach ($this->excerpts($words, $orgId, $brand) as $doc) {
+            $parts[] = "From document \"{$doc['title']}\":\n{$doc['excerpt']}";
+        }
+
+        return implode("\n\n", $parts);
+    }
+
+    private function excerpts(array $words, int $orgId, ?Brand $brand): array
+    {
+        if (! $words) {
+            return [];
+        }
+        $docs = $this->documents($orgId, $brand)->select(['id', 'file_name', 'extracted_text'])
+            ->where(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->orWhereLike('extracted_text', "%{$word}%");
                 }
-                if ($hits > 0) {
-                    // Locate the first hit to extract a nearby excerpt instead
-                    // of always using the opening of the document.
-                    $firstPos = null;
-                    foreach ($words as $w) {
-                        $p = mb_strpos($lower, $w);
-                        if ($p !== false && ($firstPos === null || $p < $firstPos)) $firstPos = $p;
-                    }
-                    $start = max(0, ($firstPos ?? 0) - 120);
-                    $excerpt = mb_substr($text, $start, 900);
-                    $docScored[] = ['doc' => $doc, 'hits' => $hits, 'excerpt' => trim($excerpt)];
+            })->orderBy('id')->cursor();
+        $best = [];
+        foreach ($docs as $doc) {
+            $text = (string) $doc->extracted_text;
+            $chunks = mb_str_split($text, 1100);
+            $score = 0;
+            $excerpt = '';
+            foreach ($chunks as $index => $chunk) {
+                $passage = $chunk.mb_substr($chunks[$index + 1] ?? '', 0, 300);
+                $lower = mb_strtolower($passage);
+                $hits = count(array_filter($words, fn ($word) => str_contains($lower, $word)));
+                if ($hits > $score) {
+                    $score = $hits;
+                    $excerpt = $passage;
                 }
             }
-
-            usort($docScored, fn($a, $b) => $b['hits'] <=> $a['hits']);
-            foreach (array_slice($docScored, 0, 2) as $d) {
-                $context .= "From document \"{$d['doc']->file_name}\":\n{$d['excerpt']}\n\n";
+            if ($score > 0) {
+                $best[] = ['score' => $score, 'title' => $doc->file_name, 'excerpt' => trim($excerpt)];
+                usort($best, fn ($a, $b) => $b['score'] <=> $a['score']);
+                $best = array_slice($best, 0, 4);
             }
         }
 
-        return trim($context);
+        return array_map(fn ($row) => ['title' => $row['title'], 'excerpt' => $row['excerpt']], $best);
     }
 
     /**

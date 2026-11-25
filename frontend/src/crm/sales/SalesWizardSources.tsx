@@ -5,12 +5,14 @@ import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { IconButton } from '../ui/IconButton'
 import { SALES_FIELD } from './assistantData'
-import { addFiles, fileKey, type Capture, type Limits, type Sources } from './salesWizard'
+import { addFiles, fileKey, type Capture, type Limits, type Profile, type Sources } from './salesWizard'
+import { EvidenceList } from './SalesWizardReview'
 
-export function SalesWizardSources({ value, onChange, limits, website, disabled, busy, capture, error, onCapture }: {
+export function SalesWizardSources({ value, onChange, limits, knowledge, website, disabled, busy, capture, error, onCapture }: {
   value: Sources
   onChange: (value: Sources) => void
   limits?: Limits
+  knowledge?: Profile['knowledge']
   website?: string
   disabled: boolean
   busy: boolean
@@ -32,7 +34,8 @@ export function SalesWizardSources({ value, onChange, limits, website, disabled,
   }
   const formats = limits?.extensions.map(extension => extension.toUpperCase()).join(', ')
   const megabytes = (bytes: number) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(bytes / 1048576)
-  const hasSource = Boolean(value.website.trim() || value.files.length || (value.search && value.name.trim()))
+  const hasKnowledge = Boolean(knowledge && (knowledge.answers || knowledge.documents))
+  const hasSource = Boolean(value.website.trim() || value.files.length || (value.search && value.name.trim()) || (hasKnowledge && value.knowledge))
   return (
     <div className="space-y-4">
       <div className="grid items-start gap-5 lg:grid-cols-2">
@@ -44,11 +47,18 @@ export function SalesWizardSources({ value, onChange, limits, website, disabled,
             <input id={`${id}-website`} className={SALES_FIELD} value={value.website} disabled={disabled}
               placeholder="example.com" type="text" inputMode="url" maxLength={2000} autoComplete="url"
               onChange={event => update({ website: event.target.value })} />
+            <p className="text-xs leading-relaxed text-a-text-2">{t('crm.wizard.website_depth')}</p>
             {website && !value.website && (
               <button type="button" className="text-left text-xs font-semibold text-a-accent-text hover:underline"
                 onClick={() => update({ website })} disabled={disabled}>{t('crm.wizard.use_website')}</button>
             )}
           </div>
+          {knowledge && <label className="flex items-start gap-2 rounded-xl border border-a-border bg-a-surface-2 p-3 text-sm">
+            <input type="checkbox" checked={Boolean(value.knowledge && hasKnowledge)} disabled={disabled || !hasKnowledge}
+              onChange={event => update({ knowledge: event.target.checked })} className="mt-0.5 h-4 w-4 shrink-0 accent-a-accent" />
+            <span className="space-y-1"><span className="block font-medium text-a-text">{t('crm.wizard.use_knowledge')}</span>
+              <span className="block text-xs text-a-text-2">{t('crm.wizard.knowledge_count', knowledge)}</span></span>
+          </label>}
           <div className="space-y-2 rounded-xl border border-a-border bg-a-surface-2 p-3">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-a-text">
               <input type="checkbox" checked={value.search} onChange={event => update({ search: event.target.checked })}
@@ -102,6 +112,10 @@ export function SalesWizardSources({ value, onChange, limits, website, disabled,
           {fileError && <p role="alert" className="text-sm text-a-danger">{fileError}</p>}
         </div>
       </div>
+      {!!capture?.pages?.length && <details className="rounded-xl border border-a-border p-3">
+        <summary className="cursor-pointer text-sm font-medium text-a-text">{t('crm.wizard.pages_read', { total: capture.pages.length })}</summary>
+        <div className="mt-2"><EvidenceList sources={capture.pages.map(page => ({ ...page, type: 'website' }))} /></div>
+      </details>}
       {error && <div role="alert"><Notice tone="warning">{error}</Notice></div>}
       <div className="flex flex-wrap items-center justify-end gap-3 border-t border-a-border pt-3">
         {busy && <span role="status" className="mr-auto text-sm text-a-text-2">{t('crm.wizard.capturing')}</span>}

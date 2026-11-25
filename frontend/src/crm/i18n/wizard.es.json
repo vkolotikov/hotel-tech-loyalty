@@ -1,4 +1,17 @@
 {
+  "brand": "Marca",
+  "discard_edits": "¿Descartar los cambios sin guardar de esta marca?",
+  "open_knowledge": "Abrir la base de conocimientos del chatbot",
+  "open_profile": "Abrir el perfil de empresa",
+  "choose_knowledge_brand": "Seleccione la marca cuyas respuestas y documentos desea gestionar.",
+  "use_knowledge": "Usar los conocimientos del chatbot de esta marca",
+  "knowledge_count": "{{answers}} respuestas activas · {{documents}} documentos indexados",
+  "website_depth": "Lee hasta 24 páginas públicas siguiendo enlaces de productos y el mapa del sitio.",
+  "pages_read": "Páginas web leídas ({{total}})",
+  "visitor_facts": "Datos de empresa para el chatbot público",
+  "visitor_hint": "Elija qué datos pueden recibir los visitantes en el chat. Al guardar el perfil, los cambios posteriores en estos datos también llegarán al chatbot.",
+  "goal_hint": "Se comparte con el chatbot de esta marca. ¿Qué debería conseguir una buena conversación con un cliente?",
+  "email_instructions_hint": "Se aplica a propuestas y respuestas por correo. Por ejemplo, comience con la respuesta y haga una pregunta si falta el diseño. Su aplicación de correo añade la firma.",
   "steps_label": "Pasos del perfil de empresa",
   "progress": "{{filled}} de {{total}} campos completos",
   "website": "Sitio web público",
@@ -41,7 +54,7 @@
     "review": "Revisar"
   },
   "intro": {
-    "sources": "Añada un sitio web, busque la empresa o elija archivos. También puede introducir sus datos manualmente.",
+    "sources": "Complete el perfil con los conocimientos del chatbot, un sitio web, una búsqueda pública o archivos. También puede introducir los datos manualmente.",
     "company": "Describa la empresa y qué valores representa.",
     "market": "Indique a quién atiende, en qué mercados trabaja y qué diferencia su oferta.",
     "services": "Indique qué vende y qué detalles debe usar la IA en las propuestas.",
@@ -49,7 +62,7 @@
   },
   "errors": {
     "capture_bad_website": "Introduzca la dirección de un sitio web público.",
-    "capture_sources_required": "Añada un sitio web, una empresa para buscar o un documento.",
+    "capture_sources_required": "Seleccione los conocimientos del chatbot, añada un sitio web o un archivo, o indique una empresa para buscar.",
     "capture_website_unreadable": "No se pudo leer este sitio web. Compruebe la dirección o use otra fuente.",
     "capture_website_indexed": "Las sugerencias provienen de una búsqueda en las páginas públicas del sitio.",
     "capture_web_unverified": "La búsqueda no encontró suficiente información para identificar la empresa. Añada su sitio oficial.",

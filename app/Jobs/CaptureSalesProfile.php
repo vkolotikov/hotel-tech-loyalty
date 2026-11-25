@@ -12,6 +12,7 @@ use App\Services\Crm\SalesBrand;
 use App\Services\Crm\SalesCaptureAi;
 use App\Services\Crm\SalesCaptureWebsite;
 use App\Services\Crm\SalesProfileCapture;
+use App\Services\KnowledgeService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +25,7 @@ final class CaptureSalesProfile implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 420;
+    public int $timeout = 600;
 
     public function __construct(public int $orgId, public int $brandId, public string $runId)
     {
@@ -38,7 +39,8 @@ final class CaptureSalesProfile implements ShouldQueue
         app()->instance('current_organization_id', $this->orgId);
         app()->instance('current_brand_id', $this->brandId);
         try {
-            if (! Brand::query()->whereKey($this->brandId)->exists() || ! ($claimed = $capture->claim($this->brandId, $this->runId))) {
+            $brand = Brand::query()->where('organization_id', $this->orgId)->find($this->brandId);
+            if (! $brand || ! ($claimed = $capture->claim($this->brandId, $this->runId))) {
                 return;
             }
             $org = Organization::findOrFail($this->orgId);
@@ -51,7 +53,8 @@ final class CaptureSalesProfile implements ShouldQueue
             }
             app(SalesBrand::class)->forSettings($user, $this->brandId);
             SalesProfileCapture::checkAvailability($org);
-            $outcome = $this->read($claimed['input'], $org, $user, $website, $ai, $usage);
+            $knowledge = ! empty($claimed['input']['knowledge']) ? app(KnowledgeService::class)->captureSources($brand) : [];
+            $outcome = $this->read($claimed['input'], $org, $user, $website, $ai, $usage, $knowledge);
             $capture->finish($this->brandId, $this->runId, $outcome['fields'] ? 'ready' : 'failed', $outcome);
         } catch (AiHelperRefused $error) {
             $capture->finish($this->brandId, $this->runId, 'failed', ['error' => $error->errorCode]);
@@ -66,7 +69,7 @@ final class CaptureSalesProfile implements ShouldQueue
         }
     }
 
-    private function read(array $input, Organization $org, User $user, SalesCaptureWebsite $website, SalesCaptureAi $ai, AiUsageService $usage): array
+    private function read(array $input, Organization $org, User $user, SalesCaptureWebsite $website, SalesCaptureAi $ai, AiUsageService $usage, array $knowledge): array
     {
         $warnings = [];
         $pages = [];
@@ -81,18 +84,18 @@ final class CaptureSalesProfile implements ShouldQueue
             }
         }
         $supplied = [];
-        if ($pages || $input['files']) {
+        if ($pages || $input['files'] || $knowledge) {
             try {
-                $response = $ai->extract($pages, $input['files'], $input['language']);
+                $response = $ai->extract($pages, $input['files'], $input['language'], $knowledge);
                 $this->meter($usage, $response, $user);
                 $supplied = $response['fields'];
             } catch (Throwable $error) {
                 $this->logFailure($error);
                 $warnings[] = $input['files'] ? 'capture_documents_unreadable' : 'ai_failed';
-                if ($pages && $input['files']) {
+                if (($pages || $knowledge) && $input['files']) {
                     try {
                         SalesProfileCapture::checkAvailability($org);
-                        $response = $ai->extract($pages, [], $input['language']);
+                        $response = $ai->extract($pages, [], $input['language'], $knowledge);
                         $this->meter($usage, $response, $user);
                         $supplied = $response['fields'];
                     } catch (Throwable $error) {
@@ -102,7 +105,8 @@ final class CaptureSalesProfile implements ShouldQueue
             }
         }
         $public = [];
-        $useIndexedSite = $input['website'] && ! $pages && ! $input['search'];
+        $thinSite = ! $pages || (count($pages) === 1 && mb_strlen($pages[0]['text']) < 400);
+        $useIndexedSite = $input['website'] && $thinSite && ! $input['search'];
         if ($input['search'] || $useIndexedSite) {
             try {
                 SalesProfileCapture::checkAvailability($org);
@@ -128,14 +132,15 @@ final class CaptureSalesProfile implements ShouldQueue
             $fields['website'] = ['value' => $input['website'], 'sources' => [array_diff_key($pages[0], ['text' => true])]];
         }
 
-        return ['fields' => $fields, 'warnings' => $warnings, 'error' => $fields ? null : ($warnings[0] ?? 'capture_no_findings')];
+        return ['fields' => $fields, 'pages' => array_map(fn ($page) => ['title' => $page['title'], 'url' => $page['url']], $pages),
+            'warnings' => $warnings, 'error' => $fields ? null : ($warnings[0] ?? 'capture_no_findings')];
     }
 
     private function meter(AiUsageService $usage, array $response, User $user): void
     {
         $usage->recordUsage($this->orgId, SalesCaptureAi::MODEL, (int) ($response['usage']['input_tokens'] ?? 0),
             (int) ($response['usage']['output_tokens'] ?? 0), 'crm_sales_capture',
-            additionalCents: $response['searches'] ?? 0, userId: $user->id);
+            additionalCents: $response['searches'] ?? 0, userId: $user->id, brandId: $this->brandId);
     }
 
     private function logFailure(Throwable $error): void

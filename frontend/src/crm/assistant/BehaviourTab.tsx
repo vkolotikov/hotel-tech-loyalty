@@ -51,6 +51,7 @@ export function BehaviourTab({ canManage, part, onPart }: { canManage: boolean; 
     mutationFn: () => send<BehaviourConfig>('put', 'chatbot-config/behavior', behaviourPayload(form)),
     onSuccess: data => {
       qc.setQueryData(BEHAVIOUR_KEY, data)
+      void qc.invalidateQueries({ queryKey: ['crm', 'sales-profile'] })
       setDraft(null)
       void qc.invalidateQueries({ queryKey: ['crm', 'start'] })
       void qc.invalidateQueries({ queryKey: ['crm', 'bootstrap'] })

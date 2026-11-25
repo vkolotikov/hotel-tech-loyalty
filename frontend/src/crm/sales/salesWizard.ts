@@ -5,25 +5,30 @@ export type Step = (typeof STEPS)[number]
 
 export type Fields = Record<string, string>
 
-export type Evidence = { type: 'website' | 'web' | 'attachment'; title: string; url?: string }
+export type Evidence = { type: 'website' | 'web' | 'attachment' | 'knowledge_answer' | 'knowledge_document'; title: string; url?: string }
 export type Suggestion = { value: string; sources: Evidence[] }
 export type Capture = {
   id: string
   status: 'queued' | 'running' | 'ready' | 'failed'
   fields?: Record<string, Suggestion>
+  pages?: { title: string; url: string }[]
   warnings?: string[]
   error?: string | null
 }
 export type Limits = { count: number; each_bytes: number; total_bytes: number; extensions: string[] }
 export type CaptureData = { capture: Capture | null; limits: Limits }
-export type Sources = { website: string; search: boolean; name: string; files: File[] }
+export type Sources = { website: string; search: boolean; knowledge?: boolean; name: string; files: File[] }
 
 export type Profile = {
   brand: { id: number; name: string }
   steps: Record<FieldStep, string[]>
   fields: Fields
   manual: Fields
+  shareable?: string[]
+  shared_fields?: string[]
+  knowledge?: { answers: number; documents: number }
   inherited: Fields
+  defaults?: Fields
   sources: Record<string, Evidence[]>
   revision: number
 }
@@ -47,7 +52,11 @@ export function validWebsite(value: string): boolean {
 }
 
 export function effectiveValue(profile: Profile, draft: Fields, key: string): string {
-  return draft[key]?.trim() || profile.inherited[key] || (key === 'name' ? profile.brand.name : '')
+  return draft[key]?.trim() || profile.inherited[key] || profile.defaults?.[key] || (key === 'name' ? profile.brand.name : '')
+}
+
+export function editedFields(edited: Fields, saved: Fields): Fields {
+  return Object.fromEntries(Object.entries(edited).filter(([key, value]) => value.trim() !== (saved[key] ?? '')))
 }
 
 export function missingSuggestions(profile: Profile, draft: Fields, suggestions: Record<string, Suggestion>): Fields {

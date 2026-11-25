@@ -2,12 +2,15 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Building2, Check, ClipboardCheck, Compass, FileUp, Package, Save, Sparkles } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf, get, params, send } from '../lib/api'
-import { brandParam } from '../lib/brand'
+import { brandParam, currentBrand, setBrand } from '../lib/brand'
+import { useBoot } from '../CrmProvider'
+import { BEHAVIOUR_KEY } from '../assistant/queries'
+import { KnowledgeBrandPicker } from '../shell/KnowledgeBrandPicker'
 import { errorText } from '../lib/errors'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
@@ -15,7 +18,7 @@ import { useToast } from '../ui/Toast'
 import { SALES_FIELD } from './assistantData'
 import { EvidenceList, SalesWizardReview } from './SalesWizardReview'
 import { SalesWizardSources } from './SalesWizardSources'
-import { effectiveValue, isCapturing, STEPS, validWebsite, websiteAddress, type CaptureData, type FieldStep, type Fields, type Profile, type Sources, type Step } from './salesWizard'
+import { editedFields, effectiveValue, isCapturing, STEPS, validWebsite, websiteAddress, type CaptureData, type FieldStep, type Fields, type Profile, type Sources, type Step } from './salesWizard'
 
 const PROFILE_PATH = 'crm/sales-profile'
 const CAPTURE_PATH = 'crm/sales-profile/capture'
@@ -23,7 +26,7 @@ const ICONS = { sources: FileUp, company: Building2, market: Compass, services: 
 const post = 'post'
 const put = 'put'
 
-type Draft = { fields: Fields; revision: number; captureId?: string }
+type Draft = { fields: Fields; revision: number; originalGoal: string; shared: string[]; captureId?: string }
 
 export function SalesProfileTab({ canEdit }: { canEdit: boolean }) {
   const [search] = useSearchParams()
@@ -49,17 +52,22 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
   const { t, i18n } = useTranslation()
   const cache = useQueryClient()
   const toast = useToast()
+  const boot = useBoot()
   const heading = useRef<HTMLHeadingElement>(null)
   const [step, setStep] = useState<Step>(canEdit ? 'sources' : 'review')
   const [editing, setEditing] = useState<Draft | null>(null)
-  const [sources, setSources] = useState<Sources>({ website: '', name: profile.fields.name ?? profile.brand.name, search: false, files: [] })
+  const hasKnowledge = Boolean(profile.knowledge && (profile.knowledge.answers || profile.knowledge.documents))
+  const [sources, setSources] = useState<Sources>({ website: '', name: profile.fields.name ?? profile.brand.name, search: false, knowledge: hasKnowledge, files: [] })
   const [websiteError, setWebsiteError] = useState(false)
   const [invalidCaptureWebsite, setInvalidCaptureWebsite] = useState(false)
-  const draft = editing?.fields ?? profile.manual
+  const draft = { ...profile.manual, ...editing?.fields }
+  const shared = editing?.shared ?? profile.shared_fields ?? []
   const steps = STEPS.filter(item => canEdit || item !== 'sources')
   const fields = Object.values(profile.steps).flat()
   const filled = fields.filter(key => Boolean(effectiveValue(profile, draft, key))).length
-  const dirty = fields.some(key => (draft[key] ?? '').trim() !== (profile.manual[key] ?? ''))
+  const changes = editedFields(editing?.fields ?? {}, profile.manual)
+  const savedShared = profile.shared_fields ?? []
+  const dirty = Object.keys(changes).length > 0 || shared.length !== savedShared.length || shared.some(key => !savedShared.includes(key))
   const capturePath = CAPTURE_PATH + scope
   const captureKey = ['crm', 'sales-profile-capture', brandParam(), profile.brand.id] as const
   const captureQuery = useQuery({
@@ -75,7 +83,8 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
     if (target !== step) requestAnimationFrame(() => { heading.current?.focus(); heading.current?.scrollIntoView({ block: 'nearest' }) })
   }
   const update = (values: Fields, captureId = editing?.captureId) => {
-    setEditing({ fields: { ...draft, ...values }, revision: editing?.revision ?? profile.revision, captureId })
+    setEditing({ fields: { ...editing?.fields, ...values }, revision: editing?.revision ?? profile.revision,
+      originalGoal: editing?.originalGoal ?? profile.manual.goal ?? '', shared, captureId })
     if ('website' in values) setWebsiteError(false)
   }
 
@@ -85,6 +94,7 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
       form.set('profile_brand', String(profile.brand.id))
       form.set('website', websiteAddress(sources.website))
       form.set('search_web', sources.search ? '1' : '0')
+      form.set('use_knowledge', sources.knowledge ? '1' : '0')
       if (sources.search) form.set('company_name', sources.name.trim())
       form.set('language', (i18n.resolvedLanguage ?? 'en').split('-')[0])
       sources.files.forEach(file => form.append('attachments[]', file))
@@ -99,10 +109,12 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
   const save = useMutation({
     mutationFn: (values: Fields) => send<Profile>(put, PROFILE_PATH + scope, {
       profile_brand: profile.brand.id, revision: editing?.revision ?? profile.revision, fields: values,
-      capture_id: editing?.captureId,
+      capture_id: editing?.captureId, shared_fields: boot.features.chatbot ? shared : undefined,
+      expected_goal: 'goal' in values ? editing?.originalGoal : undefined,
     }),
     onSuccess: next => {
       cache.setQueryData(queryKey, next)
+      void cache.invalidateQueries({ queryKey: BEHAVIOUR_KEY })
       setEditing(null)
       toast(t('crm.sales.profile.saved'))
     },
@@ -124,13 +136,13 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (step !== 'review' || !dirty || !canEdit || save.isPending || conflict) return
-    const website = draft.website === undefined ? undefined : websiteAddress(draft.website)
+    const website = changes.website === undefined ? undefined : websiteAddress(changes.website)
     if (website && !validWebsite(website)) {
       go('company')
       setWebsiteError(true)
       return
     }
-    save.mutate(website === undefined ? draft : { ...draft, website })
+    save.mutate(website === undefined ? changes : { ...changes, website })
   }
   const active = steps.indexOf(step)
   const previous = steps[active - 1]
@@ -141,10 +153,19 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
     <form onSubmit={submit} aria-label={t('crm.sales.profile.title')} noValidate className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-a-border bg-a-surface px-4 py-3">
         <div className="min-w-0">
-          <h2 className="break-words text-lg font-semibold text-a-text">{profile.brand.name}</h2>
+          {(boot.brands?.length ?? 0) > 1
+            ? <KnowledgeBrandPicker value={profile.brand.id} disabled={save.isPending || start.isPending}
+              beforeChange={() => !dirty || window.confirm(t('crm.wizard.discard_edits'))} />
+            : <h2 className="break-words text-lg font-semibold text-a-text">{profile.brand.name}</h2>}
           {!canEdit && <p className="mt-1 text-sm text-a-text-2">{t('crm.sales.profile.read_only')}</p>}
         </div>
-        <p className="text-sm tabular-nums text-a-text-2">{t('crm.wizard.progress', { filled, total: fields.length })}</p>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+          {boot.features.chatbot && <Link to="/crm/assistant?tab=knowledge" className="font-medium text-a-accent-text hover:underline" onClick={event => {
+            if (dirty && !window.confirm(t('crm.wizard.discard_edits'))) { event.preventDefault(); return }
+            if (currentBrand() !== profile.brand.id) { setBrand(profile.brand.id); void cache.resetQueries() }
+          }}>{t('crm.wizard.open_knowledge')}</Link>}
+          <p className="tabular-nums text-a-text-2">{t('crm.wizard.progress', { filled, total: fields.length })}</p>
+        </div>
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-[13.5rem_minmax(0,1fr)]">
@@ -202,17 +223,20 @@ function ProfileWizard({ scope, profile, queryKey, canEdit }: {
                   setSources(value)
                   setInvalidCaptureWebsite(false)
                   start.reset()
-                }} limits={captureQuery.data?.limits} website={effectiveValue(profile, draft, 'website')}
+                }} limits={captureQuery.data?.limits} knowledge={profile.knowledge} website={effectiveValue(profile, draft, 'website')}
                   disabled={!canEdit || busy || start.isPending} busy={busy || start.isPending}
                   capture={capture} error={captureError} onCapture={beginCapture} />
               </>
             )}
             {step !== 'sources' && step !== 'review' && (
-              <ProfileFields keys={profile.steps[step]} profile={profile} draft={draft} canEdit={canEdit && !save.isPending}
+              <ProfileFields keys={profile.steps[step].filter(key => key !== 'goal' || boot.features.chatbot)} profile={profile} draft={draft} canEdit={canEdit && !save.isPending}
                 websiteError={websiteError} update={(key, value) => update({ [key]: value })} />
             )}
             {step === 'review' && <SalesWizardReview profile={profile} draft={draft} capture={capture} captureId={editing?.captureId}
-              canEdit={canEdit && !save.isPending} onApply={update} onEdit={go} />}
+              canEdit={canEdit && !save.isPending} onApply={update} onEdit={go} shared={shared} onShare={next => {
+                setEditing({ fields: editing?.fields ?? {}, revision: editing?.revision ?? profile.revision,
+                  originalGoal: editing?.originalGoal ?? profile.manual.goal ?? '', captureId: editing?.captureId, shared: next })
+              }} />}
             {save.error && (
               <div role="alert" className="space-y-2">
                 <Notice tone="danger">{conflict ? t('crm.sales.profile.changed') : errorText(t, save.error)}</Notice>
@@ -259,18 +283,19 @@ function ProfileFields({ keys, profile, draft, canEdit, websiteError, update }: 
     <div className="grid items-start gap-x-5 gap-y-4 sm:grid-cols-2">
       {keys.map(key => {
         const inherited = profile.inherited[key]
-        const fallback = inherited ?? (key === 'name' ? profile.brand.name : '')
+        const fallback = effectiveValue(profile, {}, key)
         const url = key === 'website'
-        const long = key === 'offerings' || key === 'overview'
+        const hint = key === 'email_instructions' || key === 'goal'
+        const long = hint || key === 'offerings' || key === 'overview'
         const fieldId = `${id}-${key}`
         const value = draft[key] ?? fallback
         const proof = value && value === profile.manual[key] ? profile.sources[key] : undefined
         const attrs = {
-          id: fieldId, className: SALES_FIELD, readOnly: !canEdit, value, maxLength: url ? 2000 : 3000,
+          id: fieldId, className: SALES_FIELD, readOnly: !canEdit, value, maxLength: url ? 2000 : key === 'goal' ? 1000 : 3000,
           placeholder: fallback || (url ? 'example.com' : undefined),
           onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => update(key, event.target.value),
           'aria-invalid': url && websiteError ? true : undefined,
-          'aria-describedby': url && websiteError ? `${fieldId}-error` : undefined,
+          'aria-describedby': url && websiteError ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined,
         }
         return (
           <div key={key} className={`min-w-0 space-y-1.5 ${long ? 'sm:col-span-2' : ''}`}>
@@ -282,7 +307,8 @@ function ProfileFields({ keys, profile, draft, canEdit, websiteError, update }: 
             </div>
             {url || key === 'name'
               ? <input {...attrs} type="text" inputMode={url ? 'url' : 'text'} />
-              : <textarea {...attrs} rows={long ? 5 : 3} />}
+              : <textarea {...attrs} rows={long && !hint ? 5 : 3} />}
+            {hint && <p id={`${fieldId}-hint`} className="text-xs leading-relaxed text-a-text-2">{t(`crm.wizard.${key}_hint`)}</p>}
             {url && websiteError && <p id={`${fieldId}-error`} role="alert" className="text-sm text-a-danger">{t('crm.wizard.errors.capture_bad_website')}</p>}
             {!!proof?.length && <EvidenceList sources={proof} />}
           </div>

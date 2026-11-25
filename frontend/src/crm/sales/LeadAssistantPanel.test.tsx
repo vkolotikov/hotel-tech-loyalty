@@ -42,10 +42,12 @@ describe('response email sources', () => {
 
   it('identifies a WhatsApp request, writing samples and incomplete history', () => {
     const html = render({ ...original, emails: 0, whatsapp: 75, email_state: 'empty', reply_to: { channel: 'whatsapp' },
-      writing_samples: 3, history_limited: true, discovery_fields: 1 })
+      writing_samples: 3, history_limited: true, discovery_fields: 1, knowledge_answers: 12, knowledge_documents: 0 })
     for (const word of ['crm.whatsapp.title', 'crm.sales.context.writing_samples', 'crm.sales.context.history_limited', 'crm.sales.context.discovery_fields']) {
       expect(html).toContain(word)
     }
+    expect(html).toContain('crm.sales.context.knowledge_answers')
+    expect(html).toContain('crm.sales.context.knowledge_documents')
     expect(html).not.toContain('crm.sales.email.reply_missing')
   })
 })

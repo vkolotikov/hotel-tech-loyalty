@@ -33,6 +33,8 @@
     "title": "Fuentes utilizadas",
     "customer_fields": "Campos del perfil del cliente",
     "business_fields": "Campos de nuestra empresa",
+    "knowledge_answers": "Respuestas del chatbot utilizadas",
+    "knowledge_documents": "Documentos de conocimiento utilizados",
     "activities": "Actividades del CRM",
     "chats": "Mensajes de chat",
     "emails": "Correos",
@@ -101,6 +103,8 @@
       "terms": "Precios y condiciones comerciales",
       "voice": "Voz de la marca",
       "guidelines": "Pautas de ventas y afirmaciones",
+      "goal": "Objetivo compartido de la conversación",
+      "email_instructions": "Instrucciones de redacción de correos",
       "next_step": "Próximo paso preferido"
     }
   },

@@ -5,6 +5,7 @@ namespace App\Services\Crm;
 use App\Models\Activity;
 use App\Models\Brand;
 use App\Models\ChatConversation;
+use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatMessage;
 use App\Models\GuestBusinessProfile;
 use App\Models\Inquiry;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Models\Visitor;
 use App\Services\Integrations\CrmMail;
 use App\Services\Integrations\CrmWhatsApp;
+use App\Services\KnowledgeService;
 use App\Services\Portal\PortalBootstrap;
 use Illuminate\Support\Arr;
 
@@ -22,15 +24,17 @@ final class LeadAssistantContext
         private readonly SalesProfile $profiles,
         private readonly CrmMail $mail,
         private readonly CrmWhatsApp $whatsapp,
+        private readonly KnowledgeService $knowledge,
     ) {}
 
-    public function collect(Inquiry $lead, Brand $brand, Organization $org, User $user, array $strategies, string $mode): array
+    public function collect(Inquiry $lead, Brand $brand, Organization $org, User $user, array $strategies, string $mode, string $focus = ''): array
     {
         $guest = $lead->guest;
         $account = $lead->corporateAccount;
         $stage = $lead->pipelineStage;
         $customer = $guest ? GuestBusinessProfile::find($guest->id) : null;
-        $profile = $this->profiles->data($org, $brand);
+        $behavior = ChatbotBehaviorConfig::getForOrg((int) $org->id, (int) $brand->id);
+        $profile = $this->profiles->data($org, $brand, $behavior);
         $activities = $this->activities($lead, $brand);
         $chat = $this->chat($lead, $brand);
         $email = ['state' => 'not_connected', 'messages' => [], 'reply_to' => null];
@@ -44,6 +48,10 @@ final class LeadAssistantContext
         $previous = $draft && $guest ? $this->previousEmails($lead, $brand) : [];
         $correspondence = $draft ? CustomerCorrespondence::forDraft($email['messages'], $whatsapp['messages'], $chat, $activities, $previous) : [];
         $target = $correspondence['reply_target'] ?? null;
+        $topic = implode("\n", [$focus, $target['subject'] ?? '', $target['body'] ?? '',
+            ...array_column(array_slice($whatsapp['messages'], -3), 'body'), $lead->special_requests, $lead->notes,
+            ...array_column(array_slice($chat, -3), 'body')]);
+        $knowledge = $this->knowledge->forSales($topic, $brand);
         $company = Arr::only($customer->fields ?? [], array_keys(BusinessProfile::definitions()));
         $research = $draft ? $this->discovery($customer, $company) : [];
         $enquiry = $lead->only([
@@ -83,11 +91,15 @@ final class LeadAssistantContext
                     ...$correspondence,
                 ],
                 'our_business' => (array) $profile['fields'],
+                'brand_knowledge' => $knowledge,
+                'chatbot_guidance' => $behavior->exists ? $behavior->only(['identity', 'goal', 'tone', 'core_rules', 'custom_instructions', 'sales_style']) : [],
                 'content_planner_fields' => array_values(array_diff(array_keys((array) $profile['inherited']), array_keys((array) $profile['manual']))),
                 'reviewed_strategies' => array_map(fn ($strategy) => $strategy['body'], $reviewed),
             ],
             'coverage' => [
                 'customer_fields' => count($company),
+                'knowledge_answers' => count($knowledge['answers']),
+                'knowledge_documents' => count($knowledge['documents']),
                 'business_fields' => count(array_diff_key((array) $profile['fields'], ['name' => true])),
                 'activities' => count($activities),
                 'chats' => count($chat),

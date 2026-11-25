@@ -9,6 +9,7 @@ export const POPUPS_KEY = ['crm', 'assistant', 'popups'] as const
 /** After a write to the knowledge: its lists, and the setup step "Teach it your answers". */
 export function knowledgeChanged(qc: QueryClient): void {
   void qc.invalidateQueries({ queryKey: KNOWLEDGE_KEY })
+  void qc.invalidateQueries({ queryKey: ['crm', 'sales-profile'] })
   void qc.invalidateQueries({ queryKey: ['crm', 'start'] })
   void qc.invalidateQueries({ queryKey: ['crm', 'bootstrap'] })
 }

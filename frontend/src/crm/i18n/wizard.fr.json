@@ -1,4 +1,17 @@
 {
+  "brand": "Marque",
+  "discard_edits": "Abandonner les modifications non enregistrées pour cette marque ?",
+  "open_knowledge": "Ouvrir les connaissances du chatbot",
+  "open_profile": "Ouvrir la fiche entreprise",
+  "choose_knowledge_brand": "Choisissez la marque dont vous souhaitez gérer les réponses et les documents.",
+  "use_knowledge": "Utiliser les connaissances du chatbot de cette marque",
+  "knowledge_count": "{{answers}} réponses actives · {{documents}} documents indexés",
+  "website_depth": "Lit jusqu’à 24 pages publiques en suivant les liens produits et le plan du site.",
+  "pages_read": "Pages web lues ({{total}})",
+  "visitor_facts": "Informations de l’entreprise pour le chatbot public",
+  "visitor_hint": "Sélectionnez les informations que les visiteurs peuvent recevoir dans le chat. Une fois la fiche enregistrée, les modifications de ces valeurs sont aussi accessibles au chatbot.",
+  "goal_hint": "Cet objectif est partagé avec le chatbot de la marque. À quoi doit aboutir un échange réussi avec un client ?",
+  "email_instructions_hint": "Pour les propositions et les réponses par e-mail. Par exemple, commencez par la réponse et posez une question si le visuel manque. Votre messagerie ajoute la signature.",
   "steps_label": "Étapes du profil de l’entreprise",
   "progress": "{{filled}} champs remplis sur {{total}}",
   "website": "Site web public",
@@ -41,7 +54,7 @@
     "review": "Vérifier"
   },
   "intro": {
-    "sources": "Ajoutez un site, recherchez l’entreprise ou choisissez des fichiers. Vous pouvez aussi saisir vos informations manuellement.",
+    "sources": "Complétez la fiche de la marque avec les connaissances du chatbot, un site, une recherche publique ou des fichiers. Vous pouvez aussi saisir les informations vous-même.",
     "company": "Décrivez l’entreprise et ses valeurs.",
     "market": "Indiquez vos clients, vos marchés et ce qui distingue votre offre.",
     "services": "Indiquez ce que vous vendez et les détails à reprendre dans les propositions.",
@@ -49,7 +62,7 @@
   },
   "errors": {
     "capture_bad_website": "Saisissez l’adresse d’un site web public.",
-    "capture_sources_required": "Ajoutez un site, une entreprise à rechercher ou un document.",
+    "capture_sources_required": "Sélectionnez les connaissances du chatbot, ajoutez un site ou un fichier, ou indiquez une entreprise à rechercher.",
     "capture_website_unreadable": "Ce site n’a pas pu être lu. Vérifiez l’adresse ou utilisez une autre source.",
     "capture_website_indexed": "Les suggestions proviennent d’une recherche des pages publiques du site.",
     "capture_web_unverified": "La recherche n’a pas trouvé assez d’informations pour identifier l’entreprise. Ajoutez son site officiel.",

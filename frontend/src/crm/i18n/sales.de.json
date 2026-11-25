@@ -33,6 +33,8 @@
     "title": "Verwendete Quellen",
     "customer_fields": "Felder im Kundenprofil",
     "business_fields": "Felder zum eigenen Unternehmen",
+    "knowledge_answers": "Verwendete Chatbot-Antworten",
+    "knowledge_documents": "Verwendete Wissensdokumente",
     "activities": "CRM-Aktivitäten",
     "chats": "Chatnachrichten",
     "emails": "E-Mails",
@@ -101,6 +103,8 @@
       "terms": "Preise und Konditionen",
       "voice": "Markenstimme",
       "guidelines": "Vertriebsrichtlinien und zulässige Aussagen",
+      "goal": "Gemeinsames Gesprächsziel",
+      "email_instructions": "Schreibregeln für E-Mails",
       "next_step": "Bevorzugter nächster Schritt"
     }
   },

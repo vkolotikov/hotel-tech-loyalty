@@ -17,6 +17,8 @@ export type Run = {
 export type Coverage = {
   customer_fields: number
   business_fields: number
+  knowledge_answers?: number
+  knowledge_documents?: number
   activities: number
   chats: number
   emails: number
