@@ -2,6 +2,8 @@
 
 namespace App\Services\Crm;
 
+use App\Models\KnowledgeDocument;
+use App\Models\KnowledgeItem;
 use App\Services\Integrations\FdsBuilderKnowledge;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -9,6 +11,10 @@ use Illuminate\Database\Eloquent\Builder;
 /** Search each need across the same active brand sources, reserving space for later questions. */
 final class SalesQuestionSearch
 {
+    /**
+     * @param Builder<KnowledgeItem> $items
+     * @param Builder<KnowledgeDocument> $documents
+     */
     public function retrieve(array $plan, Builder $items, Builder $documents, Closure $tokenise): array
     {
         $queries = [];
@@ -133,7 +139,11 @@ final class SalesQuestionSearch
         return $retailOnly && ! $partner ? 'retail_price_list' : $default;
     }
 
-    /** Iterate brand-scoped sources twice without retaining a tenant's full document library in memory. */
+    /**
+     * Iterate scoped sources twice without retaining a tenant's full document library in memory.
+     * @param Builder<KnowledgeItem> $items
+     * @param Builder<KnowledgeDocument> $documents
+     */
     private function sources(Builder $items, Builder $documents, bool $partner): \Generator
     {
         foreach ((clone $items)->lazyById(100) as $item) {

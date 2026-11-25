@@ -95,7 +95,7 @@ final class LeadAssistantWriter
         $write = fn (array $context, bool $retry = false) => $this->request($ask, $mode, $email, $run['language'], $run['focus'] ?? '', $context, $retry);
         $raw = $write($input);
         $result = $this->result($raw, $mode, $email);
-        if ($email && ! isset($plan) && $result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
+        if ($email && ! isset($knowledge) && $result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
             $raw = $write($input + ['corrections' => ['Resolve the material commercial issues in the first draft.'],
                 'candidate_to_correct' => $result['body']], true);
             $result = $this->result($raw, $mode, true);
@@ -103,7 +103,7 @@ final class LeadAssistantWriter
                 $result = LeadEmailEvidence::hold('commercial_review', $run['language']);
             }
         }
-        if (isset($plan) && $result['decision'] === 'draft') {
+        if (isset($knowledge) && $result['decision'] === 'draft') {
             $firstBody = $result['body'];
             $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
             $review = function (array $candidate, array $prior = []) use (&$input, $ask, $run, $snapshot) {
