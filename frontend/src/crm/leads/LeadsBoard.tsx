@@ -35,7 +35,7 @@ function useBoardLeads(filters: LeadFilters) {
   const boot = useBoot()
   const query = boardQuery(filters, boot.staff.name)
   const key = ['crm', 'leads', 'board', query] as const
-  return { key, leads: useQuery({ queryKey: key, refetchInterval: 60_000, queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(query)}`) }) }
+  return { key, leads: useQuery({ queryKey: key, refetchInterval: boot.features.whatsapp_brand_id ? 60_000 : 0, queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(query)}`) }) }
 }
 
 /**
