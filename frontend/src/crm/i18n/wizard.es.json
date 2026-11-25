@@ -5,7 +5,7 @@
   "open_profile": "Abrir el perfil de empresa",
   "choose_knowledge_brand": "Seleccione la marca cuyas respuestas y documentos desea gestionar.",
   "use_knowledge": "Usar los conocimientos del chatbot de esta marca",
-  "knowledge_count": "{{answers}} respuestas activas · {{documents}} documentos indexados",
+  "knowledge_count": "Respuestas activas ({{answers}}) · Documentos indexados ({{documents}})",
   "website_depth": "Lee hasta 24 páginas públicas siguiendo enlaces de productos y el mapa del sitio.",
   "pages_read": "Páginas web leídas ({{total}})",
   "visitor_facts": "Datos de empresa para el chatbot público",
