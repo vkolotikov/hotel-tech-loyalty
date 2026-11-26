@@ -66,7 +66,7 @@ final class LeadEmailFields
                 }
             }
             if ($data !== ($row->custom_data ?? [])) {
-                $row->custom_data = $data;
+                $row->setAttribute('custom_data', $data);
             }
             if (blank($row->inquiry_type) && isset($values['enquiry']) && mb_strlen($values['enquiry']) <= 50) {
                 $types = CrmSetting::withoutGlobalScope(TenantScope::class)->where('organization_id', $row->organization_id)->where('key', 'inquiry_types')->first()?->value;
