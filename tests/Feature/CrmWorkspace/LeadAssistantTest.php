@@ -338,7 +338,7 @@ class LeadAssistantTest extends TestCase
     public function test_a_failed_correction_logs_its_stage_without_provider_text_or_a_customer_draft(): void
     {
         $lead = $this->lead(['notes' => 'Review the finish before pricing.']);
-        Log::spy();
+        $logger = Log::spy();
         Http::fake(['api.openai.com/v1/responses' => Http::sequence()
             ->push($this->providerOutput(['subject' => 'Finish', 'body' => 'Your price is USD 9837.', 'email_language' => 'en', 'review_notes' => []]))
             ->push(['status' => 'incomplete', 'incomplete_details' => ['reason' => 'private provider diagnostic'],
@@ -346,7 +346,7 @@ class LeadAssistantTest extends TestCase
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
         $this->asManager()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
-        Log::shouldHaveReceived('warning')->with('CRM assistant generation stage failed', [
+        $logger->shouldHaveReceived('warning')->with('CRM assistant generation stage failed', [
             'organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'stage' => 'correction',
             'reason' => 'provider_incomplete', 'http_status' => 200,
         ])->once();
