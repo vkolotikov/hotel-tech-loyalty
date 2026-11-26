@@ -137,6 +137,7 @@ class InquiryController extends Controller
     {
         $v = $request->validate([
             'guest_id'             => ['required', 'integer', OwnRows::rule('guests')],
+            'currency'             => ['sometimes', 'required', \Illuminate\Validation\Rule::in(\App\Services\Crm\EmailPriceCheck::currencyCodes())],
             'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
             'property_id'          => ['nullable', 'integer', OwnRows::rule('properties')],
             'inquiry_type'         => 'nullable|string|max:50',
@@ -416,6 +417,12 @@ class InquiryController extends Controller
             'custom_data'          => 'nullable|array',
         ]);
 
+        if ($request->has('currency')) {
+            $currency = $request->validate(['currency' => ['required', \Illuminate\Validation\Rule::in(\App\Services\Crm\EmailPriceCheck::currencyCodes())],
+                'total_value' => 'present|nullable|numeric|min:0'])['currency'];
+            abort_if(($inquiry->paid_amount > 0 || $inquiry->rate_offered !== null) && $currency !== $inquiry->currency, 422);
+            $v['currency'] = $currency;
+        }
         $checkIn  = $v['check_in'] ?? $inquiry->check_in?->toDateString();
         $checkOut = $v['check_out'] ?? $inquiry->check_out?->toDateString();
         if ($checkIn && $checkOut) {
@@ -633,9 +640,9 @@ class InquiryController extends Controller
             ->where('next_task_due', '<', $todayStr)
             ->count();
 
-        $estimatedValue = (float) Inquiry::where($openScope)
-            ->whereNotNull('total_value')
-            ->sum('total_value');
+        $amounts = Inquiry::where($openScope)->whereNotNull('total_value')
+            ->selectRaw('currency, SUM(total_value) as amount')->groupBy('currency')->toBase()->get();
+        $estimatedValue = (float) $amounts->sum('amount');
 
         $newThisWeek = Inquiry::where('created_at', '>=', $weekAgo)->count();
         $newLastWeek = Inquiry::whereBetween('created_at', [$twoWeeksAgo, $weekAgo])->count();
@@ -649,6 +656,7 @@ class InquiryController extends Controller
             'due_today'       => $dueToday,
             'overdue'         => $overdue,
             'estimated_value' => round($estimatedValue, 2),
+            'values_by_currency' => $amounts,
             'new_this_week'   => $newThisWeek,
             'new_delta_pct'   => $newPct,
         ]);

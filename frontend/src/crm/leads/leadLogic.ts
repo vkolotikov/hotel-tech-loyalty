@@ -318,6 +318,7 @@ export interface LeadDraft {
   status: string
   source: string
   value: string
+  currency?: string
   priority: string
   owner: string
   /** The enquiry type (`inquiry_type`), where the organisation has a list of them. */
@@ -393,7 +394,10 @@ export function leadBody(draft: LeadDraft, guestId: number, opts: { stay: boolea
   put('inquiry_type', draft.type)
   put('notes', draft.notes)
   const value = number(draft.value)
-  if (value !== null && !Number.isNaN(value)) body.total_value = value
+  if (value !== null && !Number.isNaN(value)) {
+    body.total_value = value
+    if (draft.currency) body.currency = draft.currency
+  }
   if (opts.stay) {
     if (isDay(draft.checkIn)) body.check_in = draft.checkIn
     if (isDay(draft.checkOut)) body.check_out = draft.checkOut

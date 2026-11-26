@@ -16,7 +16,8 @@ use RuntimeException;
 
 final class LeadAssistantWriter
 {
-    public const EMAIL_MODEL = 'gpt-6.2-astra';
+    public const EMAIL_MODEL = 'gpt-6.2-sol';
+    public const STRATEGY_MODEL = 'gpt-6.2-astra';
 
     private const COLD_RISKS = ['low', 'medium', 'high'];
 
@@ -44,7 +45,7 @@ final class LeadAssistantWriter
     {
         $mode = $run['mode'];
         $email = in_array($mode, LeadAssistant::EMAIL_MODES, true);
-        $model = $email ? self::EMAIL_MODEL : LeadAssistant::MODEL;
+        $writingModel = in_array($mode, ['sales_strategy', 'marketing_strategy'], true) ? self::STRATEGY_MODEL : self::EMAIL_MODEL;
         $meta = ['coverage' => $snapshot['coverage']];
         if ($email) {
             $evidence = $snapshot['input']['project_evidence'];
@@ -61,7 +62,8 @@ final class LeadAssistantWriter
             $input['editable_draft'] = ['subject' => $run['revise']['subject'], 'body' => $run['revise']['body']];
         }
 
-        $ask = function (string $instructions, array $payload, array $schema, string $name, string $effort, int $tokens, int $timeout) use ($org, $user, $brand, $model, $feature) {
+        $ask = function (string $instructions, array $payload, array $schema, string $name, string $effort, int $tokens, int $timeout) use ($org, $user, $brand, $writingModel, $feature, $email) {
+            $model = $name === 'crm_lead_assistant' ? $writingModel : self::STRATEGY_MODEL;
             LeadAssistant::checkAvailability($org);
             array_walk_recursive($payload, static function (&$value) {
                 if (is_string($value)) {
@@ -75,7 +77,7 @@ final class LeadAssistantWriter
             try {
                 $response = Http::acceptJson()->withToken((string) config('openai.api_key'))->connectTimeout(6)->timeout($timeout)->withoutRedirecting()
                     ->post('https://api.openai.com/v1/responses', [
-                        'model' => $model, 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
+                        'model' => $model, 'service_tier' => $email && $model === self::EMAIL_MODEL ? 'priority' : 'default', 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
                         'instructions' => $instructions,
                         'input' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE),
                         'text' => ['format' => ['type' => 'json_schema', 'name' => $name, 'strict' => true, 'schema' => $schema]],
@@ -85,8 +87,13 @@ final class LeadAssistantWriter
             }
             $data = $response->json();
             if (isset($data['usage'])) {
-                $this->usage->recordUsage((int) $org->id, $model, (int) ($data['usage']['input_tokens'] ?? 0),
-                    (int) ($data['usage']['output_tokens'] ?? 0), $feature, userId: (int) $user->id, brandId: (int) $brand->id);
+                $inputTokens = (int) ($data['usage']['input_tokens'] ?? 0);
+                $outputTokens = (int) ($data['usage']['output_tokens'] ?? 0);
+                // Fast Sol is twice the Standard token rate. Round once per provider call.
+                $standardCents = $this->usage->costUsd($model, $inputTokens, $outputTokens) * 100;
+                $premium = $model === self::EMAIL_MODEL && in_array($data['service_tier'] ?? '', ['fast', 'priority'], true)
+                    ? (int) ceil(2 * $standardCents) - (int) ceil($standardCents) : 0;
+                $this->usage->recordUsage((int) $org->id, $model, $inputTokens, $outputTokens, $feature, additionalCents: $premium, userId: (int) $user->id, brandId: (int) $brand->id);
             }
             if (! $response->successful()) {
                 throw new CrmAssistantGenerationFailed($stage, 'http_error', $response->status());
@@ -328,7 +335,7 @@ PROMPT;
         }
 
         return $ask($instructions."\n".$task, ['language' => $language, 'staff_focus' => $focus, ...$context],
-            $this->object($fields), 'crm_lead_assistant', $retry ? 'low' : ($email ? 'high' : 'low'),
+            $this->object($fields), 'crm_lead_assistant', $retry ? 'low' : ($mode === 'brief' ? 'medium' : 'high'),
             $email ? 8000 : 4000, isset($context['brand_knowledge']['plan']) ? ($retry ? 110 : 155) : ($email ? 75 : 65));
     }
 

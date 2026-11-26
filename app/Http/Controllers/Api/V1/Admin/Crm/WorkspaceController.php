@@ -42,6 +42,9 @@ class WorkspaceController extends Controller
         $platform = method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin();
         $brands = \App\Services\Crm\CrmBrands::for($user);
 
+        $selectedBrand = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $newLeadBrand = $selectedBrand ?? collect($brands['brands'])->firstWhere('is_default', true)['id'] ?? null;
+
         return response()->json([
             'name'         => self::NAME,
             'organization' => ['id' => $orgId, 'name' => (string) $org->name, 'industry' => (string) $org->resolved_industry],
@@ -50,6 +53,9 @@ class WorkspaceController extends Controller
                 'timezone' => VenueClock::zone($orgId),
                 'today'    => VenueClock::today($orgId),
                 'currency' => PortalBootstrap::currency($org),
+                'lead_currency' => $orgId === \App\Services\Integrations\CrmMail::ORGANIZATION
+                    && (int) $newLeadBrand === \App\Services\Integrations\CrmMail::BRAND
+                    ? 'EUR' : PortalBootstrap::currency($org),
             ],
             // What the plan holds: the chatbot's setup and the knowledge base answer 402 `feature_locked` without
             // `chatbot`, the live visitor feed without `engagement`. The AI capture of a lead from pasted text

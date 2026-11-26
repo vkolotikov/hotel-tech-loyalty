@@ -36,6 +36,15 @@ class LeadsAndDealsTest extends TestCase
         }
     }
 
+    public function test_recent_orders_allow_custom_enquiry_types_clearing_and_an_explicit_currency(): void
+    {
+        $id = $this->lead(['inquiry_type' => 'Room Reservation']);
+        $url = $this->adminApi('inquiries/'.$id);
+        $this->asStaffMember()->putJson($url, ['inquiry_type' => 'Bespoke production'])->assertOk()->assertJsonPath('inquiry_type', 'Bespoke production');
+        $this->putJson($url, ['inquiry_type' => null, 'currency' => 'EUR', 'total_value' => 78.5])->assertOk()->assertJsonPath('inquiry_type', null)->assertJsonPath('value_currency', 'EUR');
+        $this->putJson($url, ['currency' => 'XXX', 'total_value' => 78.5])->assertUnprocessable();
+    }
+
     private function widenTables(): void
     {
         foreach ([

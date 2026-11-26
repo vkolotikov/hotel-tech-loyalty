@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 final class BusinessProfile
 {
-    public const MODEL = 'gpt-5-mini';
+    public const MODEL = LeadAssistantWriter::EMAIL_MODEL;
 
     public const GROUPS = [
         'identity' => ['company_name' => 'short', 'website_url' => 'url', 'industry' => 'short', 'brand_summary' => 'text'],

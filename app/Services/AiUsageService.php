@@ -69,6 +69,7 @@ class AiUsageService
         'gpt-5.6-terra'                  => ['input' => 2.00,  'output' => 12.00],
         'gpt-5.6-luna'                   => ['input' => 0.20,  'output' => 1.20],
         'gpt-6.2-astra'                  => ['input' => 8.00,  'output' => 40.00],
+        'gpt-6.2-sol'                    => ['input' => 2.00,  'output' => 10.00],
         // Google Gemini (chat). ESTIMATE, not Google's published price: the
         // rate for gemini-3.5-flash-lite was not confirmed when it was added
         // (2026-11-01). Set at Gemini 3 Flash-class rates so a venue's spend

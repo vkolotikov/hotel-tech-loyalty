@@ -9,7 +9,7 @@ use RuntimeException;
 
 final class SalesCaptureAi
 {
-    public const MODEL = LeadAssistantWriter::EMAIL_MODEL;
+    public const MODEL = LeadAssistantWriter::STRATEGY_MODEL;
 
     private const GUIDE = <<<'FIELDS'
 name: Business or brand name as presented by the company.

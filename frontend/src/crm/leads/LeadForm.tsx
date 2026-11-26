@@ -15,6 +15,7 @@ import { SidePanel } from '../ui/SidePanel'
 import { Tabs } from '../ui/Tabs'
 import { useToast } from '../ui/Toast'
 import { useTeam } from '../tasks/taskData'
+import { LeadCurrency } from './LeadCurrency'
 import { CustomFieldInputs } from './CustomFields'
 import { useLeadChanged, useLeadFields, useLeadSettings, usePipelines } from './leadData'
 import {
@@ -54,6 +55,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
   const fieldsQuery = useLeadFields()
   const fields = activeFields(fieldsQuery.data)
   const stay = boot.organization.industry === 'hotel'
+  const defaultCurrency = boot.venue.lead_currency ?? boot.venue.currency
   const stages = sortedStages(defaultPipeline(pipelines.data)?.stages).filter(s => s.kind === 'open')
 
   const [draft, setDraft] = useState<LeadDraft>(() => initial ?? ({
@@ -197,9 +199,12 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
                 {sourceOptions(settings.sources).map(s => <option key={s} value={s}>{sourceLabel(t, s)}</option>)}
               </Select>
             </Field>
-            <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency: boot.venue.currency })}>
-              <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })}
+            <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency: draft.currency ?? defaultCurrency })}>
+              <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+                <LeadCurrency value={draft.currency ?? defaultCurrency} onChange={currency => set({ currency })} />
+                <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })}
                 aria-invalid={problem('value') ? true : undefined} />
+              </div>
               {problem('value') && <span className="mt-1 block text-xs text-a-danger">{problem('value')}</span>}
             </Field>
             <Field label={t('crm.leads.field_priority', 'Priority')}>
@@ -214,7 +219,9 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
                 {owners.map(o => <option key={o} value={o}>{o === boot.staff.name ? t('crm.leads.owner_me', 'Me ({{name}})', { name: o }) : o}</option>)}
               </Select>
             </Field>
-            {(settings.types.length > 0 || draft.type) && (
+            {settings.types.length === 0 ? (
+              <Field label={t('crm.leads.field_type', 'Type of enquiry')}><TextInput maxLength={50} value={draft.type} onChange={e => set({ type: e.target.value })} /></Field>
+            ) : (
               <Field label={t('crm.leads.field_type', 'Type of enquiry')}>
                 <Select value={draft.type} onChange={e => set({ type: e.target.value })}>
                   <option value="">{t('crm.leads.type_none', 'Not set')}</option>

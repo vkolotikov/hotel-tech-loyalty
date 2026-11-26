@@ -90,7 +90,7 @@ function Owed({ deal }: { deal: DealRow }) {
   const paid = amount(deal.paid_amount)
   const owed = stillOwed(deal.total_value, deal.paid_amount)
   if (owed === null || owed <= 0 || paid === null || deal.payment_status === 'paid') return null
-  return <span className="block text-xs font-medium text-a-st-pending">{t('crm.deals.owed', '{{amount}} still to pay', { amount: money(owed, boot.venue.currency, i18n.language) })}</span>
+  return <span className="block text-xs font-medium text-a-st-pending">{t('crm.deals.owed', '{{amount}} still to pay', { amount: money(owed, deal.value_currency ?? boot.venue.currency, i18n.language) })}</span>
 }
 
 function WideRow({ deal, name, columns, onPay, step, href, open }: RowProps & { columns: Record<DealColumn, boolean> }) {
@@ -123,7 +123,7 @@ function WideRow({ deal, name, columns, onPay, step, href, open }: RowProps & { 
       )}
       {columns.amount && (
         <td className="px-3 py-3 text-right tabular-nums">
-          <span className="block font-medium text-a-text">{money(value, boot.venue.currency, lang)}</span>
+          <span className="block font-medium text-a-text">{money(value, deal.value_currency ?? boot.venue.currency, lang)}</span>
           <Owed deal={deal} />
         </td>
       )}
@@ -159,7 +159,7 @@ function PhoneCard({ deal, name, onPay, step, href }: RowProps) {
           <p className="truncate text-xs text-a-text-2">{[deal.guest?.company, dealItem(deal)].filter(Boolean).join(' · ')}</p>
         </div>
         <span className="shrink-0 text-right text-sm font-medium tabular-nums text-a-text">
-          {money(amount(deal.total_value), boot.venue.currency, lang)}
+          {money(amount(deal.total_value), deal.value_currency ?? boot.venue.currency, lang)}
           <Owed deal={deal} />
         </span>
       </div>

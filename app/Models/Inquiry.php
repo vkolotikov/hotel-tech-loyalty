@@ -36,6 +36,41 @@ class Inquiry extends Model
             ->first() ?? abort(404);
     }
 
+    protected $appends = ['value_currency'];
+
+    public function getValueCurrencyAttribute(): ?string
+    {
+        if ($this->currency) {
+            return strtoupper($this->currency);
+        }
+
+        return $this->total_value === null && $this->isFdsCards() ? 'EUR' : null;
+    }
+
+    private function isFdsCards(): bool
+    {
+        return (int) $this->organization_id === \App\Services\Integrations\CrmMail::ORGANIZATION
+            && (int) $this->brand_id === \App\Services\Integrations\CrmMail::BRAND;
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $lead): void {
+            if ($lead->isFdsCards()) {
+                $lead->inquiry_type ??= null;
+                if ($lead->total_value !== null) {
+                    $lead->currency ??= 'EUR';
+                }
+            }
+        });
+
+        static::updating(function (self $lead): void {
+            if ($lead->isFdsCards() && $lead->isDirty('total_value') && $lead->getOriginal('total_value') === null && $lead->total_value !== null) {
+                $lead->currency ??= 'EUR';
+            }
+        });
+    }
+
     protected $fillable = [
         'organization_id', 'brand_id', 'guest_id', 'corporate_account_id', 'property_id', 'inquiry_type', 'source',
         'check_in', 'check_out', 'num_nights', 'num_rooms', 'num_adults', 'num_children',

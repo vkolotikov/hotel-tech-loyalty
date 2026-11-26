@@ -215,7 +215,7 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
       </td>
       {columns.value && (
         <td className="px-3 py-3 text-right tabular-nums">
-          {value === null ? <span className="text-a-text-2">—</span> : <span className="font-medium text-a-text">{money(value, boot.venue.currency, lang)}</span>}
+          {value === null ? <span className="text-a-text-2">—</span> : <span className="font-medium text-a-text">{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>}
         </td>
       )}
       {columns.ai_signal && <td className="hidden px-3 py-3 lg:table-cell"><AiCell lead={lead} blank /></td>}
@@ -282,7 +282,7 @@ function PhoneCard({ lead, name, stages, now, priorities, chosen, onSelect, acti
             </div>
             {lead.guest?.company && <p className="truncate text-xs text-a-text-2">{lead.guest.company}</p>}
           </div>
-          {value !== null && <span className="shrink-0 pt-0.5 text-sm font-medium tabular-nums text-a-text">{money(value, boot.venue.currency, lang)}</span>}
+          {value !== null && <span className="shrink-0 pt-0.5 text-sm font-medium tabular-nums text-a-text">{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>}
           <ActionMenu label={t('crm.leads.menu_named', 'More for {{name}}', { name })} items={actions.menu(lead, priorities)} />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">

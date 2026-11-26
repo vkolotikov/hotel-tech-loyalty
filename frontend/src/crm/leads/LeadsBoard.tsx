@@ -6,7 +6,7 @@ import { ArrowRight, ArrowRightLeft, CalendarClock, Coins, Columns3, Info, Targe
 import { useBoot } from '../CrmProvider'
 import { get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { count as countText, dayLabel, money } from '../lib/format'
+import { count as countText, dayLabel, money, moneyTotals } from '../lib/format'
 import { useRecordList, useRecords } from '../lib/useRecords'
 import { Avatar } from '../ui/Avatar'
 import { Card } from '../ui/Card'
@@ -108,7 +108,7 @@ export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }
                   </InlineSelect>
                 </label>
               )}
-              <Totals count={totals.count} value={money(totals.value, boot.venue.currency, lang)} lang={lang} />
+              <Totals count={totals.count} value={boardMoney(columns.filter(c => !c.collapsed).flatMap(c => c.leads), boot.venue.currency, lang)} lang={lang} />
               {(leads.data?.total ?? 0) > BOARD_LIMIT && <Truncated />}
             </div>
 
@@ -236,7 +236,7 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
         : <Avatar name={column.owner} size="sm" />}
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-semibold text-a-text">{ownerName(column.owner)}</h3>
-        <p className="text-xs text-a-text-2">{money(column.value, boot.venue.currency, lang)}</p>
+        <p className="text-xs text-a-text-2">{boardMoney(column.leads, boot.venue.currency, lang)}</p>
       </div>
       <span className="rounded-full bg-a-surface px-2 text-xs font-medium leading-5 text-a-text" aria-label={t('crm.pipeline.count', '{{count}} leads', { count: column.count })}>{column.count}</span>
     </header>
@@ -288,6 +288,10 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
   )
 }
 
+function boardMoney(leads: readonly LeadRow[], currency: string, lang: string): string {
+  return moneyTotals(leads.map(lead => ({ amount: lead.total_value, currency: lead.value_currency })), currency, lang)
+}
+
 function ColumnHead({ column, lang }: { column: Column; lang: string }) {
   const { t } = useTranslation()
   const boot = useBoot()
@@ -299,7 +303,7 @@ function ColumnHead({ column, lang }: { column: Column; lang: string }) {
         : dot ? <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} /> : null}
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-semibold text-a-text">{column.stage.name}</h3>
-        {!column.collapsed && <p className="text-xs text-a-text-2">{money(column.value, boot.venue.currency, lang)}</p>}
+        {!column.collapsed && <p className="text-xs text-a-text-2">{boardMoney(column.leads, boot.venue.currency, lang)}</p>}
       </div>
       <span className="rounded-full bg-a-surface px-2 text-xs font-medium leading-5 text-a-text" aria-label={t('crm.pipeline.count', '{{count}} leads', { count: column.count })}>{column.count}</span>
     </header>
@@ -361,7 +365,7 @@ function LeadCard({ lead, name, lang, now, stage, action, busy, draggable = fals
         <FreshChip lead={lead} now={now} />
         <ReplyBadges status={lead.reply_status} />
         {stage !== undefined && <StagePill stage={stage} fallback={lead.status} />}
-        {value !== null && <span className="inline-flex items-center gap-1 font-medium text-a-text"><Coins size={12} aria-hidden className="text-a-text-2" />{money(value, boot.venue.currency, lang)}</span>}
+        {value !== null && <span className="inline-flex items-center gap-1 font-medium text-a-text"><Coins size={12} aria-hidden className="text-a-text-2" />{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>}
         {next?.day && (
           <span className={`inline-flex items-center gap-1 ${next.state === 'overdue' ? 'font-medium text-a-danger' : next.state === 'today' ? 'font-medium text-a-st-pending' : ''}`}>
             <CalendarClock size={12} aria-hidden />{next.state === 'today' ? t('crm.pipeline.follow_today_short', 'Today') : dayLabel(next.day, lang)}

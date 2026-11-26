@@ -62,6 +62,7 @@ final class LeadCorrespondenceSync
                 continue;
             }
             $email = $this->email($guest, json_decode($row->email ?? '[]', true));
+            $email = LeadMessageValue::capture($this->mail, $guest, $email);
             $wa = $this->whatsapp($guest, json_decode($row->whatsapp ?? '[]', true));
             $query->where('claim', $claim)->update([
                 'claim' => null, 'due_at' => ! empty($email['cursor']) ? now()->addMinute() : now()->addMinutes(5),

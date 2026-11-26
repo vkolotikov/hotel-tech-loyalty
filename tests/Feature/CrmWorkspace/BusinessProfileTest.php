@@ -83,10 +83,10 @@ class BusinessProfileTest extends TestCase
         ]])->assertOk()->assertJsonPath('sources.services.0.url', $source)->assertJsonPath('revision', 1);
         $this->postJson($this->adminApi("inquiries/$lead/draft-proposal"))->assertOk()->assertJsonPath('subject', 'Cards for your studio')
             ->assertJsonPath('review_notes.0', 'Check the finish.');
-        Http::assertSent(fn (Request $request): bool => $request['model'] === 'gpt-6.2-astra' && $request['store'] === false
+        Http::assertSent(fn (Request $request): bool => $request['model'] === 'gpt-6.2-sol' && $request['store'] === false
             && str_contains($request['input'], 'Web design') && str_contains($request['input'], 'Private enquiry for 100 cards')
             && ! str_contains($request['input'], 'Worldwide'));
-        $this->assertDatabaseHas('ai_usage_logs', ['brand_id' => $this->brandId, 'feature' => 'inquiry_proposal_draft', 'model' => 'gpt-6.2-astra', 'cost_cents' => 2]);
+        $this->assertDatabaseHas('ai_usage_logs', ['brand_id' => $this->brandId, 'feature' => 'inquiry_proposal_draft', 'model' => 'gpt-6.2-sol', 'cost_cents' => 1]);
         $this->assertDatabaseHas('ai_usage_logs', ['organization_id' => $this->org->id, 'user_id' => $this->staffMember->id, 'feature' => 'crm_discovery']);
 
         $this->putJson($path, ['revision' => 0, 'fields' => ['services' => ['Old text']]])

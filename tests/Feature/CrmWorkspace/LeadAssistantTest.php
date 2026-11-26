@@ -110,8 +110,9 @@ class LeadAssistantTest extends TestCase
             ->assertJsonPath('strategies.marketing_strategy.body', 'Approved marketing approach');
         $recorded = Http::recorded();
         $input = $recorded[1][0]['input'];
-        $this->assertSame('gpt-5-mini', $recorded[0][0]['model']);
-        $this->assertSame('gpt-6.2-astra', $recorded[1][0]['model']);
+        $this->assertSame('gpt-6.2-astra', $recorded[0][0]['model']);
+        $this->assertSame('gpt-6.2-sol', $recorded[1][0]['model']);
+        $this->assertSame('priority', $recorded[1][0]['service_tier']);
         foreach (['Customer needs 100 engraved samples.', 'matte finish', 'recyclable packaging by email', 'Independent design shops',
             'Engraving and recyclable packaging', 'Local production', 'Discuss the approved sample plan', 'Approved marketing approach'] as $fact) {
             $this->assertStringContainsString($fact, $input);
@@ -221,7 +222,7 @@ class LeadAssistantTest extends TestCase
                 ['channel' => 'email', 'words' => 'Please confirm prototype timing'],
                 ['channel' => 'whatsapp', 'words' => 'I can approve the artwork Friday.'],
             ]);
-        $this->assertDatabaseHas('ai_usage_logs', ['model' => 'gpt-6.2-astra', 'feature' => 'crm_sales_assistant', 'cost_cents' => 3]);
+        $this->assertDatabaseHas('ai_usage_logs', ['model' => 'gpt-6.2-sol', 'feature' => 'crm_sales_assistant', 'cost_cents' => 1]);
         Mail::assertNothingSent();
     }
 
@@ -361,12 +362,12 @@ class LeadAssistantTest extends TestCase
     public function test_provider_usage_is_recorded_for_an_incomplete_paid_email_generation(): void
     {
         $lead = $this->lead();
-        Http::fake(['api.openai.com/v1/responses' => Http::response(['status' => 'incomplete', 'usage' => ['input_tokens' => 1000, 'output_tokens' => 1000]])]);
+        Http::fake(['api.openai.com/v1/responses' => Http::response(['status' => 'incomplete', 'service_tier' => 'fast', 'usage' => ['input_tokens' => 1000, 'output_tokens' => 1000]])]);
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
         $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
         $this->getJson($path)->assertOk()->assertJsonPath('run.error', 'ai_failed')->assertJsonMissingPath('results.reply');
-        $this->assertDatabaseHas('ai_usage_logs', ['model' => 'gpt-6.2-astra', 'feature' => 'crm_sales_assistant', 'cost_cents' => 5]);
+        $this->assertDatabaseHas('ai_usage_logs', ['model' => 'gpt-6.2-sol', 'feature' => 'crm_sales_assistant', 'cost_cents' => 3]);
         Mail::assertNothingSent();
     }
 

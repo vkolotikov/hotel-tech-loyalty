@@ -39,7 +39,7 @@ export function DealTab({ lead }: { lead: LeadDetail }) {
   const at = current ? FULFILMENT.indexOf(current) : -1
   const next = nextFulfilment(deal.fulfillment_stage)
   const progress = fulfilmentProgress(deal.fulfillment_stage)
-  const cur = boot.venue.currency
+  const cur = lead.value_currency ?? boot.venue.currency
   const value = amount(deal.total_value)
   const paid = amount(deal.paid_amount) ?? 0
   const owed = stillOwed(deal.total_value, deal.paid_amount)

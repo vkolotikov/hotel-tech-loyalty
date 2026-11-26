@@ -17,6 +17,7 @@ import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
 import { useTeam } from '../tasks/taskData'
 import { nextStepWord } from '../tasks/taskWords'
+import { LeadCurrency } from './LeadCurrency'
 import { InlineField, type InlineOption } from './InlineField'
 import { useLeadChanged, useLeadSettings } from './leadData'
 import {
@@ -81,7 +82,7 @@ export function KeyFacts({ lead }: { lead: LeadDetail }) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <Fact icon={Coins} label={t('crm.leads.value', 'Value')}>
           <InlineField label={t('crm.leads.value', 'Value')} kind="number" busy={busy} value={value === null ? '' : String(value)} onSave={save('value')}
-            display={value === null ? undefined : <span className="font-a-display text-lg leading-tight">{money(value, boot.venue.currency, lang)}</span>} />
+            display={value === null ? undefined : <span className="font-a-display text-lg leading-tight">{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>} />
         </Fact>
         <Fact icon={UserRound} label={t('crm.leads.field_owner', 'Owner')}>
           <InlineField label={t('crm.leads.field_owner', 'Owner')} kind="select" busy={busy} value={lead.assigned_to ?? ''} options={owners} onSave={save('owner')}
@@ -207,13 +208,11 @@ export function DetailsCard({ lead, onEdit }: { lead: LeadDetail; onEdit: () => 
           <dt className="text-xs text-a-text-2">{t('crm.leads.came_from', 'Came from')}</dt>
           <dd><InlineField label={t('crm.leads.came_from', 'Came from')} kind="select" busy={busy} value={lead.source ?? ''} options={sources} onSave={save('source')} display={sourceLabel(t, lead.source)} /></dd>
         </div>
-        {types.length > 0 && (
           <div className="min-w-0">
             <dt className="text-xs text-a-text-2">{t('crm.leads.field_type', 'Type of enquiry')}</dt>
-            <dd><InlineField label={t('crm.leads.field_type', 'Type of enquiry')} kind="select" busy={busy} value={lead.inquiry_type ?? ''} onSave={save('type')}
+            <dd><InlineField label={t('crm.leads.field_type', 'Type of enquiry')} kind={settings.types.length ? 'select' : 'text'} busy={busy} value={lead.inquiry_type ?? ''} onSave={save('type')}
               options={[{ value: '', label: t('crm.leads.type_none', 'Not set') }, ...types.map(v => ({ value: v, label: v }))]} /></dd>
           </div>
-        )}
         <div className="min-w-0">
           <dt className="text-xs text-a-text-2">{t('crm.leads.came_in_label', 'Came in')}</dt>
           <dd className="py-1 text-sm text-a-text">{timeAgo(lead.created_at, lang)}</dd>
@@ -245,6 +244,8 @@ export function LeadEditPanel({ lead, onClose }: { lead: LeadDetail; onClose: ()
   const team = useTeam()
   const formId = useId()
   const [draft, setDraft] = useState<DetailsDraft>(() => detailsDraft(lead))
+  const initialCurrency = lead.value_currency ?? boot.venue.currency
+  const [currency, setCurrency] = useState(initialCurrency)
   const [problem, setProblem] = useState(false)
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) => send('put', `inquiries/${lead.id}`, body),
@@ -254,8 +255,10 @@ export function LeadEditPanel({ lead, onClose }: { lead: LeadDetail; onClose: ()
     const patch = detailsPatch(lead, draft)
     setProblem(Boolean(patch.problem))
     if (patch.problem) return
-    if (!patch.body) { onClose(); return }
-    save.mutate(patch.body)
+    if (currency !== initialCurrency) {
+      save.mutate({ ...patch.body, currency, total_value: draft.value.trim() ? Number(draft.value) : null })
+    } else if (patch.body) save.mutate(patch.body)
+    else onClose()
   }
   const set = (p: Partial<DetailsDraft>) => setDraft(d => ({ ...d, ...p }))
   const types = [...new Set([...settings.types, ...(lead.inquiry_type ? [lead.inquiry_type] : [])])]
@@ -271,8 +274,10 @@ export function LeadEditPanel({ lead, onClose }: { lead: LeadDetail; onClose: ()
       <form id={formId} className="space-y-3" onSubmit={e => { e.preventDefault(); submit() }}>
         {save.isError && <Notice tone="danger">{errorText(t, save.error)}</Notice>}
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency: boot.venue.currency })}>
-            <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })} aria-invalid={problem ? true : undefined} />
+          <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency })}>
+            <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+              <LeadCurrency value={currency} disabled={Number(lead.paid_amount ?? 0) > 0 || lead.rate_offered != null} onChange={setCurrency} />
+              <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })} aria-invalid={problem ? true : undefined} /></div>
             {problem && <span className="mt-1 block text-xs text-a-danger">{problemText(t, 'number')}</span>}
           </Field>
           <Field label={t('crm.leads.field_priority', 'Priority')}>
@@ -295,7 +300,11 @@ export function LeadEditPanel({ lead, onClose }: { lead: LeadDetail; onClose: ()
               {sourceOptions(settings.sources, lead.source).map(s => <option key={s} value={s}>{sourceLabel(t, s)}</option>)}
             </Select>
           </Field>
-          {types.length > 0 && (
+          {settings.types.length === 0 ? (
+            <Field label={t('crm.leads.field_type', 'Type of enquiry')}>
+              <TextInput maxLength={50} value={draft.type} onChange={e => set({ type: e.target.value })} />
+            </Field>
+          ) : (
             <Field label={t('crm.leads.field_type', 'Type of enquiry')}>
               <Select value={draft.type} onChange={e => set({ type: e.target.value })}>
                 <option value="">{t('crm.leads.type_none', 'Not set')}</option>

@@ -76,6 +76,10 @@ class ActivityController extends Controller
             'occurred_at'       => $data['occurred_at'] ?? now(),
         ]);
 
+        if ($activity->type === 'email' && in_array($activity->direction, ['inbound', 'outbound'], true)) {
+            \App\Services\Crm\LeadMessageValue::fromLoggedEmail($inquiry, (string) $activity->body);
+        }
+
         // The legacy inquiries.last_contacted_at column is still surfaced on
         // the list view ("Touches: N"); keep it warm so the existing UI shows
         // the freshest contact time.

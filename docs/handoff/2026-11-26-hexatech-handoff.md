@@ -1,5 +1,11 @@
 # Handoff — 26 November 2026
 
+## CRM lead follow-up
+
+FDS retail prices come from the builder. The shared knowledge library now includes sourced partner terms, delivery and proof guidance. Confirm bespoke kit prices and destination charges on the specific order. The Contacts bridge accepts Zoho delivery confirmation for replies filed outside Sent.
+
+Lead edits support clearing the enquiry type and entering a custom type for organisations without a configured list. Empty FDS amounts default to EUR. Captured and logged emails can fill a blank value from an explicit order total with its currency. Approved quotes can supply their calculated total. Lead views group totals by currency.
+
 ## PHP dependency maintenance
 
 A separate lock-file patch updates Symfony HTTP Kernel, Mailer, Routing and the required HTTP Foundation component to 8.1.12. Composer's locked dependency audit clears the five November advisories. Run the production stack's PHP 8.5 checks against the lock file.

@@ -1,4 +1,5 @@
 {
+  "currency": "Валюта",
   "needs_reply": "Нужен ответ",
   "awaiting_customer": "Ждём ответа клиента",
   "nav_summary": "Сводка",

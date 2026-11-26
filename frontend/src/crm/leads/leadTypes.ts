@@ -56,6 +56,8 @@ export interface LeadRow {
   priority: string | null
   source: string | null
   inquiry_type?: string | null
+  value_currency?: string | null
+  rate_offered?: string | number | null
   total_value: string | number | null
   assigned_to: string | null
   next_task_type: string | null
@@ -211,6 +213,7 @@ export interface LeadKpis {
   total: number
   due_today: number
   overdue: number
+  values_by_currency?: { currency: string | null; amount: number | string }[]
   estimated_value: number
   new_this_week: number
   /** New this week against the week before, in percent (null without a week before). */
@@ -254,6 +257,7 @@ export interface CaptureAnswer {
     num_adults?: number | string | null
     num_children?: number | string | null
     total_value?: number | string | null
+    currency?: string | null
     source?: string | null
     special_requests?: string | null
     notes?: string | null

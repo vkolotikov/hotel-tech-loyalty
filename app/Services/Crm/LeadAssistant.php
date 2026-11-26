@@ -18,7 +18,6 @@ use Throwable;
 
 final class LeadAssistant
 {
-    public const MODEL = 'gpt-5-mini';
 
     public const EMAIL_MODES = ['proposal', 'reply', 'follow_up'];
 
@@ -137,6 +136,14 @@ final class LeadAssistant
     {
         $this->edit($lead, $brand, (int) $input['revision'], function (CrmLeadAssistant $state) use ($input, $actor, $lead) {
             $state->approved_quote = $input['quote'] === null ? null : [...LeadQuote::approved($input['quote'], $actor), 'contact_id' => $lead->guest_id];
+            $quote = $state->approved_quote;
+            if ($quote && $quote['valid_until'] >= \App\Services\Appointments\VenueClock::today((int) $lead->organization_id)
+                && \Brick\Math\BigDecimal::of($quote['total'])->isLessThanOrEqualTo('9999999999.99')) {
+                Inquiry::withoutGlobalScope(BrandScope::class)->whereKey($lead->id)->whereNull('total_value')
+                    ->whereNull('rate_offered')->where(fn ($q) => $q->whereNull('paid_amount')->orWhere('paid_amount', 0))
+                    ->update(['total_value' => (string) \Brick\Math\BigDecimal::of($quote['total'])->toScale(2, \Brick\Math\RoundingMode::HalfUp),
+                        'currency' => $quote['currency']]);
+            }
         });
     }
 

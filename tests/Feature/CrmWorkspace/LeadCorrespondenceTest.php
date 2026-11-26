@@ -22,6 +22,7 @@ class LeadCorrespondenceTest extends TestCase
 
     private array $email;
     private array $wa;
+    private string $body = '';
 
     protected function setUp(): void
     {
@@ -50,6 +51,9 @@ class LeadCorrespondenceTest extends TestCase
         $this->wa = ['state' => 'connected', 'threads' => [$this->thread('Chat', 'outbound')]];
         Http::fake([
             '*/crm-mail/*' => function (Request $r) {
+                if ($r['action'] === 'content') {
+                    return Http::response(['body' => $this->body]);
+                }
                 $this->assertSame('capture', $r['action']);
                 return Http::response($this->email, $this->email['http_status'] ?? 200);
             },
@@ -99,6 +103,27 @@ class LeadCorrespondenceTest extends TestCase
         DB::table('guests')->where('id', $guest)->update(['email' => 'changed@example.test', 'mobile' => null]);
         $this->assertNull($this->badges($lead));
         Http::assertSentCount(6);
+    }
+
+    public function test_a_confirmed_message_fills_an_empty_lead_value_once_in_its_original_currency(): void
+    {
+        $lead = $this->lead();
+        $this->email['threads'][0]['message_id'] = (string) \Illuminate\Support\Str::uuid();
+        $this->body = "Bonjour\nTotal TTC : 1 250,50 €\nCordialement";
+        app(LeadCorrespondenceSync::class)->run();
+        $this->assertDatabaseHas('inquiries', ['id' => $lead, 'total_value' => '1250.50', 'currency' => 'EUR']);
+        DB::table('inquiries')->where('id', $lead)->update(['total_value' => null]);
+        $this->travel(6)->minutes();
+        app(LeadCorrespondenceSync::class)->run();
+        $this->assertNull(DB::table('inquiries')->where('id', $lead)->value('total_value'));
+    }
+
+    public function test_ambiguous_prices_cannot_become_an_order_value(): void
+    {
+        $this->assertSame(['total_value' => '62.50', 'currency' => 'GBP'], \App\Services\Crm\LeadMessageValue::total('Order total: 25 × GBP 2.50'));
+        foreach (['Each card: £5', 'Total: $100', "Total: €100\nTotal: £90", 'Total: EUR 50 per card', 'Total: €100–200', 'Total: EUR 1.245'] as $ambiguous) {
+            $this->assertNull(\App\Services\Crm\LeadMessageValue::total($ambiguous));
+        }
     }
 
     public function test_paging_transient_failures_and_lost_matches_do_not_clear_or_leak_reply_state(): void

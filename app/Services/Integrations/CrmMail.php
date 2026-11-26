@@ -7,6 +7,8 @@ use App\Models\Guest;
 use App\Models\User;
 use App\Services\Appointments\VenueClock;
 use App\Services\Crm\CrmBrands;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -17,6 +19,7 @@ class CrmMail
 {
     public const ORGANIZATION = 19;
     public const BRAND = 23;
+    private const ENDPOINT = 'https://contacts.hexa-tech.uk/api/integrations/crm-mail/';
     private const HEADER_PAGES = 4;
     private const BODY_LIMIT = 12;
 
@@ -54,7 +57,7 @@ class CrmMail
         }
         try {
             $response = Http::withToken($token)->acceptJson()->connectTimeout(5)->timeout($timeout)->withoutRedirecting()
-                ->post('https://contacts.hexa-tech.uk/api/integrations/crm-mail/'.$guest->id, [...$input, 'email' => $email]);
+                ->post(self::ENDPOINT.$guest->id, [...$input, 'email' => $email]);
         } catch (Throwable) {
             abort(502, 'mail_unavailable');
         }
@@ -127,28 +130,34 @@ class CrmMail
             ->concat($sameThread->take(-1))->concat($inbound->take(4))->concat($rows)->unique('id')->take(self::BODY_LIMIT);
         $messages = [];
         $missing = false;
-        foreach ($selected as $row) {
+        foreach ($selected->chunk(4) as $batch) {
             $remaining = (int) floor($deadline - microtime(true));
             if ($remaining < 1) {
                 $missing = true;
                 break;
             }
-            try {
-                $content = $this->read($guest, ['action' => 'content', 'message_id' => $row['id']], min(7, $remaining));
-                if (($content['code'] ?? null) === 'crm_contact_review_required') {
+            // The bridge rechecks the guest and message on every request.
+            $responses = Http::pool(function (Pool $pool) use ($batch, $guest, $email, $remaining) {
+                foreach ($batch as $row) {
+                    $pool->as($row['id'])->withToken((string) config('crm_mail.token'))->acceptJson()
+                        ->connectTimeout(min(5, $remaining))->timeout(min(7, $remaining))->withoutRedirecting()
+                        ->post(self::ENDPOINT.$guest->id, ['action' => 'content', 'message_id' => $row['id'], 'email' => $email]);
+                }
+            }, 4);
+            foreach ($batch as $row) {
+                $response = $responses[$row['id']] ?? null;
+                if ($response instanceof Response && ($response->status() === 409 || $response->json('code') === 'crm_contact_review_required')) {
                     return ['state' => 'review_required', 'messages' => [], 'reply_to' => null];
                 }
-                $body = $content['body'] ?? null;
-            } catch (HttpExceptionInterface) {
-                $body = null;
+                $body = $response instanceof Response && $response->successful() ? $response->json('body') : null;
+                $missing = $missing || ! is_string($body) || trim($body) === '';
+                $messages[$row['id']] = [
+                    'direction' => $this->senderMatches($row, $email) ? 'from_customer' : 'other',
+                    'subject' => mb_substr((string) ($row['subject'] ?? ''), 0, 300),
+                    'sent_at' => $row['sent_at'] ?? null,
+                    'body' => is_string($body) ? mb_substr(trim($body), 0, 6000) : '',
+                ];
             }
-            $missing = $missing || ! is_string($body) || trim($body) === '';
-            $messages[$row['id']] = [
-                'direction' => $this->senderMatches($row, $email) ? 'from_customer' : 'other',
-                'subject' => mb_substr((string) ($row['subject'] ?? ''), 0, 300),
-                'sent_at' => $row['sent_at'] ?? null,
-                'body' => is_string($body) ? mb_substr(trim($body), 0, 6000) : '',
-            ];
         }
 
         return [

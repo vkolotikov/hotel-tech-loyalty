@@ -350,7 +350,7 @@ to open the channel. Email history marks the latest message of each thread. Open
 The scheduler runs `crm:sync-lead-correspondence` every minute and checks up to 12 due contacts per run. A full pass
 depends on the number of contacts and provider availability. Each contact's Zoho cursor resumes older pages in the
 background. The CRM keeps reply metadata and hashed contact identifiers. Message content stays in the existing channel
-history. Zoho's Sent folder confirms outgoing email, including mail sent from a connected email app. A shared contact
+history. Zoho's Sent folder or a successful delivery recorded by Zoho confirms outgoing email, including a reply moved to a project folder. A shared contact
 needs an exclusive, logged project subject to put an email badge on an opportunity. WhatsApp matching uses the reviewed
 contact and business number. Staff can review uncertain matches in Contacts DB.
 
@@ -416,7 +416,7 @@ The assistant separates each captured email's current text from its quoted histo
 For a complex enquiry the independent reviewer also sees the recent, dated exchange. Optional wording suggestions alone do not trigger a rewrite. A revised complex draft with changed wording must clear the reviewer before staff can use it. Without a staff-reviewed quote, an unverified amount can receive one correction within the existing rewrite allowance. The final amount check still applies. A conflict with a reviewed quote requires staff attention.
 
 Under **AI assistant**, choose **Response email** to answer a customer, **Proposal email** to make an offer, or
-**Follow-up** to check whether another email would help. All three use GPT-6.2 Astra with high reasoning.
+**Follow-up** to check whether another email would help. All three draft with GPT-6.2 Sol at high reasoning in Fast mode. GPT-6.2 Astra plans multi-part enquiries, reviews commercial claims and writes sales and marketing strategies. Customer Discovery uses Sol with web search. Mail bodies load four at a time under the existing guest and message access checks.
 The full admin's **Draft proposal** uses the same writer. A reply normally takes 35–90 words, a proposal 70–150
 and a follow-up 40–100. A simple confirmation may take one sentence. A customer
 asking for more detail can get a longer answer. Type a language or focus in the optional instruction to override

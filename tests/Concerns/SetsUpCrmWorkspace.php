@@ -394,6 +394,9 @@ trait SetsUpCrmWorkspace
                 $t->string('status', 32)->nullable();
                 $t->string('source', 64)->nullable();
                 $t->decimal('total_value', 12, 2)->nullable();
+                $t->decimal('rate_offered', 12, 2)->nullable();
+                $t->decimal('paid_amount', 12, 2)->nullable();
+                $t->string('currency', 3)->nullable();
                 $t->unsignedBigInteger('assigned_to')->nullable();
                 $t->string('next_task_type', 32)->nullable();
                 $t->date('next_task_due')->nullable();

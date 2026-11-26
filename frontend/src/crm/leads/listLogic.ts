@@ -300,6 +300,7 @@ export function draftFromCapture(answer: CaptureAnswer | null | undefined, opts:
     country: text(d.country),
     owner: opts.owner,
     value: value !== null && value >= 0 ? String(value) : '',
+    currency: /^[A-Z]{3}$/.test(text(d.currency)) ? text(d.currency) : undefined,
     priority: pick(text(d.priority), opts.priorities, false),
     source: pick(text(d.source), [...SYSTEM_SOURCES, ...opts.sources], true),
     type: pick(text(d.inquiry_type), opts.types, opts.types.length > 0),

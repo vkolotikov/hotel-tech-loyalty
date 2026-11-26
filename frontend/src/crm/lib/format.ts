@@ -51,6 +51,17 @@ export function money(amount: number | string | null | undefined, currency: stri
   }
 }
 
+/** Keep original currencies separate when an opportunity list spans markets. */
+export function moneyTotals(rows: readonly { amount: number | string | null; currency?: string | null }[], fallback: string, lang: string): string {
+  const totals = new Map<string, number>()
+  for (const row of rows) {
+    if (row.amount == null) continue
+    const code = row.currency || fallback
+    totals.set(code, (totals.get(code) ?? 0) + Math.round(Number(row.amount) * 100))
+  }
+  return [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, cents]) => money(cents / 100, code, lang)).join(' + ') || money(0, fallback, lang)
+}
+
 /** A plain count in the person's language: "1 250". */
 export function count(n: number, lang: string): string {
   return new Intl.NumberFormat(lang).format(n)

@@ -1,4 +1,5 @@
 {
+  "currency": "Moneda",
   "needs_reply": "Necesita respuesta",
   "awaiting_customer": "Esperando al cliente",
   "nav_summary": "Resumen",
