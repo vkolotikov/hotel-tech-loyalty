@@ -52,6 +52,8 @@ final class LeadAssistantContext
                 $whatsapp = $this->whatsapp->assistantHistory($guest);
             }
         }
+        $capturedEmails = count($email['messages']);
+        $email['messages'] = AssistantEmailText::messages($email['messages']);
         $reviewed = $draft ? $strategies : [];
         $previous = $draft && $guest ? $this->previousEmails($lead, $brand) : [];
         $correspondence = $draft ? CustomerCorrespondence::forDraft($email['messages'], $whatsapp['messages'], $chat, $activities, $multiple ? [] : $previous) : [];
@@ -121,7 +123,7 @@ final class LeadAssistantContext
                 'emails' => count($email['messages']),
                 'whatsapp' => count($whatsapp['messages']),
                 'whatsapp_state' => $whatsapp['state'],
-                'history_limited' => $whatsapp['has_more'] || ($email['total'] ?? 0) > count($email['messages']),
+                'history_limited' => $whatsapp['has_more'] || ($email['total'] ?? 0) > $capturedEmails,
                 'other_logged_emails' => count($previous),
                 'writing_samples' => count($correspondence['customer_writing_samples'] ?? []),
                 'discovery_fields' => count($research),

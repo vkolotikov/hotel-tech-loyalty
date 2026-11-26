@@ -17,6 +17,8 @@ final class LeadAssistantWriter
 
     private const COLD_RISKS = ['low', 'medium', 'high'];
 
+    private const PRICE_CORRECTION = 'The amount or tax basis could not be verified for this project. Use only applicable approved figures. If none apply, give the supported scope or feasibility response without an amount and identify what is needed for a quote.';
+
     public function __construct(private LeadAssistantContext $context, private AiUsageService $usage) {}
 
     public function generate(Inquiry $lead, Brand $brand, Organization $org, User $user, array $run, array $strategies, string $feature = 'crm_sales_assistant'): array
@@ -52,6 +54,11 @@ final class LeadAssistantWriter
 
         $ask = function (string $instructions, array $payload, array $schema, string $name, string $effort, int $tokens, int $timeout) use ($org, $user, $brand, $model, $feature) {
             LeadAssistant::checkAvailability($org);
+            array_walk_recursive($payload, static function (&$value) {
+                if (is_string($value)) {
+                    $value = AssistantEmailText::redact($value);
+                }
+            });
             $response = Http::acceptJson()->withToken((string) config('openai.api_key'))->connectTimeout(6)->timeout($timeout)->withoutRedirecting()
                 ->post('https://api.openai.com/v1/responses', [
                     'model' => $model, 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
@@ -95,8 +102,11 @@ final class LeadAssistantWriter
         $write = fn (array $context, bool $retry = false) => $this->request($ask, $mode, $email, $run['language'], $run['focus'] ?? '', $context, $retry);
         $raw = $write($input);
         $result = $this->result($raw, $mode, $email);
-        if ($email && ! isset($knowledge) && $result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
-            $raw = $write($input + ['corrections' => ['Resolve the material commercial issues in the first draft.'],
+        // A conflict with a staff-reviewed quote must still go straight back to staff.
+        $priceIssue = $email && $result['decision'] === 'draft' && $input['project_evidence']['approved_quote'] === null
+            && $this->pricedDraft($result, $input) === null;
+        if ($email && ! isset($knowledge) && $result['decision'] === 'draft' && ($priceIssue || ($raw['commercially_ready'] ?? true) === false)) {
+            $raw = $write($input + ['corrections' => [$priceIssue ? self::PRICE_CORRECTION : 'Resolve the material commercial issues in the first draft.'],
                 'candidate_to_correct' => $result['body']], true);
             $result = $this->result($raw, $mode, true);
             if ($result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
@@ -104,7 +114,7 @@ final class LeadAssistantWriter
             }
         }
         if (isset($knowledge) && $result['decision'] === 'draft') {
-            $firstBody = $result['body'];
+            $firstDraft = [$result['subject'], $result['body']];
             $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
             $review = function (array $candidate, array $prior = []) use (&$input, $ask, $run, $snapshot) {
                 return $ask(CommercialEmailCheck::REVIEW, [
@@ -112,6 +122,9 @@ final class LeadAssistantWriter
                     'draft' => ['subject' => $candidate['subject'], 'body' => $candidate['body']], 'knowledge' => $input['brand_knowledge'],
                     'previous_objections' => $prior,
                     'reviewed_profile' => $input['reviewed_profile_evidence'], 'project_evidence' => $input['project_evidence'],
+                    'recent_emails' => array_map(fn ($row) => ['direction' => $row['direction'], 'at' => $row['sent_at'],
+                        'subject' => $row['subject'], 'body' => mb_substr($row['body'], 0, 1500)],
+                        array_slice($input['conversation']['recent_matched_emails'], 0, 6)),
                     'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
                     'lead_requests' => $input['lead']['requests'],
                 ], EmailQuestionPlan::object(['issues' => ['type' => 'array', 'items' => ['type' => 'string']],
@@ -121,18 +134,22 @@ final class LeadAssistantWriter
             $editor = $review($result);
             $objections = array_slice($editor['issues'], 0, 4);
             $issues = array_merge($check['issues'], $objections);
+            if ($priceIssue) {
+                $issues[] = self::PRICE_CORRECTION;
+            }
             $suggestions = array_slice($editor['suggestions'] ?? [], 0, 2);
             $knowledge = $this->context->resolveKnowledgeGaps($brand, $knowledge, $check['answers'], $objections);
             $newSources = count($knowledge['answers']) + count($knowledge['documents'])
                 > count($input['brand_knowledge']['answers']) + count($input['brand_knowledge']['documents']);
             $input['brand_knowledge'] = $knowledge;
-            if (($issues || $newSources || $suggestions) && microtime(true) - $started < 285) {
+            if (($issues || $newSources) && microtime(true) - $started < 285) {
                 $raw = $write($input + ['corrections' => $issues, 'editor_suggestions' => $suggestions, 'candidate_to_correct' => $result['body']], true);
                 $result = $this->result($raw, $mode, true);
                 if ($result['decision'] === 'draft') {
                     $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
-                    if (($objections || $newSources) && $result['body'] !== $firstBody && ! $check['issues'] && microtime(true) - $started < 416) {
-                        $objections = $review($result, $objections)['issues'];
+                    if ([$result['subject'], $result['body']] !== $firstDraft && ! $check['issues']) {
+                        $objections = microtime(true) - $started < 416 ? $review($result, $objections)['issues']
+                            : [LeadEmailEvidence::hold('commercial_review', $run['language'])['reason']];
                     }
                     $issues = array_merge($check['issues'], $objections);
                 }
@@ -144,11 +161,7 @@ final class LeadAssistantWriter
             }
         }
         if ($email && $result['decision'] === 'draft') {
-            $quote = $input['project_evidence']['approved_quote'];
-            $subject = LeadQuote::fillAmounts($result['subject'], $quote, $result['email_language']);
-            $body = LeadQuote::fillAmounts($result['body'], $quote, $result['email_language']);
-            $result = $subject === null || $body === null || ! EmailPriceCheck::supported($result['subject']."\n".$result['body'], $input)
-                ? LeadEmailEvidence::hold('unverified_price', $run['language']) : [...$result, 'subject' => $subject, 'body' => $body];
+            $result = $this->pricedDraft($result, $input) ?? LeadEmailEvidence::hold('unverified_price', $run['language']);
         }
 
         if (isset($knowledge)) {
@@ -164,6 +177,16 @@ final class LeadAssistantWriter
         }
 
         return [...$result, ...$meta];
+    }
+
+    private function pricedDraft(array $result, array $input): ?array
+    {
+        $quote = $input['project_evidence']['approved_quote'];
+        $subject = LeadQuote::fillAmounts($result['subject'], $quote, $result['email_language']);
+        $body = LeadQuote::fillAmounts($result['body'], $quote, $result['email_language']);
+
+        return $subject !== null && $body !== null && EmailPriceCheck::supported($subject."\n".$body, $input)
+            ? [...$result, 'subject' => $subject, 'body' => $body] : null;
     }
 
     private function request(\Closure $ask, string $mode, bool $email, string $language, string $focus, array $context, bool $retry): array

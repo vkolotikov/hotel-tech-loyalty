@@ -307,6 +307,35 @@ class LeadAssistantTest extends TestCase
         $this->assertSame(['Friday please.', 'Already approved the matte finish.'], array_column($input['conversation']['customer_writing_samples'], 'words'));
     }
 
+    public function test_a_failed_amount_check_can_recover_a_useful_scope_reply_and_still_blocks_an_unverified_retry(): void
+    {
+        $lead = $this->lead(['notes' => "Customer wants a feasibility check before a quote.\nPassword: sample-test-private"]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $recover = true;
+        $writes = 0;
+        Http::fake(['api.openai.com/v1/responses' => function (Request $request) use (&$recover, &$writes) {
+            $writes++;
+            $this->assertStringNotContainsString('sample-test-private', $request['input']);
+            $input = json_decode($request['input'], true);
+            if ($writes % 2 === 0) {
+                $this->assertStringContainsString('could not be verified', $input['corrections'][0]);
+            }
+            $body = $recover && isset($input['corrections']) ? 'We can review the specified finish for your quote.' : 'Your total is USD 9837.';
+
+            return Http::response($this->providerOutput(['decision' => 'draft', 'subject' => 'Finish options',
+                'body' => $body, 'review_notes' => [], 'email_language' => 'en', 'commercially_ready' => true]));
+        }]);
+        $this->asManager()->postJson($path, ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.proposal.body', 'We can review the specified finish for your quote.');
+        $recover = false;
+        $this->postJson($path, ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
+        $this->assertSame(4, $writes);
+        Mail::assertNothingSent();
+    }
+
     public function test_provider_usage_is_recorded_for_an_incomplete_paid_email_generation(): void
     {
         $lead = $this->lead();
@@ -611,7 +640,9 @@ class LeadAssistantTest extends TestCase
                     'partner_purchase' => true, 'questions' => $questions];
             } elseif ($format === 'crm_email_commercial_review') {
                 $reviews++;
-                $data = ['issues' => $bad ? ['The draft diverts the customer to an unnecessary integration.'] : []];
+                $this->assertArrayHasKey('recent_emails', $ctx);
+                $data = ['issues' => $bad ? ['The draft diverts the customer to an unnecessary integration.'] : [],
+                    'suggestions' => ['An optional greeting change.']];
             } else {
                 $writes++;
                 $captured = $ctx;

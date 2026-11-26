@@ -18,7 +18,7 @@ final class CustomerCorrespondence
         ] as $channel => $rows) {
             $count = 0;
             foreach ($rows as $row) {
-                $body = $channel === 'email' ? self::ownWords($row['body']) : trim($row['body']);
+                $body = trim($row['body']);
                 if ($body === '') {
                     continue;
                 }
@@ -37,7 +37,7 @@ final class CustomerCorrespondence
 
         if ($latest = $incoming->first()) {
             $target = ['channel' => 'email', 'at' => $latest['sent_at'], 'subject' => $latest['subject'],
-                'body' => self::ownWords($latest['body'])];
+                'body' => $latest['body']];
         } else {
             // A CRM activity may be a staff paraphrase. It can identify the request, never the customer's voice.
             $logged = collect($activities)->concat(collect($previous)->where('scope', 'contact'))
@@ -51,14 +51,5 @@ final class CustomerCorrespondence
         }
 
         return ['reply_target' => $target, 'customer_writing_samples' => $samples];
-    }
-
-    private static function ownWords(string $body): string
-    {
-        // Leave the captured body available as history. Only the author's new lines are evidence of their style.
-        $body = str_replace(["\r\n", "\r"], "\n", $body);
-        $parts = preg_split('/^(?:[ \t]*[-_]{2,}[ \t]*(?:(?:original message|forwarded message|message d.origine|ursprüngliche nachricht)[ \t]*[-_]+)?[ \t]*$|[ \t]*(?:On .+ wrote|Am .+ schrieb .+|Le .+ a écrit|El .+ escribió)\s*:|[ \t]*(?:From|Von|De|От):[^\n]*\n[ \t]*(?:Sent|Date|Gesendet|Envoyé|Enviado|Отправлено):)/imu', $body, 2);
-
-        return trim(preg_replace('/^[ \t]*>[^\n]*(?:\n|$)/m', '', $parts[0] ?? ''));
     }
 }

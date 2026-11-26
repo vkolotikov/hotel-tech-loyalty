@@ -407,6 +407,10 @@ review.
 
 ### Customer email drafts
 
+The assistant separates each captured email's current text from its quoted history. Exact duplicate copies and conventional footers are removed from drafting context. Quoted text missing from the captured originals stays available as background. The email reader retains the original correspondence. Labelled credentials and token-bearing query parameters are masked before the assistant sends text to its provider.
+
+For a complex enquiry the independent reviewer also sees the recent, dated exchange. Optional wording suggestions alone do not trigger a rewrite. A revised complex draft with changed wording must clear the reviewer before staff can use it. Without a staff-reviewed quote, an unverified amount can receive one correction within the existing rewrite allowance. The final amount check still applies. A conflict with a reviewed quote requires staff attention.
+
 Under **AI assistant**, choose **Response email** to answer a customer, **Proposal email** to make an offer, or
 **Follow-up** to check whether another email would help. All three use GPT-6.2 Astra with high reasoning.
 The full admin's **Draft proposal** uses the same writer. A reply normally takes 35–90 words, a proposal 70–150

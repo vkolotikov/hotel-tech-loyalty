@@ -1,0 +1,7 @@
+# Handoff — 26 November 2026
+
+## CRM email quality review
+
+The production draft review exposed quoted threads and signatures being read as fresh requests, repeated email copies, and a price hold after a buyer expressly invited a feasibility response. The CRM assistant now prepares the captured correspondence before retrieval, masks labelled access details in provider inputs, and gives the independent commercial reviewer recent correspondence. A pricing correction shares the existing retry allowance. Each final figure must still pass the commercial checks.
+
+The CRM runbook describes the [email workflow](../crm-workspace.md#customer-email-drafts). Regression coverage is in `LeadAssistantTest` and `AssistantEmailTextTest`. The customer-level audit and draft examples are held outside Git. For the automatic capture setup, queues, release procedure and other operational context, see the [25 November handoff](2026-11-25-hexatech-handoff.md).
