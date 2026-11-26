@@ -121,7 +121,7 @@ class LeadCorrespondenceTest extends TestCase
     public function test_ambiguous_prices_cannot_become_an_order_value(): void
     {
         $this->assertSame(['total_value' => '62.50', 'currency' => 'GBP'], \App\Services\Crm\LeadMessageValue::total('Order total: 25 × GBP 2.50'));
-        foreach (['Each card: £5', 'Total: $100', "Total: €100\nTotal: £90", 'Total: EUR 50 per card', 'Total: €100–200', 'Total: EUR 1.245'] as $ambiguous) {
+        foreach (['Total: EUR 0', 'Each card: £5', 'Total: $100', "Total: €100\nTotal: £90", 'Total: EUR 50 per card', 'Total: €100–200', 'Total: EUR 1.245'] as $ambiguous) {
             $this->assertNull(\App\Services\Crm\LeadMessageValue::total($ambiguous));
         }
     }

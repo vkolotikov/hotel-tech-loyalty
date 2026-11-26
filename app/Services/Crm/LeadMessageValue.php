@@ -89,7 +89,7 @@ final class LeadMessageValue
             return null;
         }
         $currency = strtoupper($m['before'] ?: $m['after']);
-        $number = str_replace(' ', '', $m['first'] ?: $m['second']);
+        $number = str_replace(' ', '', $m['first'] !== '' ? $m['first'] : $m['second']);
         if (preg_match('/[.,]\d{3}$/D', $number) || preg_match('/([.,])\d{3}\1/', $number)) {
             return null;
         }
