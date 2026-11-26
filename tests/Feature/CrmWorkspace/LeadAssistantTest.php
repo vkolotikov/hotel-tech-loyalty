@@ -678,6 +678,28 @@ class LeadAssistantTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_sample_prices_rank_for_the_requested_deliverable_and_only_the_buyers_actual_fallback_counts(): void
+    {
+        $rows = ['Standard swatch sample' => 'Stock swatch sample, EUR 5.',
+            'Assembled enclosure sample' => 'The assembled enclosure proof needs an individual quote.'];
+        $ids = [];
+        foreach ($rows as $title => $answer) {
+            $ids[] = 'faq-'.DB::table('knowledge_items')->insertGetId(['organization_id' => $this->org->id,
+                'brand_id' => $this->brandId, 'question' => $title, 'answer' => $answer, 'is_active' => true]);
+        }
+        $request = 'Please price the assembled enclosure sample. A feasibility answer is enough for now.';
+        $input = ['accepted_fallback' => 'A feasibility answer is enough for now.', 'questions' => [
+            ['need' => 'What is the prototype charge?', 'scope' => 'samples', 'search' => 'sample',
+                'alternate' => 'sample', 'price_subject' => 'assembled enclosure'],
+        ]];
+        $plan = \App\Services\Crm\EmailQuestionPlan::from($input, $request);
+        $brand = \App\Models\Brand::findOrFail($this->brandId);
+        $knowledge = app(\App\Services\KnowledgeService::class)->forSalesQuestions($brand, $plan);
+        $this->assertSame($input['accepted_fallback'], $knowledge['plan']['accepted_fallback']);
+        $this->assertSame($ids[1], $knowledge['plan']['questions'][0]['matches'][0]['id']);
+        $this->assertSame('', \App\Services\Crm\EmailQuestionPlan::from($input, 'Please quote the whole order.')['accepted_fallback']);
+    }
+
     public function test_a_referral_percentage_does_not_authorise_a_reseller_discount(): void
     {
         $context = ['brand_knowledge' => ['answers' => [

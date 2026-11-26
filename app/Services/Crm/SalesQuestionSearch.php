@@ -20,8 +20,8 @@ final class SalesQuestionSearch
         $queries = [];
         $ranked = [];
         foreach ($plan['questions'] as $q) {
-            foreach (['search', 'alternate'] as $pass) {
-                $terms = $q[$pass];
+            foreach (['search', 'alternate', 'price_subject'] as $pass) {
+                $terms = $q[$pass] ?? '';
                 preg_match_all('/\b(?:qr|us|uk|eu|[\pL]+\d[\pL\d.-]*|[\pL]+[-.][\pL\d.-]*\d[\pL\d.-]*)\b/iu', $terms, $special);
                 $queries[$q['id']][$pass] = array_slice(array_unique([...array_map('mb_strtolower', $special[0]), ...$tokenise($terms)]), 0, 18);
             }
@@ -62,14 +62,19 @@ final class SalesQuestionSearch
                 if ($plan['partner_purchase'] && $q['scope'] !== 'retail' && in_array($source['kind'], ['public_catalog', 'retail_price_list'], true)) {
                     continue;
                 }
-                foreach ($queries[$q['id']] as $pass => $words) {
+                $subject = $queries[$q['id']]['price_subject'];
+                $subjectMatch = array_intersect_key($weights, array_flip($subject));
+                foreach (['search', 'alternate'] as $pass) {
+                    $words = $queries[$q['id']][$pass];
                     $score = array_sum(array_intersect_key($weights, array_flip($words)));
                     if ($score <= 0) {
                         continue;
                     }
-                    if ($q['scope'] === 'samples' && preg_match('/\b(sample|swatch|échantillon|muster|muestra|образец)/iu', $source['title'].' '.$source['text'])) {
+                    if ($q['scope'] === 'samples' && (! $subject || $subjectMatch) && preg_match('/\b(sample|swatch|échantillon|muster|muestra|образец)/iu', $source['title'].' '.$source['text'])) {
                         $score *= 2;
                     }
+                    // A matching price subject helps rank a source. Only its actual terms can support a figure.
+                    $score += array_sum($subjectMatch);
                     $rows = $ranked[$q['id']][$pass] ?? [];
                     $rows[$source['id']] = ['score' => round($score, 2), 'source' => $source];
                     uasort($rows, fn ($a, $b) => $b['score'] <=> $a['score'] ?: strcmp($a['source']['id'], $b['source']['id']));

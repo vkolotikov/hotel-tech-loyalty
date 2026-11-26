@@ -407,6 +407,8 @@ review.
 
 ### Customer email drafts
 
+For a multi-part commercial enquiry, the search plan names the specific item or service behind each price question. Sample searches give matching deliverables more weight. A narrower answer the buyer explicitly accepts is carried into commercial review only when the quoted words occur in the current request. The reviewer checks whether a published charge actually covers that deliverable.
+
 The assistant separates each captured email's current text from its quoted history. Exact duplicate copies and conventional footers are removed from drafting context. Quoted text missing from the captured originals stays available as background. The email reader retains the original correspondence. Labelled credentials and token-bearing query parameters are masked before the assistant sends text to its provider.
 
 For a complex enquiry the independent reviewer also sees the recent, dated exchange. Optional wording suggestions alone do not trigger a rewrite. A revised complex draft with changed wording must clear the reviewer before staff can use it. Without a staff-reviewed quote, an unverified amount can receive one correction within the existing rewrite allowance. The final amount check still applies. A conflict with a reviewed quote requires staff attention.
