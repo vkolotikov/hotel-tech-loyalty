@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { get } from '../lib/api'
 import { brandParam } from '../lib/brand'
 
-export const MODES = ['brief', 'sales_strategy', 'marketing_strategy', 'proposal', 'reply', 'follow_up'] as const
+export const MODES = ['reply', 'proposal', 'follow_up', 'brief', 'sales_strategy', 'marketing_strategy'] as const
 export const SALES_FIELD = 'w-full rounded-xl border border-a-border bg-a-surface-2 px-3 py-2 text-sm text-a-text placeholder:text-a-text-2 focus-visible:outline-2 focus-visible:outline-a-accent'
 export type Mode = (typeof MODES)[number]
 export type Strategy = Extract<Mode, 'sales_strategy' | 'marketing_strategy'>
@@ -50,6 +50,7 @@ export type Result = {
   decision?: 'draft' | 'wait' | 'internal_action' | 'stop'
   reason?: string
   can_revise?: boolean
+  new_correspondence?: boolean
   intent?: string
   next_step?: string
   unanswered?: string[]
@@ -101,10 +102,10 @@ export function assistantKey(id: number) {
   return ['crm', 'lead-assistant', brandParam(), id] as const
 }
 
-export function useAssistant(id: number) {
+export function useAssistant(id: number, watching = false) {
   return useQuery({
     queryKey: assistantKey(id),
     queryFn: () => get<Assistant>(`crm/leads/${id}/assistant`),
-    refetchInterval: query => working(query.state.data?.run) ? 3000 : false,
+    refetchInterval: query => working(query.state.data?.run) ? 3000 : watching && query.state.data && Object.values(query.state.data.results).some(r => r.body && !r.new_correspondence) ? 60000 : false,
   })
 }

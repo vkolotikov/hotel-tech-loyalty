@@ -59,7 +59,7 @@ final class LeadAssistantController extends Controller
 
     private function state(Request $request, Inquiry $inquiry, Brand $brand, LeadAssistant $assistant): JsonResponse
     {
-        return response()->json([...$assistant->data($inquiry, $brand), 'can_review' => CrmAccess::isManager($request->user())], $request->isMethod('POST') ? 202 : 200)
+        return response()->json([...$assistant->data($inquiry, $brand, $request->user()), 'can_review' => CrmAccess::isManager($request->user())], $request->isMethod('POST') ? 202 : 200)
             ->header('Cache-Control', 'private, no-store');
     }
 }

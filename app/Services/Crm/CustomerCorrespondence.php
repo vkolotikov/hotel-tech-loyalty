@@ -35,21 +35,43 @@ final class CustomerCorrespondence
             }
         }
 
-        if ($latest = $incoming->first()) {
+        // An explicitly logged inbound message can update a captured email on this opportunity.
+        $logged = collect($activities)->concat(collect($previous)->where('scope', 'contact'))
+            ->filter(fn ($row) => $row['direction'] === 'inbound' && in_array($row['kind'], ['email', 'chat', 'call', 'meeting'], true)
+                && ($row['body'] !== '' || $row['subject'] !== ''))
+            ->reverse()->sortByDesc(fn ($row) => strtotime((string) $row['at']) ?: 0)->first();
+        if ($logged) {
+            $candidates['activity'] = ['channel' => 'activity', 'at' => $logged['at'], 'subject' => $logged['subject'], 'body' => $logged['body']];
+        }
+        $newest = collect($candidates)->sortByDesc(fn ($row) => strtotime((string) $row['at']) ?: 0)->first();
+        if ($latest = $incoming->firstWhere('reply_status', 'needs_reply') ?? $incoming->first()) {
             $target = ['channel' => 'email', 'at' => $latest['sent_at'], 'subject' => $latest['subject'],
                 'body' => $latest['body']];
         } else {
-            // A CRM activity may be a staff paraphrase. It can identify the request, never the customer's voice.
-            $logged = collect($activities)->concat(collect($previous)->where('scope', 'contact'))
-                ->filter(fn ($row) => $row['direction'] === 'inbound' && in_array($row['kind'], ['email', 'chat', 'call', 'meeting'], true)
-                    && ($row['body'] !== '' || $row['subject'] !== ''))
-                ->reverse()->sortByDesc(fn ($row) => strtotime((string) $row['at']) ?: 0)->first();
-            if ($logged) {
-                $candidates['activity'] = ['channel' => 'activity', 'at' => $logged['at'], 'subject' => $logged['subject'], 'body' => $logged['body']];
-            }
-            $target = collect($candidates)->sortByDesc(fn ($row) => strtotime((string) $row['at']) ?: 0)->first();
+            $target = $newest;
         }
 
-        return ['reply_target' => $target, 'customer_writing_samples' => $samples];
+        $update = $newest && $target && $newest['channel'] !== $target['channel']
+            && strtotime((string) $newest['at']) > strtotime((string) $target['at']) ? $newest : null;
+
+        return ['reply_target' => $target, 'latest_customer_update' => $update, 'customer_writing_samples' => $samples];
+    }
+
+    /** Dates actually supplied to this draft, by channel. Separate clocks keep a later email from hiding a new chat. */
+    public static function times(array $emails, array $whatsapp, array $chat, array $activities, array $previous = []): array
+    {
+        $logged = collect($activities)->concat(collect($previous)->where('scope', 'contact'))
+            ->whereIn('direction', ['inbound', 'outbound'])->whereIn('kind', ['email', 'chat', 'call', 'meeting']);
+        return array_filter([
+            'email' => self::latestTime(array_column($emails, 'sent_at')),
+            'whatsapp' => self::latestTime(array_column($whatsapp, 'sent_at')),
+            'chat' => self::latestTime(array_column($chat, 'at')),
+            'activity' => self::latestTime($logged->pluck('at')->all()),
+        ]);
+    }
+
+    private static function latestTime(array $dates): int
+    {
+        return max([0, ...array_map(fn ($date) => strtotime((string) $date) ?: 0, $dates)]);
     }
 }

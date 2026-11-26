@@ -121,6 +121,41 @@ class LeadCorrespondenceTest extends TestCase
         $this->assertNull(DB::table('inquiries')->where('id', $lead)->value('total_value'));
     }
 
+    public function test_only_explicit_unambiguous_incoming_details_fill_empty_configured_fields(): void
+    {
+        (require database_path('migrations/2026_05_10_130000_create_custom_fields.php'))->up();
+        if (! Schema::hasColumn('inquiries', 'inquiry_type')) {
+            Schema::table('inquiries', fn ($t) => $t->string('inquiry_type')->nullable());
+        }
+        if (! Schema::hasTable('crm_settings')) {
+            Schema::create('crm_settings', function ($t) {
+                $t->id(); $t->unsignedBigInteger('organization_id'); $t->string('key'); $t->json('value');
+            });
+        }
+        foreach ([['project_type', 'Product', 'multiselect'], ['order_quantity', 'Quantity', 'number'], ['project_deadline', 'Deadline', 'date']] as [$key, $label, $type]) {
+            DB::table('custom_fields')->insert(['organization_id' => $this->org->id, 'entity' => 'inquiry', 'key' => $key, 'label' => $label,
+                'type' => $type, 'is_active' => true, 'config' => json_encode(['options' => ['Metal cards']])]);
+        }
+        $lead = $this->lead(['inquiry_type' => null, 'total_value' => 45, 'custom_data' => json_encode(['order_quantity' => 50])]);
+        $this->email['threads'][0]['message_id'] = (string) str()->uuid();
+        $this->body = "Product: Metal cards\nQuantity: 75\nDeadline: 2026-12-12\nDeadline: 2026-12-15\nEnquiry type: Repeat order\n\nOn Tue, buyer wrote:\nProduct: Obsolete item";
+        app(LeadCorrespondenceSync::class)->run();
+        $row = Inquiry::findOrFail($lead);
+        $this->assertSame('Repeat order', $row->inquiry_type);
+        $this->assertSame(50, $row->custom_data['order_quantity']);
+        $this->assertSame(['Metal cards'], $row->custom_data['project_type']);
+        $this->assertArrayNotHasKey('project_deadline', $row->custom_data);
+        $this->body = "Deadline: 2026-12-12\nProduct: Metal cards";
+        $this->email['threads'][0] = [...$this->thread('Artwork', 'outbound'), 'message_id' => (string) str()->uuid()];
+        $this->travel(6)->minutes();
+        app(LeadCorrespondenceSync::class)->run();
+        $this->assertArrayNotHasKey('project_deadline', $row->fresh()->custom_data);
+        $this->email['threads'][0] = [...$this->thread('Artwork', 'inbound'), 'message_id' => (string) str()->uuid()];
+        $this->travel(6)->minutes();
+        app(LeadCorrespondenceSync::class)->run();
+        $this->assertSame('2026-12-12', $row->fresh()->custom_data['project_deadline']);
+    }
+
     public function test_ambiguous_prices_cannot_become_an_order_value(): void
     {
         $this->assertSame(['total_value' => '62.50', 'currency' => 'GBP'], \App\Services\Crm\LeadMessageValue::total('Order total: 25 × GBP 2.50'));

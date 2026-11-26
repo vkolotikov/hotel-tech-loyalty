@@ -282,7 +282,8 @@ class KnowledgeService
             if ($length > $remaining) {
                 continue;
             }
-            $answers[] = ['question' => $question, 'answer' => $answer];
+            $answers[] = ['id' => 'faq-'.$item->id, 'kind' => str_starts_with((string) $item->source_key, FdsBuilderKnowledge::PREFIX)
+                ? 'public_catalog' : 'active_brand_answer', 'question' => $question, 'answer' => $answer];
             $remaining -= $length;
         }
 
@@ -341,13 +342,14 @@ class KnowledgeService
                 }
             }
             if ($score > 0) {
-                $best[] = ['score' => $score, 'title' => $doc->file_name, 'excerpt' => trim($excerpt)];
+                $best[] = ['score' => $score, 'id' => 'doc-'.$doc->id, 'kind' => 'brand_document',
+                    'title' => $doc->file_name, 'excerpt' => trim($excerpt)];
                 usort($best, fn ($a, $b) => $b['score'] <=> $a['score']);
                 $best = array_slice($best, 0, 4);
             }
         }
 
-        return array_map(fn ($row) => ['title' => $row['title'], 'excerpt' => $row['excerpt']], $best);
+        return array_map(fn ($row) => array_diff_key($row, ['score' => true]), $best);
     }
 
     /**

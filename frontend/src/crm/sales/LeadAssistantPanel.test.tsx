@@ -22,7 +22,7 @@ function render(coverage: Coverage, decision: 'draft' | 'internal_action' = 'dra
   client.setQueryData<Assistant>(assistantKey(41), {
     brand: { id: 1, name: 'Studio' }, revision: 1, strategies: {}, run: null,
     results: { reply: { id: 'reply', generated_at: '2026-11-24T10:00:00Z', subject: 'Proof', body: 'Friday works.',
-      review_notes: ['Verify the finish internally.'], decision, reason: 'Engineering owes an answer.', coverage } },
+      review_notes: ['Verify the finish internally.', 'Check the date.', 'Confirm the sample.', 'Fourth note.'], new_correspondence: true, decision, reason: 'Engineering owes an answer.', coverage } },
   })
   function Panel() {
     return <LeadAssistantPanel leadId={41} recipient="buyer@example.org" mode="reply" query={useAssistant(41)}
@@ -36,6 +36,10 @@ describe('response email sources', () => {
     const html = render(original)
     expect(html).toContain('Prototype timing')
     expect(html).toContain('Verify the finish internally.')
+    expect(html).toContain('crm.sales.email.new_correspondence')
+    expect(html).not.toContain('Fourth note.')
+    expect(html.indexOf('crm.sales.email.body')).toBeLessThan(html.indexOf('crm.sales.email.recommendations'))
+    expect(html).toMatch(/<details[^>]*><summary[^>]*>crm.sales.context.title<\/summary>/)
     for (const action of ['comment', 'revise', 'fresh']) expect(html).toContain(`inquiryDetail.proposal.${action}`)
     expect(html.match(/href="mailto:[^"]+"/)?.[0]).toBe('href="mailto:buyer@example.org?subject=Proof&amp;body=Friday%20works."')
     expect(html).not.toContain('crm.sales.context.history_limited')

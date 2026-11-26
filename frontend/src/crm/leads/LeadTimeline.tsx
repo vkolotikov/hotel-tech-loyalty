@@ -35,7 +35,7 @@ const ICON: Record<string, typeof StickyNote> = {
  * (`POST …/log-contact`), then the timeline (`GET inquiries/{id}/activities`, newest first, filtered by kind as the
  * full admin's lead page filters it).
  */
-export function LeadTimeline({ lead, seed }: { lead: LeadDetail; seed: ComposerSeed | null }) {
+export function LeadTimeline({ lead, seed, onEmails }: { lead: LeadDetail; seed: ComposerSeed | null; onEmails: () => void }) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const lang = i18n.language
@@ -43,6 +43,7 @@ export function LeadTimeline({ lead, seed }: { lead: LeadDetail; seed: ComposerS
   const [kind, setKind] = useState<TimelineKind>('')
   const activities = useLeadActivities(lead.id, kind, page)
   const rows = activities.data?.data ?? []
+  const syncedEmail = (!kind || kind === 'email') && lead.latest_correspondence?.email
 
   return (
     <section aria-label={t('crm.leads.timeline', 'Timeline')}>
@@ -52,7 +53,10 @@ export function LeadTimeline({ lead, seed }: { lead: LeadDetail; seed: ComposerS
         <Tabs label={t('crm.leads.timeline_filter', 'Show')} value={kind} onChange={next => { setKind(next); setPage(1) }}
           items={TIMELINE_KINDS.map(k => ({ key: k, label: timelineKindLabel(t, k) }))} />
         <QueryState loading={activities.isLoading} error={activities.error} onRetry={() => { void activities.refetch() }} rows={3}>
-          {rows.length === 0 ? (
+          {syncedEmail && <button type="button" onClick={onEmails} className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-xl border border-a-border px-3 py-2 text-left text-sm text-a-accent-text hover:bg-a-surface-2">
+            <Mail size={16} aria-hidden />{t('crm.sales.email.synced_mail')} · {dateTime(syncedEmail.at, lang, boot.venue.timezone)}
+          </button>}
+          {rows.length === 0 && !syncedEmail ? (
             <p className="py-4 text-center text-sm text-a-text-2">{kind ? t('crm.leads.timeline_none_kind', 'Nothing of this kind yet.') : t('crm.leads.timeline_empty_short', 'Nothing yet.')}</p>
           ) : (
             <ol className="space-y-4 border-l border-a-border pl-5">

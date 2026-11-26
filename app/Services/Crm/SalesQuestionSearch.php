@@ -78,7 +78,7 @@ final class SalesQuestionSearch
                     $rows = $ranked[$q['id']][$pass] ?? [];
                     $rows[$source['id']] = ['score' => round($score, 2), 'source' => $source];
                     uasort($rows, fn ($a, $b) => $b['score'] <=> $a['score'] ?: strcmp($a['source']['id'], $b['source']['id']));
-                    $ranked[$q['id']][$pass] = array_slice($rows, 0, 6, true);
+                    $ranked[$q['id']][$pass] = array_slice($rows, 0, 10, true);
                 }
             }
         }
@@ -97,11 +97,24 @@ final class SalesQuestionSearch
                 }
             }
             uasort($merged, fn ($a, $b) => $b['score'] <=> $a['score']);
-            $choices[$q['id']] = array_values(array_slice($merged, 0, 4));
+            // Multiple tariffs for the same product can displace the actual policy or technical passage.
+            // Keep competing rates for a price question and one catalogue example for other needs.
+            $best = reset($merged)['score'] ?? 0;
+            $catalogues = 0;
+            $choices[$q['id']] = [];
+            foreach ($merged as $hit) {
+                if ($hit['score'] < $best * 0.45 || count($choices[$q['id']]) === 3) {
+                    break;
+                }
+                if ($hit['source']['kind'] === 'public_catalog' && $q['scope'] !== 'retail' && ++$catalogues > 1) {
+                    continue;
+                }
+                $choices[$q['id']][] = $hit;
+            }
             $q['matches'] = [];
         }
         unset($q);
-        for ($place = 0; $place < 4; $place++) {
+        for ($place = 0; $place < 3; $place++) {
             foreach ($plan['questions'] as &$q) {
                 $hit = $choices[$q['id']][$place] ?? null;
                 if (! $hit) {

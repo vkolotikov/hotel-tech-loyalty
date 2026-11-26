@@ -8,6 +8,7 @@ use App\Models\Brand;
 use App\Models\CrmLeadAssistant;
 use App\Models\Inquiry;
 use App\Models\Organization;
+use App\Models\User;
 use App\Scopes\BrandScope;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,7 +30,7 @@ final class LeadAssistant
 
     private const MAX_AGE_MINUTES = 12;
 
-    public function data(Inquiry $lead, Brand $brand): array
+    public function data(Inquiry $lead, Brand $brand, ?User $user = null): array
     {
         $state = $this->query($lead->id, $brand->id)->first();
         $run = $state?->run;
@@ -42,6 +43,7 @@ final class LeadAssistant
         $mailResults = array_intersect(self::EMAIL_MODES, array_keys($results));
         if ($mailResults) {
             $policy = LeadEmailEvidence::policy($lead);
+            $latest = $user ? app(LeadAssistantContext::class)->currentMessageTimes($lead, $brand, $user) : [];
             foreach ($mailResults as $mode) {
                 $result = $results[$mode];
                 if (array_key_exists('contact_id', $result) && $result['contact_id'] !== $lead->guest_id) {
@@ -49,8 +51,11 @@ final class LeadAssistant
                     continue;
                 }
                 $results[$mode]['can_revise'] = array_key_exists('contact_id', $result);
+                $times = $result['coverage']['message_times'] ?? null;
+                $results[$mode]['new_correspondence'] = array_any(array_keys($latest), fn ($channel) =>
+                    $latest[$channel] > ($times === null ? strtotime($result['generated_at'] ?? '') : ($times[$channel] ?? 0)));
                 if ($code = LeadEmailEvidence::recheck($policy, $mode, $quote, (int) $brand->organization_id, $result)) {
-                    $results[$mode] = [...$result, ...LeadEmailEvidence::hold($code, $result['language'] ?? 'en')];
+                    $results[$mode] = [...$results[$mode], ...LeadEmailEvidence::hold($code, $result['language'] ?? 'en')];
                 }
             }
         }

@@ -7,6 +7,7 @@ use App\Models\Guest;
 use App\Models\User;
 use App\Services\Appointments\VenueClock;
 use App\Services\Crm\CrmBrands;
+use App\Services\Crm\LeadReplyBadges;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
@@ -120,13 +121,15 @@ class CrmMail
         if ($projectSubjects !== null) {
             $rows = $rows->filter(fn ($row) => isset($projectSubjects[self::threadSubject($row)]))->values();
         }
+        $page = LeadReplyBadges::emailPage($guest, null, ['connected' => true, 'messages' => $rows->all()]);
+        $rows = collect($page['messages']);
         $inbound = $rows->filter(fn ($row) => $this->senderMatches($row, $email));
-        $reply = $inbound->first();
+        $reply = $inbound->firstWhere('reply_status', 'needs_reply') ?? $inbound->first();
         $thread = $reply ? $this->threadSubject($reply) : '';
         $sameThread = $thread !== '' ? $rows->filter(fn ($row) => $this->threadSubject($row) === $thread) : collect();
         // Fetch the target first even if it is buried under outgoing mail. Reserve space for the original
         // request in its thread and for earlier samples of the customer's own writing.
-        $selected = $inbound->take(1)->concat($rows->take(4))->concat($sameThread->take(3))
+        $selected = collect($reply ? [$reply] : [])->concat($rows->take(4))->concat($sameThread->take(3))
             ->concat($sameThread->take(-1))->concat($inbound->take(4))->concat($rows)->unique('id')->take(self::BODY_LIMIT);
         $messages = [];
         $missing = false;
@@ -153,6 +156,7 @@ class CrmMail
                 $missing = $missing || ! is_string($body) || trim($body) === '';
                 $messages[$row['id']] = [
                     'direction' => $this->senderMatches($row, $email) ? 'from_customer' : 'other',
+                    ...isset($row['reply_status']) ? ['reply_status' => $row['reply_status']] : [],
                     'subject' => mb_substr((string) ($row['subject'] ?? ''), 0, 300),
                     'sent_at' => $row['sent_at'] ?? null,
                     'body' => is_string($body) ? mb_substr(trim($body), 0, 6000) : '',

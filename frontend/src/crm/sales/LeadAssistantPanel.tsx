@@ -9,6 +9,7 @@ import { failureOf, send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { timeAgo } from '../lib/format'
 import { Card } from '../ui/Card'
+import { Confirm } from '../ui/Confirm'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SectionNav } from '../ui/SectionNav'
@@ -67,7 +68,8 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
   const emailMode = mode === 'proposal' || mode === 'reply' || mode === 'follow_up'
   const held = result?.decision && result.decision !== 'draft'
   const review = data.reviews?.[mode]
-  const strategies = Object.keys(data.strategies)
+  const showSetup = !emailMode || !result || held
+  const notes = [...new Set(result?.review_notes ?? [])].filter(note => note.trim() && (!held || note !== result?.reason)).slice(0, emailMode ? 3 : 6)
   const generate = useMutation({
     mutationFn: (action?: DraftAction) => send<Assistant>('post', `crm/leads/${leadId}/assistant`, {
       mode, language: (i18n.resolvedLanguage ?? 'en').split('-')[0], ...(action ?? { focus: focus.trim() }),
@@ -80,14 +82,9 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
   const failure = data.run?.mode === mode && data.run.status === 'failed' ? data.run.error : null
   return (
     <div className="space-y-4">
-      <Card title={t(`crm.sales.modes.${mode}`)} hint={data.brand.name} icon={ICONS[mode]} tone="ai">
+      {showSetup && <Card title={t(`crm.sales.modes.${mode}`)} hint={data.brand.name} icon={ICONS[mode]} tone="ai">
         <div className="space-y-3">
           <p className="text-sm text-a-text-2">{t(`crm.sales.describe.${mode}`)}</p>
-          {emailMode && (
-            <p className="text-sm text-a-text-2">{strategies.length > 0
-              ? t('crm.sales.strategy.available', { plans: strategies.map(item => t(`crm.sales.modes.${item}`)).join(' · ') })
-              : t('crm.sales.strategy.none')}</p>
-          )}
           {(!emailMode || !result || held) && <label className="block space-y-1 text-sm font-medium text-a-text">
             <span>{t('crm.sales.focus')}</span>
             <textarea className={SALES_FIELD} rows={2} maxLength={600} value={focus} onChange={event => setFocus(event.target.value)}
@@ -102,27 +99,37 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
               <Sparkles size={15} aria-hidden />{t(result ? 'crm.sales.regenerate' : 'crm.sales.generate')}
             </Button>}
           </div>
-          {generating && data.run && (
-            <p role="status" className="text-sm text-a-text-2">{t('crm.sales.working', { mode: t(`crm.sales.modes.${data.run.mode}`) })}</p>
-          )}
-          {generate.error && <div role="alert"><Notice tone="danger">{assistantError(t, generate.error)}</Notice></div>}
-          {failure && <div role="status"><Notice tone="warning">{jobError(t, failure)}</Notice></div>}
         </div>
-      </Card>
-      {emailMode && (data.can_review || data.quote) && <OpportunityQuote leadId={leadId} data={data} />}
+      </Card>}
+      {generating && data.run && <p role="status" className="text-sm text-a-text-2">{t('crm.sales.working', { mode: t(`crm.sales.modes.${data.run.mode}`) })}</p>}
+      {generate.error && <div role="alert"><Notice tone="danger">{assistantError(t, generate.error)}</Notice></div>}
+      {failure && <div role="status"><Notice tone="warning">{jobError(t, failure)}</Notice></div>}
       {result && (
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(250px,0.42fr)]">
+        <div className="space-y-3">
           <Card title={t(held ? `crm.sales.email.${result.decision}` : emailMode ? 'crm.sales.email.draft' : 'crm.sales.result')} icon={held ? Clock3 : emailMode ? Mail : FileText} tone="ai"
             hint={timeAgo(result.generated_at, i18n.language)}>
+            {emailMode && result.new_correspondence && <div role="status" className="mb-3"><Notice tone="warning">{t('crm.sales.email.new_correspondence')}</Notice></div>}
             {held ? <p role="status" className={OUTPUT_TEXT}>{result.reason}</p> : emailMode
-              ? <DraftEditor key={`${result.id}:${review?.approved_at ?? ''}`} initial={review?.source_id === result.id ? review : { subject: result.subject ?? '', body: result.body ?? '' }}
+              ? <DraftEditor key={result.id} initial={review?.source_id === result.id ? review : { subject: result.subject ?? '', body: result.body ?? '' }}
                 recipient={recipient} onUse={onUse} leadId={leadId} mode={mode} resultId={result.id} data={data}
                 busy={generate.isPending || generating} onGenerate={action => generate.mutate(action)} />
               : <Insight result={result} />}
           </Card>
-          <div className="space-y-4">
-            <CoverageCard coverage={result.coverage} mode={mode} onEmails={onEmails} />
-            {result.knowledge_trace && <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
+          {notes.length > 0 && <Card title={t(emailMode ? 'crm.sales.email.recommendations' : 'crm.sales.review')} icon={Clipboard} tone="pending">
+            <ul className="list-disc space-y-1 pl-4 text-sm text-a-text">{notes.map(note => <li key={note} className="[overflow-wrap:anywhere]">{note}</li>)}</ul>
+          </Card>}
+          <div className="space-y-2">
+            <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
+              <summary className="cursor-pointer font-medium">{t('crm.sales.context.title')}</summary>
+              <CoverageCard coverage={result.coverage} mode={mode} onEmails={onEmails} />
+              {Boolean(result.knowledge_trace?.sources.length) && <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-a-text-2">
+                {result.knowledge_trace?.sources.map(s => <li key={s.id}>{s.title}</li>)}
+              </ul>}
+              <Link to={`/crm/settings?tab=business&for_brand=${data.brand.id}`} className="mt-2 inline-flex items-center gap-1 text-a-accent-text hover:underline">
+                <ArrowUpRight size={14} aria-hidden />{t('crm.sales.profile.title')}
+              </Link>
+            </details>
+            {result.knowledge_trace && result.knowledge_trace.questions.length > 0 && <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
               <summary className="cursor-pointer font-medium">{t('inquiryDetail.proposal.evidence')}</summary>
               <ul className="mt-3 space-y-3">
                 {result.knowledge_trace.questions.map(q => {
@@ -136,26 +143,20 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
               </ul>
             </details>}
             {(result.intent || result.next_step || Boolean(result.unanswered?.length)) && (
-              <Card title={t('crm.sales.email.assessment')} icon={Target} tone="neutral">
-                <dl className="space-y-2 text-sm">{(['intent', 'next_step', 'unanswered'] as const).map(field => {
+              <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
+                <summary className="cursor-pointer font-medium">{t('crm.sales.email.assessment')}</summary>
+                <dl className="mt-3 space-y-2 text-sm">{(['intent', 'next_step', 'unanswered'] as const).map(field => {
                   const value = result[field]
                   return value?.length ? <div key={field}><dt className="font-medium text-a-text">{t(`crm.sales.email.${field}`)}</dt>
                     <dd className="whitespace-pre-line text-a-text-2">{Array.isArray(value) ? value.join('\n') : value}</dd></div> : null
                 })}</dl>
-              </Card>
-            )}
-            {result.review_notes.some(note => !held || note !== result.reason) && (
-              <Card title={t('crm.sales.review')} icon={Clipboard} tone="pending">
-                <ul className="list-disc space-y-1 pl-4 text-sm text-a-text-2">{result.review_notes.map((note, index) => <li key={index} className="[overflow-wrap:anywhere]">{note}</li>)}</ul>
-              </Card>
+              </details>
             )}
           </div>
         </div>
       )}
       {strategyMode(mode) && <StrategyEditor leadId={leadId} mode={mode} data={data} result={result} />}
-      {emailMode && result && !held && (
-        <p className="text-xs text-a-text-2">{t('crm.sales.email.edit_hint')}</p>
-      )}
+      {emailMode && (data.can_review || data.quote) && <OpportunityQuote leadId={leadId} data={data} />}
     </div>
   )
 
@@ -254,7 +255,7 @@ function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage
   const replySource = target?.channel === 'email' ? target.subject || t('crm.mail.no_subject')
     : target ? t(channelLabels[target.channel]) : null
   return (
-    <Card title={t('crm.sales.context.title')} icon={BookOpen} tone="neutral">
+    <div className="mt-3">
       <dl className="space-y-1.5 text-sm">
         {fields.map(key => (
           <div key={key} className="flex items-baseline justify-between gap-3">
@@ -275,7 +276,7 @@ function CoverageCard({ coverage, mode, onEmails }: { coverage: Result['coverage
           <button type="button" className="text-left font-medium text-a-accent-text hover:underline" onClick={onEmails}>{t('crm.sales.email.view_history')}</button>
         )}
       </div>
-    </Card>
+    </div>
   )
 }
 
@@ -286,16 +287,20 @@ function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data, 
   const { t } = useTranslation()
   const toast = useToast()
   const fieldId = useId()
-  const [draft, setDraft] = useState<Email>({ subject: initial.subject, body: initial.body })
+  const [edit, setEdit] = useState<{ draft: Email; revision: number } | null>(null)
+  const draft = edit?.draft ?? initial
+  const revision = edit?.revision ?? data.revision
+  const setDraft = (next: Email) => setEdit({ draft: next, revision })
+  const [confirmFresh, setConfirmFresh] = useState(false)
+  const edited = draft.subject !== initial.subject || draft.body !== initial.body
   const [comment, setComment] = useState('')
-  const [revision, setRevision] = useState(data.revision)
   const cache = useQueryClient()
   const key = assistantKey(leadId)
   const save = useMutation({
     mutationFn: () => send<Assistant>('put', `crm/leads/${leadId}/assistant/review`, {
       mode, revision, source_id: resultId, subject: draft.subject, body: draft.body,
     }),
-    onSuccess: next => { cache.setQueryData(key, next); toast(t('crm.sales.email.reviewed')) },
+    onSuccess: next => { cache.setQueryData(key, next); setEdit(null); toast(t('crm.sales.email.reviewed')) },
   })
   const copy = async () => {
     try {
@@ -334,7 +339,7 @@ function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data, 
             onClick={() => onGenerate({ focus: comment.trim(), revise: { source_id: resultId, revision, ...draft } })}>
             <Sparkles size={15} aria-hidden />{t('inquiryDetail.proposal.revise')}</Button>}
           <Button type="button" size="sm" variant="secondary" disabled={busy || save.isPending}
-            onClick={() => onGenerate({ focus: comment.trim() })}>{t('inquiryDetail.proposal.fresh')}</Button>
+            onClick={() => edited ? setConfirmFresh(true) : onGenerate({ focus: comment.trim() })}>{t('inquiryDetail.proposal.fresh')}</Button>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -344,10 +349,12 @@ function DraftEditor({ initial, recipient, onUse, leadId, resultId, mode, data, 
         <Button type="button" size="sm" variant="secondary" disabled={!ready} onClick={() => onUse(draft)}><ListPlus size={15} aria-hidden />{t('crm.sales.email.use_activity')}</Button>
         {href && <a href={href} className="crm-ai-soft inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold"><Mail size={15} aria-hidden />{t('crm.sales.email.open')}</a>}
       </div>
+      {confirmFresh && <Confirm title={t('crm.sales.email.replace_edits')} confirm={t('inquiryDetail.proposal.fresh')} danger={false}
+        onClose={() => setConfirmFresh(false)} onConfirm={() => { setConfirmFresh(false); onGenerate({ focus: comment.trim() }) }} />}
       {save.error && <Notice tone="danger">{failureOf(save.error).code === 'strategy_changed'
         ? <button type="button" className="underline" onClick={async () => {
           await cache.invalidateQueries({ queryKey: key })
-          setRevision(cache.getQueryData<Assistant>(key)?.revision ?? data.revision)
+          setEdit({ draft, revision: cache.getQueryData<Assistant>(key)?.revision ?? data.revision })
           save.reset()
         }}>{t('crm.sales.reload')}</button>
         : errorText(t, save.error)}</Notice>}

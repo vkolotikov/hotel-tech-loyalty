@@ -47,6 +47,9 @@ final class LeadAssistantContext
         $whatsapp = ['state' => null, 'messages' => [], 'has_more' => false];
         if ($guest && (int) $lead->brand_id === CrmMail::BRAND && $this->mail->available($user)) {
             $email = $this->mail->assistantHistory($guest, $multiple ? $this->projectSubjects($lead, $brand) : null);
+            if ($draft) {
+                LeadReplyBadges::attach(collect([$lead]), $user);
+            }
             // The WhatsApp bridge identifies a contact, with no opportunity linkage.
             if (! $multiple) {
                 $whatsapp = $this->whatsapp->assistantHistory($guest);
@@ -58,10 +61,14 @@ final class LeadAssistantContext
         $previous = $draft && $guest ? $this->previousEmails($lead, $brand) : [];
         $correspondence = $draft ? CustomerCorrespondence::forDraft($email['messages'], $whatsapp['messages'], $chat, $activities, $multiple ? [] : $previous) : [];
         $target = $correspondence['reply_target'] ?? null;
-        $topic = implode("\n", [$focus, $target['subject'] ?? '', $target['body'] ?? '',
+        $update = $correspondence['latest_customer_update'] ?? null;
+        $topic = implode("\n", [$focus, $update['body'] ?? '', $target['subject'] ?? '', $target['body'] ?? '',
             ...array_column(array_slice($whatsapp['messages'], -3), 'body'), $lead->special_requests, $lead->notes,
             ...array_column(array_slice($chat, -3), 'body')]);
         $requestText = trim((string) ($target['body'] ?? '')) ?: trim($lead->special_requests."\n".$lead->notes);
+        if ($update) {
+            $requestText = "Latest customer update:\n".$update['body']."\nEarlier request:\n".$requestText;
+        }
         $needsPlan = in_array($mode, ['reply', 'proposal'], true) && EmailQuestionPlan::needed($requestText.' '.$focus);
         $knowledge = $needsPlan ? ['answers' => [], 'documents' => []] : $this->knowledge->forSales($topic, $brand);
         $company = Arr::only($customer->fields ?? [], array_keys(BusinessProfile::definitions()));
@@ -101,6 +108,7 @@ final class LeadAssistantContext
                     'other_logged_customer_emails' => $previous,
                     'recent_chat_messages' => $chat, 'recent_whatsapp_messages' => $whatsapp['messages'],
                     'whatsapp_capture_state' => $whatsapp['state'],
+                    'verified_latest' => $lead->latest_correspondence ?? [],
                     ...$correspondence,
                 ],
                 'our_business' => (array) $profile['fields'],
@@ -128,6 +136,7 @@ final class LeadAssistantContext
                 'writing_samples' => count($correspondence['customer_writing_samples'] ?? []),
                 'discovery_fields' => count($research),
                 'email_state' => $email['state'],
+                'message_times' => CustomerCorrespondence::times($email['messages'], $whatsapp['messages'], $chat, $activities, $multiple ? [] : $previous),
                 'strategies' => array_keys($reviewed),
                 'reply_to' => $mode === 'reply' && $target ? Arr::only($target, ['channel', 'subject']) : null,
             ],
@@ -137,6 +146,18 @@ final class LeadAssistantContext
     public function knowledgeForPlan(Brand $brand, array $plan): array
     {
         return $this->knowledge->forSalesQuestions($brand, $plan);
+    }
+
+    /** A saved draft can be checked from authorised local records without opening mail bodies or invoking AI. */
+    public function currentMessageTimes(Inquiry $lead, Brand $brand, User $user): array
+    {
+        LeadReplyBadges::attach(collect([$lead]), $user);
+        $latest = $lead->latest_correspondence ?? [];
+        $multiple = $lead->guest_id && Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)
+            ->where('organization_id', $lead->organization_id)->where('guest_id', $lead->guest_id)->whereKeyNot($lead->id)->exists();
+        return CustomerCorrespondence::times([['sent_at' => $latest['email']['at'] ?? null]],
+            [['sent_at' => $latest['whatsapp']['at'] ?? null]], $this->chat($lead, $brand, $multiple),
+            $this->activities($lead, $brand), $lead->guest_id && ! $multiple ? $this->previousEmails($lead, $brand) : []);
     }
 
     /** Use open conditions and reviewer objections to look for evidence missed by the initial searches. */

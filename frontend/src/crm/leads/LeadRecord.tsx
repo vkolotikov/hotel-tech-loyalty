@@ -98,7 +98,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
   const changed = useLeadChanged()
   const pipelines = usePipelines()
   const settings = useLeadSettings()
-  const assistant = useAssistant(lead.id)
+  const assistant = useAssistant(lead.id, tab === 'assistant')
   const briefSignalId = assistant.data?.results.brief?.signals ? assistant.data.results.brief.id : null
   useEffect(() => {
     if (briefSignalId) changed()
@@ -112,7 +112,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
   const [mailing, setMailing] = useState(false)
   const [editing, setEditing] = useState(false)
   const [addingTask, setAddingTask] = useState(false)
-  const [assistantMode, setAssistantMode] = useState<Mode>('brief')
+  const [assistantMode, setAssistantMode] = useState<Mode>('reply')
   const [seed, setSeed] = useState<ComposerSeed | null>(null)
   const openAssistant = (mode: Mode) => { setAssistantMode(mode); onTab('assistant') }
 
@@ -247,7 +247,7 @@ export function LeadRecordView({ lead, tab, onTab, tools, titleId, onDeleted, ba
             onUse={draft => { setSeed({ ...draft, type: 'email', n: Date.now() }); onTab('activity'); toast(t('crm.leads.proposal_placed_tab', 'The draft is in the Activity box')) }} />
         )}
         {shown === 'business' && <BusinessProfilePanel resource="inquiries" id={lead.id} />}
-        {shown === 'activity' && <LeadTimeline lead={lead} seed={seed} />}
+        {shown === 'activity' && <LeadTimeline lead={lead} seed={seed} onEmails={() => onTab('emails')} />}
         {shown === 'tasks' && <LeadTasks lead={lead} name={name} onAdd={() => setAddingTask(true)} />}
         {shown === 'emails' && (
           <div>

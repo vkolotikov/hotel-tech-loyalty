@@ -586,6 +586,34 @@ class LeadAssistantTest extends TestCase
         $this->assertSame(['Shipping'], array_column($service->forSales('Livraison ?', $brand)['answers'], 'question'));
     }
 
+    public function test_a_new_message_marks_the_saved_draft_stale_without_generating_another(): void
+    {
+        $this->travelTo(now()->startOfMinute());
+        $lead = $this->lead(['notes' => 'Please send the design.']);
+        $this->activity($lead, $this->brandId, 'Please send the design.');
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        Http::fake(['api.openai.com/v1/responses' => Http::response($this->providerOutput(['subject' => 'Your design', 'body' => 'We can prepare the design.', 'review_notes' => []]))]);
+        $this->asStaffMember()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.reply.new_correspondence', false);
+        $this->travel(2)->minutes();
+        $this->activity($lead, $this->brandId, 'Use the new design instead.');
+        $this->getJson($path)->assertJsonPath('results.reply.new_correspondence', true)->assertJsonPath('results.reply.body', 'We can prepare the design.');
+        Http::assertSentCount(1);
+        Mail::assertNothingSent();
+    }
+
+    public function test_private_unresolved_details_do_not_hold_a_supported_email(): void
+    {
+        $input = ['brand_knowledge' => ['plan' => ['questions' => [['id' => 'q1']]], 'answers' => [], 'documents' => []]];
+        $quality = ['fits_workflow' => true, 'useful_next_step' => false, 'grounded_commitments' => true,
+            'answers' => [['id' => 'q1', 'status' => 'open', 'email_excerpt' => '', 'pending' => 'Check the original attachment.']]];
+        $draft = ['subject' => 'Your sample', 'body' => 'We can work from your concept.'];
+        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $quality['answers'][0]['status'] = 'confirmed';
+        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+    }
+
     public function test_a_comment_revises_the_current_edited_email_and_a_fresh_draft_discards_it(): void
     {
         $lead = $this->lead(['notes' => 'Please send an artwork proof.']);

@@ -12,6 +12,8 @@ A separate lock-file patch updates Symfony HTTP Kernel, Mailer, Routing and the 
 
 ## CRM email quality review
 
+The lead assistant opens on the response email and places staff recommendations underneath it. It reports newer correspondence, shows actual retrieved source titles even for ordinary enquiries, and checks its own attachment recommendations against the customer wording. Newer cross-channel corrections also reach the search planner. The live FDS knowledge now has sourced material thicknesses, a project gallery link and production estimates for specific processes. The CRM runbook covers literal field capture and the draft safeguards.
+
 A reseller run ended without a usable email after four paid calls. The audit stayed within its ten-attempt limit. The writer now records bounded failure reasons by generation stage, including correction and review, without logging correspondence or provider responses.
 
 A matched production retest distinguished the price of a stock sample from the cost of proving a complete custom order. The search plan now records what is being priced and carries a buyer-approved fallback through to review. Retrieve the full audit from the owner's private report for case scores and the limitations of the live sample.

@@ -48,6 +48,7 @@ export interface LeadGuest {
 export interface LeadRow {
   id: number
   reply_status?: Partial<Record<'email' | 'whatsapp', 'needs_reply' | 'awaiting_customer'>> | null
+  latest_correspondence?: Partial<Record<'email' | 'whatsapp', { at: string; direction: 'inbound' | 'outbound' }>> | null
   brand_id?: number | null
   guest_id: number | null
   pipeline_id: number | null

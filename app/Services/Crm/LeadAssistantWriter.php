@@ -148,10 +148,12 @@ final class LeadAssistantWriter
             $review = function (array $candidate, array $prior = []) use (&$input, $ask, $run, $snapshot) {
                 return $ask(CommercialEmailCheck::REVIEW, [
                     'language' => $run['language'], 'request' => $snapshot['plan_request'], 'staff_focus' => $run['focus'] ?? '',
-                    'draft' => ['subject' => $candidate['subject'], 'body' => $candidate['body']], 'knowledge' => $input['brand_knowledge'],
+                    'draft' => ['subject' => $candidate['subject'], 'body' => $candidate['body']],
+                    'draft_notes' => $candidate['review_notes'], 'knowledge' => $input['brand_knowledge'],
+                    'latest_customer_update' => $input['conversation']['latest_customer_update'] ?? null,
                     'previous_objections' => $prior,
                     'reviewed_profile' => $input['reviewed_profile_evidence'], 'project_evidence' => $input['project_evidence'],
-                    'recent_emails' => array_map(fn ($row) => ['direction' => $row['direction'], 'at' => $row['sent_at'],
+                    'recent_emails' => array_map(fn ($row) => ['direction' => $row['direction'], 'reply_status' => $row['reply_status'] ?? null, 'at' => $row['sent_at'],
                         'subject' => $row['subject'], 'body' => mb_substr($row['body'], 0, 1500)],
                         array_slice($input['conversation']['recent_matched_emails'], 0, 6)),
                     'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
@@ -167,11 +169,9 @@ final class LeadAssistantWriter
                 $issues[] = self::PRICE_CORRECTION;
             }
             $suggestions = array_slice($editor['suggestions'] ?? [], 0, 2);
-            $knowledge = $this->context->resolveKnowledgeGaps($brand, $knowledge, $check['answers'], $objections);
-            $newSources = count($knowledge['answers']) + count($knowledge['documents'])
-                > count($input['brand_knowledge']['answers']) + count($input['brand_knowledge']['documents']);
-            $input['brand_knowledge'] = $knowledge;
-            if (($issues || $newSources) && microtime(true) - $started < 285) {
+            if ($issues && microtime(true) - $started < 285) {
+                $knowledge = $this->context->resolveKnowledgeGaps($brand, $knowledge, $check['answers'], $objections);
+                $input['brand_knowledge'] = $knowledge;
                 $raw = $write($input + ['corrections' => $issues, 'editor_suggestions' => $suggestions, 'candidate_to_correct' => $result['body']], true);
                 $result = $this->result($raw, $mode, true, 'correction');
                 if ($result['decision'] === 'draft') {
@@ -193,11 +193,12 @@ final class LeadAssistantWriter
             $result = $this->pricedDraft($result, $input) ?? LeadEmailEvidence::hold('unverified_price', $run['language']);
         }
 
-        if (isset($knowledge)) {
+        if ($email) {
+            $knowledge ??= $input['brand_knowledge'];
             $meta['coverage']['knowledge_answers'] = count($knowledge['answers']);
             $meta['coverage']['knowledge_documents'] = count($knowledge['documents']);
-            $meta['knowledge_trace'] = $knowledge['plan'] + ['sources' => array_map(fn ($row) => [
-                'id' => $row['id'], 'title' => $row['question'] ?? $row['title'], 'kind' => $row['kind'], 'updated' => $row['updated'],
+            $meta['knowledge_trace'] = ($knowledge['plan'] ?? ['questions' => []]) + ['sources' => array_map(fn ($row) => [
+                'id' => $row['id'], 'title' => $row['question'] ?? $row['title'], 'kind' => $row['kind'], 'updated' => $row['updated'] ?? null,
             ], [...$knowledge['answers'], ...$knowledge['documents']])];
             $meta['knowledge_trace']['assessment'] = $assessment ?? [];
         }
@@ -234,7 +235,7 @@ final class LeadAssistantWriter
         $fields = $email
             ? ['decision' => ['type' => 'string', 'enum' => ['draft', 'wait', 'internal_action', 'stop']], 'reason' => $str,
                 'intent' => $str, 'next_step' => $str, 'unanswered' => $reviewNotes, 'email_language' => $str,
-                'subject' => $str, 'body' => $str, 'review_notes' => $reviewNotes]
+                'review_notes' => $reviewNotes, 'subject' => $str, 'body' => $str]
             : ['summary' => $str, 'sections' => ['type' => 'array', 'items' => $this->object(['title' => $str, 'body' => $str])], 'review_notes' => $reviewNotes];
         if ($mode === 'brief') {
             $fields['signals'] = $this->object([
@@ -265,52 +266,14 @@ Keep the brief and strategy concise. Use up to six clearly titled sections with 
 PROMPT;
         if ($email) {
             $instructions .= "\n".<<<'PROMPT'
-First identify what the customer needs now, what we already answered, and which details changed. Use their latest
-correction even when it came through WhatsApp. Historical prices and other opportunities are background only.
-If the latest email concerns a clearly different order, address this lead's request and flag the mismatch for staff.
-An email with a missing body establishes its subject only. Never claim to have read its questions or attachments.
-If there is no identifiable customer request, ask one useful clarification without implying a prior exchange.
-Treat unreviewed_discovery as research leads for staff to verify. State a finding to the customer only when
-their correspondence or reviewed profile independently confirms it. Keep suggested opportunities internal.
-Read customer_writing_samples for their greeting, formality, vocabulary, sentence length and level of detail.
-Give the customer's email voice most weight. Chat and WhatsApp are secondary evidence. Ignore quoted replies,
-signatures and staff wording as style signals. With sparse evidence use a neutral, courteous business voice.
-Use the language expressly requested by staff or the customer, then the customer's own message being answered,
-their recent writing, their saved preferred language, and finally the CRM language. Never infer language or
-personality from a name or country. Use known business type and role to decide which details matter. Use country
-for relevant logistics or date conventions only. Never assume purchasing authority, local terms or delivery times.
-Lead with the actual answer or the specific offer. Use familiar words, active verbs and short paragraphs.
-Skip generic greetings about wellbeing, sales superlatives, stock thank-yous, canned closings and invented signatures.
-Match an established salutation when appropriate. Include at most one practical next step if one is needed.
-Apply our_business.email_instructions to style, wording and next steps, subject to accuracy and the customer's explicit request.
-Finish at the last useful sentence. The email app adds the signature. Never append a closing salutation, "Best regards",
-"Thanks", a sender or team name, job title, signature block or footer, even if correspondence contains one.
-Use project_evidence.today and business_timezone to interpret dates. Choose the purpose from the conversation and the actual stage:
-a technical assessment, an approval, an order, a billing question, a complaint, a repeat purchase and a sales follow-up need different answers.
-Acknowledge all material questions. Retain enquiry-only restrictions. Use an existing submission or file record before asking for it again.
-File names and staff descriptions are metadata, not inspected content. No outgoing attachments are included in this composer.
-Distinguish a customer's requested specification or budget from a verified capability and an agreed scope. A family or similar identifier is
-not an exact model match. Keep the customer's own labels for the options being compared. Do not assign an unstated configuration to an existing option.
-Offer only documented, feasible alternatives. Never turn interest, an estimate or a mock-up into approval.
-Prefer valid authorised terms for this opportunity, then staff focus within its authority, current matching brand facts, then this project's history.
-Use current matching programme terms for their published scope and a valid customer agreement for individual exceptions. Other projects, writing examples and internal estimates cannot establish a commitment.
-Use a valid approved_quote only for its stated scope, quantity, currency, tax basis and validity. Use its precalculated decimal values.
-For structured quote figures write the appropriate placeholder {{quote.unit_price}}, {{quote.charges}}, {{quote.subtotal}} or {{quote.total}}.
-Set email_language to the BCP 47 language tag of the customer-facing text. The CRM inserts the verified currency and amount in that language.
-Do not add a second currency marker. Format other verified monetary figures in the customer's usual convention with an unambiguous currency.
-For a published price list, match the exact product, service, quantity and currency. Distinguish the whole order from a unit price and one-off charges from subscriptions.
-For a bespoke or bundled request, a buyer's target cost or a component price cannot establish a delivered total. If the buyer accepts a feasibility answer, give the verified scope and identify what still needs pricing.
-Never calculate or extrapolate a new price, discount, tax or total. If the quote expired or conflicts
-with the actual request, omit the amounts and flag a new quote for staff. Do not infer VAT from location or a registration number.
-Distinguish production, dispatch, transit and delivery. Check stock, schedule and authorisation before making commitments or offering exceptions.
-Reviewed writing examples are guidance on wording only. Mark unverifiable details privately. Keep intent, next_step, unanswered, reason and
-review_notes in the staff language. Return a short reason for a hold, and empty subject and body whenever the decision is not draft.
-Read the result as the staff member responsible for this account. Check material answers, exact identifiers, dates, currency, attachment claims,
-customer language and restrictions; remove repetition and routine marketing language. Put only actionable uncertainties in review_notes.
-Leave them empty when there is nothing for staff to check.
-Answer every material question the evidence supports. If a missing fact matters, ask one focused question or flag
-it privately for staff. Only expand for an explicit request for detail or to cover essential answers. Read the draft
-once and cut any line that could be sent unchanged to an unrelated customer. Return a complete plain-text email.
+Write as the person handling this opportunity. Answer the current request, using the latest customer correction across email, WhatsApp, chat or logged correspondence. Read the latest outgoing message as well. If we have already answered and the customer owes the next move, choose wait unless staff expressly requests a useful new message. A receipt or a staff promise to prepare a quote is not a substantive answer. Keep separate projects separate. A missing body establishes only its subject.
+Use a valid order-specific agreement first, then matching current brand facts. An active FAQ, indexed document or reviewed public profile can establish company policy. A chatbot utterance, earlier generated draft, unreviewed discovery, style example or deal estimate cannot. The customer's own messages establish their requirements, not our capabilities. Use customer business type and role when relevant. Country can inform logistics, never personality, language or authority.
+For replies and proposals, choose draft whenever a useful answer is possible. An unknown price, technique or deadline seldom prevents answering the rest. Start with the confirmed fit, quote the applicable standard offer or distinguish the bespoke part, and state the next step the seller can take with what the buyer already supplied. Keep unresolved operational checks internal unless the limitation changes the buyer's decision. Suggest a sample, relevant portfolio link, design help or a simpler alternative only if documented and useful here.
+Resolve any contradiction between review_notes and the customer-facing wording BEFORE returning it. If a customer refers to a file, artwork or information already supplied, work from that statement. A missing CRM attachment is not proof it was never sent: put a mailbox check in review_notes. Ask for a resend only when the original is confirmed missing or unusable and is needed now. Never imply we inspected a file merely from its name, or that an outgoing file is attached.
+Match the customer's greeting, formality and technical detail. Write in the explicitly requested language or that of the current customer's message, then their own writing, saved preference or CRM language. Use short, natural paragraphs. Skip the generic introduction, sales pitch, repeated requirements and stock closing. Follow our_business.email_instructions within the customer's explicit requirements. End at the last useful sentence; the mail client adds the signature. No closing salutation, regards, sender name or footer.
+Use project_evidence.today and business_timezone for timing. Separate production, dispatch, transit and delivery. Use exact product identifiers, scope and quantities. Do not turn a requested finish, a proposal or an historical price into a commitment. State documented capabilities directly; do not promise stock, compatibility, deadlines or exceptions without evidence.
+Use a valid approved_quote only within its scope, quantity, currency, tax treatment and validity. For its amounts use {{quote.unit_price}}, {{quote.charges}}, {{quote.subtotal}} or {{quote.total}} with no extra currency marker. Set email_language to the BCP 47 language of the email. For a current price list match product, service, quantity, and currency exactly. Label unit versus total and recurring versus one-time charges. Never extrapolate or calculate a price, VAT, discount or bundle. A component or retail price is not a bespoke or partner quote. Where a narrower answer helps, give it and say which item still needs pricing.
+Write at most three short, concrete staff recommendations in the requested CRM language, most important first. Leave them empty when no check would change the outcome. Don't ask staff to fix wording you can correct yourself. Use an empty subject and body only for a genuine wait, stop or internal action.
 PROMPT;
         }
         if ($email && ! isset($context['brand_knowledge']['plan'])) {
@@ -326,11 +289,9 @@ PROMPT;
         if (isset($context['brand_knowledge']['plan'])) {
             $fields['commercial_check'] = CommercialEmailCheck::schema();
             $instructions .= "\n".<<<'PROMPT'
-Use the question plan as an internal checklist. Respect who owns the client relationship, artwork, hosting, approvals and delivery. Open with the strongest documented fit. A direct buyer needs purchasing terms; a referral link pays commission. An ordinary retail price is irrelevant to wholesale rates unless the buyer expressly asks for both. Distinguish order minimums from programme purchase commitments, and shipping from duties, importer arrangements and neutral packaging. Offer a relevant sample, test order or specific next action if it advances the decision. Never promise to send a price sheet or perform work already completed unless the record supports it.
-Address all material requests in compact connected paragraphs. For a multi-question introduction, aim for about 120–190 words. Group related decisions; do not repeat the same unknown or next step. Cover the supported facts and the checks that affect the buyer's decision. When a partner asks for trial pricing, describe available sample options; quote a sample price only when it matches the requested arrangement or the buyer expressly requested a retail comparison. State standard included shipping explicitly when documented; qualifying a delivery estimate or customs responsibility need not undermine that fact. If we owe a quote or technical answer, say what we can prepare from the brief already supplied. Ask the customer for extra information only when needed now. Ignore default CRM categories when they conflict with the buyer's actual enquiry.
-Assess the FINAL email. For every question ID, copy a short exact passage from the email that answers it or discloses what remains open. For confirmed, partial, conditional or explicitly unavailable answers, cite a short VERBATIM quote from the actual answer or document excerpt and its ID, or a reviewed_profile_evidence field using "profile-" plus its key, or "quote" for valid approved_quote. Never cite staff comments, planner output, other customers, marketing goals or old emails as policy. Include evidence for each financial figure, percentage, threshold and eligibility condition used. Search scores indicate relevance only. For open questions or requested exceptions without evidence use an empty evidence array and a precise pending check in the staff language. A lack of evidence does not establish a refusal. Review for misplaced discounts, unsupported operational promises and unnecessary disclaimers. Set fits_workflow, useful_next_step (also true when no action is needed) and grounded_commitments honestly, improving the email before returning it. For a hold use an empty answers array.
-Match every quoted figure to the price_subject of the question. If that exact deliverable is unpriced, use a narrower response when the buyer explicitly accepted it. A price for a different sample or service is optional only if the buyer wants that alternative.
-For any material unknown, put a short targeted query in lookup (otherwise an empty string). Use terms that could find the missing condition, not the whole original question.
+Cover the customer's material questions in connected paragraphs, grouping related points. Prefer a decision the buyer can make over a catalogue of caveats. Respect who owns artwork, hosting, approvals and delivery. Distinguish a partner's direct purchase discount from a referral commission, product minimum from programme commitment, and shipping from customs or neutral packaging.
+For each question ID assess the final wording. For a claim, copy an exact short email excerpt and the source ID and verbatim evidence passage (FAQ, document, profile- plus a reviewed field key, or quote). Cite the figures and conditions. For an outstanding detail with no claim use open or exception, empty evidence, and a specific pending check. The email excerpt may be empty for an internal-only check. A missing answer in the library is not a negative policy. Use lookup for a term likely to locate a decision-changing missing fact. Search scores and prior drafting recommendations are not evidence.
+A quoted price must cover the question's price_subject. Give a feasibility answer when appropriate. Check that the final email fits the workflow, grounds its promises and has a useful next step if needed. For a genuine hold use an empty answers array.
 PROMPT;
         }
 
@@ -366,7 +327,8 @@ PROMPT;
         if (! is_array($result)) {
             throw new RuntimeException('The CRM assistant provider returned no usable content.');
         }
-        $notes = array_values(array_filter(array_map(fn ($note) => $this->text($note, 500), array_slice((array) ($result['review_notes'] ?? []), 0, 6))));
+        $notes = collect($result['review_notes'] ?? [])->map(fn ($note) => $this->text($note, 500))
+            ->filter()->unique()->take($email ? 3 : 6)->values()->all();
         if ($email) {
             $decision = $result['decision'] ?? 'draft';
             if (! in_array($decision, ['draft', 'wait', 'internal_action', 'stop'], true)) {

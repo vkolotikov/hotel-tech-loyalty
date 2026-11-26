@@ -77,7 +77,7 @@ class ActivityController extends Controller
         ]);
 
         if ($data['type'] === 'email' && in_array($data['direction'] ?? null, ['inbound', 'outbound'], true)) {
-            \App\Services\Crm\LeadMessageValue::fromLoggedEmail($inquiry, (string) ($data['body'] ?? ''));
+            \App\Services\Crm\LeadMessageValue::fromLoggedEmail($inquiry, (string) ($data['body'] ?? ''), $data['direction'] === 'inbound');
         }
 
         // The legacy inquiries.last_contacted_at column is still surfaced on

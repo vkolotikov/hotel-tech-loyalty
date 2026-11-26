@@ -39,6 +39,15 @@ final class LeadReplyBadges
             $lead->setAttribute('reply_status', array_filter([
                 'email' => self::channel($mailThreads), 'whatsapp' => self::channel($waThreads),
             ]) ?: null);
+            $latest = [];
+            foreach (['email' => $mailThreads, 'whatsapp' => $waThreads] as $channel => $threads) {
+                $last = collect($threads)->whereIn('direction', ['inbound', 'outbound'])
+                    ->sortByDesc(fn ($row) => strtotime($row['at'] ?? '') ?: 0)->first();
+                if (! empty($last['at'])) {
+                    $latest[$channel] = ['at' => $last['at'], 'direction' => $last['direction']];
+                }
+            }
+            $lead->setAttribute('latest_correspondence', $latest ?: null);
         }
     }
 

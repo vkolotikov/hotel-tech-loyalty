@@ -4,6 +4,8 @@ namespace App\Services\Crm;
 
 use App\Models\Guest;
 use App\Models\Inquiry;
+use App\Scopes\BrandScope;
+use App\Scopes\TenantScope;
 use App\Services\Integrations\CrmMail;
 use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +21,9 @@ final class LeadMessageValue
         if (! $threads || ($state['identity'] ?? '') !== LeadCorrespondenceSync::emailIdentity($guest)) {
             return $state;
         }
-        $leads = DB::table('inquiries')->where('organization_id', CrmMail::ORGANIZATION)
+        $leads = Inquiry::withoutGlobalScopes([TenantScope::class, BrandScope::class])->where('organization_id', CrmMail::ORGANIZATION)
             ->where('brand_id', CrmMail::BRAND)->where('guest_id', $guest->id)
-            ->whereNull('total_value')->whereNull('rate_offered')->where(fn ($q) => $q->whereNull('paid_amount')->orWhere('paid_amount', 0))
-            ->get(['id', 'currency']);
+            ->get(['id', 'organization_id', 'brand_id', 'guest_id', 'currency', 'total_value', 'rate_offered', 'paid_amount']);
         if ($leads->isEmpty()) {
             return $state;
         }
@@ -35,7 +36,10 @@ final class LeadMessageValue
             }
             $thread = reset($matched);
             $id = $thread['message_id'] ?? '';
-            if (! Str::isUuid($id) || ($state['value_checked'][$lead->id] ?? null) === $id) {
+            $checkAmount = $lead->total_value === null && $lead->rate_offered === null && (float) $lead->paid_amount === 0.0
+                && ($state['value_checked'][$lead->id] ?? null) !== $id;
+            $checkFields = $thread['direction'] === 'inbound' && ($state['fields_checked'][$lead->id] ?? null) !== $id;
+            if (! Str::isUuid($id) || (! $checkAmount && ! $checkFields)) {
                 continue;
             }
             try {
@@ -47,6 +51,13 @@ final class LeadMessageValue
                 continue;
             }
             $body = AssistantEmailText::messages([['body' => $result['body'], 'sent_at' => $thread['at'], 'subject' => '', 'direction' => $thread['direction']]])[0]['body'];
+            if ($checkFields) {
+                LeadEmailFields::fill($lead, $body);
+                $state['fields_checked'][$lead->id] = $id;
+            }
+            if (! $checkAmount) {
+                continue;
+            }
             $value = self::total($body);
             if ($value !== null) {
                 DB::table('inquiries')->where('id', $lead->id)->where('guest_id', $guest->id)->where('brand_id', CrmMail::BRAND)
@@ -60,12 +71,18 @@ final class LeadMessageValue
         return $state;
     }
 
-    public static function fromLoggedEmail(Inquiry $lead, string $text): void
+    public static function fromLoggedEmail(Inquiry $lead, string $text, bool $inbound = false): void
     {
-        if ($lead->total_value !== null || $text === '') {
+        if ($text === '' || (! $inbound && $lead->total_value !== null)) {
             return;
         }
         $message = AssistantEmailText::messages([['body' => $text, 'direction' => 'email', 'sent_at' => null, 'subject' => '']])[0];
+        if ($inbound) {
+            LeadEmailFields::fill($lead, $message['body']);
+        }
+        if ($lead->total_value !== null) {
+            return;
+        }
         $value = self::total($message['body']);
         if ($value) {
             DB::table('inquiries')->where('organization_id', $lead->organization_id)->where('id', $lead->id)

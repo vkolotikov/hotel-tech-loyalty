@@ -407,6 +407,14 @@ review.
 
 ### Customer email drafts
 
+Response email opens first in AI tools. A new draft uses the latest matched correspondence, current company knowledge and any saved strategy. A strategy is optional. The email appears above up to three actionable AI recommendations. Expand Sources used for the titles of active knowledge answers, builder entries and document passages supplied to the writer. Reviewed customer profile fields count saved Discovery fields. The ordinary contact details and the customer's messages also reach the writer. Chatbot conversation text supplies history only. A manager's saved knowledge answer or indexed company document can supply policy.
+
+The assistant warns when newer matched correspondence has arrived since an email draft. The warning also covers earlier saved drafts from before per-channel timestamps were recorded. Checking for changes reads local correspondence metadata and never generates another email. Open the synced email link in Activity to read the originals. Logged activities keep their own timeline rows.
+
+When a customer mentions supplied artwork, a missing file in CRM calls for checking the original mailbox. The writer resolves contradictions between its own recommendations and the email before returning it. On a complex enquiry the existing reviewer sees those recommendations. An open operational detail can stay in the staff notes. A substantive unsupported promise or price still needs correction or a hold. Optional suggestions alone use no rewrite. Generating a fresh email with unsaved edits asks whether to replace them.
+
+Verified inbound email with explicit field labels can fill blank Product, Quantity, Deadline and Type of enquiry fields. The first three need an active matching field definition. Product choices must match configured options, quantities must be whole numbers and dates must be unambiguous ISO calendar dates. Conflicting entries stay blank. This happens on matched background email capture or when staff log an incoming email. Draft generation only reads the lead.
+
 An unsuccessful provider call or unusable model output records a `CRM assistant generation stage failed` application event. It carries the organisation, brand, stage, a fixed reason and an HTTP status when available. The stages distinguish question planning, initial writing, correction and commercial review. Operators can use the event and the metered usage records to diagnose a failed draft without logging prompts or provider response bodies.
 
 For a multi-part commercial enquiry, the search plan names the specific item or service behind each price question. Sample searches give matching deliverables more weight. A narrower answer the buyer explicitly accepts is carried into commercial review only when the quoted words occur in the current request. The reviewer checks whether a published charge actually covers that deliverable.
