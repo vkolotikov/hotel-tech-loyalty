@@ -311,16 +311,15 @@ class LeadAssistantTest extends TestCase
     {
         $lead = $this->lead(['notes' => "Customer wants a feasibility check before a quote.\nPassword: sample-test-private"]);
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
-        $recover = true;
         $writes = 0;
-        Http::fake(['api.openai.com/v1/responses' => function (Request $request) use (&$recover, &$writes) {
+        Http::fake(['api.openai.com/v1/responses' => function (Request $request) use (&$writes) {
             $writes++;
             $this->assertStringNotContainsString('sample-test-private', $request['input']);
             $input = json_decode($request['input'], true);
             if ($writes % 2 === 0) {
                 $this->assertStringContainsString('could not be verified', $input['corrections'][0]);
             }
-            $body = $recover && isset($input['corrections']) ? 'We can review the specified finish for your quote.' : 'Your total is USD 9837.';
+            $body = $input['staff_focus'] === '' && isset($input['corrections']) ? 'We can review the specified finish for your quote.' : 'Your total is USD 9837.';
 
             return Http::response($this->providerOutput(['decision' => 'draft', 'subject' => 'Finish options',
                 'body' => $body, 'review_notes' => [], 'email_language' => 'en', 'commercially_ready' => true]));
@@ -328,8 +327,7 @@ class LeadAssistantTest extends TestCase
         $this->asManager()->postJson($path, ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
         $this->getJson($path)->assertJsonPath('results.proposal.body', 'We can review the specified finish for your quote.');
-        $recover = false;
-        $this->postJson($path, ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
+        $this->postJson($path, ['mode' => 'proposal', 'language' => 'en', 'focus' => 'Review the amount.'])->assertAccepted();
         $this->runLatest();
         $this->getJson($path)->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
         $this->assertSame(4, $writes);
@@ -629,11 +627,11 @@ class LeadAssistantTest extends TestCase
             DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $brand, 'is_active' => $active,
                 'question' => 'Wholesale PVC metal tier', 'answer' => 'Private negotiated 80% discount.']);
         }
-        $bad = false;
         $writes = $reviews = 0;
         $captured = null;
-        Http::fake(['api.openai.com/v1/responses' => function (Request $req) use ($fixture, $questions, $refs, &$bad, &$writes, &$reviews, &$captured) {
+        Http::fake(['api.openai.com/v1/responses' => function (Request $req) use ($fixture, $questions, $refs, &$writes, &$reviews, &$captured) {
             $ctx = json_decode($req['input'], true);
+            $bad = $ctx['staff_focus'] === 'Review the integration.';
             $format = $req['text']['format']['name'];
             if ($format === 'crm_email_questions') {
                 $data = ['relationship' => 'Manufacturing and reseller partnership', 'customer_workflow' => 'Client-managed artwork, hosting and approval.',
@@ -672,8 +670,7 @@ class LeadAssistantTest extends TestCase
         $this->assertStringNotContainsString('USD 65', json_encode($captured));
         $this->assertSame('open', $result['knowledge_trace']['assessment'][3]['status']);
         $this->assertSame('partial', $result['knowledge_trace']['assessment'][7]['status']);
-        $bad = true;
-        $this->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->postJson($path, ['mode' => 'reply', 'language' => 'en', 'focus' => 'Review the integration.'])->assertAccepted();
         $this->runLatest();
         $this->getJson($path)->assertJsonPath('results.reply.reason_code', 'commercial_review')->assertJsonPath('results.reply.body', '');
         $this->assertSame(3, $writes);
