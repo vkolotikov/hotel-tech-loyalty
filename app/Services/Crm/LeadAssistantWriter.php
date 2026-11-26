@@ -3,12 +3,15 @@
 namespace App\Services\Crm;
 
 use App\Enums\InquiryCategory;
+use App\Exceptions\CrmAssistantGenerationFailed;
 use App\Models\Brand;
 use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\AiUsageService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 final class LeadAssistantWriter
@@ -27,7 +30,13 @@ final class LeadAssistantWriter
         LeadAssistant::checkAvailability($org);
         $snapshot = $this->context->collect($lead, $brand, $org, $user, $strategies, $run['mode'], $run['focus'] ?? '');
 
-        return $this->writeSnapshot($lead, $brand, $org, $user, $run, $feature, $snapshot, $started);
+        try {
+            return $this->writeSnapshot($lead, $brand, $org, $user, $run, $feature, $snapshot, $started);
+        } catch (CrmAssistantGenerationFailed $error) {
+            Log::warning('CRM assistant generation stage failed', ['organization_id' => $org->id, 'brand_id' => $brand->id,
+                'stage' => $error->stage, 'reason' => $error->reason, 'http_status' => $error->httpStatus]);
+            throw $error;
+        }
     }
 
     private function writeSnapshot(Inquiry $lead, Brand $brand, Organization $org, User $user, array $run,
@@ -59,26 +68,39 @@ final class LeadAssistantWriter
                     $value = AssistantEmailText::redact($value);
                 }
             });
-            $response = Http::acceptJson()->withToken((string) config('openai.api_key'))->connectTimeout(6)->timeout($timeout)->withoutRedirecting()
-                ->post('https://api.openai.com/v1/responses', [
-                    'model' => $model, 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
-                    'instructions' => $instructions,
-                    'input' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE),
-                    'text' => ['format' => ['type' => 'json_schema', 'name' => $name, 'strict' => true, 'schema' => $schema]],
-                ]);
+            $stage = match ($name) {
+                'crm_email_questions' => 'question_plan', 'crm_email_commercial_review' => 'commercial_review',
+                default => isset($payload['candidate_to_correct']) ? 'correction' : 'draft',
+            };
+            try {
+                $response = Http::acceptJson()->withToken((string) config('openai.api_key'))->connectTimeout(6)->timeout($timeout)->withoutRedirecting()
+                    ->post('https://api.openai.com/v1/responses', [
+                        'model' => $model, 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
+                        'instructions' => $instructions,
+                        'input' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE),
+                        'text' => ['format' => ['type' => 'json_schema', 'name' => $name, 'strict' => true, 'schema' => $schema]],
+                    ]);
+            } catch (ConnectionException) {
+                throw new CrmAssistantGenerationFailed($stage, 'connection_failed');
+            }
             $data = $response->json();
             if (isset($data['usage'])) {
                 $this->usage->recordUsage((int) $org->id, $model, (int) ($data['usage']['input_tokens'] ?? 0),
                     (int) ($data['usage']['output_tokens'] ?? 0), $feature, userId: (int) $user->id, brandId: (int) $brand->id);
             }
-            if (! $response->successful() || ($data['status'] ?? null) !== 'completed') {
-                throw new RuntimeException('The CRM assistant provider did not complete the output.');
+            if (! $response->successful()) {
+                throw new CrmAssistantGenerationFailed($stage, 'http_error', $response->status());
+            }
+            if (($data['status'] ?? null) !== 'completed') {
+                $reason = $data['incomplete_details']['reason'] ?? null;
+                throw new CrmAssistantGenerationFailed($stage,
+                    in_array($reason, ['max_output_tokens', 'content_filter'], true) ? $reason : 'provider_incomplete', $response->status());
             }
             $text = collect($data['output'] ?? [])->where('type', 'message')->pluck('content')->flatten(1)
                 ->where('type', 'output_text')->pluck('text')->implode('');
             $output = json_decode($text, true);
             if (! is_array($output)) {
-                throw new RuntimeException('The CRM assistant provider returned no usable content.');
+                throw new CrmAssistantGenerationFailed($stage, 'invalid_json', $response->status());
             }
 
             return $output;
@@ -92,7 +114,7 @@ final class LeadAssistantWriter
                 'knowledge_language_sample' => mb_substr($input['our_business']['overview'] ?? '', 0, 250),
             ], EmailQuestionPlan::schema(), 'crm_email_questions', 'low', 3200, 40), $snapshot['plan_request']);
             if (! $plan['questions']) {
-                throw new RuntimeException('The commercial question plan was empty.');
+                throw new CrmAssistantGenerationFailed('question_plan', 'empty_plan');
             }
             $knowledge = $this->context->knowledgeForPlan($brand, $plan);
             $input['brand_knowledge'] = $knowledge;
@@ -108,7 +130,7 @@ final class LeadAssistantWriter
         if ($email && ! isset($knowledge) && $result['decision'] === 'draft' && ($priceIssue || ($raw['commercially_ready'] ?? true) === false)) {
             $raw = $write($input + ['corrections' => [$priceIssue ? self::PRICE_CORRECTION : 'Resolve the material commercial issues in the first draft.'],
                 'candidate_to_correct' => $result['body']], true);
-            $result = $this->result($raw, $mode, true);
+            $result = $this->result($raw, $mode, true, 'correction');
             if ($result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
                 $result = LeadEmailEvidence::hold('commercial_review', $run['language']);
             }
@@ -144,7 +166,7 @@ final class LeadAssistantWriter
             $input['brand_knowledge'] = $knowledge;
             if (($issues || $newSources) && microtime(true) - $started < 285) {
                 $raw = $write($input + ['corrections' => $issues, 'editor_suggestions' => $suggestions, 'candidate_to_correct' => $result['body']], true);
-                $result = $this->result($raw, $mode, true);
+                $result = $this->result($raw, $mode, true, 'correction');
                 if ($result['decision'] === 'draft') {
                     $check = CommercialEmailCheck::assess($result, $input, $raw['commercial_check'] ?? []);
                     if ([$result['subject'], $result['body']] !== $firstDraft && ! $check['issues']) {
@@ -310,9 +332,13 @@ PROMPT;
             $email ? 8000 : 4000, isset($context['brand_knowledge']['plan']) ? ($retry ? 110 : 155) : ($email ? 75 : 65));
     }
 
-    private function result(array $result, string $mode, bool $email): array
+    private function result(array $result, string $mode, bool $email, string $stage = 'draft'): array
     {
-        $clean = $this->clean($result, $email);
+        try {
+            $clean = $this->clean($result, $email);
+        } catch (RuntimeException) {
+            throw new CrmAssistantGenerationFailed($stage, 'invalid_content');
+        }
         if ($mode === 'brief') {
             $signals = $result['signals'] ?? [];
             $probability = $signals['win_probability'] ?? null;

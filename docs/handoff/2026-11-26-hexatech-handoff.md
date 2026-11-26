@@ -6,6 +6,8 @@ A separate lock-file patch updates Symfony HTTP Kernel, Mailer, Routing and the 
 
 ## CRM email quality review
 
+A reseller run ended without a usable email after four paid calls. The audit stayed within its ten-attempt limit. The writer now records bounded failure reasons by generation stage, including correction and review, without logging correspondence or provider responses.
+
 A matched production retest distinguished the price of a stock sample from the cost of proving a complete custom order. The search plan now records what is being priced and carries a buyer-approved fallback through to review. Retrieve the full audit from the owner's private report for case scores and the limitations of the live sample.
 
 The production draft review exposed quoted threads and signatures being read as fresh requests, repeated email copies, and a price hold after a buyer expressly invited a feasibility response. The CRM assistant now prepares the captured correspondence before retrieval, masks labelled access details in provider inputs, and gives the independent commercial reviewer recent correspondence. A pricing correction shares the existing retry allowance. Each final figure must still pass the commercial checks.

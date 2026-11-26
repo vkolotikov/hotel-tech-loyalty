@@ -13,6 +13,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
@@ -331,6 +332,25 @@ class LeadAssistantTest extends TestCase
         $this->runLatest();
         $this->getJson($path)->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
         $this->assertSame(4, $writes);
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_failed_correction_logs_its_stage_without_provider_text_or_a_customer_draft(): void
+    {
+        $lead = $this->lead(['notes' => 'Review the finish before pricing.']);
+        Log::spy();
+        Http::fake(['api.openai.com/v1/responses' => Http::sequence()
+            ->push($this->providerOutput(['subject' => 'Finish', 'body' => 'Your price is USD 9837.', 'email_language' => 'en', 'review_notes' => []]))
+            ->push(['status' => 'incomplete', 'incomplete_details' => ['reason' => 'private provider diagnostic'],
+                'usage' => ['input_tokens' => 100, 'output_tokens' => 50]])]);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $this->asManager()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        Log::shouldHaveReceived('warning')->with('CRM assistant generation stage failed', [
+            'organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'stage' => 'correction',
+            'reason' => 'provider_incomplete', 'http_status' => 200,
+        ])->once();
+        $this->getJson($path)->assertJsonPath('run.error', 'ai_failed')->assertJsonMissingPath('results.reply');
         Mail::assertNothingSent();
     }
 

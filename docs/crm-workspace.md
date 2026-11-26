@@ -407,6 +407,8 @@ review.
 
 ### Customer email drafts
 
+An unsuccessful provider call or unusable model output records a `CRM assistant generation stage failed` application event. It carries the organisation, brand, stage, a fixed reason and an HTTP status when available. The stages distinguish question planning, initial writing, correction and commercial review. Operators can use the event and the metered usage records to diagnose a failed draft without logging prompts or provider response bodies.
+
 For a multi-part commercial enquiry, the search plan names the specific item or service behind each price question. Sample searches give matching deliverables more weight. A narrower answer the buyer explicitly accepts is carried into commercial review only when the quoted words occur in the current request. The reviewer checks whether a published charge actually covers that deliverable.
 
 The assistant separates each captured email's current text from its quoted history. Exact duplicate copies and conventional footers are removed from drafting context. Quoted text missing from the captured originals stays available as background. The email reader retains the original correspondence. Labelled credentials and token-bearing query parameters are masked before the assistant sends text to its provider.
