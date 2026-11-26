@@ -44,7 +44,7 @@ class Inquiry extends Model
             return strtoupper($this->currency);
         }
 
-        return $this->total_value === null && $this->isFdsCards() ? 'EUR' : null;
+        return $this->isFdsCards() ? ($this->total_value === null ? 'EUR' : 'XXX') : null;
     }
 
     private function isFdsCards(): bool

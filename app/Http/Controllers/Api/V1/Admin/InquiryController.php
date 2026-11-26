@@ -420,7 +420,7 @@ class InquiryController extends Controller
         if ($request->has('currency')) {
             $currency = $request->validate(['currency' => ['required', \Illuminate\Validation\Rule::in(\App\Services\Crm\EmailPriceCheck::currencyCodes())],
                 'total_value' => 'present|nullable|numeric|min:0'])['currency'];
-            abort_if(($inquiry->paid_amount > 0 || $inquiry->rate_offered !== null) && $currency !== $inquiry->currency, 422);
+            abort_if($inquiry->currency && ($inquiry->paid_amount > 0 || $inquiry->rate_offered !== null) && $currency !== $inquiry->currency, 422);
             $v['currency'] = $currency;
         }
         $checkIn  = $v['check_in'] ?? $inquiry->check_in?->toDateString();
@@ -641,7 +641,9 @@ class InquiryController extends Controller
             ->count();
 
         $amounts = Inquiry::where($openScope)->whereNotNull('total_value')
-            ->selectRaw('currency, SUM(total_value) as amount')->groupBy('currency')->toBase()->get();
+            ->selectRaw('organization_id, brand_id, currency, SUM(total_value) as amount')->groupBy('organization_id', 'brand_id', 'currency')->toBase()->get()
+            ->map(fn ($row) => ['amount' => $row->amount, 'currency' => $row->currency ?? (
+                (int) $row->organization_id === \App\Services\Integrations\CrmMail::ORGANIZATION && (int) $row->brand_id === \App\Services\Integrations\CrmMail::BRAND ? 'XXX' : null)]);
         $estimatedValue = (float) $amounts->sum('amount');
 
         $newThisWeek = Inquiry::where('created_at', '>=', $weekAgo)->count();

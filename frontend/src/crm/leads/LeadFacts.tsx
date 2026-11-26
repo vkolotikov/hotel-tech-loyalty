@@ -8,7 +8,7 @@ import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { money, timeAgo } from '../lib/format'
+import { currencyLabel, money, timeAgo } from '../lib/format'
 import { Card } from '../ui/Card'
 import { IconButton } from '../ui/IconButton'
 import { Select, TextArea, TextInput } from '../ui/inputs'
@@ -236,7 +236,7 @@ export function DetailsCard({ lead, onEdit }: { lead: LeadDetail; onEdit: () => 
 
 /** The whole lead at once (the … menu's Edit): value, priority, owner, where it came from, the type and notes. */
 export function LeadEditPanel({ lead, onClose }: { lead: LeadDetail; onClose: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const boot = useBoot()
   const toast = useToast()
   const changed = useLeadChanged()
@@ -274,9 +274,9 @@ export function LeadEditPanel({ lead, onClose }: { lead: LeadDetail; onClose: ()
       <form id={formId} className="space-y-3" onSubmit={e => { e.preventDefault(); submit() }}>
         {save.isError && <Notice tone="danger">{errorText(t, save.error)}</Notice>}
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency })}>
+          <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency: currencyLabel(currency, i18n.language) })}>
             <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
-              <LeadCurrency value={currency} disabled={Number(lead.paid_amount ?? 0) > 0 || lead.rate_offered != null} onChange={setCurrency} />
+              <LeadCurrency value={currency} disabled={initialCurrency !== 'XXX' && (Number(lead.paid_amount ?? 0) > 0 || lead.rate_offered != null)} onChange={setCurrency} />
               <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })} aria-invalid={problem ? true : undefined} /></div>
             {problem && <span className="mt-1 block text-xs text-a-danger">{problemText(t, 'number')}</span>}
           </Field>

@@ -43,12 +43,17 @@ export function dayLabel(ymd: string | null | undefined, lang: string): string {
 export function money(amount: number | string | null | undefined, currency: string, lang: string): string {
   const value = typeof amount === 'string' ? Number(amount) : amount
   if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  if (currency === 'XXX') return new Intl.NumberFormat(lang).format(value) + ' (' + currencyLabel(currency, lang) + ')'
   const cents = Math.round(value * 100) % 100 !== 0
   try {
     return new Intl.NumberFormat(lang, { style: 'currency', currency: currency || 'EUR', minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: 2 }).format(value)
   } catch {
     return `${value.toFixed(cents ? 2 : 0)} ${currency}`
   }
+}
+
+export function currencyLabel(code: string, lang: string): string {
+  return code === 'XXX' ? new Intl.DisplayNames([lang], { type: 'currency' }).of(code) ?? code : code
 }
 
 /** Keep original currencies separate when an opportunity list spans markets. */

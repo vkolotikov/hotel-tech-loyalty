@@ -109,6 +109,9 @@ class LeadCorrespondenceTest extends TestCase
     {
         $lead = $this->lead();
         $this->email['threads'][0]['message_id'] = (string) \Illuminate\Support\Str::uuid();
+        $legacy = $this->lead(['total_value' => 15]);
+        $this->assertSame('XXX', Inquiry::findOrFail($legacy)->value_currency);
+        $this->assertSame('EUR', Inquiry::findOrFail($lead)->value_currency);
         $this->body = "Bonjour\nTotal TTC : 1 250,50 €\nCordialement";
         app(LeadCorrespondenceSync::class)->run();
         $this->assertDatabaseHas('inquiries', ['id' => $lead, 'total_value' => '1250.50', 'currency' => 'EUR']);
