@@ -1,5 +1,9 @@
 # Handoff — 26 November 2026
 
+## PHP dependency maintenance
+
+A separate lock-file patch updates Symfony HTTP Kernel, Mailer, Routing and the required HTTP Foundation component to 8.1.12. Composer's locked dependency audit clears the five November advisories. Run the production stack's PHP 8.5 checks against the lock file.
+
 ## CRM email quality review
 
 A matched production retest distinguished the price of a stock sample from the cost of proving a complete custom order. The search plan now records what is being priced and carries a buyer-approved fallback through to review. Retrieve the full audit from the owner's private report for case scores and the limitations of the live sample.
