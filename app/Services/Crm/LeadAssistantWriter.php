@@ -33,7 +33,7 @@ final class LeadAssistantWriter
         try {
             return $this->writeSnapshot($lead, $brand, $org, $user, $run, $feature, $snapshot, $started);
         } catch (CrmAssistantGenerationFailed $error) {
-            Log::warning('CRM assistant generation stage failed', ['organization_id' => $org->id, 'brand_id' => $brand->id,
+            Log::error('CRM assistant generation stage failed', ['organization_id' => $org->id, 'brand_id' => $brand->id,
                 'stage' => $error->stage, 'reason' => $error->reason, 'http_status' => $error->httpStatus]);
             throw $error;
         }

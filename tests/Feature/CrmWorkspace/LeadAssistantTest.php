@@ -341,7 +341,7 @@ class LeadAssistantTest extends TestCase
         $lead = $this->lead(['notes' => 'Review the finish before pricing.']);
         $diagnostics = [];
         Event::listen(MessageLogged::class, static function (MessageLogged $event) use (&$diagnostics) {
-            if ($event->message === 'CRM assistant generation stage failed') {
+            if ($event->level === 'error' && $event->message === 'CRM assistant generation stage failed') {
                 $diagnostics[] = $event->context;
             }
         });
