@@ -27,6 +27,46 @@ PROMPT;
                 'evidence' => ['type' => 'array', 'items' => EmailQuestionPlan::object(['ref' => $str, 'quote' => $str])]])]]);
     }
 
+    /** Label the same passages the server can resolve, without adding another copy to the prompt. */
+    public static function labelSources(array $context): array
+    {
+        foreach (['answers' => 'answer', 'documents' => 'excerpt'] as $group => $field) {
+            foreach ($context['brand_knowledge'][$group] as $i => $row) {
+                $context['brand_knowledge'][$group][$i][$field] = self::label($row[$field]);
+            }
+        }
+        foreach ($context['reviewed_profile_evidence'] ?? [] as $key => $value) {
+            if (is_string($value)) {
+                $context['reviewed_profile_evidence'][$key] = self::label($value);
+            }
+        }
+        foreach (self::recordedSources($context) as $ref => $body) {
+            [$kind, $index] = explode('-', $ref);
+            $group = $kind === 'email' ? 'recent_matched_emails' : 'recent_activities';
+            $row = &$context['conversation'][$group][(int) $index - 1];
+            $row['evidence_ref'] = $ref;
+            $row['body'] = self::label($body);
+            unset($row);
+        }
+
+        return $context;
+    }
+
+    private static function passages(string $text): array
+    {
+        return preg_split('/\R+|(?<=[.!?])\h+(?=[\p{Lu}\d])/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+
+    private static function label(string $text): string
+    {
+        $lines = [];
+        foreach (self::passages($text) as $i => $passage) {
+            $lines[] = '#'.($i + 1).' '.$passage;
+        }
+
+        return implode("\n", $lines);
+    }
+
     public static function assess(array $result, array $context, array $quality): array
     {
         $sources = [];
@@ -43,19 +83,7 @@ PROMPT;
             $sources['quote'] = json_encode($quote, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
         $issues = [];
-        $recorded = [];
-        $subject = CrmMail::threadSubject($context['conversation']['reply_target'] ?? []);
-        foreach ($context['conversation']['recent_matched_emails'] ?? [] as $i => $mail) {
-            if ($subject !== '' && CrmMail::threadSubject($mail) === $subject
-                && ($mail['direction'] === 'from_customer' || ($mail['reply_status'] ?? '') === 'awaiting_customer')) {
-                $recorded['email-'.($i + 1)] = $mail['body'];
-            }
-        }
-        foreach ($context['conversation']['recent_activities'] ?? [] as $i => $activity) {
-            if ($activity['kind'] === 'email' && in_array($activity['direction'], ['inbound', 'outbound'], true)) {
-                $recorded['activity-'.($i + 1)] = $activity['body'];
-            }
-        }
+        $recorded = self::recordedSources($context);
         $checked = [];
         $proof = [];
         $map = collect($quality['answers'] ?? [])->keyBy('id');
@@ -72,7 +100,10 @@ PROMPT;
             foreach ($row['evidence'] ?? [] as $citation) {
                 $ref = $citation['ref'] ?? '';
                 $words = $citation['quote'] ?? '';
-                $source = $sources[$ref] ?? ($status === 'recorded' ? ($recorded[$ref] ?? null) : null);
+                $source = $sources[$ref] ?? $recorded[$ref] ?? null;
+                if ($source !== null && preg_match('/^#([1-9]\d{0,3})$/D', trim($words), $match)) {
+                    $words = self::passages($source)[(int) $match[1] - 1] ?? '';
+                }
                 if ($source === null || ! self::contains($source, $words)) {
                     $issues[] = $q['id'].' needs a verbatim passage from an available source.';
                     continue;
@@ -82,7 +113,8 @@ PROMPT;
                     $proof[] = $words;
                 }
             }
-            if (! $refs && ! in_array($status, ['open', 'exception'], true)) {
+            $supported = $status === 'recorded' ? $refs : array_intersect($refs, array_keys($sources));
+            if (! $supported && ! in_array($status, ['open', 'exception'], true)) {
                 $issues[] = $q['id'].' has no evidence for its conclusion.';
             }
             if (in_array($status, ['partial', 'open', 'exception'], true) && trim($row['pending'] ?? '') === '') {
@@ -101,6 +133,25 @@ PROMPT;
         }
 
         return ['issues' => array_values(array_unique($issues)), 'answers' => $checked];
+    }
+
+    private static function recordedSources(array $context): array
+    {
+        $recorded = [];
+        $subject = CrmMail::threadSubject($context['conversation']['reply_target'] ?? []);
+        foreach ($context['conversation']['recent_matched_emails'] ?? [] as $i => $mail) {
+            if ($subject !== '' && CrmMail::threadSubject($mail) === $subject
+                && ($mail['direction'] === 'from_customer' || ($mail['reply_status'] ?? '') === 'awaiting_customer')) {
+                $recorded['email-'.($i + 1)] = $mail['body'];
+            }
+        }
+        foreach ($context['conversation']['recent_activities'] ?? [] as $i => $activity) {
+            if ($activity['kind'] === 'email' && in_array($activity['direction'], ['inbound', 'outbound'], true)) {
+                $recorded['activity-'.($i + 1)] = $activity['body'];
+            }
+        }
+
+        return $recorded;
     }
 
     private static function contains(string $source, string $excerpt): bool

@@ -225,9 +225,22 @@ class KnowledgeService
     public function forSalesQuestions(Brand $brand, array $plan): array
     {
         $orgId = (int) $brand->organization_id;
+        $terms = collect($plan['questions'])->map(fn ($q) => implode(' ', [$q['need'], $q['search'], $q['alternate'], $q['price_subject'] ?? '']))->implode(' ');
 
-        return (new SalesQuestionSearch)->retrieve($plan, $this->items($orgId, $brand),
+        return (new SalesQuestionSearch)->retrieve($plan, $this->salesItems($brand, $terms),
             $this->documents($orgId, $brand), $this->tokeniseQuery(...));
+    }
+
+    /** Pen engraving, packaging and shipping have their own builder tariff. */
+    private function salesItems(Brand $brand, string $terms): Builder
+    {
+        $items = $this->items((int) $brand->organization_id, $brand);
+        if (FdsBuilderKnowledge::owns($brand) && preg_match('/(?:\bcards?\b|kaart|visiit|cartes?\b|tarjet|karte|карт)/iu', $terms)
+            && ! preg_match('/\b(?:pens?|parker|jotter|sonnet|stylo\pL*|kugelschreiber\pL*|bol[ií]grafo\pL*|ручк\pL*|pastapliiats\pL*)\b/iu', $terms)) {
+            $items->where(fn ($q) => $q->whereNull('source_key')->orWhereNotLike('source_key', FdsBuilderKnowledge::PREFIX.'pens.%'));
+        }
+
+        return $items;
     }
 
     /** Match exact model references first, then rank relevant brand answers and document passages. */
@@ -247,7 +260,7 @@ class KnowledgeService
                 $words = array_values(array_unique([...$words, ...$terms]));
             }
         }
-        $base = $this->items((int) $brand->organization_id, $brand);
+        $base = $this->salesItems($brand, $query);
         $matched = $words ? $this->rankedItems(clone $base, $words, 12, $brand) : collect();
         $exact = collect();
         if ($ids) {

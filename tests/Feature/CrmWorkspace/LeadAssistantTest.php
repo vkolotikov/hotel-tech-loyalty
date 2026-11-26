@@ -325,7 +325,7 @@ class LeadAssistantTest extends TestCase
             $body = $input['staff_focus'] === '' && isset($input['corrections']) ? 'We can review the specified finish for your quote.' : 'Your total is USD 9837.';
 
             return Http::response($this->providerOutput(['decision' => 'draft', 'subject' => 'Finish options',
-                'body' => $body, 'review_notes' => [], 'email_language' => 'en', 'commercially_ready' => true]));
+                'body' => $body, 'review_notes' => [], 'email_language' => 'en', 'material_issue' => '']));
         }]);
         $this->asManager()->postJson($path, ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
@@ -334,6 +334,30 @@ class LeadAssistantTest extends TestCase
         $this->runLatest();
         $this->getJson($path)->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
         $this->assertSame(4, $writes);
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_custom_quote_can_be_pending_but_an_unsupported_promise_must_be_fixed(): void
+    {
+        $lead = $this->lead(['notes' => 'The buyer wants a fitted presentation box. Its minimum and price are pending.']);
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $issue = 'The email guarantees production for one box without a confirmed minimum.';
+        $draft = fn ($body, $defect) => $this->providerOutput(['decision' => 'draft', 'subject' => 'Fitted box',
+            'body' => $body, 'review_notes' => ['Obtain the box minimum and unit price.'], 'material_issue' => $defect]);
+        $unsafe = $draft('One box is guaranteed.', $issue);
+        $safe = 'We can quote the fitted box from your mockup and show its minimum and unit price separately.';
+        Http::fake(['api.openai.com/v1/responses' => Http::sequence()->push($unsafe)->push($draft($safe, ''))->push($unsafe)->push($unsafe)]);
+        $run = fn () => $this->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->asManager();
+        $run();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.reply.body', $safe)
+            ->assertJsonPath('results.reply.review_notes.0', 'Obtain the box minimum and unit price.');
+        Http::assertSent(fn (Request $request) => (json_decode($request['input'], true)['corrections'][0] ?? '') === $issue);
+        $run();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.reply.reason_code', 'commercial_review')
+            ->assertJsonPath('results.reply.body', '')->assertJsonPath('results.reply.review_notes.0', $issue);
         Mail::assertNothingSent();
     }
 
@@ -618,6 +642,19 @@ class LeadAssistantTest extends TestCase
         $quality['answers'][0] = ['id' => 'q1', 'status' => 'recorded', 'email_excerpt' => $draft['body'],
             'evidence' => [['ref' => 'email-1', 'quote' => 'sent the revised concept']]];
         $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $input['brand_knowledge']['answers'][] = ['id' => 'faq-1', 'answer' => "Matte stock is available.\nCustom finishes need a quote."];
+        $labelled = \App\Services\Crm\CommercialEmailCheck::labelSources($input);
+        $this->assertStringContainsString('#2 Custom finishes need a quote.', $labelled['brand_knowledge']['answers'][0]['answer']);
+        $this->assertSame('email-1', $labelled['conversation']['recent_matched_emails'][0]['evidence_ref']);
+        $quality['answers'][0]['evidence'][0]['quote'] = '#1';
+        $quality['answers'][0]['status'] = 'partial';
+        $quality['answers'][0]['pending'] = 'Confirm the special finish.';
+        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $quality['answers'][0]['evidence'][] = ['ref' => 'faq-1', 'quote' => '#2'];
+        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $quality['answers'][0]['evidence'][1]['quote'] = '#3';
+        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $quality['answers'][0]['evidence'][1]['quote'] = '#2';
         $input['conversation']['reply_target']['subject'] = 'Another order';
         $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
     }

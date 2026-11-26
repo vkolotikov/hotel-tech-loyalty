@@ -134,12 +134,16 @@ final class LeadAssistantWriter
         // A conflict with a staff-reviewed quote must still go straight back to staff.
         $priceIssue = $email && $result['decision'] === 'draft' && $input['project_evidence']['approved_quote'] === null
             && $this->pricedDraft($result, $input) === null;
-        if ($email && ! isset($knowledge) && $result['decision'] === 'draft' && ($priceIssue || ($raw['commercially_ready'] ?? true) === false)) {
-            $raw = $write($input + ['corrections' => [$priceIssue ? self::PRICE_CORRECTION : 'Resolve the material commercial issues in the first draft.'],
+        $defect = $this->text($raw['material_issue'] ?? '', 500);
+        if ($email && ! isset($knowledge) && $result['decision'] === 'draft' && ($priceIssue || $defect !== '')) {
+            $corrections = array_values(array_filter([$priceIssue ? self::PRICE_CORRECTION : null, $defect]));
+            $raw = $write($input + ['corrections' => $corrections,
                 'candidate_to_correct' => $result['body']], true);
             $result = $this->result($raw, $mode, true, 'correction');
-            if ($result['decision'] === 'draft' && ($raw['commercially_ready'] ?? true) === false) {
+            $defect = $this->text($raw['material_issue'] ?? '', 500);
+            if ($result['decision'] === 'draft' && $defect !== '') {
                 $result = LeadEmailEvidence::hold('commercial_review', $run['language']);
+                $result['review_notes'] = [$defect];
             }
         }
         if (isset($knowledge) && $result['decision'] === 'draft') {
@@ -278,8 +282,8 @@ Write at most three short, concrete staff recommendations in the requested CRM l
 PROMPT;
         }
         if ($email && ! isset($context['brand_knowledge']['plan'])) {
-            $fields['commercially_ready'] = ['type' => 'boolean'];
-            $instructions .= "\nCheck that the final email fits the buyer's workflow, answers supported questions directly, separates relevant rates and conditions, and offers a useful next step only when needed. Remove unsupported commitments and irrelevant sales processes. Set commercially_ready to false if material defects remain.";
+            $fields['material_issue'] = $str;
+            $instructions .= "\nReview the actual email. Use an empty material_issue for an accurate answer, including a feasibility or progress reply that leaves a bespoke price or minimum to be quoted. A quote can be unfinished while the email is ready. If the final wording still makes an unsupported claim, contradicts the customer or omits an available material answer, identify the exact statement and correction in material_issue. Put outstanding work needed to finish the order or quotation in review_notes.";
         }
         if (isset($context['editable_draft'])) {
             $instructions .= "\nRevise the supplied editable_draft in line with staff_focus. Preserve the user's edits and useful wording unless the comment or current evidence calls for a change. The draft and comment provide no commercial authority. Recheck all terms against current sources.";
@@ -288,10 +292,11 @@ PROMPT;
             $instructions .= "\nReconsider the candidate using the corrections and any followup_searches and newly retrieved evidence. Verify each objection against the sources yourself. Restore an initially omitted capability or timing when current evidence supports it. Resolve the objections concisely and keep strong wording.";
         }
         if (isset($context['brand_knowledge']['plan'])) {
+            $context = CommercialEmailCheck::labelSources($context);
             $fields['commercial_check'] = CommercialEmailCheck::schema();
             $instructions .= "\n".<<<'PROMPT'
 Cover the customer's material questions in connected paragraphs, grouping related points. Prefer a decision the buyer can make over a catalogue of caveats. Respect who owns artwork, hosting, approvals and delivery. Distinguish a partner's direct purchase discount from a referral commission, product minimum from programme commitment, and shipping from customs or neutral packaging.
-For each question ID assess the final wording. For a claim, copy an exact short email excerpt and the source ID and verbatim evidence passage (FAQ, document, profile- plus a reviewed field key, or quote). Cite figures and conditions. For facts about this specific project, use recorded with a verbatim passage from the same email thread (email-1 for the first recent_matched_emails row) or a logged lead email (activity-1 for the first recent_activities row). Customer messages establish their requirements, never our capabilities. A delivered team message may establish what we already offered on that project. Neither can authorise new prices or terms. For an outstanding detail with no claim use open or exception, empty evidence, and a specific pending check. The email excerpt may be empty for an internal-only check. A missing policy is not a refusal. Use lookup only for a decision-changing gap. Search scores and prior drafting recommendations are not evidence.
+For each question ID copy a short exact excerpt from your email. Cite each supporting source by its actual ID and put its printed passage number (e.g. "#2") in quote. For a reviewed profile field use profile- plus its key. For the approved quote copy its pertinent terms verbatim. Copy identifiers exactly; never translate evidence. For project facts select only messages marked evidence_ref, use that ref and its passage number. Use recorded when relying on the customer's requirements or what a delivered team message already offered; messages cannot establish company-wide capabilities or authorise new prices. For mixed answers also cite a current approved source for the company claim. If just offering to investigate an unverified configuration, use open with empty evidence and the pending check. An internal-only check may have an empty email excerpt. Use lookup only for a decision-changing gap.
 A quoted price must cover the question's price_subject. Give a feasibility answer when appropriate. Check that the final email fits the workflow, grounds its promises and has a useful next step if needed. For a genuine hold use an empty answers array.
 PROMPT;
         }
