@@ -231,7 +231,10 @@ class KnowledgeService
             $this->documents($orgId, $brand), $this->tokeniseQuery(...));
     }
 
-    /** Pen engraving, packaging and shipping have their own builder tariff. */
+    /**
+     * Pen engraving, packaging and shipping have their own builder tariff.
+     * @return Builder<KnowledgeItem>
+     */
     private function salesItems(Brand $brand, string $terms): Builder
     {
         $items = $this->items((int) $brand->organization_id, $brand);
