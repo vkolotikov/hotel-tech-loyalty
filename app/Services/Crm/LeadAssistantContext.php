@@ -62,8 +62,17 @@ final class LeadAssistantContext
         $correspondence = $draft ? CustomerCorrespondence::forDraft($email['messages'], $whatsapp['messages'], $chat, $activities, $multiple ? [] : $previous) : [];
         $target = $correspondence['reply_target'] ?? null;
         $update = $correspondence['latest_customer_update'] ?? null;
+        // A short follow-on ("per box?", "without NFC") often names only the change. Retrieve against the
+        // previous customer's specification for the same subject, leaving the latest request first.
+        $background = [];
+        if (($target['channel'] ?? '') === 'email' && mb_strlen($target['body']) < 420 && ($subject = CrmMail::threadSubject($target)) !== '') {
+            $background = collect($email['messages'])->where('direction', 'from_customer')
+                ->filter(fn ($row) => $row['body'] !== $target['body'] && CrmMail::threadSubject($row) === $subject
+                    && strtotime((string) $row['sent_at']) <= strtotime((string) $target['at']))
+                ->take(2)->map(fn ($row) => mb_substr($row['body'], 0, 900))->all();
+        }
         $topic = implode("\n", [$focus, $update['body'] ?? '', $target['subject'] ?? '', $target['body'] ?? '',
-            ...array_column(array_slice($whatsapp['messages'], -3), 'body'), $lead->special_requests, $lead->notes,
+            ...$background, ...array_column(array_slice($whatsapp['messages'], -3), 'body'), $lead->special_requests, $lead->notes,
             ...array_column(array_slice($chat, -3), 'body')]);
         $requestText = trim((string) ($target['body'] ?? '')) ?: trim($lead->special_requests."\n".$lead->notes);
         if ($update) {
