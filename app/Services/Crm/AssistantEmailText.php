@@ -68,7 +68,7 @@ final class AssistantEmailText
     private static function withoutFooter(string $body): string
     {
         $body = preg_split('/^(?:(?:All details contained within this e-?mail|This (?:e-?mail|message)(?: and (?:any|its) attachments)?) (?:are|is) confidential\b|Sent from my (?:iPhone|iPad|Android)\b)/imu', $body, 2)[0];
-        $closing = '/^(?:(?:best|kind|warm(?:est)?) regards|regards|best wishes|sincerely|cordialement|bien à vous|mit freundlichen grüßen|saludos(?: cordiales)?|thanks(?: again)?|thank you(?: very much)?|merci(?: beaucoup)?)[,.! ]*$/imu';
+        $closing = '/^(?:(?:best|kind|warm(?:est)?) regards|regards|best wishes|sincerely|cordialement|bien à vous|mit freundlichen grüßen|saludos(?: cordiales)?|thanks(?: again)?|thank you(?: very much)?|merci(?: beaucoup)?|lugupidamisega|parimate soovidega)[,.! ]*$/imu';
         if (preg_match($closing, $body, $match, PREG_OFFSET_CAPTURE)) {
             $tail = substr($body, $match[0][1] + strlen($match[0][0]));
             // Keep postscript questions, instructions and specifications below an apparent sign-off.

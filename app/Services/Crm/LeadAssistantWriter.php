@@ -203,7 +203,7 @@ final class LeadAssistantWriter
             ], [...$knowledge['answers'], ...$knowledge['documents']])];
             $meta['knowledge_trace']['assessment'] = $assessment ?? [];
         }
-        if (isset($run['revise']) && in_array($result['reason_code'] ?? '', ['commercial_review', 'unverified_price'], true)) {
+        if (isset($run['revise']) && $result['decision'] !== 'draft') {
             throw new \App\Exceptions\AiHelperRefused('draft_revision_failed', $result['reason'], 422);
         }
 
@@ -344,7 +344,7 @@ PROMPT;
             $subject = trim(str_replace(["\r", "\n"], ' ', $this->text($result['subject'] ?? null, 240)));
             $body = $this->text($result['body'] ?? null, 10000);
             // The mail client adds the signature. Remove a conventional closing copied from the correspondence.
-            $closing = 'best(?: regards| wishes)?|(?:kind|warm|warmest) regards|regards|sincerely|yours (?:sincerely|faithfully)|cheers|thanks|thank you|many thanks|(?:bien )?cordialement|bien à vous|mit freundlichen grü[ßs]+en|viele grü[ßs]+e|(?:un )?saludo(?:s cordiales|s)?|atentamente|с уважением';
+            $closing = 'best(?: regards| wishes)?|(?:kind|warm|warmest) regards|regards|sincerely|yours (?:sincerely|faithfully)|cheers|thanks|thank you|many thanks|(?:bien )?cordialement|bien à vous|mit freundlichen grü[ßs]+en|viele grü[ßs]+e|(?:un )?saludo(?:s cordiales|s)?|atentamente|с уважением|lugupidamisega|parimate soovidega';
             $parts = preg_split('/\R[ \t]*(?:--[ \t]*|(?:'.$closing.')[ \t]*[,.!]?|(?:best regards|kind regards|с уважением|cordialement),[ \t]+[^\r\n]+)[ \t]*(?:\R|$)/iu', $body, 2);
             if (is_array($parts) && count($parts) === 2 && $this->looksLikeSignature($parts[1])) {
                 $body = trim($parts[0]);
