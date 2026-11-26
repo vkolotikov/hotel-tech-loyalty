@@ -612,6 +612,14 @@ class LeadAssistantTest extends TestCase
         $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
         $quality['answers'][0]['status'] = 'confirmed';
         $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $input['conversation'] = ['reply_target' => ['subject' => 'Sample'], 'recent_matched_emails' => [
+            ['subject' => 'Re: Sample', 'direction' => 'from_customer', 'body' => 'We sent the revised concept.'],
+        ]];
+        $quality['answers'][0] = ['id' => 'q1', 'status' => 'recorded', 'email_excerpt' => $draft['body'],
+            'evidence' => [['ref' => 'email-1', 'quote' => 'sent the revised concept']]];
+        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $input['conversation']['reply_target']['subject'] = 'Another order';
+        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
     }
 
     public function test_a_comment_revises_the_current_edited_email_and_a_fresh_draft_discards_it(): void

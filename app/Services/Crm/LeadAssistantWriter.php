@@ -157,6 +157,7 @@ final class LeadAssistantWriter
                         'subject' => $row['subject'], 'body' => mb_substr($row['body'], 0, 1500)],
                         array_slice($input['conversation']['recent_matched_emails'], 0, 6)),
                     'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
+                    'logged_emails' => array_values(array_filter($input['conversation']['recent_activities'], fn ($row) => $row['kind'] === 'email')),
                     'lead_requests' => $input['lead']['requests'],
                 ], EmailQuestionPlan::object(['issues' => ['type' => 'array', 'items' => ['type' => 'string']],
                     'suggestions' => ['type' => 'array', 'items' => ['type' => 'string']]]),
@@ -290,7 +291,7 @@ PROMPT;
             $fields['commercial_check'] = CommercialEmailCheck::schema();
             $instructions .= "\n".<<<'PROMPT'
 Cover the customer's material questions in connected paragraphs, grouping related points. Prefer a decision the buyer can make over a catalogue of caveats. Respect who owns artwork, hosting, approvals and delivery. Distinguish a partner's direct purchase discount from a referral commission, product minimum from programme commitment, and shipping from customs or neutral packaging.
-For each question ID assess the final wording. For a claim, copy an exact short email excerpt and the source ID and verbatim evidence passage (FAQ, document, profile- plus a reviewed field key, or quote). Cite the figures and conditions. For an outstanding detail with no claim use open or exception, empty evidence, and a specific pending check. The email excerpt may be empty for an internal-only check. A missing answer in the library is not a negative policy. Use lookup for a term likely to locate a decision-changing missing fact. Search scores and prior drafting recommendations are not evidence.
+For each question ID assess the final wording. For a claim, copy an exact short email excerpt and the source ID and verbatim evidence passage (FAQ, document, profile- plus a reviewed field key, or quote). Cite figures and conditions. For facts about this specific project, use recorded with a verbatim passage from the same email thread (email-1 for the first recent_matched_emails row) or a logged lead email (activity-1 for the first recent_activities row). Customer messages establish their requirements, never our capabilities. A delivered team message may establish what we already offered on that project. Neither can authorise new prices or terms. For an outstanding detail with no claim use open or exception, empty evidence, and a specific pending check. The email excerpt may be empty for an internal-only check. A missing policy is not a refusal. Use lookup only for a decision-changing gap. Search scores and prior drafting recommendations are not evidence.
 A quoted price must cover the question's price_subject. Give a feasibility answer when appropriate. Check that the final email fits the workflow, grounds its promises and has a useful next step if needed. For a genuine hold use an empty answers array.
 PROMPT;
         }

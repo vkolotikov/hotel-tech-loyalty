@@ -2,6 +2,8 @@
 
 namespace App\Services\Crm;
 
+use App\Services\Integrations\CrmMail;
+
 /** Require an actual passage in both the email and its evidence for each confirmed answer. */
 final class CommercialEmailCheck
 {
@@ -20,7 +22,7 @@ PROMPT;
 
         return EmailQuestionPlan::object(['fits_workflow' => $bool, 'useful_next_step' => $bool, 'grounded_commitments' => $bool,
             'answers' => ['type' => 'array', 'items' => EmailQuestionPlan::object(['id' => $str,
-                'status' => ['type' => 'string', 'enum' => ['confirmed', 'conditional', 'partial', 'open', 'exception', 'unavailable']],
+                'status' => ['type' => 'string', 'enum' => ['confirmed', 'recorded', 'conditional', 'partial', 'open', 'exception', 'unavailable']],
                 'email_excerpt' => $str, 'pending' => $str, 'lookup' => $str,
                 'evidence' => ['type' => 'array', 'items' => EmailQuestionPlan::object(['ref' => $str, 'quote' => $str])]])]]);
     }
@@ -41,6 +43,19 @@ PROMPT;
             $sources['quote'] = json_encode($quote, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
         $issues = [];
+        $recorded = [];
+        $subject = CrmMail::threadSubject($context['conversation']['reply_target'] ?? []);
+        foreach ($context['conversation']['recent_matched_emails'] ?? [] as $i => $mail) {
+            if ($subject !== '' && CrmMail::threadSubject($mail) === $subject
+                && ($mail['direction'] === 'from_customer' || ($mail['reply_status'] ?? '') === 'awaiting_customer')) {
+                $recorded['email-'.($i + 1)] = $mail['body'];
+            }
+        }
+        foreach ($context['conversation']['recent_activities'] ?? [] as $i => $activity) {
+            if ($activity['kind'] === 'email' && in_array($activity['direction'], ['inbound', 'outbound'], true)) {
+                $recorded['activity-'.($i + 1)] = $activity['body'];
+            }
+        }
         $checked = [];
         $proof = [];
         $map = collect($quality['answers'] ?? [])->keyBy('id');
@@ -57,12 +72,15 @@ PROMPT;
             foreach ($row['evidence'] ?? [] as $citation) {
                 $ref = $citation['ref'] ?? '';
                 $words = $citation['quote'] ?? '';
-                if (! isset($sources[$ref]) || ! self::contains($sources[$ref], $words)) {
+                $source = $sources[$ref] ?? ($status === 'recorded' ? ($recorded[$ref] ?? null) : null);
+                if ($source === null || ! self::contains($source, $words)) {
                     $issues[] = $q['id'].' needs a verbatim passage from an available source.';
                     continue;
                 }
                 $refs[] = $ref;
-                $proof[] = $words;
+                if (isset($sources[$ref])) {
+                    $proof[] = $words;
+                }
             }
             if (! $refs && ! in_array($status, ['open', 'exception'], true)) {
                 $issues[] = $q['id'].' has no evidence for its conclusion.';
