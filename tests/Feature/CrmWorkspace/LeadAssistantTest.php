@@ -10,10 +10,11 @@ use App\Models\GuestBusinessProfile;
 use App\Models\Organization;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Client\Request;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
@@ -338,7 +339,12 @@ class LeadAssistantTest extends TestCase
     public function test_a_failed_correction_logs_its_stage_without_provider_text_or_a_customer_draft(): void
     {
         $lead = $this->lead(['notes' => 'Review the finish before pricing.']);
-        $logger = Log::spy();
+        $diagnostics = [];
+        Event::listen(MessageLogged::class, static function (MessageLogged $event) use (&$diagnostics) {
+            if ($event->message === 'CRM assistant generation stage failed') {
+                $diagnostics[] = $event->context;
+            }
+        });
         Http::fake(['api.openai.com/v1/responses' => Http::sequence()
             ->push($this->providerOutput(['subject' => 'Finish', 'body' => 'Your price is USD 9837.', 'email_language' => 'en', 'review_notes' => []]))
             ->push(['status' => 'incomplete', 'incomplete_details' => ['reason' => 'private provider diagnostic'],
@@ -346,10 +352,8 @@ class LeadAssistantTest extends TestCase
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
         $this->asManager()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
-        $logger->shouldHaveReceived('warning')->with('CRM assistant generation stage failed', [
-            'organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'stage' => 'correction',
-            'reason' => 'provider_incomplete', 'http_status' => 200,
-        ])->once();
+        $this->assertSame([['organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'stage' => 'correction',
+            'reason' => 'provider_incomplete', 'http_status' => 200]], $diagnostics);
         $this->getJson($path)->assertJsonPath('run.error', 'ai_failed')->assertJsonMissingPath('results.reply');
         Mail::assertNothingSent();
     }
