@@ -2,6 +2,8 @@
 
 namespace App\Services\Crm;
 
+use App\Services\Integrations\CrmMail;
+
 /** Extract the author's contribution while retaining otherwise missing quoted history separately. */
 final class AssistantEmailText
 {
@@ -29,6 +31,14 @@ final class AssistantEmailText
         }
 
 
+        // Retain only text that the customer actually quoted from an earlier verified sender in the same thread.
+        $receipts = [];
+        foreach ($messages as $i => $row) {
+            $subject = CrmMail::threadSubject($row);
+            if ($row['direction'] === 'from_customer' && $subject !== '' && $quoted[$i] !== '' && ($at = strtotime((string) $row['sent_at']))) {
+                $receipts[$subject][] = ['at' => $at, 'text' => self::fingerprint($quoted[$i])];
+            }
+        }
         $unique = [];
         $seenMessages = [];
         $known = array_fill_keys($authored, true);
@@ -38,6 +48,23 @@ final class AssistantEmailText
                 continue;
             }
             $seenMessages[$key] = true;
+            if (($message['from_verified_team_sender'] ?? false) && $message['direction'] === 'other' && ($at = strtotime((string) $message['sent_at']))) {
+                $later = array_filter($receipts[CrmMail::threadSubject($message)] ?? [], fn ($r) => $r['at'] > $at);
+                $confirmed = [];
+                $remaining = 2200;
+                foreach (preg_split('/\R+/u', $message['body']) as $line) {
+                    $text = self::fingerprint($line);
+                    $length = mb_strlen($line) + 1;
+                    if ($length <= $remaining && mb_strlen($text) >= 40 && array_any($later, fn ($r) => str_contains($r['text'], $text))) {
+                        $confirmed[] = trim($line);
+                        $remaining -= $length;
+                    }
+                }
+                if ($confirmed) {
+                    $message['customer_quoted_team_text'] = implode("\n", array_unique($confirmed));
+                }
+            }
+            unset($message['from_verified_team_sender']);
             $fingerprint = self::fingerprint($quoted[$index]);
             if ($fingerprint !== '' && ! isset($known[$fingerprint])) {
                 $message['quoted_context'] = mb_substr($quoted[$index], 0, 2200);

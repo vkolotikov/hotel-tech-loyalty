@@ -42,10 +42,15 @@ PROMPT;
         }
         foreach (self::recordedSources($context) as $ref => $body) {
             [$kind, $index] = explode('-', $ref);
-            $group = $kind === 'email' ? 'recent_matched_emails' : 'recent_activities';
+            $group = $kind === 'activity' ? 'recent_activities' : 'recent_matched_emails';
             $row = &$context['conversation'][$group][(int) $index - 1];
-            $row['evidence_ref'] = $ref;
-            $row['body'] = self::label($body);
+            if ($kind === 'history') {
+                $row['previous_terms_ref'] = $ref;
+                $row['customer_quoted_team_text'] = self::label($body);
+            } else {
+                $row['evidence_ref'] = $ref;
+                $row['body'] = self::label($body);
+            }
             unset($row);
         }
 
@@ -140,6 +145,10 @@ PROMPT;
         $recorded = [];
         $subject = CrmMail::threadSubject($context['conversation']['reply_target'] ?? []);
         foreach ($context['conversation']['recent_matched_emails'] ?? [] as $i => $mail) {
+            if (! empty($mail['customer_quoted_team_text']) && $subject !== '' && (CrmMail::threadSubject($mail) === $subject
+                || ($context['project_evidence']['multiple_projects'] ?? true) === false)) {
+                $recorded['history-'.($i + 1)] = $mail['customer_quoted_team_text'];
+            }
             if ($subject !== '' && CrmMail::threadSubject($mail) === $subject
                 && ($mail['direction'] === 'from_customer' || ($mail['reply_status'] ?? '') === 'awaiting_customer')) {
                 $recorded['email-'.($i + 1)] = $mail['body'];

@@ -123,6 +123,8 @@ class CrmMail
         }
         $page = LeadReplyBadges::emailPage($guest, null, ['connected' => true, 'messages' => $rows->all()]);
         $rows = collect($page['messages']);
+        $teamSenders = $rows->where('reply_status', 'awaiting_customer')
+            ->flatMap(fn ($row) => $this->addresses($row['participants']['from'] ?? []))->unique()->all();
         $inbound = $rows->filter(fn ($row) => $this->senderMatches($row, $email));
         $reply = $inbound->firstWhere('reply_status', 'needs_reply') ?? $inbound->first();
         $thread = $reply ? $this->threadSubject($reply) : '';
@@ -154,8 +156,11 @@ class CrmMail
                 }
                 $body = $response instanceof Response && $response->successful() ? $response->json('body') : null;
                 $missing = $missing || ! is_string($body) || trim($body) === '';
+                $from = $this->addresses($row['participants']['from'] ?? []);
                 $messages[$row['id']] = [
                     'direction' => $this->senderMatches($row, $email) ? 'from_customer' : 'other',
+                    'from_verified_team_sender' => count($from) === 1 && in_array($from[0], $teamSenders, true)
+                        && in_array($email, $this->addresses($row['participants']['to'] ?? []), true),
                     ...isset($row['reply_status']) ? ['reply_status' => $row['reply_status']] : [],
                     'subject' => mb_substr((string) ($row['subject'] ?? ''), 0, 300),
                     'sent_at' => $row['sent_at'] ?? null,
@@ -181,15 +186,19 @@ class CrmMail
 
     private function senderMatches(array $row, string $email): bool
     {
-        foreach ((array) data_get($row, 'participants.from', []) as $sender) {
-            if (is_string($sender) && preg_match('/<([^<>]+)>\s*$/D', $sender, $match)) {
-                $sender = $match[1];
-            }
-            if (is_string($sender) && strtolower(trim($sender)) === $email) {
-                return true;
+        return in_array($email, $this->addresses($row['participants']['from'] ?? []), true);
+    }
+
+    private function addresses(mixed $participants): array
+    {
+        $addresses = [];
+        foreach ((array) $participants as $value) {
+            if (is_string($value)) {
+                $address = preg_match('/<([^<>]+)>\s*$/D', $value, $match) ? $match[1] : $value;
+                $addresses[] = strtolower(trim($address));
             }
         }
 
-        return false;
+        return array_values(array_unique(array_filter($addresses)));
     }
 }

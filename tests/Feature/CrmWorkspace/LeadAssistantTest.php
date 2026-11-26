@@ -657,6 +657,19 @@ class LeadAssistantTest extends TestCase
         $quality['answers'][0]['evidence'][1]['quote'] = '#2';
         $input['conversation']['reply_target']['subject'] = 'Another order';
         $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $input['conversation']['recent_matched_emails'][0] = ['direction' => 'other', 'subject' => 'Original specifications',
+            'body' => 'The chip can be locked. Old prices have expired.', 'customer_quoted_team_text' => 'The chip can be locked.'];
+        $input['project_evidence']['multiple_projects'] = false;
+        $quality['answers'][0] = ['id' => 'q1', 'status' => 'recorded', 'email_excerpt' => $draft['body'],
+            'evidence' => [['ref' => 'history-1', 'quote' => '#1']]];
+        $labels = \App\Services\Crm\CommercialEmailCheck::labelSources($input);
+        $this->assertSame('history-1', $labels['conversation']['recent_matched_emails'][0]['previous_terms_ref']);
+        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $quality['answers'][0]['evidence'][0]['quote'] = 'Old prices have expired.';
+        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $quality['answers'][0]['evidence'][0]['quote'] = '#1';
+        $input['project_evidence']['multiple_projects'] = true;
+        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
     }
 
     public function test_a_comment_revises_the_current_edited_email_and_a_fresh_draft_discards_it(): void

@@ -444,7 +444,7 @@ Sources compete per question, with a shared 32,000-character budget. Staff can e
 to see which evidence supported each answer and which conditions need attention. The saved trace also records search
 terms, relevance scores and source IDs. Public builder prices have a retail scope. Product availability can inform a
 partner reply independently of those prices. An independent commercial review checks the draft against the enquiry
-and current evidence. It can verify a numbered passage against its original source. The customer's requirements can supplement a company source when both apply to the same answer. Material objections trigger one rewrite. A remaining unsupported claim holds the draft for staff. An outstanding supplier quote can stay in the recommendations when the email itself is accurate.
+and current evidence. It can verify a numbered passage against its original source. For a revised enquiry with a new subject on a contact's sole opportunity, it can cite previous wording that the customer quoted from a verified team sender. Only the matching passage counts as a record of the earlier discussion. Project history cannot authorise new prices. The customer's requirements can supplement a company source when both apply to the same answer. Material objections trigger one rewrite. A remaining unsupported claim holds the draft for staff. An outstanding supplier quote can stay in the recommendations when the email itself is accurate.
 When an ordinary
 enquiry has no matching answers, it can consult four priority entries. Private email instructions guide the writing.
 The draft ends at the last useful sentence so the email app can add its signature. Once AI Discovery finishes, sourced public findings can identify details for

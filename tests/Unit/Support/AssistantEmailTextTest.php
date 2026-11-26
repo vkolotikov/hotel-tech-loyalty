@@ -32,6 +32,21 @@ final class AssistantEmailTextTest extends TestCase
         self::assertStringNotContainsString('Subject: Estimate', $clean['quoted_context']);
     }
 
+    public function test_only_a_later_customer_quotation_corroborates_the_matching_portion_of_a_team_message(): void
+    {
+        $term = 'The chip can remain rewritable or can be permanently locked after programming.';
+        $sent = ['subject' => 'Materials', 'direction' => 'other', 'sent_at' => '2026-01-10', 'from_verified_team_sender' => true,
+            'body' => $term."\n\nAvailability for your amended specification still needs to be checked."];
+        $in = ['subject' => 'Re: Materials', 'direction' => 'from_customer', 'sent_at' => '2026-01-11',
+            'body' => "Thanks for the detail.\n\nFrom: Supplier\nTo: Customer\nSubject: Materials\n\n".$term];
+        $extract = fn ($from, $reply) => AssistantEmailText::messages([$reply, $from])[1]['customer_quoted_team_text'] ?? null;
+        self::assertSame($term, $extract($sent, $in));
+        self::assertNull($extract([...$sent, 'from_verified_team_sender' => false], $in));
+        self::assertNull($extract($sent, [...$in, 'subject' => 'Another order']));
+        self::assertNull($extract($sent, [...$in, 'sent_at' => '2026-01-09']));
+        self::assertNull($extract($sent, [...$in, 'body' => $term]));
+    }
+
     public function test_assigned_credentials_are_scrubbed_and_the_public_destination_is_preserved(): void
     {
         $clean = AssistantEmailText::redact("Use https://example.test/card/123. Reset: https://example.test/reset?token=sample-test-value\nPassword:\n\nsample-test-pass\nPassword\n  \n  sample-test-other\nAuthorization: Bearer sample-test-bearer\nPlease keep the QR code unchanged.");

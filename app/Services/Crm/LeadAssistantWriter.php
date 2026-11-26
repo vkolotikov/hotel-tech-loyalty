@@ -158,6 +158,7 @@ final class LeadAssistantWriter
                     'previous_objections' => $prior,
                     'reviewed_profile' => $input['reviewed_profile_evidence'], 'project_evidence' => $input['project_evidence'],
                     'recent_emails' => array_map(fn ($row) => ['direction' => $row['direction'], 'reply_status' => $row['reply_status'] ?? null, 'at' => $row['sent_at'],
+                        'customer_quoted_team_text' => $row['customer_quoted_team_text'] ?? null,
                         'subject' => $row['subject'], 'body' => mb_substr($row['body'], 0, 1500)],
                         array_slice($input['conversation']['recent_matched_emails'], 0, 6)),
                     'recent_whatsapp' => array_slice($input['conversation']['recent_whatsapp_messages'] ?? [], -5),
@@ -297,7 +298,7 @@ PROMPT;
             $instructions .= "\n".<<<'PROMPT'
 Cover the customer's material questions in connected paragraphs, grouping related points. Prefer a decision the buyer can make over a catalogue of caveats. Respect who owns artwork, hosting, approvals and delivery. Distinguish a partner's direct purchase discount from a referral commission, product minimum from programme commitment, and shipping from customs or neutral packaging.
 For each question ID copy a short exact excerpt from your email. Cite each supporting source by its actual ID and put its printed passage number (e.g. "#2") in quote. For a reviewed profile field use profile- plus its key. For the approved quote copy its pertinent terms verbatim. Copy identifiers exactly; never translate evidence. For project facts select only messages marked evidence_ref, use that ref and its passage number. Use recorded when relying on the customer's requirements or what a delivered team message already offered; messages cannot establish company-wide capabilities or authorise new prices. For mixed answers also cite a current approved source for the company claim. If just offering to investigate an unverified configuration, use open with empty evidence and the pending check. An internal-only check may have an empty email excerpt. Use lookup only for a decision-changing gap.
-Keep evidence identifiers and passage numbers out of the customer email. A quoted price must cover the question's price_subject. Give a feasibility answer when appropriate. For a genuine hold use an empty answers array.
+previous_terms_ref identifies earlier team wording which this customer quoted back. Use it as recorded evidence of what was discussed, even if the latest revision has a new subject. Carry forward the still-applicable technical answer. Reassess changed specifications and never transfer an older price, minimum or delivery promise to a revised order. Keep evidence identifiers out of the email. A quoted price must cover the question's price_subject. For a genuine hold use an empty answers array.
 PROMPT;
         }
 
