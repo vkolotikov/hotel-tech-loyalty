@@ -23,12 +23,12 @@ const field = (key: string, type: CustomField['type'], extra: Partial<CustomFiel
 describe('the list filters in the address', () => {
   it('reads Today\'s "?due=1" as due now and leaves out what is not a filter value', () => {
     const f = readFilters(new URLSearchParams('due=1&sort=nope&page=-2&from=2026-13&q=ada'))
-    expect(f).toMatchObject({ due: 'now', sort: 'newest', page: 1, from: '', q: 'ada' })
+    expect(f).toMatchObject({ due: 'now', sort: 'follow_up', page: 1, from: '', q: 'ada' })
     expect(readFilters(new URLSearchParams('due=overdue&stage=New&owner=me&page=3')).due).toBe('overdue')
   })
 
   it('writes only what differs from the defaults and keeps ?new and ?guest', () => {
-    const sp = writeFilters({ ...NO_FILTERS, due: 'now', owner: 'me', page: 2 }, new URLSearchParams('new=1&guest=5&stage=Old'))
+    const sp = writeFilters({ ...NO_FILTERS, due: 'now', sort: 'follow_up', owner: 'me', page: 2 }, new URLSearchParams('new=1&guest=5&stage=Old'))
     expect(sp.get('due')).toBe('1')
     expect(sp.get('owner')).toBe('me')
     expect(sp.get('page')).toBe('2')
@@ -36,6 +36,7 @@ describe('the list filters in the address', () => {
     expect(sp.get('guest')).toBe('5')
     expect(sp.has('stage')).toBe(false)
     expect(sp.has('sort')).toBe(false)
+    expect(readFilters(writeFilters({ ...NO_FILTERS, due: 'now', sort: 'newest' })).sort).toBe('newest')
     expect(readFilters(sp)).toMatchObject({ due: 'now', owner: 'me', page: 2 })
   })
 
