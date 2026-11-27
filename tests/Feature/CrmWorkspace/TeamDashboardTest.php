@@ -4,6 +4,7 @@ namespace Tests\Feature\CrmWorkspace;
 
 use App\Jobs\ReviewTeamPriorities;
 use App\Models\Brand;
+use App\Models\Organization;
 use App\Services\Crm\TeamPriorityReview;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Client\Request;
@@ -92,7 +93,8 @@ class TeamDashboardTest extends TestCase
         $other = Brand::create(['organization_id' => $this->org->id, 'name' => 'North', 'slug' => 'north', 'widget_token' => str()->random(32)]);
         $this->lead(['brand_id' => $other->id]);
         $this->activity($visible, ['brand_id' => $other->id, 'subject' => 'Other brand email']);
-        $this->activity($visible, ['organization_id' => $this->org->id + 5000, 'subject' => 'Other tenant email']);
+        $tenant = Organization::create(['name' => 'Separate tenant', 'slug' => 'separate-'.uniqid()]);
+        $this->activity($visible, ['organization_id' => $tenant->id, 'brand_id' => null, 'subject' => 'Other tenant email']);
         $this->staffMember->brands()->attach($this->brandId);
         $board = $this->board('?brand_id=all');
         $this->assertSame([1, 0, $visible], [$board['actions_total'], $board['emails'], $board['actions'][0]['lead_id']]);
