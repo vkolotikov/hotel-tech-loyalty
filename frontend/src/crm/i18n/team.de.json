@@ -95,5 +95,9 @@
   "overdue": "Überfällige Wiedervorlagen",
   "due_today": "Heute fällige Wiedervorlagen",
   "urgent_actions": "Dringende Aktionen",
-  "filter_urgent": "Dringende Aktionen"
+  "filter_urgent": "Dringende Aktionen",
+  "filter_needed": "Leads mit Handlungsbedarf",
+  "filter_waiting_week": "Warten seit 7+ Tagen auf uns",
+  "filter_checkin": "Seit 7+ Tagen ohne Kundenantwort",
+  "kind_checkin": "Auf gesendete E-Mail nachfassen"
 }

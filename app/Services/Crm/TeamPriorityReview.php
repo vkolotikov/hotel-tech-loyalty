@@ -53,14 +53,14 @@ final class TeamPriorityReview
         }
         unset($row);
         usort($rows, fn ($a, $b) => $b['score'] <=> $a['score'] ?: $a['at'] <=> $b['at'] ?: strcmp($a['key'], $b['key']));
-        $unreviewed = collect($rows)->whereNull('ai_reason')->keyBy('key');
+        $unreviewed = collect($rows)->whereNull('ai_reason')->where('kind', '!=', 'checkin')->keyBy('key');
         // Reserve room for new mail so a fresh delivery emergency can surface even in a large older backlog.
         $pending = $unreviewed->take(4)->union($unreviewed->where('kind', 'email')->sortByDesc('at')->take(4))->union($unreviewed)->take(8);
         if ($pending->isNotEmpty() && config('openai.api_key') && $this->usage->isModelAllowed($org, LeadAssistantWriter::EMAIL_MODEL)
             && $this->usage->budgetStatus($org)['status'] !== 'over' && $cache->add('crm:team:batch:'.$scope, true, 120)) {
             $batch = [];
             foreach ($pending as $item) {
-                $batch[] = array_diff_key($item, array_flip(['name','company','owner','priority','score','ai_reason']));
+                $batch[] = array_diff_key($item, array_flip(['name','company','owner','priority','score','ai_reason','outreach','fallback']));
             }
             try {
                 ReviewTeamPriorities::dispatch((int) $org->id, $brand, (int) $user->id, $batch);

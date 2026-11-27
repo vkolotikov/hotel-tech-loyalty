@@ -1690,6 +1690,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);
                 Route::get('team-day-plan', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'teamDayPlan']);
                 Route::get('team-dashboard', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'teamDashboard']);
+                Route::get('team-customers', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'teamCustomers']);
                 Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'start']);
                 Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
                 Route::post('conversations/{id}/draft', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'draft'])

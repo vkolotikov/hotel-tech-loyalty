@@ -6,12 +6,13 @@ import { CrmContext } from '../CrmProvider'
 import type { Bootstrap } from '../lib/types'
 import words from '../i18n/team.en.json'
 import dayWords from '../i18n/dayplan.en.json'
+import focusWords from '../i18n/focus.en.json'
 import { TeamDashboardPage } from './TeamDashboardPage'
 import { actionLink, advanceSlide, planPage, type DayPlan, boardView, teamOptions, type TeamAction, type TeamBoard } from './teamBoard'
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   i18n: { language: 'en' },
-  t: (key: string, vars: Record<string, unknown> = {}) => ((dayWords as Record<string, string>)[key.replace('crm.dayplan.', '')] ?? (words as Record<string, string>)[key.replace('crm.team.', '')] ?? key)
+  t: (key: string, vars: Record<string, unknown> = {}) => ((focusWords as Record<string, string>)[key.replace('crm.focus.', '')] ?? (dayWords as Record<string, string>)[key.replace('crm.dayplan.', '')] ?? (words as Record<string, string>)[key.replace('crm.team.', '')] ?? key)
     .replace(/\{\{(\w+)\}\}/g, (_, name) => String(vars[name])),
 }) }))
 
@@ -35,6 +36,11 @@ function render(search = '', board = base) {
   const options = teamOptions(new URLSearchParams(search))
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
   qc.setQueryData(['crm', 'team-dashboard', 8, 'all', options.period, options.filter, options.page, options.tv], board)
+  qc.setQueryData(['crm', 'team-customers', 8, 'all', new URLSearchParams(search).get('customers') === 'period' ? options.period : 'all'], {
+    as_of: new Date().toISOString(), total: 2, rows: [
+      { type: 'company', id: 22, name: 'Aster Group', company: '', wins: 4, amount: '8275.00', currency: 'EUR', valued: 3 },
+      { type: 'contact', id: 7, name: 'Jean', company: 'Paper Studio', wins: 1, amount: null, currency: 'EUR', valued: 0 },
+    ] })
   qc.setQueryData(['crm', 'team-day-plan', 8, 'all', ''], plan)
   return renderToStaticMarkup(<QueryClientProvider client={qc}><MemoryRouter initialEntries={['/crm/team?' + search]}>
     <CrmContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {} }}><TeamDashboardPage /></CrmContext.Provider>
@@ -62,14 +68,25 @@ describe('team dashboard', () => {
     expect(tv).toContain('Mia')
     for (const hidden of ['Prepare proof','Open full planner','Add a task','type="date"']) expect(tv).not.toContain(hidden)
   })
+  it('opens customer records and exact messages, shows partial values and distinguishes the two seven-day waits', () => {
+    const sent: TeamAction = { ...mail, key: 'sent', lead_id: 62, kind: 'checkin', company: 'Oak Group', at: 1000, age_days: 12, source: 'activity', message_id: '99' }
+    const attention = { needed: 9, waiting_week: 4, checkin: 3, top: [{ ...mail, age_days: 8 }], followups: [sent] }
+    const html = render('display=tv', { ...base, attention })
+    for (const label of ['Top customers','Aster Group','€8,275','3 of 4 valued','Waiting 7+ days for us','No customer reply for 7+ days','8 d','12 d','Oak Group']) expect(html).toContain(label)
+    for (const link of ['/crm/contacts?tab=companies&amp;company=22','/crm/contacts?contact=7','mail_message=verified-message','rtab=activity&amp;activity=99']) expect(html).toContain(link)
+    const empty = render('view=customers&customers=period', { ...base, attention: { needed: 0, waiting_week: 0, checkin: 0, top: [], followups: [] } })
+    expect(empty).toContain('No leads need action')
+    expect(empty).toContain('No open leads are waiting')
+    for (const filter of ['needed','waiting_week','checkin']) expect(teamOptions(new URLSearchParams({ filter })).filter).toBe(filter)
+  })
   it('rotates across the whole roster and returns to overview with the selected period', () => {
     let search = new URLSearchParams('period=month&display=tv&view=overview&page=3')
     const screens = []
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       search = advanceSlide(search, 3)
       screens.push(boardView(search) + planPage(search, 3))
     }
-    expect(screens).toEqual(['plan1','plan2','plan3','actions1','overview1'])
+    expect(screens).toEqual(['customers1','plan1','plan2','plan3','actions1','overview1'])
     expect(search.get('period')).toBe('month')
     expect(search.has('page')).toBe(false)
     expect(planPage(new URLSearchParams('people=-4'), 3)).toBe(1)
@@ -80,7 +97,7 @@ describe('team dashboard', () => {
     for (const label of ['Total leads','Open pipeline value','Won deal value','Lead and deal activity','United Kingdom','Country unknown · 2','Overdue follow-ups','Urgent actions']) expect(html).toContain(label)
     expect(html).toContain('due=overdue')
     expect(html).toContain('€4,500')
-    expect(boardView(new URLSearchParams('display=tv'))).toBe('overview')
+    expect(boardView(new URLSearchParams('display=tv'))).toBe('customers')
     expect(boardView(new URLSearchParams('filter=email'))).toBe('actions')
     expect(boardView(new URLSearchParams('view=overview&filter=email'))).toBe('overview')
   })

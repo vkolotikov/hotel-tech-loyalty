@@ -14,18 +14,19 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpCrmWorkspace;
+use Tests\Concerns\SetsUpCrmReports;
 use Tests\TestCase;
 
 class TeamDashboardTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpCrmWorkspace;
+    use DatabaseTransactions, SetsUpCrmWorkspace, SetsUpCrmReports;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpCrmWorkspace();
         $this->setUpLeadAssistantTables();
-        foreach (['guests' => ['vip_level'], 'inquiries' => ['custom_data','fulfillment_stage','priority','special_requests','last_contacted_at'], 'activities' => ['metadata']] as $table => $columns) {
+        foreach (['guests' => ['vip_level','mobile','phone','email_consent','marketing_consent','consent_updated_at'], 'inquiries' => ['custom_data','fulfillment_stage','priority','special_requests','last_contacted_at'], 'activities' => ['metadata']] as $table => $columns) {
             foreach ($columns as $column) {
                 if (!Schema::hasColumn($table, $column)) Schema::table($table, fn ($t) => $t->text($column)->nullable());
             }
@@ -147,6 +148,101 @@ class TeamDashboardTest extends TestCase
         $this->assertSame([1, 0, $visible], [$board['actions_total'], $board['emails'], $board['actions'][0]['lead_id']]);
         $this->assertSame(1, $board['portfolio']['total']);
         $this->assertSame(1, $board['portfolio']['countries']['total']);
+    }
+
+    public function test_customer_waits_are_distinct_and_the_oldest_reply_stays_visible_alongside_urgent_leads(): void
+    {
+        $old = $this->lead();
+        $last = $this->activity($old, ['occurred_at' => now()->subDays(14)]);
+        $this->activity($old, ['subject' => 'Separate question', 'occurred_at' => now()->subDays(8)]);
+        foreach (range(1, 4) as $n) {
+            $lead = $this->lead(['priority' => 'High', 'custom_data' => '{"deadline":"2026-11-05"}']);
+            $this->activity($lead, ['occurred_at' => now()->subHours(3)]);
+        }
+        $edge = $this->lead();
+        $this->activity($edge, ['occurred_at' => now()->subDays(7)->addSecond()]);
+        $board = $this->board('?period=month&filter=waiting_week');
+        $this->assertSame([6, 1, 0], array_values(array_intersect_key($board['attention'], array_flip(['needed','waiting_week','checkin']))));
+        $this->assertSame([$old], array_column($board['actions'], 'lead_id'));
+        $this->assertSame([(string) $last, 14], [$board['actions'][0]['message_id'], $board['actions'][0]['age_days']]);
+        $this->assertSame($old, $board['attention']['top'][2]['lead_id']);
+        $this->assertCount(3, array_unique(array_column($board['attention']['top'], 'lead_id')));
+        $this->activity($old, ['subject' => 'Re: Artwork', 'direction' => 'outbound', 'occurred_at' => now()]);
+        $this->travel(61)->seconds();
+        $this->assertSame(2, $this->board('?filter=waiting_week')['matching']);
+        $this->assertSame('Separate question', $this->board('?filter=waiting_week')['actions'][0]['subject']);
+    }
+
+    public function test_checkins_use_last_sent_email_and_honour_replies_tasks_other_channels_and_contact_preferences(): void
+    {
+        $send = function (array $attrs = [], int $days = 7) {
+            $id = $this->lead($attrs);
+            $msg = $this->activity($id, ['direction' => 'outbound', 'occurred_at' => now()->subDays($days)]);
+            return [$id, $msg];
+        };
+        [$eligible, $msg] = $send(['priority' => 'High']);
+        [$due] = $send(['next_task_due' => now()->subDay()]);
+        [$reply] = $send();
+        $this->activity($reply, ['subject' => 'Re: Artwork']);
+        $send([], 6);
+        $send(['status' => 'Confirmed']);
+        $send(['status' => 'Lost']);
+        $send(['status' => 'Declined']);
+        $send(['last_contacted_at' => now()->subDays(3)]);
+        $send(['next_task_due' => now()->addDay()]);
+        [$call] = $send();
+        $this->activity($call, ['type' => 'call', 'direction' => 'outbound']);
+        [$resend] = $send();
+        $this->activity($resend, ['subject' => 'New details', 'direction' => 'outbound']);
+        [$unsub] = $send();
+        $g = DB::table('inquiries')->where('id', $unsub)->value('guest_id');
+        DB::table('guests')->where('id', $g)->update(['email_consent' => false, 'consent_updated_at' => now()]);
+        [$bounce] = $send();
+        $email = DB::table('guests')->where('id', DB::table('inquiries')->where('id', $bounce)->value('guest_id'))->value('email');
+        \App\Models\EmailSuppression::suppress($email, \App\Models\EmailSuppression::HARD_BOUNCE);
+        $view = $this->board('?filter=checkin');
+        $this->assertEqualsCanonicalizing([$eligible,$due], array_column($view['actions'], 'lead_id'));
+        $this->assertSame(2, $view['attention']['checkin']);
+        $this->assertSame(2, $view['attention']['needed']);
+        $entry = collect($view['actions'])->firstWhere('lead_id', $eligible);
+        $this->assertSame(['activity',(string) $msg,7], [$entry['source'],$entry['message_id'],$entry['age_days']]);
+        $this->assertSame(1, collect($this->board()['actions'])->where('lead_id', $due)->count());
+        $this->assertStringNotContainsString('"outreach"', json_encode($view));
+    }
+
+    public function test_customer_ranking_groups_linked_companies_converts_won_value_and_scopes_legacy_deals(): void
+    {
+        $this->setUpCrmReports();
+        $this->org->forceFill(['currency' => 'EUR'])->saveQuietly();
+        $company = $this->company('North Studio');
+        $win = function (array $attrs, ?string $date, string $name = 'Independent') {
+            $id = $this->lead($attrs + ['status' => 'Confirmed'], $name);
+            if ($date) $this->activity($id, ['type' => 'status_change', 'metadata' => '{"kind":"won"}', 'occurred_at' => $date]);
+            return $id;
+        };
+        $date = '2026-11-03 12:00:00';
+        $first = $win(['corporate_account_id' => $company, 'total_value' => 125, 'currency' => 'USD'], $date);
+        $this->activity($first, ['type' => 'status_change', 'metadata' => '{"kind":"won"}']);
+        $win(['corporate_account_id' => $company, 'total_value' => 85, 'currency' => 'EUR'], $date);
+        $win(['corporate_account_id' => $company, 'total_value' => 900, 'currency' => 'XXX'], $date);
+        $win(['total_value' => 170, 'currency' => 'EUR'], $date);
+        $win([], $date);
+        $win(['total_value' => 600, 'currency' => 'EUR'], null, 'Legacy');
+        $win(['total_value' => 300, 'currency' => 'EUR'], '2026-11-01 07:00:00', 'Earlier');
+        $this->lead(['total_value' => 5000, 'currency' => 'EUR', 'corporate_account_id' => $company]);
+        $other = Brand::create(['organization_id' => $this->org->id, 'name' => 'North', 'slug' => 'north-rank', 'widget_token' => str()->random(32)]);
+        $win(['brand_id' => $other->id, 'total_value' => 9999, 'currency' => 'EUR'], null, 'Hidden');
+        $this->staffMember->brands()->attach($this->brandId);
+        $get = fn ($period) => $this->asStaffMember()->getJson($this->crmApi('team-customers?brand_id=all&period='.$period))->assertOk()->json();
+        $week = $get('week');
+        $this->assertSame(3, $week['total']);
+        $this->assertSame(['type' => 'company','id' => $company,'name' => 'North Studio','company' => '','wins' => 3,'amount' => '185.00','currency' => 'EUR','converted' => true,'valued' => 2], $week['rows'][0]);
+        $this->assertSame(['North Studio','Independent','Independent'], array_column($week['rows'], 'name'));
+        $this->assertNull($week['rows'][2]['amount']);
+        $this->assertSame('Earlier', $get('month')['rows'][0]['name']);
+        $all = $get('all');
+        $this->assertSame([5, 'Legacy'], [$all['total'], $all['rows'][0]['name']]);
+        $this->getJson($this->crmApi('team-customers?period=yesterday'))->assertUnprocessable();
     }
 
     public function test_ai_batch_includes_recent_mail_while_a_large_old_backlog_is_being_reviewed(): void

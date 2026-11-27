@@ -2,21 +2,22 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, CalendarClock, Check, ChevronLeft, ChevronRight, ClipboardCheck, CalendarDays, Expand, LayoutDashboard, ListTodo, Mail, Monitor, Pause, Play, RefreshCw, Sparkles, UserPlus, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, Check, ChevronLeft, ChevronRight, ClipboardCheck, CalendarDays, Expand, LayoutDashboard, ListTodo, Mail, Monitor, Pause, Play, RefreshCw, Send, Sparkles, UserPlus, UsersRound, X } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { useNow } from '../../hooks/useNow'
 import { useMedia } from '../../workspace/lib/useMedia'
 import { get, params } from '../lib/api'
 import { currentBrand } from '../lib/brand'
 import { count, money, timeAgo } from '../lib/format'
-import { actionLink, advanceSlide, planPage, PEOPLE_PER_SLIDE, type DayPlan, boardDay, boardView, teamOptions, type BoardView, type Filter, type Kind, type TeamAction, type TeamBoard } from './teamBoard'
+import { actionLink, advanceSlide, planPage, PEOPLE_PER_SLIDE, type DayPlan, type CustomerRanking, boardDay, boardView, teamOptions, type BoardView, type Filter, type Kind, type TeamAction, type TeamBoard } from './teamBoard'
 import { TeamOverview } from './TeamOverview'
+import { CustomerFocus } from './CustomerFocus'
 import { TeamDay } from './TeamDay'
 import { isDay } from '../../time/lib/dates'
 import './team.css'
 
-const icons = { email: Mail, followup: CalendarClock, delivery: ClipboardCheck, new: UserPlus }
-const filters: Filter[] = ['all','urgent','email','delivery','followup','new']
+const icons = { email: Mail, followup: CalendarClock, delivery: ClipboardCheck, new: UserPlus, checkin: Send }
+const filters: Filter[] = ['all','urgent','needed','waiting_week','checkin','email','delivery','followup','new']
 
 function Presentation({ children, close }: { children: ReactNode; close: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -52,6 +53,11 @@ export function TeamDashboardPage() {
   const board = useQuery({ queryKey: ['crm', 'team-dashboard', boot.organization.id, brand, period, filter, page, tv],
     queryFn: () => get<TeamBoard>('crm/team-dashboard' + params({ period, filter, page, size: tv ? 4 : 8 })),
     staleTime: 15_000, refetchInterval: 60_000, refetchIntervalInBackground: true, retry: 1 })
+  const allTime = sp.get('customers') !== 'period'
+  const customerPeriod = allTime ? 'all' : period
+  const ranking = useQuery({ queryKey: ['crm', 'team-customers', boot.organization.id, brand, customerPeriod],
+    queryFn: () => get<CustomerRanking>('crm/team-customers' + params({ period: customerPeriod })),
+    enabled: view === 'customers' || tv, staleTime: 15_000, refetchInterval: 60_000, refetchIntervalInBackground: true, retry: 1 })
   const requestedDate = sp.get('plan_date')
   const date = !tv && isDay(requestedDate) ? requestedDate : ''
   const plan = useQuery({ queryKey: ['crm', 'team-day-plan', boot.organization.id, brand, date],
@@ -101,7 +107,9 @@ export function TeamDashboardPage() {
   const now = useNow(60_000)
   const stale = data && (now.getTime() - Date.parse(data.as_of) > 180000 || board.isError)
   const planStale = plan.data && (now.getTime() - Date.parse(plan.data.as_of) > 180000 || plan.isError)
-  const refresh = () => { void board.refetch(); if (view === 'plan') void plan.refetch() }
+  const rankingStale = ranking.data && (now.getTime() - Date.parse(ranking.data.as_of) > 180000 || ranking.isError)
+  const delayed = stale || (view === 'plan' && planStale) || (view === 'customers' && (rankingStale || ranking.isError))
+  const refresh = () => { void board.refetch(); if (view === 'plan') void plan.refetch(); if (view === 'customers') void ranking.refetch() }
   const content = <div className="crm-team" data-view={view}>
     <header className="crm-team-head">
       <div><div className="crm-team-context">{current}{data && <><span aria-hidden>·</span><span>{boardDay(data.from, lang)} – {boardDay(data.through, lang)}</span></>}</div>
@@ -117,13 +125,14 @@ export function TeamDashboardPage() {
     <div className="crm-team-viewbar">
       <nav className="crm-team-views" aria-label={t('crm.team.board_views')}>
         <button type="button" aria-pressed={view === 'overview'} onClick={() => chooseView('overview')}><LayoutDashboard size={16}/>{t('crm.team.overview')}</button>
+        <button type="button" aria-pressed={view === 'customers'} onClick={() => chooseView('customers')}><UsersRound size={16}/>{t('crm.focus.tab')}</button>
         <button type="button" aria-pressed={view === 'plan'} onClick={() => chooseView('plan')}><CalendarDays size={16}/>{t('crm.dayplan.tab')}</button>
         <button type="button" aria-pressed={view === 'actions'} onClick={() => chooseView('actions', 'all')}><ListTodo size={16}/>{t('crm.team.actions')}</button>
       </nav>
       <div className="crm-team-live-controls">
         {tv && !reduced && <button key={view + peoplePage} type="button" className="crm-team-rotation" data-playing={rotating} aria-label={t(rotating ? 'crm.team.pause' : 'crm.team.play')} title={t(rotating ? 'crm.team.pause' : 'crm.team.play')} onClick={() => setRotation(!rotating)}>{rotating ? <Pause size={15}/> : <Play size={15}/>}<span>{t(rotating ? 'crm.team.rotating' : 'crm.team.paused')}</span></button>}
-        {data && <button type="button" className="crm-team-health" data-stale={Boolean(stale || (view === 'plan' && planStale))} aria-label={t('crm.team.refresh')} title={t('crm.team.refresh')} disabled={board.isFetching || (view === 'plan' && plan.isFetching)} onClick={refresh}>
-          <i key={data.as_of} aria-hidden/><span>{t(stale || (view === 'plan' && planStale) ? 'crm.team.delayed' : 'crm.team.live')}</span>
+        {data && <button type="button" className="crm-team-health" data-stale={Boolean(delayed)} aria-label={t('crm.team.refresh')} title={t('crm.team.refresh')} disabled={board.isFetching || (view === 'plan' && plan.isFetching) || (view === 'customers' && ranking.isFetching)} onClick={refresh}>
+          <i key={data.as_of} aria-hidden/><span>{t(delayed ? 'crm.team.delayed' : 'crm.team.live')}</span>
           <time dateTime={data.as_of}>{new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit', timeZone: boot.venue.timezone }).format(new Date(data.as_of))}</time><RefreshCw size={13}/>
         </button>}
       </div>
@@ -133,6 +142,10 @@ export function TeamDashboardPage() {
     {data && view === 'overview' && <div onFocusCapture={() => { if (rotating) setRotation(false) }}>
       <TeamOverview board={data} lang={lang} showActions={kind => chooseView('actions', kind)} allCountries={sp.get('countries') === 'all'}
         setAllCountries={all => change('countries', all ? 'all' : '')}/>
+    </div>}
+    {view === 'customers' && <div onFocusCapture={() => { if (rotating) setRotation(false) }}>
+      <CustomerFocus attention={data?.attention} ranking={ranking.data} period={period} allTime={allTime} setAllTime={all => change('customers', all ? '' : 'period')}
+        showActions={kind => chooseView('actions', kind)} rankingError={Boolean(ranking.isError || rankingStale)} retry={() => { void ranking.refetch() }} lang={lang}/>
     </div>}
     {view === 'plan' && <div onFocusCapture={() => { if (rotating) setRotation(false) }}>
       {plan.isLoading && <p role="status" className="crm-team-empty">{t('crm.dayplan.loading')}</p>}
@@ -186,7 +199,7 @@ function ActionRow({ item, lang }: { item: TeamAction; lang: string }) {
       <h3>{item.company || item.name || t('crm.team.unnamed', { id: item.lead_id })}</h3>
       {item.subject && <p className="crm-team-subject">{item.subject}</p>}
       <div className="crm-team-facts">{reason && <span><Sparkles size={12} aria-hidden/>{reason}</span>}{facts.slice(0, 3).map(f => <span key={f}>{f}</span>)}
-        {item.kind === 'email' && <span>{timeAgo(new Date(item.at * 1000).toISOString(), lang)}</span>}
+        {(item.kind === 'email' || item.kind === 'checkin') && <span>{timeAgo(new Date(item.at * 1000).toISOString(), lang)}</span>}
         {item.owner && <span>{item.owner}</span>}</div>
     </div><ArrowRight size={17} aria-hidden className="crm-team-row-arrow"/>
   </Link></li>

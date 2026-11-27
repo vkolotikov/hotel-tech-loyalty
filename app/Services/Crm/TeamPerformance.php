@@ -58,10 +58,7 @@ final class TeamPerformance
             $days[CarbonImmutable::parse($lead->created_at, 'UTC')->setTimezone($now->timezone)->toDateString()]['leads']++;
         }
         // Only a dated win is a win in a particular interval. Later edits or fulfilment dates cannot date an old sale.
-        $wins = DB::table('activities as a')->joinSub((clone $visible)->select(['id', 'brand_id']), 'i', 'i.id', '=', 'a.inquiry_id')
-            ->where('a.organization_id', $orgId)->where(fn ($q) => $q->whereNull('a.brand_id')->orWhereColumn('a.brand_id', 'i.brand_id'))
-            ->where('a.type', 'status_change')->where('a.metadata->kind', 'won')->whereNotNull('a.occurred_at')
-            ->groupBy('a.inquiry_id')->selectRaw('a.inquiry_id, MIN(a.occurred_at) AS won_at');
+        $wins = $this->firstWins($visible, $orgId);
         $recorded = DB::query()->fromSub(clone $wins, 'wins')->whereBetween('won_at', $range);
         foreach ((clone $recorded)->cursor() as $win) {
             $days[CarbonImmutable::parse($win->won_at, 'UTC')->setTimezone($now->timezone)->toDateString()]['wins']++;
@@ -85,6 +82,15 @@ final class TeamPerformance
             'win_change' => array_sum(array_column($days, 'wins')) - $priorWins,
             'previous_from' => $previousStart->toDateString(), 'previous_through' => $previousEnd->toDateString(),
         ]];
+    }
+
+    /** @param Builder<Inquiry> $visible */
+    public function firstWins(Builder $visible, int $orgId): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('activities as a')->joinSub((clone $visible)->select(['id', 'brand_id']), 'i', 'i.id', '=', 'a.inquiry_id')
+            ->where('a.organization_id', $orgId)->where(fn ($q) => $q->whereNull('a.brand_id')->orWhereColumn('a.brand_id', 'i.brand_id'))
+            ->where('a.type', 'status_change')->where('a.metadata->kind', 'won')->whereNotNull('a.occurred_at')
+            ->groupBy('a.inquiry_id')->selectRaw('a.inquiry_id, MIN(a.occurred_at) AS won_at');
     }
 
     /** @param Builder<Inquiry> $scope */

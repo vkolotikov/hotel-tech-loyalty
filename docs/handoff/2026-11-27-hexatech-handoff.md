@@ -12,9 +12,11 @@ The Leads table shows the date each lead entered the CRM in the venue’s time z
 
 The [team dashboard](../crm-workspace.md#team-dashboard) at `/crm/team` includes a signed-in TV view, venue-local weekly and monthly lead and win counts, current unanswered threads and an actionable priority queue. Win dates now also follow individual and bulk lead status edits. The screen uses existing correspondence and background AI review. No database migration is required.
 
-The dashboard now opens on a performance overview. It shares the CRM currency valuation, compares week or month activity, and groups lead countries across the selected period or all time. Due and overdue follow-ups count independently of the email queue. The TV rotates through the overview, every page of the shared day plan, and the priority queue. Staff can pause rotation, and it respects reduced-motion preferences. Bookmarks with an action filter still open the queue.
+The dashboard now opens on a performance overview. It shares the CRM currency valuation, compares week or month activity, and groups lead countries across the selected period or all time. Due and overdue follow-ups count independently of the email queue. The TV rotates through Customers, every page of the shared day plan, the priority queue and Overview. Staff can pause rotation, and it respects reduced-motion preferences. Bookmarks with an action filter still open the queue.
 
 The **Day plan** tab adds and shares real dated assignments. It combines the existing Time Planner with brand-visible CRM work, honours own-day planning permissions and refreshes across signed-in displays every minute. Its slide shows local daily and weekly lead growth, wins, unanswered threads, priority leads, priority work and employee progress. Staff can plan future dates from their working view.
+
+The **Customers** tab at `/crm/team?view=customers` ranks visible customers by converted won deal value and shows priority leads beside overdue conversations in each direction. A seven-day wait uses the actual last email on its thread. Staff can open the matched contact, company, lead or message. A fresh TV link starts here. The customer-period control lets staff look back across all recorded wins while the live queue continues across reporting periods.
 
 ## Open lead value
 

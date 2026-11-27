@@ -95,5 +95,9 @@
   "overdue": "Relances en retard",
   "due_today": "Relances du jour",
   "urgent_actions": "Actions urgentes",
-  "filter_urgent": "Actions urgentes"
+  "filter_urgent": "Actions urgentes",
+  "filter_needed": "Prospects à traiter",
+  "filter_waiting_week": "Attendent notre réponse depuis 7 j ou plus",
+  "filter_checkin": "Sans réponse du client depuis 7 j ou plus",
+  "kind_checkin": "Relancer après un e-mail envoyé"
 }

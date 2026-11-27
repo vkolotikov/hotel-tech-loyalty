@@ -95,5 +95,9 @@
   "overdue": "Overdue follow-ups",
   "due_today": "Follow-ups due today",
   "urgent_actions": "Urgent actions",
-  "filter_urgent": "Urgent actions"
+  "filter_urgent": "Urgent actions",
+  "filter_needed": "Leads needing action",
+  "filter_waiting_week": "Waiting 7+ days for us",
+  "filter_checkin": "No customer reply for 7+ days",
+  "kind_checkin": "Follow up on sent email"
 }

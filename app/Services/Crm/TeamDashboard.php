@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Models\EmailSuppression;
 use App\Models\GuestBusinessProfile;
 use App\Models\Inquiry;
 use App\Models\Organization;
@@ -22,33 +23,28 @@ final class TeamDashboard
         $orgId = (int) $org->id;
         $access = CrmBrands::for($user);
         $selected = app()->bound('current_brand_id') ? app('current_brand_id') : null;
-        $visible = Inquiry::query()->where('organization_id', $orgId);
-        if (!$access['all']) {
-            $visible->whereIntegerInRaw('brand_id', array_column($access['brands'], 'id'));
-        }
+        $visible = $this->visible($orgId, $access);
         $mail = $orgId === CrmMail::ORGANIZATION && app(CrmMail::class)->available($user);
         $scope = hash('sha256', json_encode([$orgId, $selected, $access['all'], array_column($access['brands'], 'id'), $mail]));
         $now = CarbonImmutable::now(VenueClock::zone($orgId));
         $start = $period === 'month' ? $now->startOfMonth() : $now->startOfWeek(CarbonImmutable::MONDAY);
         $cache = SharedCache::store();
-        $key = 'crm:team:v2:'.$scope.':'.$now->toDateString();
+        $key = 'crm:team:v3:'.$scope.':'.$now->toDateString();
         $snapshot = $cache->remember($key, 45, fn () => $this->queue($visible, $org, $now, $mail));
         $portfolio = $cache->remember($key.':portfolio', 45, fn () => $this->performance->portfolio($visible, $org, $now));
         $series = $cache->remember($key.':'.$period, 45, fn () => $this->performance->period($visible, $org, $start, $now, $period === 'month'));
         [$actions, $reviewed] = $this->review->rank($snapshot['actions'], $org, $user, $selected, $scope);
+        $attention = TeamAttention::lists($actions);
         // The first ranked action for each lead represents that opportunity, even if it has multiple email threads.
-        $topLeads = collect($actions)->unique('lead_id')->take(3)->map(fn ($row) => \Illuminate\Support\Arr::only($row,
+        $topLeads = collect($attention['needed'])->concat($attention['checkin'])->unique('lead_id')->take(3)->map(fn ($row) => \Illuminate\Support\Arr::only($row,
             ['lead_id','name','company','kind','priority','owner','signals','ai_reason','amount','currency','deadline']))->values()->all();
         $emails = array_filter($actions, fn ($row) => $row['kind'] === 'email');
         $urgent = array_filter($actions, fn ($row) => $row['priority'] === 'urgent');
-        $filtered = array_values($filter === 'urgent' ? $urgent : array_filter($actions, fn ($row) => $filter === 'all' || $row['kind'] === $filter));
+        $filtered = $attention[$filter] ?? array_values($filter === 'urgent' ? $urgent : array_filter($actions, fn ($row) => $filter === 'all' || $row['kind'] === $filter));
         $pages = max(1, (int) ceil(count($filtered) / $size));
         $page = min($pages, $page);
         $rows = array_slice($filtered, ($page - 1) * $size, $size);
-        foreach ($rows as &$row) {
-            unset($row['evidence'], $row['score'], $row['review_key'], $row['guest_id'], $row['brand_id']);
-        }
-        unset($row);
+        $rows = array_map([TeamAttention::class, 'publicRow'], $rows);
 
         return [
             'period' => $period, 'from' => $start->toDateString(), 'through' => $now->toDateString(), 'as_of' => $snapshot['as_of'],
@@ -56,10 +52,34 @@ final class TeamDashboard
             'undated_wins' => $series['undated'], 'days' => $series['days'], 'emails' => count($emails),
             'period_emails' => count(array_filter($emails, fn ($r) => $r['at'] >= $start->timestamp)),
             'arrivals' => $cache->remember($key.':arrivals', 45, fn () => $this->performance->arrivals($visible, $now)),
-            'top_leads' => $topLeads, 'portfolio' => $portfolio, 'performance' => $series['performance'], 'urgent' => count($urgent),
+            'top_leads' => $topLeads, 'attention' => $attention['summary'], 'portfolio' => $portfolio, 'performance' => $series['performance'], 'urgent' => count($urgent),
             'actions_total' => count($actions), 'reviewed' => $reviewed, 'page' => $page, 'pages' => $pages,
             'matching' => count($filtered), 'actions' => $rows,
         ];
+    }
+
+    public function customers(Organization $org, User $user, string $period, TeamCustomers $customers): array
+    {
+        $orgId = (int) $org->id;
+        $access = CrmBrands::for($user);
+        $selected = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $scope = hash('sha256', json_encode([$orgId, $selected, $access['all'], array_column($access['brands'], 'id')]));
+        $now = CarbonImmutable::now(VenueClock::zone($orgId));
+        $start = match ($period) {
+            'week' => $now->startOfWeek(CarbonImmutable::MONDAY), 'month' => $now->startOfMonth(), default => null,
+        };
+        return SharedCache::store()->remember('crm:team:customers:'.$scope.':'.$period.':'.$now->toDateString(), 45,
+            fn () => $customers->ranking($this->visible($orgId, $access), $org, $start, $now));
+    }
+
+    /** @return Builder<Inquiry> */
+    private function visible(int $orgId, array $access): Builder
+    {
+        $visible = Inquiry::query()->where('organization_id', $orgId);
+        if (!$access['all']) {
+            $visible->whereIntegerInRaw('brand_id', array_column($access['brands'], 'id'));
+        }
+        return $visible;
     }
 
     /** @param Builder<Inquiry> $visible */
@@ -67,11 +87,14 @@ final class TeamDashboard
     {
         $rows = $amounts = [];
         $venueCurrency = PortalBootstrap::currency($org);
-        (clone $visible)->with(['guest:id,organization_id,full_name,company,email,importance,vip_level,custom_data', 'pipelineStage:id,kind'])
+        (clone $visible)->with(['guest:id,organization_id,full_name,company,email,phone,mobile,importance,vip_level,custom_data,email_consent,marketing_consent,consent_updated_at', 'pipelineStage:id,kind'])
             ->select(['id', 'organization_id', 'brand_id', 'guest_id', 'pipeline_stage_id', 'status', 'priority', 'assigned_to', 'total_value', 'currency',
                 'custom_data', 'next_task_completed', 'next_task_due', 'last_contacted_at', 'fulfillment_stage', 'created_at', 'notes', 'special_requests'])
             ->chunkById(200, function ($leads) use (&$rows, &$amounts, $org, $now, $mail, $venueCurrency) {
-                $threads = $this->threads->heads($leads, (int) $org->id, $mail);
+                $conversations = $this->threads->conversations($leads, (int) $org->id, $mail);
+                $threads = $conversations['email'];
+                $addresses = $leads->filter(fn ($lead) => isset($threads[$lead->id]))->pluck('guest.email')->filter()->unique()->values()->all();
+                $suppressed = EmailSuppression::forAddresses($addresses, (int) $org->id);
                 $guestIds = $leads->pluck('guest')->filter()->pluck('id')->unique()->values()->all();
                 $profiles = GuestBusinessProfile::whereIntegerInRaw('guest_id', $guestIds)->get(['guest_id', 'fields', 'discovery'])->mapWithKeys(function ($profile) {
                     $summary = $profile->fields['brand_summary'] ?? null;
@@ -94,31 +117,28 @@ final class TeamDashboard
                         'name' => trim((string) $lead->guest?->full_name), 'company' => trim((string) $lead->guest?->company),
                         'owner' => $lead->assigned_to, 'amount' => $amount, 'currency' => $currency,
                         'deadline' => $facts['deadline'], 'quantity' => $facts['quantity'], 'signals' => $facts['signals'],
-                        'score' => $facts['score'], 'at' => $lead->created_at->timestamp ?? 0, 'source' => null, 'message_id' => null, 'subject' => '',
+                        'score' => $facts['score'], 'age_days' => null, 'at' => $lead->created_at->timestamp ?? 0, 'source' => null, 'message_id' => null, 'subject' => '',
                         'evidence' => ['account' => $profiles->get($lead->guest_id, ''),
                             'request' => mb_substr(trim((string) $lead->special_requests.' '.(string) $lead->notes), 0, 750),
                             'size' => $facts['size']],
                     ];
-                    $pending = false;
+                    $incoming = [];
                     foreach ($heads as $key => $head) {
                         if ($head['direction'] !== 'inbound') {
                             continue;
                         }
-                        $pending = true;
                         $wait = max(0, intdiv($now->timestamp - $head['at'], 3600));
                         $row = array_replace($base, ['kind' => 'email', 'key' => $lead->id.'-email-'.$key, 'source' => $head['source'],
-                            'message_id' => $head['id'], 'subject' => $head['subject'], 'at' => $head['at']]);
+                            'message_id' => $head['id'], 'subject' => $head['subject'], 'at' => $head['at'], 'age_days' => intdiv($wait, 24)]);
                         $row['score'] += 30 + min(16, intdiv($wait, 12));
                         if ($wait >= 48) {
                             $row['signals'][] = 'waiting';
                         }
-                        $rows[] = $row;
-                    }
-                    if ($pending) {
-                        continue;
+                        $incoming[] = $row;
                     }
                     $due = $lead->next_task_due?->toDateString();
                     $delivery = in_array('delivery_due', $base['signals'], true) && !in_array(strtolower((string) $lead->fulfillment_stage), ['completed','delivered','cancelled'], true);
+                    $kind = null;
                     if ($delivery && ($open || $lead->status === 'Confirmed' || $lead->pipelineStage?->kind === 'won')) {
                         $kind = 'delivery';
                     } elseif ($open && !$lead->next_task_completed && $due && $due <= $now->toDateString()) {
@@ -129,10 +149,33 @@ final class TeamDashboard
                         && in_array(strtolower(trim((string) $lead->status)), ['new', 'new enquiry', 'new inquiry', ''], true)) {
                         $kind = 'new';
                         $base['score'] += 15;
-                    } else {
+                    }
+                    if ($incoming) {
+                        foreach ($incoming as $row) {
+                            if ($kind) {
+                                $row['fallback'] = ['kind' => $kind, 'key' => $lead->id.'-'.$kind, 'signals' => $base['signals']];
+                            }
+                            $rows[] = $row;
+                        }
                         continue;
                     }
-                    $rows[] = [...$base, 'kind' => $kind, 'key' => $lead->id.'-'.$kind];
+                    $last = $heads ? collect($heads)->sortByDesc('at')->first() : null;
+                    $age = $last ? intdiv($now->timestamp - $last['at'], 86400) : 0;
+                    if ($open && $last && $age >= TeamAttention::WAIT_DAYS && ($lead->next_task_completed || !$due || $due <= $now->toDateString())
+                        && ($conversations['other'][$lead->id] ?? 0) < $last['at'] && (!$lead->last_contacted_at || $lead->last_contacted_at->timestamp <= $last['at'])) {
+                        $address = EmailSuppression::normalise((string) $lead->guest?->email);
+                        if ($address !== '' && !LeadEmailEvidence::stopReason(LeadEmailEvidence::policy($lead, isset($suppressed[$address])), 'follow_up')) {
+                            $base['outreach'] = ['at' => $last['at'], 'age_days' => $age, 'source' => $last['source'], 'message_id' => $last['id'], 'subject' => $last['subject']];
+                            if (!$kind) {
+                                $kind = 'checkin';
+                                $base = array_replace($base, $base['outreach']);
+                                $base['score'] += 18 + min(14, $age - TeamAttention::WAIT_DAYS);
+                            }
+                        }
+                    }
+                    if ($kind) {
+                        $rows[] = [...$base, 'kind' => $kind, 'key' => $lead->id.'-'.$kind];
+                    }
                 }
             });
         $thresholds = [];

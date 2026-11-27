@@ -13,6 +13,7 @@ use App\Services\Appointments\VenueClock;
 use App\Services\Crm\CrmAccess;
 use App\Services\Crm\CrmSetupProgress;
 use App\Services\Crm\CrmToday;
+use App\Services\Crm\TeamCustomers;
 use App\Services\Crm\TeamDashboard;
 use App\Services\Crm\TeamDayPlan;
 use App\Services\Portal\PortalBootstrap;
@@ -112,9 +113,16 @@ class WorkspaceController extends Controller
             ->header('Cache-Control', 'private, no-store');
     }
 
+    public function teamCustomers(Request $request, TeamDashboard $dashboard, TeamCustomers $customers): JsonResponse
+    {
+        $args = $request->validate(['period' => 'sometimes|in:week,month,all']);
+        return response()->json($dashboard->customers($request->attributes->get('workspace_org'), $request->user(), $args['period'] ?? 'all', $customers))
+            ->header('Cache-Control', 'private, no-store');
+    }
+
     public function teamDashboard(Request $request, TeamDashboard $dashboard): JsonResponse
     {
-        $args = $request->validate(['period' => 'sometimes|in:week,month', 'filter' => 'sometimes|in:all,urgent,email,followup,delivery,new',
+        $args = $request->validate(['period' => 'sometimes|in:week,month', 'filter' => 'sometimes|in:all,urgent,email,followup,delivery,new,needed,waiting_week,checkin',
             'page' => 'sometimes|integer|min:1|max:100000', 'size' => 'sometimes|integer|in:4,8']);
         return response()->json($dashboard->for($request->attributes->get('workspace_org'), $request->user(), $args['period'] ?? 'week',
             $args['filter'] ?? 'all', (int) ($args['page'] ?? 1), (int) ($args['size'] ?? 8)))->header('Cache-Control', 'private, no-store');

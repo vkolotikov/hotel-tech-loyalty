@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -77,9 +78,19 @@ class EmailSuppression extends Model
             return true; // nothing to send to
         }
 
-        return static::query()
-            ->where('email', $email)
-            ->where(function ($q) use ($organizationId) {
+        return self::active($organizationId)->where('email', $email)->exists();
+    }
+
+    /** @return array<string, bool> Active suppressions indexed by normalised address. */
+    public static function forAddresses(array $addresses, int $organizationId): array
+    {
+        $addresses = array_filter(array_map([self::class, 'normalise'], $addresses));
+        return $addresses ? array_fill_keys(self::active($organizationId)->whereIn('email', $addresses)->pluck('email')->all(), true) : [];
+    }
+
+    private static function active(?int $organizationId): Builder
+    {
+        return static::query()->where(function ($q) use ($organizationId) {
                 $q->whereNull('organization_id');
                 if ($organizationId) {
                     $q->orWhere('organization_id', $organizationId);
@@ -92,8 +103,7 @@ class EmailSuppression extends Model
             ->where(function ($q) {
                 $q->where('reason', '!=', self::SOFT_BOUNCE)
                   ->orWhere('failure_count', '>=', self::SOFT_BOUNCE_LIMIT);
-            })
-            ->exists();
+            });
     }
 
     /**

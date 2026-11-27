@@ -16,13 +16,13 @@ use Illuminate\Support\Arr;
 
 final class LeadEmailEvidence
 {
-    public static function policy(Inquiry $lead): array
+    public static function policy(Inquiry $lead, ?bool $suppressed = null): array
     {
         $guest = $lead->guest;
         $address = trim((string) $guest?->email);
 
         return [
-            'address_suppressed' => $address !== '' && EmailSuppression::isSuppressed($address, (int) $lead->organization_id),
+            'address_suppressed' => $suppressed ?? ($address !== '' && EmailSuppression::isSuppressed($address, (int) $lead->organization_id)),
             'declined' => $lead->pipelineStage?->kind === 'lost' || in_array(strtolower(trim((string) $lead->status)), ['lost', 'declined'], true),
             'sales_email_opt_out' => $guest?->consent_updated_at !== null
                 && ($guest->email_consent === false || $guest->marketing_consent === false),

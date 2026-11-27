@@ -93,6 +93,7 @@ final class AccessMap
         'admin/crm/sales-profile'               => ['staff',              'manager',            'crm'],
         'admin/crm/team-day-plan'               => ['staff',              'staff',              'crm'],
         'admin/crm/team-dashboard'              => ['staff',              'staff',              'crm'],
+        'admin/crm/team-customers'              => ['staff',              'staff',              'crm'],
         'admin/crm/sales-profile/capture'       => ['manager',            'manager',            'crm'],
         'admin/crm/leads/{inquiry}/assistant'   => ['staff',              'staff',              'crm'],
         'admin/crm/leads/{inquiry}/assistant/quote' => ['manager',        'manager',            'crm'],

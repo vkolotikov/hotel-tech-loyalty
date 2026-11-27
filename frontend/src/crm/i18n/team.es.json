@@ -95,5 +95,9 @@
   "overdue": "Seguimientos vencidos",
   "due_today": "Seguimientos para hoy",
   "urgent_actions": "Acciones urgentes",
-  "filter_urgent": "Acciones urgentes"
+  "filter_urgent": "Acciones urgentes",
+  "filter_needed": "Leads que requieren atención",
+  "filter_waiting_week": "Llevan 7 días o más esperándonos",
+  "filter_checkin": "Sin respuesta del cliente en 7 días o más",
+  "kind_checkin": "Dar seguimiento al correo enviado"
 }
