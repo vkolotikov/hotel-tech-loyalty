@@ -73,12 +73,12 @@
 [data-crm] .crm-team-notice { padding: 12px 0; color: rgb(var(--a-st-pending)); }
 [data-crm] .crm-team-notice button { text-decoration: underline; }
 @media (min-width: 900px) {
-  [data-crm] .crm-team-tv .crm-team { max-width: 2100px; padding: clamp(20px, 2.5vw, 52px); }
+  [data-crm] .crm-team-tv .crm-team { max-width: 2100px; padding: clamp(20px, 3.5vh, 40px) clamp(20px, 2.5vw, 52px); }
   [data-crm] .crm-team-tv .crm-team-layout { grid-template-columns: minmax(0,1.75fr) minmax(0,1fr); }
   [data-crm] .crm-team-tv .crm-team-item h3 { font-size: clamp(1.45rem, 1.65vw, 2.5rem); }
   [data-crm] .crm-team-tv .crm-team-facts, [data-crm] .crm-team-tv .crm-team-row-meta, [data-crm] .crm-team-tv .crm-team-backlog p,
   [data-crm] .crm-team-tv .crm-team-context, [data-crm] .crm-team-tv .crm-team-totals dt { font-size: clamp(.95rem, 1.05vw, 1.6rem); }
-  [data-crm] .crm-team-tv .crm-team-row { padding-block: clamp(14px, 1.25vw, 27px); }
+  [data-crm] .crm-team-tv .crm-team-row { padding-block: clamp(12px, 1.75vh, 22px); }
   [data-crm] .crm-team-tv .crm-team-subject, [data-crm] .crm-team-tv .crm-team-section p { font-size: clamp(.95rem, 1.12vw, 1.55rem); }
   [data-crm] .crm-team-tv .crm-team-item h3 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 }
@@ -87,7 +87,12 @@
   [data-crm] .crm-team-tv .crm-team-head { padding-bottom: 12px; }
   [data-crm] .crm-team-tv h1 { font-size: 2.4rem; }
   [data-crm] .crm-team-tv .crm-team-section { padding: 10px 18px; }
-  [data-crm] .crm-team-tv .crm-team-row { padding-block: 9px; }
+  [data-crm] .crm-team-tv .crm-team-row { padding-block: 7px; }
+  [data-crm] .crm-team-tv .crm-team-item { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 12px; }
+  [data-crm] .crm-team-tv .crm-team-item h3 { grid-column: 1; grid-row: 1; }
+  [data-crm] .crm-team-tv .crm-team-row-meta { grid-column: 2; grid-row: 1; align-self: center; }
+  [data-crm] .crm-team-tv .crm-team-subject, [data-crm] .crm-team-tv .crm-team-facts { grid-column: 1 / -1; }
+  [data-crm] .crm-team-tv .crm-team-facts { line-height: 1.25; }
   [data-crm] .crm-team-tv .crm-team-foot { min-height: 35px; padding-block: 1px; }
 }
 @media (max-width: 850px) { [data-crm] .crm-team-layout { grid-template-columns: minmax(0,1fr); } }
