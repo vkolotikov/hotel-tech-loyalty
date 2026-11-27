@@ -89,7 +89,7 @@ final class LeadAssistantWriter
             try {
                 $response = Http::acceptJson()->withToken((string) config('openai.api_key'))->connectTimeout(6)->timeout($timeout)->withoutRedirecting()
                     ->post('https://api.openai.com/v1/responses', [
-                        'model' => $model, 'service_tier' => $email && $model === self::EMAIL_MODEL ? 'priority' : 'default', 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
+                        'model' => $model, 'service_tier' => $email ? 'priority' : 'default', 'store' => false, 'reasoning' => ['effort' => $effort], 'max_output_tokens' => $tokens,
                         'instructions' => $instructions,
                         'input' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE),
                         'text' => ['format' => ['type' => 'json_schema', 'name' => 'crm_lead_assistant', 'strict' => true, 'schema' => $schema]],
