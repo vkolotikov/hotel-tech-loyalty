@@ -55,7 +55,7 @@ describe('team dashboard', () => {
     expect(teamOptions(new URLSearchParams('period=unknown&filter=allx&page=-3'))).toEqual({ period: 'week', filter: 'all', page: 1, tv: false })
   })
   it('shows shared assignments and current sales signals, with planning controls only on the working view', () => {
-    const board = { ...base, arrivals: { today: 6, yesterday: 3, week: 18, last_week: 19 }, top_leads: [mail] }
+    const board = { ...base, arrivals: { today: 6, yesterday: 3, week: 18, last_week: 19, day_change: 3, week_change: -1 }, top_leads: [mail] }
     const work = render('view=plan', board)
     for (const label of ['Leads today','Leads this week','+3','-1','Team plan','In progress','Ruth','Mia','Prepare proof','Nothing planned','Independent studio','Add a task','Open full planner']) expect(work).toContain(label)
     const tv = render('view=plan&display=tv&people=2&plan_date=2026-11-24', board)

@@ -46,7 +46,7 @@ export interface TeamBoard {
   undated_wins: number; days: { date: string; leads: number; wins: number }[]
   emails: number; period_emails: number; actions_total: number; reviewed: number; page: number; pages: number; matching: number; actions: TeamAction[]
   urgent: number
-  arrivals?: { today: number; yesterday: number; week: number; last_week: number }
+  arrivals?: { today: number; yesterday: number; week: number; last_week: number; day_change: number; week_change: number }
   top_leads?: PriorityLead[]
   portfolio: { total: number; total_value: BoardValue; open: number; open_value: BoardValue; overdue: number; due_today: number; countries: CountryMix }
   performance: { won_value: BoardValue; countries: CountryMix; lead_change: number; win_change: number; previous_from: string; previous_through: string }

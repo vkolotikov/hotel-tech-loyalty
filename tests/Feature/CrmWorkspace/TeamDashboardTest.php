@@ -68,7 +68,7 @@ class TeamDashboardTest extends TestCase
             $this->lead(['created_at' => $instant.':00']);
         }
         $unfiltered = $this->board();
-        $this->assertSame(['today' => 1, 'yesterday' => 1, 'week' => 3, 'last_week' => 1], $unfiltered['arrivals']);
+        $this->assertSame(['today' => 1, 'yesterday' => 1, 'week' => 3, 'last_week' => 1, 'day_change' => 0, 'week_change' => 2], $unfiltered['arrivals']);
         $filtered = $this->board('?filter=email&page=7&period=month');
         $this->assertSame($unfiltered['arrivals'], $filtered['arrivals']);
         $this->assertCount(3, $filtered['top_leads']);

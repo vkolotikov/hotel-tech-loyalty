@@ -26,8 +26,7 @@ function Metric({ label, value, icon, children, lang }: { label: string; value?:
   return <div className="crm-day-metric"><span>{icon}{label}</span><strong>{value === undefined ? '—' : count(value, lang)}</strong><small>{children}</small></div>
 }
 
-function Change({ current, prior, label, lang }: { current: number; prior: number; label: string; lang: string }) {
-  const diff = current - prior
+function Change({ diff, label, lang }: { diff: number; label: string; lang: string }) {
   const Icon = diff > 0 ? ArrowUpRight : diff < 0 ? ArrowDownRight : Minus
   return <><b data-change={Math.sign(diff)}><Icon size={14} aria-hidden/>{new Intl.NumberFormat(lang, { signDisplay: 'exceptZero' }).format(diff)}</b> {label}</>
 }
@@ -96,8 +95,8 @@ export function TeamDay({ plan, board, lang, tv, page, pages, changePage, change
   const arrivals = board?.arrivals
   return <div className="crm-day">
     <section className="crm-day-metrics" aria-label={t('crm.team.performance')}>
-      <Metric label={t('crm.dayplan.leads_today')} value={arrivals?.today} icon={<UserPlus size={16}/>} lang={lang}>{arrivals && <Change current={arrivals.today} prior={arrivals.yesterday} label={t('crm.dayplan.vs_day')} lang={lang}/>}</Metric>
-      <Metric label={t('crm.dayplan.leads_week')} value={arrivals?.week} icon={<CalendarDays size={16}/>} lang={lang}>{arrivals && <Change current={arrivals.week} prior={arrivals.last_week} label={t('crm.dayplan.vs_week')} lang={lang}/>}</Metric>
+      <Metric label={t('crm.dayplan.leads_today')} value={arrivals?.today} icon={<UserPlus size={16}/>} lang={lang}>{arrivals && <Change diff={arrivals.day_change} label={t('crm.dayplan.vs_day')} lang={lang}/>}</Metric>
+      <Metric label={t('crm.dayplan.leads_week')} value={arrivals?.week} icon={<CalendarDays size={16}/>} lang={lang}>{arrivals && <Change diff={arrivals.week_change} label={t('crm.dayplan.vs_week')} lang={lang}/>}</Metric>
       <Metric label={t('crm.team.wins')} value={board?.wins} icon={<Trophy size={16}/>} lang={lang}>{board && t(`crm.team.${board.period}`)}</Metric>
       <Metric label={t('crm.team.unanswered')} value={board?.emails} icon={<Mail size={16}/>} lang={lang}>{t('crm.dayplan.waiting')}</Metric>
     </section>

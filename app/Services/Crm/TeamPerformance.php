@@ -18,8 +18,13 @@ final class TeamPerformance
         $day = $now->startOfDay();
         $week = $now->startOfWeek(CarbonImmutable::MONDAY);
         $count = fn (CarbonImmutable $from, CarbonImmutable $to) => (clone $visible)->whereBetween('created_at', [$from->utc(), $to->utc()])->count();
-        return ['today' => $count($day, $now), 'yesterday' => $count($day->subDay(), $now->subDay()),
-            'week' => $count($week, $now), 'last_week' => $count($week->subWeek(), $now->subWeek())];
+        $today = $count($day, $now);
+        $yesterday = $count($day->subDay(), $now->subDay());
+        $thisWeek = $count($week, $now);
+        $lastWeek = $count($week->subWeek(), $now->subWeek());
+
+        return ['today' => $today, 'yesterday' => $yesterday, 'week' => $thisWeek, 'last_week' => $lastWeek,
+            'day_change' => $today - $yesterday, 'week_change' => $thisWeek - $lastWeek];
     }
 
     /** @param Builder<Inquiry> $visible */
