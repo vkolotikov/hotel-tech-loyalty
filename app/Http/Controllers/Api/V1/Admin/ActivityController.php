@@ -32,6 +32,9 @@ class ActivityController extends Controller
     {
         $query = $inquiry->activities()
             ->with('creator:id,name,email');
+        if ($id = $request->integer('activity_id')) {
+            $query->whereKey($id);
+        }
 
         if ($filter = $request->string('type')->toString()) {
             $query->where('type', $filter);

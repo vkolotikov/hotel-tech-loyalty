@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   BarChart3, Bot, BriefcaseBusiness, CheckSquare, Contact, Eye, Home, MessageSquareText, MessagesSquare, Plug, Search, Settings2, Target,
-  type LucideIcon,
+  Monitor, type LucideIcon,
 } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
@@ -29,6 +29,7 @@ import { withCreate } from './lib/records'
 
 const ICONS: Record<AreaKey, LucideIcon> = {
   today: Home,
+  team: Monitor,
   inbox: MessagesSquare,
   visitors: Eye,
   leads: Target,
@@ -45,7 +46,7 @@ const ICONS: Record<AreaKey, LucideIcon> = {
 /** The default (English) name of each area, beside its key crm.nav.<area>. */
 const NAV_DEFAULTS: Record<AreaKey, string> = {
   today: 'Today', inbox: 'Inbox', visitors: 'Visitors', leads: 'Leads', deals: 'Deals', contacts: 'Contacts',
-  tasks: 'Tasks', assistant: 'AI assistant', widget: 'Chat widget', insights: 'Insights', integrations: 'Integrations', settings: 'Settings',
+  tasks: 'Tasks', assistant: 'AI assistant', widget: 'Chat widget', insights: 'Insights', team: 'Team dashboard', integrations: 'Integrations', settings: 'Settings',
 }
 
 /** The groups' default (English) names, beside their keys crm.nav.groups.<group>. */

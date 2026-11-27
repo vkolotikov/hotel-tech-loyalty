@@ -77,18 +77,18 @@ final class LeadReplyBadges
         return $page;
     }
 
-    private static function mailThreads(?string $encoded, Guest $guest, ?array $subjects): array
+    public static function mailThreads(?string $encoded, Guest $guest, ?array $subjects): array
     {
         $email = json_decode($encoded ?? '[]', true);
         if (($email['identity'] ?? null) !== LeadCorrespondenceSync::emailIdentity($guest)) {
             return [];
         }
         if ($subjects === null) {
-            return $email['threads'];
+            return $email['threads'] ?? [];
         }
         $allowed = array_map(fn ($subject) => hash('sha256', (string) $subject), array_keys($subjects));
 
-        return array_filter($email['threads'], fn ($thread) => in_array($thread['subject_key'] ?? null, $allowed, true));
+        return array_filter($email['threads'] ?? [], fn ($thread) => in_array($thread['subject_key'] ?? null, $allowed, true));
     }
 
     private static function channel(array $threads): ?string

@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Services\Crm\EuroReferenceRates;
 use App\Services\Crm\LeadCorrespondenceSync;
 use App\Services\Crm\LeadReplyBadges;
+use App\Services\Crm\TeamEmailThreads;
 use App\Services\Integrations\CrmMail;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Client\Request;
@@ -96,6 +97,21 @@ class LeadCorrespondenceTest extends TestCase
         $this->getJson($api.'/kpis?brand_id=23')->assertOk()->assertJsonPath('open_value.amount', '43695.87')
             ->assertJsonPath('open_value.missing_currency', 0);
         $this->getJson($api.'/kpis?brand_id=80000023')->assertOk()->assertJsonPath('open_value.currency', 'USD')->assertJsonPath('open_value.amount', '200.00');
+    }
+
+    public function test_team_queue_merges_verified_mail_with_staff_replies_only_for_the_same_subject(): void
+    {
+        $id = $this->lead();
+        $this->email['threads'][] = $this->thread('Samples', 'inbound');
+        app(LeadCorrespondenceSync::class)->run();
+        $leads = Inquiry::with('guest')->whereKey($id)->get();
+        DB::table('activities')->insert(['organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'inquiry_id' => $id,
+            'type' => 'email', 'direction' => 'outbound', 'subject' => 'Re: Artwork', 'occurred_at' => now()->addSecond()]);
+        $heads = app(TeamEmailThreads::class)->heads($leads, $this->org->id, true)[$id];
+        $this->assertSame(['outbound','activity'], [$heads[hash('sha256', 'artwork')]['direction'], $heads[hash('sha256', 'artwork')]['source']]);
+        $this->assertSame('Samples-inbound', $heads[hash('sha256', 'samples')]['id']);
+        $unconnected = app(TeamEmailThreads::class)->heads($leads, $this->org->id, false)[$id];
+        $this->assertCount(1, $unconnected);
     }
 
     private function badges(int $id): ?array

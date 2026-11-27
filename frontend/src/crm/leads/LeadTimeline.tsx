@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CalendarDays, CheckCircle2, FileText, Loader2, Mail, MessageCircle, MessageSquare, Mic, Phone, Plus, Square, StickyNote, Tag } from 'lucide-react'
@@ -41,17 +42,21 @@ export function LeadTimeline({ lead, seed, onEmails }: { lead: LeadDetail; seed:
   const lang = i18n.language
   const [page, setPage] = useState(1)
   const [kind, setKind] = useState<TimelineKind>('')
-  const activities = useLeadActivities(lead.id, kind, page)
+  const [search, setSearch] = useSearchParams()
+  const selected = Number(search.get('lead')) === lead.id ? Number(search.get('activity')) : 0
+  const focused = Number.isSafeInteger(selected) && selected > 0 ? selected : undefined
+  const activities = useLeadActivities(lead.id, focused ? 'email' : kind, page, focused)
   const rows = activities.data?.data ?? []
-  const syncedEmail = (!kind || kind === 'email') && lead.latest_correspondence?.email
+  const syncedEmail = !focused && (!kind || kind === 'email') && lead.latest_correspondence?.email
 
   return (
     <section aria-label={t('crm.leads.timeline', 'Timeline')}>
       <div className="space-y-4">
         <Composer key={seed?.n ?? 0} leadId={lead.id} seed={seed} />
         <Touches lead={lead} />
-        <Tabs label={t('crm.leads.timeline_filter', 'Show')} value={kind} onChange={next => { setKind(next); setPage(1) }}
-          items={TIMELINE_KINDS.map(k => ({ key: k, label: timelineKindLabel(t, k) }))} />
+        {focused ? <button className="text-sm font-semibold text-a-accent-text underline" type="button" onClick={() => setSearch(old => { const next = new URLSearchParams(old); next.delete('activity'); return next })}>{t('crm.leads.timeline', 'Timeline')}</button>
+          : <Tabs label={t('crm.leads.timeline_filter', 'Show')} value={kind} onChange={next => { setKind(next); setPage(1) }}
+            items={TIMELINE_KINDS.map(k => ({ key: k, label: timelineKindLabel(t, k) }))} />}
         <QueryState loading={activities.isLoading} error={activities.error} onRetry={() => { void activities.refetch() }} rows={3}>
           {syncedEmail && <button type="button" onClick={onEmails} className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-xl border border-a-border px-3 py-2 text-left text-sm text-a-accent-text hover:bg-a-surface-2">
             <Mail size={16} aria-hidden />{t('crm.sales.email.synced_mail')} · {dateTime(syncedEmail.at, lang, boot.venue.timezone)}

@@ -72,6 +72,24 @@ final class BusinessProfile
         return $type === 'url' ? self::publicUrl($value) : (trim(mb_substr($value, 0, self::limit($type))) ?: null);
     }
 
+    public static function sourcedDiscovery(?GuestBusinessProfile $profile, array $reviewed): array
+    {
+        $run = $profile?->discovery;
+        if (($run['status'] ?? null) !== 'ready') {
+            return [];
+        }
+        $findings = [];
+        foreach (array_diff_key(self::publicDefinitions(), $reviewed) as $key => $type) {
+            $value = self::clean($type, $run['fields'][$key] ?? null);
+            $urls = array_filter(array_map(self::publicUrl(...), array_column($run['sources'][$key] ?? [], 'url')));
+            if ($value && $urls) {
+                $findings[$key] = ['value' => $value, 'sources' => array_slice($urls, 0, 3)];
+            }
+        }
+
+        return $findings;
+    }
+
     public static function publicUrl(mixed $value): ?string
     {
         if (! is_string($value) || strlen($value) > 2048 || preg_match('/[\\\\\x00-\x20\x7f]/', $value) || ! filter_var($value, FILTER_VALIDATE_URL)) {

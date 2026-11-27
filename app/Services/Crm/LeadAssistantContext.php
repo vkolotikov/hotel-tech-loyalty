@@ -83,7 +83,7 @@ final class LeadAssistantContext
             ? $this->knowledge->forSalesQuestions($brand, EmailQuestionPlan::searches($focus."\n".$requestText, trim(implode("\n", [$target['subject'] ?? '', ...$background, $lead->special_requests]))))
             : $this->knowledge->forSales($topic, $brand);
         $company = Arr::only($customer->fields ?? [], array_keys(BusinessProfile::definitions()));
-        $research = $draft ? $this->discovery($customer, $company) : [];
+        $research = $draft ? BusinessProfile::sourcedDiscovery($customer, $company) : [];
         $enquiry = $lead->only([
             'inquiry_type', 'source', 'status', 'priority', 'num_nights', 'num_rooms', 'num_adults', 'num_children', 'room_type_requested',
             'event_type', 'event_name', 'event_pax', 'function_space', 'catering_required', 'av_required',
@@ -193,24 +193,6 @@ final class LeadAssistantContext
                 'direction' => $row->direction, 'at' => $row->occurred_at->toISOString(),
                 'subject' => $this->text($row->subject, 240), 'body' => $this->text($row->body, 1500),
             ])->all();
-    }
-
-    private function discovery(?GuestBusinessProfile $profile, array $reviewed): array
-    {
-        $run = $profile?->discovery;
-        if (($run['status'] ?? null) !== 'ready') {
-            return [];
-        }
-        $findings = [];
-        foreach (array_diff_key(BusinessProfile::publicDefinitions(), $reviewed) as $key => $type) {
-            $value = BusinessProfile::clean($type, $run['fields'][$key] ?? null);
-            $urls = array_filter(array_map(BusinessProfile::publicUrl(...), array_column($run['sources'][$key] ?? [], 'url')));
-            if ($value && $urls) {
-                $findings[$key] = ['value' => $value, 'sources' => array_slice($urls, 0, 3)];
-            }
-        }
-
-        return $findings;
     }
 
     private function projectSubjects(Inquiry $lead, Brand $brand): array

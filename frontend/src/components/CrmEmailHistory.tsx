@@ -23,12 +23,12 @@ export interface EmailHistory { available: boolean; code?: string; connected?: b
 export interface MailTransport { read: <T>(path: string) => Promise<T>; refresh: <T>(path: string, data: unknown) => Promise<T> }
 const defaultTransport: MailTransport = { read: path => api.get(`/v1/admin/${path}`).then(r => r.data), refresh: (path, data) => api.post(`/v1/admin/${path}`, data).then(r => r.data) }
 
-export function CrmEmailHistory({ resource, id, transport = defaultTransport, scope }: { resource: 'guests' | 'inquiries'; id: number; transport?: MailTransport; scope?: string }) {
+export function CrmEmailHistory({ resource, id, transport = defaultTransport, scope, initialMessage = null }: { resource: 'guests' | 'inquiries'; id: number; transport?: MailTransport; scope?: string; initialMessage?: string | null }) {
   const brand = useBrandStore(s => s.currentBrandId)
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
-  const [selected, select] = useState<string | null>(null)
+  const [selected, select] = useState<string | null>(initialMessage)
   const [cursor, setCursor] = useState<string | null>(null)
   const path = `${resource}/${id}/email-history`
   const key = ['crm-mail', scope ?? `admin:${brand}`, resource, id]
@@ -39,6 +39,7 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
   const denied = [403, 404].includes((query.error as { response?: { status?: number } } | null)?.response?.status ?? 0)
   if (denied || (!query.isLoading && !query.error && query.data?.available === false)) return null
   const code = query.data?.code
+  const messageBody = body.isLoading ? <p role="status">{t('crm.mail.loading')}</p> : body.error ? <div role="alert">{t('crm.mail.error')} <button type="button" className="underline" onClick={() => void body.refetch()}>{t('crm.mail.retry')}</button></div> : body.data?.code ? <p role="alert">{t(`crm.mail.${body.data.code}`, t('crm.mail.error'))}</p> : <MailText text={body.data?.body ?? ''} />
   return <section aria-label={t('crm.mail.title')} className="min-w-0 rounded-2xl border border-a-border bg-a-surface p-4 text-a-text shadow-a-sm">
     <header className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-semibold"><Mail size={16} aria-hidden />{t('crm.mail.title')}</h2>{query.data?.available && !code && <button type="button" onClick={() => refresh.mutate(false)} disabled={refresh.isPending} className="inline-flex items-center gap-1 rounded-lg border border-a-border px-3 py-2 text-xs disabled:opacity-50"><RefreshCw size={14} aria-hidden />{t(refresh.isPending ? 'crm.mail.loading' : 'crm.mail.refresh')}</button>}</header>
     {query.isLoading && <p role="status" className="text-sm text-a-text-2">{t('crm.mail.loading')}</p>}
@@ -47,6 +48,9 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
     {query.data?.available && !code && <>
       <p className="mb-3 break-all text-xs text-a-text-2">{query.data.email} · {t(resource === 'inquiries' && query.data.connected ? 'crm.mail.auto_sync' : 'crm.mail.read_only')}</p>
       {query.data.connected === false && <p className="text-sm text-a-text-2">{t('crm.mail.disconnected')}</p>}
+      {initialMessage && selected === initialMessage && !query.data.messages?.some(m => m.id === selected) && (
+        <section className="my-3 rounded-xl border border-a-border p-4"><h3 className="mb-2 font-semibold">{t('crm.team.selected_email')}</h3>{messageBody}</section>
+      )}
       {!query.data.messages?.length && !query.isFetching && !refresh.isPending && !query.error && !refresh.error && <p role="status" className="py-3 text-sm text-a-text-2">{t(refresh.isSuccess || resource === 'inquiries' ? 'crm.mail.no_matches' : 'crm.mail.empty')}</p>}
       <div className="space-y-4">{groupBySubject(query.data.messages ?? []).map(group => <section key={group.messages[0].id} className="overflow-hidden rounded-xl border border-a-border">
         <header className="flex items-start justify-between gap-3 border-b border-a-border bg-a-surface-2 px-3 py-3 sm:px-4">
@@ -75,7 +79,7 @@ export function CrmEmailHistory({ resource, id, transport = defaultTransport, sc
               <dl className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs text-a-text-2">
                 {(['from', 'to', 'cc'] as const).filter(field => message.participants[field]?.length).map(field => <Fragment key={field}><dt className="font-medium">{t(`crm.mail.${field}`)}</dt><dd className="break-words [overflow-wrap:anywhere]">{message.participants[field].join(', ')}</dd></Fragment>)}
               </dl>
-              {body.isLoading ? <p role="status">{t('crm.mail.loading')}</p> : body.error ? <div role="alert">{t('crm.mail.error')} <button type="button" className="underline" onClick={() => void body.refetch()}>{t('crm.mail.retry')}</button></div> : body.data?.code ? <p role="alert">{t(`crm.mail.${body.data.code}`, t('crm.mail.error'))}</p> : <MailText text={body.data?.body ?? ''} />}
+              {messageBody}
             </div>}
           </article>
         })}</div>

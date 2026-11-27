@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { OpenValueTile } from '../ui/OpenValueTile'
+import { Monitor } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Activity, AlarmClock, ArrowRight, BarChart3, CalendarClock, CalendarPlus, Check, CheckSquare, Inbox, Loader2, MessageCircle,
@@ -70,10 +71,11 @@ export function TodayPage() {
   return (
     <Page icon={Sun} title={fullName ? hello : t('crm.today.title', 'Today')}
       line={t('crm.today.line', 'What needs you now, from the website chat and your pipeline.')}
-      actions={phone ? undefined : (
+      actions={(
         <>
-          <IconButton icon={CalendarPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
-          <Button onClick={() => records.create('lead')} className="min-h-10 rounded-full"><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Button>
+          <Link to="/crm/team" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-a-border bg-a-surface px-3 text-sm font-semibold text-a-text hover:bg-a-surface-2"><Monitor size={16} aria-hidden />{t('crm.team.title')}</Link>
+          {!phone && <><IconButton icon={CalendarPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
+            <Button onClick={() => records.create('lead')} className="min-h-10 rounded-full"><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Button></>}
         </>
       )}>
       {!boot.setup.complete && <SetupBanner done={boot.setup.done} total={boot.setup.total} />}

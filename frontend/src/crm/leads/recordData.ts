@@ -22,11 +22,11 @@ export function useLeadDetail(id: number) {
 }
 
 /** A page of the timeline (`GET inquiries/{id}/activities`), newest first, of one kind or all. */
-export function useLeadActivities(id: number, kind = '', page = 1) {
+export function useLeadActivities(id: number, kind = '', page = 1, activity?: number) {
   return useQuery({
-    queryKey: ['crm', 'leads', 'activities', id, kind, page],
-    queryFn: () => get<MetaList<Activity>>(`inquiries/${id}/activities${params({ type: kind, page, per_page: 20 })}`),
-    placeholderData: previous => previous,
+    queryKey: ['crm', 'leads', 'activities', id, kind, page, ...(activity ? [activity] : [])],
+    queryFn: () => get<MetaList<Activity>>(`inquiries/${id}/activities${params({ type: kind, page, per_page: 20, activity_id: activity })}`),
+    placeholderData: activity ? undefined : previous => previous,
   })
 }
 

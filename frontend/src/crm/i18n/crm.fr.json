@@ -65,6 +65,7 @@
     "chats": "Chats du site"
   },
   "nav": {
+    "team": "Tableau de bord de l’équipe",
     "today": "Aujourd'hui",
     "assistant": "Assistant IA",
     "contacts": "Contacts",

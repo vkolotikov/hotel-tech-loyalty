@@ -13,6 +13,7 @@ use App\Services\Appointments\VenueClock;
 use App\Services\Crm\CrmAccess;
 use App\Services\Crm\CrmSetupProgress;
 use App\Services\Crm\CrmToday;
+use App\Services\Crm\TeamDashboard;
 use App\Services\Portal\PortalBootstrap;
 use App\Support\OrgAccent;
 use Carbon\CarbonImmutable;
@@ -101,5 +102,13 @@ class WorkspaceController extends Controller
     public function start(Request $request, CrmSetupProgress $setup): JsonResponse
     {
         return response()->json($setup->for((int) $request->attributes->get('workspace_org')->id));
+    }
+
+    public function teamDashboard(Request $request, TeamDashboard $dashboard): JsonResponse
+    {
+        $args = $request->validate(['period' => 'sometimes|in:week,month', 'filter' => 'sometimes|in:all,email,followup,delivery,new',
+            'page' => 'sometimes|integer|min:1|max:100000', 'size' => 'sometimes|integer|in:4,8']);
+        return response()->json($dashboard->for($request->attributes->get('workspace_org'), $request->user(), $args['period'] ?? 'week',
+            $args['filter'] ?? 'all', (int) ($args['page'] ?? 1), (int) ($args['size'] ?? 8)))->header('Cache-Control', 'private, no-store');
     }
 }

@@ -1,5 +1,13 @@
 # HexaTech CRM — runbook
 
+## Team dashboard
+
+Open **Team dashboard** from Today or Reports. Switch between the current calendar week (Monday onwards) and month in the venue’s time zone. **TV view** fills a signed-in screen, shows four actions at a time and refreshes every minute. The selected brand and the viewer’s permissions apply to every figure and link. Open an action to go directly to its opportunity, mailbox message or logged email.
+
+Leads received uses the lead creation date. Deals won counts each lead on its first recorded win. Older won records with no recorded date are listed under **How wins are counted**. Unanswered email threads is a current backlog across dates. The smaller figure counts the threads still waiting whose latest customer email came in during the selected period. A staff reply resolves its own thread. FDS Cards uses verified Zoho correspondence alongside direction-tagged CRM emails. Other brands use their logged correspondence.
+
+The queue weighs waiting time, due follow-ups, first contact, delivery dates, account importance, known company and order size, and the relative value of open leads in the same currency. A background job on the AI queue reviews up to eight outstanding actions per batch using scoped customer messages, lead facts and reviewed or sourced business information. It can raise a buying decision or customer issue and lower a promotional email or acknowledgement. Its reason appears on the action. A CRM-based ranking is available immediately and while AI is unavailable. Billing uses the existing organisation allowance under `crm_team_priorities`.
+
 HexaTech CRM (`/crm`) is the website's AI chat and the CRM in one staff workspace, beside the full admin: the chat
 widget with its AI assistant, the live inbox and visitors, leads, the pipeline, contacts and tasks. The owner
 (2026-11-07): "We make separate portals for loyalty, booking and content planner. Now I want to make a separate portal

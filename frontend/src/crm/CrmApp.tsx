@@ -15,6 +15,7 @@ import { CreateHost } from './CreateHost'
 
 // A phone opening Today should not download the inbox, the board or the charts.
 const TodayPage = lazy(() => import('./today/TodayPage').then(m => ({ default: m.TodayPage })))
+const TeamDashboardPage = lazy(() => import('./team/TeamDashboardPage').then(m => ({ default: m.TeamDashboardPage })))
 const StartPage = lazy(() => import('./start/StartPage').then(m => ({ default: m.StartPage })))
 const InboxPage = lazy(() => import('./inbox/InboxPage').then(m => ({ default: m.InboxPage })))
 const VisitorsPage = lazy(() => import('./visitors/VisitorsPage').then(m => ({ default: m.VisitorsPage })))
@@ -61,6 +62,7 @@ export function CrmApp() {
           <PageLoad>
             <Routes>
               <Route index element={<TodayPage />} />
+              <Route path="team" element={<TeamDashboardPage />} />
               <Route path="start" element={<StartPage />} />
               <Route path="inbox" element={<InboxPage />} />
               <Route path="visitors" element={<VisitorsPage />} />

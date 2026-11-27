@@ -176,9 +176,12 @@ class InquiryController extends Controller
         // CRM Phase 7 — sanitize custom fields against the active schema.
         $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data'] ?? null);
 
-        $inquiry = DB::transaction(function () use ($v) {
+        $inquiry = DB::transaction(function () use ($v, $request) {
             $inquiry = Inquiry::create($v);
             $this->placeInDefaultPipeline($inquiry, $v['status'] ?? null);
+            if ($this->isWon($inquiry)) {
+                $this->recordWin($inquiry, 'New', null, $request->user()?->id);
+            }
 
             return $inquiry;
         });
@@ -435,25 +438,25 @@ class InquiryController extends Controller
             $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data']);
         }
 
-        $inquiry->update($v);
+        $previous = $inquiry->status;
+        $wasWon = !isset($v['status']) || $this->isWon($inquiry);
+        $syncedStage = DB::transaction(function () use ($inquiry, $v, $wasWon, $previous, $request) {
+            $inquiry->update($v);
 
-        // Keep pipeline_stage_id in lockstep with the status the UI writes.
-        // The leads list + kanban + detail all set `status` to the chosen
-        // stage's NAME; without this resync, the stage pill + colour (which
-        // read `pipeline_stage`) show the OLD stage while the dropdown shows
-        // the new one — the "status changes but the card doesn't" bug.
-        // Resolve the stage by name within the inquiry's pipeline, falling
-        // back to the won/lost stage by kind for the terminal statuses.
-        $syncedStage = null;
-        if (array_key_exists('status', $v) && $v['status'] !== null && $inquiry->pipeline_id) {
-            $stage = $this->stageForStatus($inquiry->pipeline_id, $v['status']);
-            if ($stage && $stage->id !== $inquiry->pipeline_stage_id) {
-                $inquiry->pipeline_stage_id = $stage->id;
-                $inquiry->save();
+            // The full admin and CRM can move a lead by the stage's name as well as the dedicated Won action.
+            $stage = null;
+            if (isset($v['status']) && $inquiry->pipeline_id) {
+                $stage = $this->stageForStatus($inquiry->pipeline_id, $v['status']);
+                if ($stage && $stage->id !== $inquiry->pipeline_stage_id) {
+                    $inquiry->pipeline_stage_id = $stage->id;
+                    $inquiry->save();
+                }
             }
-            $syncedStage = $stage;
-        }
-
+            if (!$wasWon && ($inquiry->status === 'Confirmed' || $stage?->kind === 'won')) {
+                $this->recordWin($inquiry, $previous, null, $request->user()?->id);
+            }
+            return $stage;
+        });
         // Auto-create reservation when the deal is won. Keyed on the resolved
         // stage's `kind` (not just the literal "Confirmed") so orgs that
         // renamed their won stage — or any non-hotel preset whose won stage
@@ -905,7 +908,12 @@ class InquiryController extends Controller
                 }
                 // update() (not raw query) so the model's saving hook
                 // still creates a reservation when status flips to Confirmed.
+                $wasWon = !isset($patch['status']) || $this->isWon($r);
+                $previous = $r->status;
                 $r->update($patch);
+                if (!$wasWon && $this->isWon($r)) {
+                    $this->recordWin($r, $previous, null, $request->user()?->id);
+                }
                 $updated++;
             }
         });
@@ -1185,21 +1193,7 @@ class InquiryController extends Controller
                 'lost_reason_id'    => null, // Clear any prior Lost selection.
             ])->save();
 
-            // Log the transition on the timeline.
-            Activity::create([
-                'inquiry_id' => $inquiry->id,
-                'guest_id'   => $inquiry->guest_id,
-                'type'       => 'status_change',
-                'subject'    => 'Marked Won',
-                'body'       => trim(
-                    "Stage: {$previousStage} → " . ($wonStage?->name ?? 'Confirmed')
-                    . ($note ? "\n\n{$note}" : '')
-                ),
-                'created_by' => $userId,
-                'occurred_at' => now(),
-                'metadata'   => ['kind' => 'won'],
-            ]);
-
+            $this->recordWin($inquiry, $previousStage, $note, $userId, $wonStage?->name ?? 'Confirmed');
             // Auto-create a draft reservation if one isn't already linked
             // and we have enough info to seed it (property + dates).
             $reservation = $inquiry->reservations()->first();
@@ -1355,5 +1349,22 @@ class InquiryController extends Controller
 
         return response()->json($response)
             ->header('Cache-Control', 'private, no-store');
+    }
+
+    /** @phpstan-impure The lead and its pipeline stage can change inside this transaction. */
+    private function isWon(Inquiry $inquiry): bool
+    {
+        return $inquiry->status === 'Confirmed' || ($inquiry->pipeline_stage_id && $inquiry->pipelineStage()->value('kind') === 'won');
+    }
+
+    private function recordWin(Inquiry $inquiry, ?string $previous, ?string $note, ?int $userId, ?string $stage = null): void
+    {
+        $stage ??= $inquiry->pipeline_stage_id ? $inquiry->pipelineStage()->value('name') : null;
+        Activity::create([
+            'organization_id' => $inquiry->organization_id, 'brand_id' => $inquiry->brand_id,
+            'inquiry_id' => $inquiry->id, 'guest_id' => $inquiry->guest_id, 'type' => 'status_change', 'subject' => 'Marked Won',
+            'body' => trim("Stage: {$previous} → ".($stage ?? 'Confirmed').($note ? "\n\n{$note}" : '')),
+            'created_by' => $userId, 'occurred_at' => now(), 'metadata' => ['kind' => 'won'],
+        ]);
     }
 }

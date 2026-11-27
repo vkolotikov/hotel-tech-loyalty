@@ -65,6 +65,7 @@
     "chats": "Website chats"
   },
   "nav": {
+    "team": "Team dashboard",
     "assistant": "AI assistant",
     "contacts": "Contacts",
     "inbox": "Inbox",
