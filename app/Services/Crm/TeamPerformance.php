@@ -13,6 +13,16 @@ final class TeamPerformance
     public function __construct(private OpenLeadValue $valuation) {}
 
     /** @param Builder<Inquiry> $visible */
+    public function arrivals(Builder $visible, CarbonImmutable $now): array
+    {
+        $day = $now->startOfDay();
+        $week = $now->startOfWeek(CarbonImmutable::MONDAY);
+        $count = fn (CarbonImmutable $from, CarbonImmutable $to) => (clone $visible)->whereBetween('created_at', [$from->utc(), $to->utc()])->count();
+        return ['today' => $count($day, $now), 'yesterday' => $count($day->subDay(), $now->subDay()),
+            'week' => $count($week, $now), 'last_week' => $count($week->subWeek(), $now->subWeek())];
+    }
+
+    /** @param Builder<Inquiry> $visible */
     public function portfolio(Builder $visible, Organization $org, CarbonImmutable $now): array
     {
         // The open pipeline and its follow-ups use the same scope as Leads and Today.

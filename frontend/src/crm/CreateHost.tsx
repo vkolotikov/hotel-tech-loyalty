@@ -1,4 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { isDay } from '../time/lib/dates'
 import { ChunkErrorBoundary } from '../components/ChunkErrorBoundary'
 import { useBoot } from './CrmProvider'
 import { useRecords } from './lib/useRecords'
@@ -17,6 +19,8 @@ const TaskForm = lazy(() => import('./tasks/TaskForm').then(m => ({ default: m.T
  */
 export function CreateHost() {
   const records = useRecords()
+  const [search] = useSearchParams()
+  const taskDay = search.get('task_day')
   const boot = useBoot()
   const kind = records.creating
   const [captured, setCaptured] = useState<LeadDraft | null>(null)
@@ -35,7 +39,7 @@ export function CreateHost() {
   } else if (kind === 'company') {
     body = <CompanyFormPanel onClose={close} onSaved={company => records.open('company', company.id)} />
   } else if (kind === 'task') {
-    body = <TaskForm task={null} onClose={close} />
+    body = <TaskForm task={null} initialDate={isDay(taskDay) ? taskDay : undefined} onClose={close} />
   }
   return (
     <ChunkErrorBoundary>

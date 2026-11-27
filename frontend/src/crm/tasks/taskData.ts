@@ -21,6 +21,7 @@ export function useTeam() {
 export function useTaskChanged(): () => void {
   const qc = useQueryClient()
   return useCallback(() => {
+    void qc.invalidateQueries({ queryKey: ['crm', 'team-day-plan'] })
     void qc.invalidateQueries({ queryKey: ['crm', 'tasks'] })
     void qc.invalidateQueries({ queryKey: ['crm', 'leads'] })
     void qc.invalidateQueries({ queryKey: ['crm', 'pipeline'] })

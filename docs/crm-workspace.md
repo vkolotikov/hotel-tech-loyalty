@@ -16,7 +16,11 @@ The activity chart shows daily arrivals and first wins. Select a day or open the
 
 Follow-up signals open the corresponding due lists. The email and urgent signals open the filtered priority queue. Counts use the same lead, currency and follow-up rules as the CRM lead list. Priorities and statistics respect the selected brand and staff access.
 
-**TV view** refreshes every minute and alternates the overview and the four highest-ranked actions every 30 seconds. Pause it to keep a view on screen. Interacting with a chart control or switching views manually pauses rotation. Reduced-motion settings turn off animations and automatic rotation. Open an action to go directly to its opportunity or message.
+**Day plan** combines dated CRM tasks for the selected brand with the organisation’s Time Planner assignments when that workspace is enabled. Each employee appears once. Expand a person to see their tasks and update a status. Use the date picker and **Add a task** to plan ahead. **Open full planner** opens that day for the whole team. Organisations using CRM alone add tasks through the usual CRM task form. Assignment controls follow the existing planner permissions.
+
+The day-plan figures show leads today and this week, with the change in lead count against the same local time yesterday and last week. Deals won follows the selected reporting period. The priority list shows up to three distinct leads from the sales queue. Team progress counts completed assignments for the displayed day. Names show recorded work and status, including unassigned work and people with an empty plan.
+
+**TV view** follows the venue’s current day and refreshes every minute. It rotates every 30 seconds through Overview, the day plan in groups of four employees, and Priority actions. Pause it to keep a view on screen. Interacting with a chart control or switching views manually pauses rotation. Reduced-motion settings turn off animations and automatic rotation. Open an action to go directly to its opportunity or message.
 
 Leads received uses the lead creation date. Deals won counts each lead on its first recorded win. Older won records with no recorded date are listed under **How wins are counted**. Unanswered email threads is a current backlog across dates. The smaller figure counts the threads still waiting whose latest customer email came in during the selected period. A staff reply resolves its own thread. FDS Cards uses verified Zoho correspondence alongside direction-tagged CRM emails. Other brands use their logged correspondence.
 

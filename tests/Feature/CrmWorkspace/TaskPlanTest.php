@@ -41,6 +41,18 @@ class TaskPlanTest extends TestCase
         }
     }
 
+    public function test_a_crm_assignment_created_on_a_future_day_keeps_the_selected_brand_on_the_team_plan(): void
+    {
+        $query = '?brand_id='.$this->brandId;
+        $task = $this->asStaffMember()->postJson($this->adminApi('tasks'.$query), [
+            'title' => 'Prepare samples', 'due_at' => '2026-11-04T22:00:00Z',
+        ])->assertCreated()->json();
+        $this->assertSame($this->brandId, (int) $task['brand_id']);
+        $this->getJson($this->crmApi('team-day-plan'.$query.'&date=2026-11-05'))->assertOk()
+            ->assertJsonPath('planner', false)->assertJsonPath('total', 1)->assertJsonPath('top_tasks.0.id', $task['id']);
+        $this->getJson($this->crmApi('team-day-plan'.$query))->assertOk()->assertJsonPath('total', 0);
+    }
+
     public function test_priority_length_and_repeat_are_saved_and_answered(): void
     {
         $task = $this->asStaffMember()->postJson($this->adminApi('tasks'), [

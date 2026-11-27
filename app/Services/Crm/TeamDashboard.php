@@ -36,6 +36,9 @@ final class TeamDashboard
         $portfolio = $cache->remember($key.':portfolio', 45, fn () => $this->performance->portfolio($visible, $org, $now));
         $series = $cache->remember($key.':'.$period, 45, fn () => $this->performance->period($visible, $org, $start, $now, $period === 'month'));
         [$actions, $reviewed] = $this->review->rank($snapshot['actions'], $org, $user, $selected, $scope);
+        // The first ranked action for each lead represents that opportunity, even if it has multiple email threads.
+        $topLeads = collect($actions)->unique('lead_id')->take(3)->map(fn ($row) => \Illuminate\Support\Arr::only($row,
+            ['lead_id','name','company','kind','priority','owner','signals','ai_reason','amount','currency','deadline']))->values()->all();
         $emails = array_filter($actions, fn ($row) => $row['kind'] === 'email');
         $urgent = array_filter($actions, fn ($row) => $row['priority'] === 'urgent');
         $filtered = array_values($filter === 'urgent' ? $urgent : array_filter($actions, fn ($row) => $filter === 'all' || $row['kind'] === $filter));
@@ -52,7 +55,8 @@ final class TeamDashboard
             'leads' => array_sum(array_column($series['days'], 'leads')), 'wins' => array_sum(array_column($series['days'], 'wins')),
             'undated_wins' => $series['undated'], 'days' => $series['days'], 'emails' => count($emails),
             'period_emails' => count(array_filter($emails, fn ($r) => $r['at'] >= $start->timestamp)),
-            'portfolio' => $portfolio, 'performance' => $series['performance'], 'urgent' => count($urgent),
+            'arrivals' => $cache->remember($key.':arrivals', 45, fn () => $this->performance->arrivals($visible, $now)),
+            'top_leads' => $topLeads, 'portfolio' => $portfolio, 'performance' => $series['performance'], 'urgent' => count($urgent),
             'actions_total' => count($actions), 'reviewed' => $reviewed, 'page' => $page, 'pages' => $pages,
             'matching' => count($filtered), 'actions' => $rows,
         ];

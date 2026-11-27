@@ -91,6 +91,7 @@ final class AccessMap
         'admin/crm/ai-usage'                    => ['manager',            'manager',            'crm'],           // This month's AI spend against the allowance, this organisation's own (manager, as admin/ai-usage)
         'admin/crm/whatsapp-status'             => ['manager',            'manager',            'crm'],
         'admin/crm/sales-profile'               => ['staff',              'manager',            'crm'],
+        'admin/crm/team-day-plan'               => ['staff',              'staff',              'crm'],
         'admin/crm/team-dashboard'              => ['staff',              'staff',              'crm'],
         'admin/crm/sales-profile/capture'       => ['manager',            'manager',            'crm'],
         'admin/crm/leads/{inquiry}/assistant'   => ['staff',              'staff',              'crm'],

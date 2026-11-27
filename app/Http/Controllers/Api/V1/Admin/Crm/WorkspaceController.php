@@ -14,6 +14,7 @@ use App\Services\Crm\CrmAccess;
 use App\Services\Crm\CrmSetupProgress;
 use App\Services\Crm\CrmToday;
 use App\Services\Crm\TeamDashboard;
+use App\Services\Crm\TeamDayPlan;
 use App\Services\Portal\PortalBootstrap;
 use App\Support\OrgAccent;
 use Carbon\CarbonImmutable;
@@ -102,6 +103,13 @@ class WorkspaceController extends Controller
     public function start(Request $request, CrmSetupProgress $setup): JsonResponse
     {
         return response()->json($setup->for((int) $request->attributes->get('workspace_org')->id));
+    }
+
+    public function teamDayPlan(Request $request, TeamDayPlan $plan): JsonResponse
+    {
+        $args = $request->validate(['date' => 'sometimes|date_format:Y-m-d']);
+        return response()->json($plan->for($request->attributes->get('workspace_org'), $request->user(), $args['date'] ?? null))
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function teamDashboard(Request $request, TeamDashboard $dashboard): JsonResponse

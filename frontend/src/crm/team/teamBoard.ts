@@ -3,7 +3,35 @@ import type { OpenLeadValue } from '../lib/types'
 export type Period = 'week' | 'month'
 export type Kind = 'email' | 'followup' | 'delivery' | 'new'
 export type Filter = 'all' | 'urgent' | Kind
-export type BoardView = 'overview' | 'actions'
+export type BoardView = 'overview' | 'plan' | 'actions'
+export type PlanStatus = 'todo' | 'in_progress' | 'blocked' | 'done'
+export interface PlanTask {
+  id: number; source: 'planner' | 'crm'; title: string; time: string | null; priority: number; status: PlanStatus; editable: boolean
+}
+export interface PersonPlan { key: string; name: string | null; user_id: number | null; assignable: boolean; tasks: PlanTask[]; done: number }
+export interface DayPlan {
+  date: string; today: string; as_of: string; planner: boolean; people: PersonPlan[]; total: number; done: number
+  top_tasks: (PlanTask & { owner: string | null; owner_key: string })[]
+}
+export type PriorityLead = Pick<TeamAction, 'lead_id' | 'name' | 'company' | 'kind' | 'priority' | 'owner' | 'signals' | 'ai_reason' | 'amount' | 'currency' | 'deadline'>
+export const PEOPLE_PER_SLIDE = 4
+
+export function planPage(sp: URLSearchParams, pages: number): number {
+  const page = Number(sp.get('people'))
+  return Number.isSafeInteger(page) && page > 0 ? Math.min(page, Math.max(pages, 1)) : 1
+}
+
+/** Visit every roster page before advancing to the priority queue. */
+export function advanceSlide(sp: URLSearchParams, rosterPages: number): URLSearchParams {
+  const next = new URLSearchParams(sp)
+  const view = boardView(sp)
+  const page = planPage(sp, rosterPages)
+  next.delete('page')
+  next.delete('people')
+  if (view === 'plan' && page < rosterPages) next.set('people', String(page + 1))
+  else next.set('view', view === 'overview' ? 'plan' : view === 'plan' ? 'actions' : 'overview')
+  return next
+}
 export interface CountryMix { rows: { code: string; count: number }[]; unknown: number; total: number }
 export interface BoardValue extends OpenLeadValue { valued: number }
 
@@ -18,6 +46,8 @@ export interface TeamBoard {
   undated_wins: number; days: { date: string; leads: number; wins: number }[]
   emails: number; period_emails: number; actions_total: number; reviewed: number; page: number; pages: number; matching: number; actions: TeamAction[]
   urgent: number
+  arrivals?: { today: number; yesterday: number; week: number; last_week: number }
+  top_leads?: PriorityLead[]
   portfolio: { total: number; total_value: BoardValue; open: number; open_value: BoardValue; overdue: number; due_today: number; countries: CountryMix }
   performance: { won_value: BoardValue; countries: CountryMix; lead_change: number; win_change: number; previous_from: string; previous_through: string }
 }
@@ -31,6 +61,7 @@ export function teamOptions(sp: URLSearchParams) {
 }
 
 export function boardView(sp: URLSearchParams): BoardView {
+  if (sp.get('view') === 'plan') return 'plan'
   if (sp.get('view') === 'overview') return 'overview'
   return sp.get('view') === 'actions' || sp.has('filter') || sp.has('page') ? 'actions' : 'overview'
 }

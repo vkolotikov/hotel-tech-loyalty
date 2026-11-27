@@ -39,6 +39,15 @@ final class CrmAccess
         return $modules === null || in_array('booking', AccessMap::productsFor($modules), true);
     }
 
+    public static function seesTimePlan(Organization $org, User $user): bool
+    {
+        $modules = $org->planModules();
+        return $org->workspaceEnabled('time') && ($user->isPlatformAdmin() || (
+            $org->hasActiveSubscription() && $org->hasFeature('time_management')
+            && ($modules === null || in_array('time', AccessMap::productsFor($modules), true))
+        ));
+    }
+
     public static function role(User $user): ?string
     {
         return self::staff($user)?->role;

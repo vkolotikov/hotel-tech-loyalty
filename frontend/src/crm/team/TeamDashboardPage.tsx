@@ -2,15 +2,17 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, CalendarClock, Check, ChevronLeft, ChevronRight, ClipboardCheck, Expand, LayoutDashboard, ListTodo, Mail, Monitor, Pause, Play, RefreshCw, Sparkles, UserPlus, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, Check, ChevronLeft, ChevronRight, ClipboardCheck, CalendarDays, Expand, LayoutDashboard, ListTodo, Mail, Monitor, Pause, Play, RefreshCw, Sparkles, UserPlus, X } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { useNow } from '../../hooks/useNow'
 import { useMedia } from '../../workspace/lib/useMedia'
 import { get, params } from '../lib/api'
 import { currentBrand } from '../lib/brand'
 import { count, money, timeAgo } from '../lib/format'
-import { actionLink, boardDay, boardView, teamOptions, type BoardView, type Filter, type Kind, type TeamAction, type TeamBoard } from './teamBoard'
+import { actionLink, advanceSlide, planPage, PEOPLE_PER_SLIDE, type DayPlan, boardDay, boardView, teamOptions, type BoardView, type Filter, type Kind, type TeamAction, type TeamBoard } from './teamBoard'
 import { TeamOverview } from './TeamOverview'
+import { TeamDay } from './TeamDay'
+import { isDay } from '../../time/lib/dates'
 import './team.css'
 
 const icons = { email: Mail, followup: CalendarClock, delivery: ClipboardCheck, new: UserPlus }
@@ -50,8 +52,17 @@ export function TeamDashboardPage() {
   const board = useQuery({ queryKey: ['crm', 'team-dashboard', boot.organization.id, brand, period, filter, page, tv],
     queryFn: () => get<TeamBoard>('crm/team-dashboard' + params({ period, filter, page, size: tv ? 4 : 8 })),
     staleTime: 15_000, refetchInterval: 60_000, refetchIntervalInBackground: true, retry: 1 })
+  const requestedDate = sp.get('plan_date')
+  const date = !tv && isDay(requestedDate) ? requestedDate : ''
+  const plan = useQuery({ queryKey: ['crm', 'team-day-plan', boot.organization.id, brand, date],
+    queryFn: () => get<DayPlan>('crm/team-day-plan' + params({ date: date || undefined })),
+    enabled: view === 'plan' || tv, staleTime: 15_000, refetchInterval: 60_000, refetchIntervalInBackground: true, retry: 1 })
+  const rosterPages = Math.max(1, Math.ceil((plan.data?.people.length ?? 0) / PEOPLE_PER_SLIDE))
+  const peoplePage = planPage(sp, rosterPages)
   const change = (key: string, value: string) => setSp(old => {
     const next = new URLSearchParams(old)
+    if (key === 'plan_date' || key === 'display') next.delete('people')
+    if (key === 'display') next.delete('plan_date')
     if (key !== 'page') next.delete('page')
     if (tv && key !== 'display') next.set('rotate', 'off')
     if (value) next.set(key, value); else next.delete(key)
@@ -61,6 +72,7 @@ export function TeamDashboardPage() {
   const chooseView = (screen: BoardView, kind?: Filter) => setSp(old => {
     const next = new URLSearchParams(old)
     next.set('view', screen)
+    next.delete('people')
     next.delete('page')
     if (kind) { if (kind === 'all') next.delete('filter'); else next.set('filter', kind) }
     if (tv) next.set('rotate', 'off')
@@ -75,15 +87,10 @@ export function TeamDashboardPage() {
     if (!rotating) return
     const timer = window.setInterval(() => {
       if (document.hidden) return
-      setSp(old => {
-        const next = new URLSearchParams(old)
-        next.set('view', boardView(old) === 'overview' ? 'actions' : 'overview')
-        next.delete('page')
-        return next
-      }, { replace: true })
+      setSp(old => advanceSlide(old, rosterPages), { replace: true })
     }, 30_000)
     return () => window.clearInterval(timer)
-  }, [rotating, view, setSp])
+  }, [rotating, view, peoplePage, rosterPages, setSp])
   const openTv = () => {
     if (document.fullscreenEnabled) void document.documentElement.requestFullscreen().catch(() => {})
     change('display', 'tv')
@@ -93,6 +100,8 @@ export function TeamDashboardPage() {
   const current = boot.brands?.find(b => b.id === brand)?.name ?? (brand === 'all' && (boot.brands?.length ?? 0) > 1 ? t('crm.team.all_brands') : boot.organization.name)
   const now = useNow(60_000)
   const stale = data && (now.getTime() - Date.parse(data.as_of) > 180000 || board.isError)
+  const planStale = plan.data && (now.getTime() - Date.parse(plan.data.as_of) > 180000 || plan.isError)
+  const refresh = () => { void board.refetch(); if (view === 'plan') void plan.refetch() }
   const content = <div className="crm-team" data-view={view}>
     <header className="crm-team-head">
       <div><div className="crm-team-context">{current}{data && <><span aria-hidden>·</span><span>{boardDay(data.from, lang)} – {boardDay(data.through, lang)}</span></>}</div>
@@ -108,12 +117,13 @@ export function TeamDashboardPage() {
     <div className="crm-team-viewbar">
       <nav className="crm-team-views" aria-label={t('crm.team.board_views')}>
         <button type="button" aria-pressed={view === 'overview'} onClick={() => chooseView('overview')}><LayoutDashboard size={16}/>{t('crm.team.overview')}</button>
+        <button type="button" aria-pressed={view === 'plan'} onClick={() => chooseView('plan')}><CalendarDays size={16}/>{t('crm.dayplan.tab')}</button>
         <button type="button" aria-pressed={view === 'actions'} onClick={() => chooseView('actions', 'all')}><ListTodo size={16}/>{t('crm.team.actions')}</button>
       </nav>
       <div className="crm-team-live-controls">
-        {tv && !reduced && <button key={view} type="button" className="crm-team-rotation" data-playing={rotating} aria-label={t(rotating ? 'crm.team.pause' : 'crm.team.play')} title={t(rotating ? 'crm.team.pause' : 'crm.team.play')} onClick={() => setRotation(!rotating)}>{rotating ? <Pause size={15}/> : <Play size={15}/>}<span>{t(rotating ? 'crm.team.rotating' : 'crm.team.paused')}</span></button>}
-        {data && <button type="button" className="crm-team-health" data-stale={Boolean(stale)} aria-label={t('crm.team.refresh')} title={t('crm.team.refresh')} disabled={board.isFetching} onClick={() => { void board.refetch() }}>
-          <i key={data.as_of} aria-hidden/><span>{t(stale ? 'crm.team.delayed' : 'crm.team.live')}</span>
+        {tv && !reduced && <button key={view + peoplePage} type="button" className="crm-team-rotation" data-playing={rotating} aria-label={t(rotating ? 'crm.team.pause' : 'crm.team.play')} title={t(rotating ? 'crm.team.pause' : 'crm.team.play')} onClick={() => setRotation(!rotating)}>{rotating ? <Pause size={15}/> : <Play size={15}/>}<span>{t(rotating ? 'crm.team.rotating' : 'crm.team.paused')}</span></button>}
+        {data && <button type="button" className="crm-team-health" data-stale={Boolean(stale || (view === 'plan' && planStale))} aria-label={t('crm.team.refresh')} title={t('crm.team.refresh')} disabled={board.isFetching || (view === 'plan' && plan.isFetching)} onClick={refresh}>
+          <i key={data.as_of} aria-hidden/><span>{t(stale || (view === 'plan' && planStale) ? 'crm.team.delayed' : 'crm.team.live')}</span>
           <time dateTime={data.as_of}>{new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit', timeZone: boot.venue.timezone }).format(new Date(data.as_of))}</time><RefreshCw size={13}/>
         </button>}
       </div>
@@ -123,6 +133,12 @@ export function TeamDashboardPage() {
     {data && view === 'overview' && <div onFocusCapture={() => { if (rotating) setRotation(false) }}>
       <TeamOverview board={data} lang={lang} showActions={kind => chooseView('actions', kind)} allCountries={sp.get('countries') === 'all'}
         setAllCountries={all => change('countries', all ? 'all' : '')}/>
+    </div>}
+    {view === 'plan' && <div onFocusCapture={() => { if (rotating) setRotation(false) }}>
+      {plan.isLoading && <p role="status" className="crm-team-empty">{t('crm.dayplan.loading')}</p>}
+      {(plan.isError || planStale) && <div role="status" className="crm-team-notice">{t(plan.data ? 'crm.dayplan.stale' : 'crm.dayplan.failed')} <button type="button" onClick={() => { void plan.refetch() }}>{t('crm.common.retry')}</button></div>}
+      {plan.data && <TeamDay key={String(brand) + plan.data.date} plan={plan.data} board={data} lang={lang} tv={tv} page={peoplePage} pages={rosterPages}
+        changePage={n => change('people', String(n))} changeDate={d => change('plan_date', d === plan.data?.today ? '' : d)} />}
     </div>}
     {data && view === 'actions' && <div className="crm-team-layout" onFocusCapture={() => { if (rotating) setRotation(false) }}>
       <section className="crm-team-queue">

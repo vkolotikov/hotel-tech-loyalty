@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
+use App\Models\Inquiry;
 use App\Models\Task;
 use App\Services\Appointments\VenueClock;
 use App\Services\CustomFieldService;
@@ -89,6 +90,10 @@ class TaskController extends Controller
         if (array_key_exists('due_at', $data)) {
             $data['due_at'] = self::trueInstant($data['due_at']);
         }
+        // A linked task inherits the enquiry's brand, including when opened from an older direct link.
+        $data['brand_id'] = !empty($data['inquiry_id'])
+            ? Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->where('organization_id', $request->user()->organization_id)->whereKey($data['inquiry_id'])->value('brand_id')
+            : (app()->bound('current_brand_id') ? app('current_brand_id') : null);
         $data['created_by']  = $request->user()->id;
         $data['assigned_to'] = $data['assigned_to'] ?? $request->user()->id;
         $data['custom_data'] = $this->customFields->validate('task', $data['custom_data'] ?? null);

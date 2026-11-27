@@ -47,10 +47,11 @@ const CHIP_ON = 'border-transparent bg-a-accent text-a-accent-ink'
  * clock), who does it and the lead (chosen when it is added; the server does not move a task to another lead), and
  * notes. The footer sums it up.
  */
-export function TaskForm({ task, inquiryId, leadName, onClose }: {
+export function TaskForm({ task, inquiryId, leadName, initialDate, onClose }: {
   task: Task | null
   /** Opened from a lead: the new task is that lead's. */
   inquiryId?: number | null
+  initialDate?: string
   leadName?: string | null
   onClose: () => void
 }) {
@@ -62,7 +63,7 @@ export function TaskForm({ task, inquiryId, leadName, onClose }: {
   const team = useTeam()
   const formId = useId()
   const isNew = !task
-  const [draft, setDraft] = useState<TaskDraft>(() => draftOf(task, zone, { me: boot.staff.id, inquiryId: inquiryId ?? null }))
+  const [draft, setDraft] = useState<TaskDraft>(() => draftOf(task, zone, { me: boot.staff.id, inquiryId: inquiryId ?? null, date: initialDate }))
   const [picked, setPicked] = useState<string | null>(leadName ?? null)
   const [part, setPart] = useState<DayPart>(() => partOf(draft.time))
   const [tried, setTried] = useState(false)

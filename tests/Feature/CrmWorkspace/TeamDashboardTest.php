@@ -62,6 +62,21 @@ class TeamDashboardTest extends TestCase
         $this->getJson($this->crmApi('team-dashboard?period=yesterday'))->assertUnprocessable();
     }
 
+    public function test_day_and_week_growth_use_the_same_elapsed_local_time_and_priority_leads_survive_queue_filters(): void
+    {
+        foreach (['2026-11-03 22:05','2026-11-04 10:01','2026-11-03 08:00','2026-11-03 20:00','2026-10-28 09:59','2026-10-28 10:01'] as $instant) {
+            $this->lead(['created_at' => $instant.':00']);
+        }
+        $unfiltered = $this->board();
+        $this->assertSame(['today' => 1, 'yesterday' => 1, 'week' => 3, 'last_week' => 1], $unfiltered['arrivals']);
+        $filtered = $this->board('?filter=email&page=7&period=month');
+        $this->assertSame($unfiltered['arrivals'], $filtered['arrivals']);
+        $this->assertCount(3, $filtered['top_leads']);
+        $this->assertSame($unfiltered['top_leads'], $filtered['top_leads']);
+        $this->assertCount(3, array_unique(array_column($filtered['top_leads'], 'lead_id')));
+        $this->assertArrayNotHasKey('evidence', $filtered['top_leads'][0]);
+    }
+
     public function test_portfolio_countries_converted_values_followups_and_comparison_share_the_visible_leads(): void
     {
         $this->org->forceFill(['currency' => 'EUR'])->saveQuietly();
