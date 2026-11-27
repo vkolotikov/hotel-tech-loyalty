@@ -145,15 +145,17 @@ final class TeamDashboard
                         $kind = 'followup';
                         $base['signals'][] = $due < $now->toDateString() ? 'overdue' : 'due_today';
                         $base['score'] += $due < $now->toDateString() ? 32 : 24;
-                    } elseif ($open && !$heads && !$lead->last_contacted_at && $lead->created_at?->gte($now->subDays(7))
+                    } elseif ($open && !$heads && empty($conversations['other'][$lead->id]) && !$lead->last_contacted_at && $lead->created_at?->lte($now)
+                        && ($lead->next_task_completed || !$due || $due <= $now->toDateString())
                         && in_array(strtolower(trim((string) $lead->status)), ['new', 'new enquiry', 'new inquiry', ''], true)) {
                         $kind = 'new';
-                        $base['score'] += 15;
+                        $base['age_days'] = intdiv($now->timestamp - $lead->created_at->timestamp, 86400);
+                        $base['score'] += 15 + min(20, $base['age_days']);
                     }
                     if ($incoming) {
                         foreach ($incoming as $row) {
                             if ($kind) {
-                                $row['fallback'] = ['kind' => $kind, 'key' => $lead->id.'-'.$kind, 'signals' => $base['signals']];
+                                $row['fallback'] = ['kind' => $kind, 'key' => $lead->id.'-'.$kind, 'signals' => $base['signals'], 'score' => $base['score'], 'at' => $base['at']];
                             }
                             $rows[] = $row;
                         }
@@ -189,6 +191,10 @@ final class TeamDashboard
             if (isset($thresholds[$row['currency']]) && (float) $row['amount'] >= $thresholds[$row['currency']]) {
                 $row['signals'][] = 'high_value';
                 $row['score'] += 15;
+                if (isset($row['fallback'])) {
+                    $row['fallback']['score'] += 15;
+                    $row['fallback']['signals'][] = 'high_value';
+                }
             }
         }
         unset($row);

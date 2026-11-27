@@ -22,16 +22,22 @@ final class TeamAttention
             }
             if ($row['kind'] === 'email' && in_array($row['ai_reason'], ['automated', 'information_only'], true)) {
                 if (isset($row['fallback'])) {
-                    $fallbacks[$id] ??= self::publicRow(array_replace($row, $row['fallback'], ['source' => null, 'message_id' => null, 'subject' => '', 'age_days' => null, 'ai_reason' => null]));
+                    $work = $row['fallback'];
+                    $fallbacks[$id] ??= array_replace($row, $work, ['priority' => TeamPriorityReview::priority($work['score']),
+                        'source' => null, 'message_id' => null, 'subject' => '', 'age_days' => null, 'ai_reason' => null]);
                 }
                 continue;
             }
-            $needed[$id] ??= self::publicRow($row);
+            $needed[$id] ??= $row;
             if ($row['kind'] === 'email' && $row['age_days'] >= self::WAIT_DAYS && (!isset($waiting[$id]) || $row['at'] < $waiting[$id]['at'])) {
                 $waiting[$id] = self::publicRow($row);
             }
         }
-        $needed += $fallbacks;
+        if ($fallbacks) {
+            $needed += $fallbacks;
+            uasort($needed, fn ($a, $b) => $b['score'] <=> $a['score'] ?: $a['at'] <=> $b['at'] ?: strcmp($a['key'], $b['key']));
+        }
+        $needed = array_map([self::class, 'publicRow'], $needed);
         uasort($waiting, fn ($a, $b) => $a['at'] <=> $b['at'] ?: $a['lead_id'] <=> $b['lead_id']);
         $top = array_slice($needed, 0, 3, true);
         if ($waiting) {

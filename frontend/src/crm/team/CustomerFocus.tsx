@@ -15,7 +15,7 @@ export function CustomerFocus({ attention, ranking, period, allTime, setAllTime,
   const signals = [{ key: 'needed', icon: ListTodo }, { key: 'waiting_week', icon: ArrowDownLeft }, { key: 'checkin', icon: ArrowUpRight }] as const
   return <div className="crm-focus">
     {attention && <div className="crm-focus-signals">{signals.map(({ key, icon: Icon }) =>
-      <button key={key} type="button" data-signal={key} onClick={() => showActions(key)}>
+      <button key={key} type="button" data-signal={key} data-active={attention[key] > 0} onClick={() => showActions(key)}>
         <span className="crm-focus-signal-label"><Icon size={18} aria-hidden/>{t(`crm.focus.${key}`)}</span>
         <strong>{count(attention[key], lang)}</strong><ChevronRight size={15} aria-hidden className="crm-focus-chevron"/>
       </button>)}</div>}
@@ -54,13 +54,12 @@ function FocusList({ title, items, empty, kind, open, lang }: { title: string; i
     <button type="button" aria-label={t('crm.focus.see_list', { name: title })} onClick={() => open(kind)}>{t('crm.focus.view_all')}<ArrowRight size={14} aria-hidden/></button></header>
     {items.length ? <ul>{items.map(item => {
       const name = item.company || item.name || t('crm.team.unnamed', { id: item.lead_id })
-      const email = item.kind === 'email' || item.kind === 'checkin'
-      const age = email && item.age_days != null ? item.age_days === 0 ? t('crm.focus.under_day') : t('crm.focus.days', { n: count(item.age_days, lang) }) : ''
+      const age = item.age_days != null ? item.age_days === 0 ? t('crm.focus.under_day') : t('crm.focus.days', { n: count(item.age_days, lang) }) : ''
       const reason = item.deadline && item.signals.includes('delivery_due') ? t('crm.team.delivery_date', { date: boardDay(item.deadline, lang) })
         : item.ai_reason && item.ai_reason !== 'routine' ? t(`crm.team.ai_${item.ai_reason}`) : t(`crm.team.kind_${item.kind}`)
       return <li key={item.key}><Link to={actionLink(item)} data-priority={item.priority}>
         <div><strong>{name}</strong><small>{reason} · {item.owner || t('crm.dayplan.unassigned')}</small></div>
-        {age ? <span className="crm-focus-age" data-long={(item.age_days ?? 0) >= 7}>{item.kind === 'checkin' ? <ArrowUpRight size={14} aria-hidden/> : <Mail size={13} aria-hidden/>}{age}</span>
+        {age ? <span className="crm-focus-age" data-long={(item.age_days ?? 0) >= 7}>{item.kind === 'checkin' ? <ArrowUpRight size={14} aria-hidden/> : item.kind === 'email' ? <Mail size={13} aria-hidden/> : <Clock3 size={13} aria-hidden/>}{age}</span>
           : <span className="crm-focus-age"><Clock3 size={13} aria-hidden/>{t(`crm.team.level_${item.priority}`)}</span>}</Link></li>
     })}</ul> : <p className="crm-focus-empty">{empty}</p>}</section>
 }

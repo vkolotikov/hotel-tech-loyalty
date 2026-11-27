@@ -20,6 +20,11 @@ final class TeamPriorityReview
 
     public function __construct(private AiUsageService $usage) {}
 
+    public static function priority(int $score): string
+    {
+        return $score >= 60 ? 'urgent' : ($score >= 30 ? 'next' : 'later');
+    }
+
     /** Always return the current facts immediately. Worker decisions apply only to the same message and facts. */
     public function rank(array $rows, Organization $org, User $user, ?int $brand, string $scope): array
     {
@@ -49,7 +54,7 @@ final class TeamPriorityReview
             if (in_array('delivery_due', $row['signals'], true)) {
                 $row['score'] = max(50, $row['score']);
             }
-            $row['priority'] = $row['score'] >= 60 ? 'urgent' : ($row['score'] >= 30 ? 'next' : 'later');
+            $row['priority'] = self::priority($row['score']);
         }
         unset($row);
         usort($rows, fn ($a, $b) => $b['score'] <=> $a['score'] ?: $a['at'] <=> $b['at'] ?: strcmp($a['key'], $b['key']));

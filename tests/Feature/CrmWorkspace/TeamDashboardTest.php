@@ -173,6 +173,23 @@ class TeamDashboardTest extends TestCase
         $this->assertSame('Separate question', $this->board('?filter=waiting_week')['actions'][0]['subject']);
     }
 
+    public function test_untouched_leads_remain_actionable_across_weeks_until_first_contact_or_a_scheduled_task(): void
+    {
+        $old = ['created_at' => now()->subDays(18)];
+        $waiting = $this->lead($old);
+        $this->lead($old + ['next_task_due' => now()->addDays(2)]);
+        $called = $this->lead($old);
+        $this->activity($called, ['type' => 'call', 'direction' => 'outbound']);
+        $this->lead($old + ['status' => 'Lost']);
+        $new = $this->board('?filter=new');
+        $this->assertSame([$waiting], array_column($new['actions'], 'lead_id'));
+        $this->assertSame(18, $new['attention']['top'][0]['age_days']);
+        $this->assertSame(0, $new['attention']['waiting_week']);
+        $this->activity($waiting, ['direction' => 'outbound', 'occurred_at' => now()]);
+        $this->travel(61)->seconds();
+        $this->assertSame(0, $this->board('?filter=new')['matching']);
+    }
+
     public function test_checkins_use_last_sent_email_and_honour_replies_tasks_other_channels_and_contact_preferences(): void
     {
         $send = function (array $attrs = [], int $days = 7) {
@@ -283,6 +300,7 @@ class TeamDashboardTest extends TestCase
         $job->handle(app(TeamPriorityReview::class));
         $second = $this->board();
         $this->assertSame([2, 2, $order, 'urgent', 'information_only'], [$second['reviewed'], $second['emails'], $second['actions'][0]['lead_id'], $second['actions'][0]['priority'], $second['actions'][1]['ai_reason']]);
+        $this->assertSame([$order], array_column($second['attention']['top'], 'lead_id'));
         Queue::assertPushed(ReviewTeamPriorities::class, 1);
         Http::assertSentCount(1);
     }

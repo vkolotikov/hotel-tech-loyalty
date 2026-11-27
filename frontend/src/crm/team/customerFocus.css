@@ -4,7 +4,7 @@
 [data-crm] .crm-focus-signals button + button { border-inline-start: 1px solid var(--team-rule); }
 [data-crm] .crm-focus-signal-label { grid-column: 1/-1; display: flex; gap: 8px; align-items: center; font-size: .91rem; font-weight: 600; }
 [data-crm] .crm-focus-signal-label svg { flex: none; color: rgb(var(--a-accent-text)); }
-[data-crm] [data-signal="waiting_week"] .crm-focus-signal-label svg { color: rgb(var(--a-warning-text, var(--a-text))); }
+[data-crm] [data-signal="waiting_week"][data-active=true] .crm-focus-signal-label svg, [data-crm] [data-signal="waiting_week"][data-active=true] strong { color: rgb(var(--a-danger)); }
 [data-crm] .crm-focus-signals strong { font: 400 clamp(2.25rem,3.2vw,3.8rem)/1.05 'A Display',Georgia,serif; font-variant-numeric: lining-nums tabular-nums; }
 [data-crm] .crm-focus-chevron { align-self: center; color: var(--team-muted); }
 [data-crm] .crm-focus-columns { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); align-items: start; gap: var(--focus-gap); }
@@ -30,6 +30,7 @@
 [data-crm] .crm-focus-list li a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 20px; }
 [data-crm] .crm-focus-age { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--team-muted); font-size: .83rem; font-variant-numeric: tabular-nums; }
 [data-crm] .crm-focus-age[data-long=true] { font-weight: 650; color: rgb(var(--a-text)); }
+[data-crm] .crm-focus-list li a[data-priority=urgent] { box-shadow: inset 3px 0 rgb(var(--a-danger) / .75); }
 [data-crm] .crm-focus-empty { padding: 22px 20px; }
 @media (min-width: 900px) and (min-height: 801px) {
   [data-crm] .crm-team-tv .crm-focus { --focus-gap: 22px; }
