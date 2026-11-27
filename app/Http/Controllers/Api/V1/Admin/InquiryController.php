@@ -1325,10 +1325,8 @@ class InquiryController extends Controller
         if (isset($input['revise'])) {
             $state = CrmLeadAssistant::query()->whereKey($id)->where('brand_id', $brand->id)->first();
             $stamp = LeadEmailEvidence::quoteStamp(LeadEmailEvidence::currentQuote($state, $inquiry), (int) $org->id);
-            if (! hash_equals(EmailDraftRevision::token($inquiry, $brand, $stamp), $input['revise']['source_id'])) {
-                EmailDraftRevision::changed();
-            }
-            $run += ['revise' => $input['revise'], 'contact_id' => $inquiry->guest_id, 'quote_stamp' => $stamp];
+            $prior = EmailDraftRevision::guidance($input['revise']['source_id'], $inquiry, $brand, $stamp);
+            $run += ['revise' => $input['revise'], 'contact_id' => $inquiry->guest_id, 'quote_stamp' => $stamp, 'prior_guidance' => $prior];
         }
         try {
             $draft = $writer->generate($inquiry, $brand, $org, $user, $run,
@@ -1338,7 +1336,7 @@ class InquiryController extends Controller
         } catch (\Throwable $error) {
             \Illuminate\Support\Facades\Log::warning('CRM proposal failed', ['inquiry_id' => $id, 'exception' => $error::class]);
 
-            return response()->json(['subject' => '', 'body' => '', 'error' => 'Could not draft proposal. Please try again.']);
+            throw AiHelperRefused::failed();
         }
 
         $current = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
@@ -1351,7 +1349,7 @@ class InquiryController extends Controller
 
         $response = Arr::only($draft, ['subject', 'body', 'decision', 'reason', 'review_notes']);
         if (! empty($draft['body'])) {
-            $response['source_id'] = EmailDraftRevision::token($current, $brand, $draft['quote_stamp']);
+            $response['source_id'] = EmailDraftRevision::token($current, $brand, $draft['quote_stamp'], $draft['manager_guidance'] ?? []);
         }
 
         return response()->json($response)

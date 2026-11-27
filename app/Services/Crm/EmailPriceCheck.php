@@ -22,6 +22,21 @@ final class EmailPriceCheck
         $currency = $quote['currency'] ?? $context['lead']['currency'] ?? '';
         $claims = self::amounts($text, $currency);
         $rates = self::commercialRates($text);
+        $managerAmounts = $managerRates = [];
+        foreach ($context['manager_guidance'] ?? [] as $guidance) {
+            $clauses = preg_split('/\R|;|(?<=[.!?])\s+|,(?!\d)\s*|\s+\b(?:but|mais|pero|aber|но)\s+|\s+(?=(?:instead of|rather than|not|au lieu de|statt|en lugar de|вместо)\b)/iu', $guidance);
+            foreach ($clauses as $clause) {
+                // A later correction can withdraw an earlier manager figure. A buyer budget is never an offer.
+                $approved = ! preg_match('/\b(?:budget|presupuesto|бюджет\pL*|expired|previous|old|not|do not|don.t|rejected|instead of|rather than|au lieu de|statt|en lugar de|вместо|не предлагать)\b/iu', $clause);
+                foreach (self::amounts($clause, $currency) as $amount) {
+                    $managerAmounts[$amount] = $approved;
+                }
+                foreach (self::commercialRates($clause) as $rate) {
+                    $managerRates[$rate] = $approved;
+                }
+            }
+        }
+        $currentQuote = ($quote['status'] ?? null) === 'valid';
         if ($rates) {
             $verified = [];
             foreach ($context['brand_knowledge']['answers'] ?? [] as $row) {
@@ -31,21 +46,21 @@ final class EmailPriceCheck
                 array_push($verified, ...self::commercialRates($row['excerpt'], $row['title'] ?? ''));
             }
             array_push($verified, ...self::commercialRates($context['project_evidence']['reviewed_brand_terms'] ?? ''));
-            if ($quote && $quote['status'] === 'valid') {
-                array_push($verified, ...self::commercialRates($quote['scope'] ?? ''));
+            $quoteRates = $currentQuote ? self::commercialRates($quote['scope'] ?? '') : [];
+            foreach ($rates as $rate) {
+                $type = explode(' ', $rate)[0].' ';
+                $agreed = array_filter($quoteRates, fn ($term) => str_starts_with($term, $type));
+                if ($agreed && ! in_array($rate, $agreed, true)) {
+                    return false;
+                }
             }
+            array_push($verified, ...$quoteRates, ...array_keys(array_filter($managerRates)));
             if (array_diff($rates, $verified)) {
                 return false;
             }
         }
-        if (! $claims && ! str_contains($text, '{{quote.')) {
-            return true;
-        }
         $allowed = [];
-        if ($quote) {
-            if ($quote['status'] !== 'valid') {
-                return false;
-            }
+        if ($currentQuote) {
             $taxIncluded = '/\b(tax included|including (?:tax|vat)|vat[- ]inclusive|ttc|impuestos incluidos|inklusive mwst|с ндс)\b/iu';
             $taxExcluded = '/\b(before (?:tax|vat)|excluding (?:tax|vat)|(?:tax|vat)[- ]exclusive|hors taxes|ht|sin impuestos|zzgl\.? mwst|без ндс)\b/iu';
             if (($quote['tax_basis'] !== 'included' && preg_match($taxIncluded, $text))
@@ -55,7 +70,13 @@ final class EmailPriceCheck
             foreach (['unit_price', 'charges', 'subtotal', 'total'] as $field) {
                 $allowed[] = $currency.' '.BigDecimal::of($quote[$field])->strippedOfTrailingZeros();
             }
+        } elseif ($quote) {
+            // A fresh manager offer may supply its own figures after the recorded quote has expired.
+            $allowed = array_keys(array_filter($managerAmounts));
         } else {
+            if (! $claims && ! str_contains($text, '{{quote.')) {
+                return true;
+            }
             $sources = array_column($context['brand_knowledge']['answers'] ?? [], 'answer');
             $sources[] = $context['project_evidence']['reviewed_brand_terms'] ?? '';
             array_push($sources, ...array_column($context['brand_knowledge']['documents'] ?? [], 'excerpt'));
@@ -73,7 +94,7 @@ final class EmailPriceCheck
             if (! empty($payment['payment_status']) && isset($payment['paid_amount'], $payment['currency'])) {
                 $sources[] = $payment['currency'].' '.$payment['paid_amount'];
             }
-            $allowed = self::amounts(implode("\n", $sources), $currency);
+            $allowed = [...self::amounts(implode("\n", $sources), $currency), ...array_keys(array_filter($managerAmounts))];
         }
 
         return array_diff($claims, $allowed) === [];

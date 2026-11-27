@@ -71,6 +71,7 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
   const showSetup = !emailMode || !result || held
   const notes = [...new Set(result?.review_notes ?? [])].filter(note => note.trim() && (!held || note !== result?.reason)).slice(0, emailMode ? 3 : 6)
   const generate = useMutation({
+    onMutate: () => cache.cancelQueries({ queryKey: key }),
     mutationFn: (action?: DraftAction) => send<Assistant>('post', `crm/leads/${leadId}/assistant`, {
       mode, language: (i18n.resolvedLanguage ?? 'en').split('-')[0], ...(action ?? { focus: focus.trim() }),
     }),
@@ -79,7 +80,7 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
       if (failureOf(error).code === 'strategy_changed') void cache.invalidateQueries({ queryKey: key })
     },
   })
-  const failure = data.run?.mode === mode && data.run.status === 'failed' ? data.run.error : null
+  const failure = !generate.isPending && data.run?.mode === mode && data.run.status === 'failed' ? data.run.error : null
   return (
     <div className="space-y-4">
       {showSetup && <Card title={t(`crm.sales.modes.${mode}`)} hint={data.brand.name} icon={ICONS[mode]} tone="ai">
@@ -129,19 +130,7 @@ function AssistantMode({ data, leadId, mode, recipient, onEmails, onUse }: {
                 <ArrowUpRight size={14} aria-hidden />{t('crm.sales.profile.title')}
               </Link>
             </details>
-            {result.knowledge_trace && result.knowledge_trace.questions.length > 0 && <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
-              <summary className="cursor-pointer font-medium">{t('inquiryDetail.proposal.evidence')}</summary>
-              <ul className="mt-3 space-y-3">
-                {result.knowledge_trace.questions.map(q => {
-                  const trace = result.knowledge_trace!
-                  const answer = trace.assessment?.find(row => row.id === q.id)
-                  const titles = trace.sources.filter(row => (answer?.sources ?? []).includes(row.id)).map(row => row.title)
-                  return <li key={q.id}><p>{q.need}</p>
-                    {titles.length > 0 && <p className="text-xs text-a-text-2">{titles.join(' · ')}</p>}
-                    {answer?.pending && <p className="text-xs text-a-text-2">{answer.pending}</p>}</li>
-                })}
-              </ul>
-            </details>}
+
             {(result.intent || result.next_step || Boolean(result.unanswered?.length)) && (
               <details className="rounded-xl border border-a-border p-3 text-sm text-a-text">
                 <summary className="cursor-pointer font-medium">{t('crm.sales.email.assessment')}</summary>

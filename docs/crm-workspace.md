@@ -415,42 +415,19 @@ When a customer mentions supplied artwork, a missing file in CRM calls for check
 
 Verified inbound email with explicit field labels can fill blank Product, Quantity, Deadline and Type of enquiry fields. The first three need an active matching field definition. Product choices must match configured options, quantities must be whole numbers and dates must be unambiguous ISO calendar dates. Conflicting entries stay blank. This happens on matched background email capture or when staff log an incoming email. Draft generation only reads the lead.
 
-An unsuccessful provider call or unusable model output records a `CRM assistant generation stage failed` application event. It carries the organisation, brand, stage, a fixed reason and an HTTP status when available. The stages distinguish question planning, initial writing, correction and commercial review. Operators can use the event and the metered usage records to diagnose a failed draft without logging prompts or provider response bodies.
+Under **AI assistant**, choose **Response email** to answer the buyer, **Proposal email** to make an offer or **Follow-up** to check whether to contact them again. The full admin’s **Draft proposal** uses the same writer. Emails use GPT-6.2 Sol with high reasoning at priority service. Sales and marketing strategies use GPT-6.2 Astra. Staff can draft an email immediately from the lead.
 
-For a multi-part commercial enquiry, the search plan names the specific item or service behind each price question. Sample searches give matching deliverables more weight. A narrower answer the buyer explicitly accepts is carried into commercial review only when the quoted words occur in the current request. The reviewer checks whether a published charge actually covers that deliverable.
+The writer reads the current customer message, relevant email and WhatsApp history, reviewed account facts and active brand knowledge. The CRM removes duplicate email copies and separates quoted earlier correspondence from the current message. An earlier team answer quoted back by the customer can establish what was discussed. Labelled credentials and token-bearing links are masked before the provider request.
 
-The assistant separates each captured email's current text from its quoted history. Exact duplicate copies and conventional footers are removed from drafting context. Quoted text missing from the captured originals stays available as background. The email reader retains the original correspondence. Labelled credentials and token-bearing query parameters are masked before the assistant sends text to its provider.
+For ordinary enquiries, retrieval ranks exact model references and searches active brand answers and indexed documents. For multi-part enquiries it searches individual topics locally, in one pass over the selected brand’s library to count term frequencies and a second to rank passages. Reseller searches can include public prices when the buyer explicitly asks about retail pricing. Retrieved source titles remain available under **Sources used**. The database retains matching identifiers and search scores for diagnosis.
 
-For a complex enquiry the independent reviewer also sees the recent, dated exchange. Optional wording suggestions alone do not trigger a rewrite. A revised complex draft with changed wording must clear the reviewer before staff can use it. Without a staff-reviewed quote, an unverified amount can receive one correction within the existing rewrite allowance. The final amount check still applies. A conflict with a reviewed quote requires staff attention.
+**Focus** and **Comment for AI** accept opportunity-specific guidance. An authorised sales manager can supply prices, materials, facilities, production dates or delivery estimates. The writer can use those facts immediately. A binding agreement or policy takes precedence over a conflicting instruction. Guidance stays with the relevant draft and its revisions. Changing global company policy is a separate edit in **Settings → Our business**.
 
-Under **AI assistant**, choose **Response email** to answer a customer, **Proposal email** to make an offer, or
-**Follow-up** to check whether another email would help. All three draft with GPT-6.2 Sol at high reasoning in Fast mode. GPT-6.2 Astra plans multi-part enquiries, reviews commercial claims and writes sales and marketing strategies. Customer Discovery uses Sol with web search. Mail bodies load four at a time under the existing guest and message access checks.
-The full admin's **Draft proposal** uses the same writer. A reply normally takes 35–90 words, a proposal 70–150
-and a follow-up 40–100. A simple confirmation may take one sentence. A customer
-asking for more detail can get a longer answer. Type a language or focus in the optional instruction to override
-the usual choice. The customer’s own correspondence and saved language guide the default.
+A normal reply or proposal takes one model request. The writer answers confirmed points, offers relevant alternatives for the buyer to approve and keeps outstanding checks in up to three optional staff notes. It separates production and transit and ends before the signature. Typical lengths are 35–90 words for replies, 70–150 for proposals and 40–100 for follow-ups. The customer’s language and style guide the default.
 
-After generation, staff can edit the subject and body, enter a comment and choose **Revise this draft**.
-**Generate a fresh draft** uses the current lead and any comment. Both actions reload the brand and opportunity
-evidence. A comment can change the writing or focus. Commercial authority still comes from the current sources.
-The full admin’s proposal editor has the same two actions.
+The server checks explicit prices, commercial percentages and current quote terms. A concrete problem can receive one targeted correction. If that correction fails, the server removes the affected wording and returns the safe remainder. If it has no useful text left, it returns a short confirmation that the seller will check the details. Initial provider failures appear as technical errors and leave a previous draft available. Application logs record the failed stage, category and HTTP status without correspondence or provider response bodies.
 
-The writer reads the current request, customer role and location, the account's industry, reviewed strategy and
-brand knowledge. It looks for exact model references and matches commercial topics across languages. It selects up to
-12 active answers within 22,000 characters and relevant passages from up to four indexed documents for ordinary requests.
-For multipart replies and proposals, a separate model pass identifies the buyer's workflow and up to 16 information
-needs. Each need gets a primary and alternate search over the active brand answers and indexed document passages.
-Sources compete per question, with a shared 32,000-character budget. Staff can expand **Review the questions and sources**
-to see which evidence supported each answer and which conditions need attention. The saved trace also records search
-terms, relevance scores and source IDs. Public builder prices have a retail scope. Product availability can inform a
-partner reply independently of those prices. An independent commercial review checks the draft against the enquiry
-and current evidence. It can verify a numbered passage against its original source. For a revised enquiry with a new subject on a contact's sole opportunity, it can cite previous wording that the customer quoted from a verified team sender. Only the matching passage counts as a record of the earlier discussion. Project history cannot authorise new prices. The customer's requirements can supplement a company source when both apply to the same answer. Material objections trigger one rewrite. A remaining unsupported claim holds the draft for staff. An outstanding supplier quote can stay in the recommendations when the email itself is accurate.
-When an ordinary
-enquiry has no matching answers, it can consult four priority entries. Private email instructions guide the writing.
-The draft ends at the last useful sentence so the email app can add its signature. Once AI Discovery finishes, sourced public findings can identify details for
-staff to check. The customer's own statements and reviewed profile take precedence. **To verify** stays with
-staff when a draft is copied or opened in email.
-
+Staff can edit the subject and body or enter a comment and choose **Revise this draft**. **Generate a fresh draft** starts again with the current lead and comment. Both actions reread current project data and brand knowledge. Only the customer-facing subject and body move into the composer. Sending remains a separate staff action.
 For a response, the latest matched incoming email normally supplies the subject and request. Later corrections
 in WhatsApp or chat can change the answer. Without a matched incoming email, the writer uses the newest incoming
 WhatsApp text, visitor chat or recorded inbound activity, then the lead request. The writer looks for the customer's

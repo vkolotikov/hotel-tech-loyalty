@@ -10,6 +10,8 @@ import {
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { failureOf } from '../crm/lib/api'
+import { errorText } from '../crm/lib/errors'
 import { useSettings, type InquiryFieldConfig } from '../lib/crmSettings'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
@@ -291,6 +293,7 @@ export function InquiryDetail() {
       )}
       {draftingProposal && (
         <ProposalModal
+          key={inq.id}
           inq={inq}
           onClose={() => setDraftingProposal(false)}
           onUseAsEmail={(draft) => {
@@ -1339,6 +1342,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
   const [body, setBody] = useState('')
   const [comment, setComment] = useState('')
   const [sourceId, setSourceId] = useState('')
+  const requested = useRef(false)
 
   const draft = useMutation({
     mutationFn: (action?: 'revise' | 'fresh') => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal?brand_id=${inq.brand_id ?? 'all'}`, {
@@ -1346,10 +1350,6 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
       ...(action === 'revise' ? { revise: { source_id: sourceId, subject, body } } : {}),
     }).then(r => r.data),
     onSuccess: (data) => {
-      if (data.error) {
-        toast.error(data.error)
-        return
-      }
       setComment('')
       setSourceId(data.source_id ?? '')
       setSubject(data.subject ?? '')
@@ -1357,10 +1357,21 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
       setReviewNotes(data.review_notes ?? [])
       setHoldReason(data.decision && data.decision !== 'draft' ? data.reason || t('inquiryDetail.proposal.review') : '')
     },
-    onError: () => toast.error('Could not draft proposal'),
+    onError: error => {
+      const failure = failureOf(error)
+      if ([401, 403, 404, 409].includes(failure.status) && failure.code !== 'ai_budget_used_up') {
+        setSubject('')
+        setBody('')
+        setSourceId('')
+        setReviewNotes([])
+        setHoldReason(t('crm.sales.reload'))
+      }
+    },
   })
 
   useEffect(() => {
+    if (requested.current) return
+    requested.current = true
     draft.mutate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1416,16 +1427,17 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
               />
             </div>
-            {sourceId && <label className="block space-y-1 text-sm text-t-secondary">
+            </>}
+            <label className="block space-y-1 text-sm text-t-secondary">
               <span>{t('inquiryDetail.proposal.comment')}</span>
               <textarea value={comment} rows={2} maxLength={600} disabled={draft.isPending} onChange={e => setComment(e.target.value)}
                 placeholder={t('inquiryDetail.proposal.comment_hint')}
                 className="w-full rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white focus:border-accent" />
-            </label>}
-            </>}
-            {reviewNotes.filter(note => note !== holdReason).length > 0 && <div className="text-sm text-t-secondary">
+            </label>
+            {draft.isError && <p role="alert" className="text-sm text-red-300">{errorText(t, draft.error)}</p>}
+            {reviewNotes.some(note => note !== holdReason) && <div className="text-sm text-t-secondary">
               <p className="font-semibold">{t('inquiryDetail.proposal.review')}</p>
-              <ul className="list-disc pl-5">{reviewNotes.map((note, index) => <li key={index}>{note}</li>)}</ul>
+              <ul className="list-disc pl-5">{reviewNotes.filter(note => note !== holdReason).slice(0, 3).map(note => <li key={note}>{note}</li>)}</ul>
             </div>}
           </div>
         )}
@@ -1454,7 +1466,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
             </button>
             {!holdReason && <button
               onClick={() => onUseAsEmail({ subject, body })}
-              disabled={!body.trim()}
+              disabled={draft.isPending || !subject.trim() || !body.trim()}
               className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 hover:bg-accent/90 flex items-center gap-2"
             >
               <Mail size={14} />

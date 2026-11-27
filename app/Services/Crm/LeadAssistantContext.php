@@ -79,7 +79,9 @@ final class LeadAssistantContext
             $requestText = "Latest customer update:\n".$update['body']."\nEarlier request:\n".$requestText;
         }
         $needsPlan = in_array($mode, ['reply', 'proposal'], true) && EmailQuestionPlan::needed($requestText.' '.$focus);
-        $knowledge = $needsPlan ? ['answers' => [], 'documents' => []] : $this->knowledge->forSales($topic, $brand);
+        $knowledge = $needsPlan
+            ? $this->knowledge->forSalesQuestions($brand, EmailQuestionPlan::searches($focus."\n".$requestText, trim(implode("\n", [$target['subject'] ?? '', ...$background, $lead->special_requests]))))
+            : $this->knowledge->forSales($topic, $brand);
         $company = Arr::only($customer->fields ?? [], array_keys(BusinessProfile::definitions()));
         $research = $draft ? $this->discovery($customer, $company) : [];
         $enquiry = $lead->only([
@@ -88,7 +90,6 @@ final class LeadAssistantContext
         ]);
 
         return [
-            'plan_request' => $needsPlan ? mb_substr($requestText, 0, 12000) : null,
             'input' => [
                 'lead' => [
                     ...array_map(fn ($value) => is_string($value) ? $this->text($value, 400) : $value, $enquiry),
@@ -152,10 +153,6 @@ final class LeadAssistantContext
         ];
     }
 
-    public function knowledgeForPlan(Brand $brand, array $plan): array
-    {
-        return $this->knowledge->forSalesQuestions($brand, $plan);
-    }
 
     /** A saved draft can be checked from authorised local records without opening mail bodies or invoking AI. */
     public function currentMessageTimes(Inquiry $lead, Brand $brand, User $user): array
@@ -169,54 +166,6 @@ final class LeadAssistantContext
             $this->activities($lead, $brand), $lead->guest_id && ! $multiple ? $this->previousEmails($lead, $brand) : []);
     }
 
-    /** Use open conditions and reviewer objections to look for evidence missed by the initial searches. */
-    public function resolveKnowledgeGaps(Brand $brand, array $knowledge, array $assessment, array $objections): array
-    {
-        $plan = $knowledge['plan'];
-        $questions = collect($plan['questions'])->keyBy('id');
-        $followups = [];
-        foreach ($assessment as $row) {
-            if ($row['lookup'] !== '' && in_array($row['status'], ['open', 'partial', 'conditional', 'exception'], true)) {
-                $q = $questions->get($row['id']);
-                $followups[] = [...$q, 'search' => $row['lookup'], 'alternate' => $row['pending']];
-            }
-        }
-        foreach ($objections as $index => $issue) {
-            $followups[] = ['id' => 'review-'.($index + 1), 'need' => $issue, 'scope' => 'operations',
-                'search' => mb_substr($issue, 0, 350), 'alternate' => ''];
-        }
-        if (! $followups) {
-            return $knowledge;
-        }
-        $extra = $this->knowledgeForPlan($brand, [...$plan, 'questions' => $followups]);
-        $rows = collect([...$extra['answers'], ...$extra['documents']])->keyBy('id');
-        $selected = array_flip(array_column([...$knowledge['answers'], ...$knowledge['documents']], 'id'));
-        $remaining = 8000;
-        // Give independent objections first access to the reserved context budget.
-        $traces = array_reverse($extra['plan']['questions']);
-        for ($rank = 0; $rank < 2; $rank++) {
-            foreach ($traces as $q) {
-                $id = $q['matches'][$rank]['id'] ?? null;
-                if (! $id || isset($selected[$id]) || count($selected) >= 32 || $remaining < 180) {
-                    continue;
-                }
-                $row = $rows->get($id);
-                $document = isset($row['excerpt']);
-                $field = $document ? 'excerpt' : 'answer';
-                $row[$field] = mb_substr($row[$field], 0, $remaining);
-                $remaining -= mb_strlen($row[$field]);
-                $knowledge[$document ? 'documents' : 'answers'][] = $row;
-                $selected[$id] = true;
-            }
-        }
-        foreach ($traces as &$q) {
-            $q['matches'] = array_values(array_filter($q['matches'], fn ($hit) => isset($selected[$hit['id']])));
-        }
-        unset($q);
-        $knowledge['plan']['followup_searches'] = $traces;
-
-        return $knowledge;
-    }
 
     private function activities(Inquiry $lead, Brand $brand): array
     {

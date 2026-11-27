@@ -310,7 +310,7 @@ class LeadAssistantTest extends TestCase
         $this->assertSame(['Friday please.', 'Already approved the matte finish.'], array_column($input['conversation']['customer_writing_samples'], 'words'));
     }
 
-    public function test_a_failed_amount_check_can_recover_a_useful_scope_reply_and_still_blocks_an_unverified_retry(): void
+    public function test_a_failed_amount_check_can_recover_a_useful_scope_reply_and_drop_only_the_unverified_sentence(): void
     {
         $lead = $this->lead(['notes' => "Customer wants a feasibility check before a quote.\nPassword: sample-test-private"]);
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
@@ -322,17 +322,22 @@ class LeadAssistantTest extends TestCase
             if ($writes % 2 === 0) {
                 $this->assertStringContainsString('could not be verified', $input['corrections'][0]);
             }
-            $body = $input['staff_focus'] === '' && isset($input['corrections']) ? 'We can review the specified finish for your quote.' : 'Your total is USD 9837.';
+            $body = 'We can review the specified finish for your quote.';
+            if ($input['staff_focus'] !== '' || ! isset($input['corrections'])) {
+                $body .= ' Your total is USD 9837.';
+            }
 
             return Http::response($this->providerOutput(['decision' => 'draft', 'subject' => 'Finish options',
-                'body' => $body, 'review_notes' => [], 'email_language' => 'en', 'material_issue' => '']));
+                'body' => $body, 'review_notes' => [], 'email_language' => 'en', 'unsafe_statement' => '']));
         }]);
         $this->asManager()->postJson($path, ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
         $this->getJson($path)->assertJsonPath('results.proposal.body', 'We can review the specified finish for your quote.');
         $this->postJson($path, ['mode' => 'proposal', 'language' => 'en', 'focus' => 'Review the amount.'])->assertAccepted();
         $this->runLatest();
-        $this->getJson($path)->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
+        $this->getJson($path)->assertJsonPath('results.proposal.decision', 'draft')
+            ->assertJsonPath('results.proposal.body', 'We can review the specified finish for your quote.')
+            ->assertJsonPath('results.proposal.review_notes.0', trans('crm_email.check_price'));
         $this->assertSame(4, $writes);
         Mail::assertNothingSent();
     }
@@ -341,10 +346,10 @@ class LeadAssistantTest extends TestCase
     {
         $lead = $this->lead(['notes' => 'The buyer wants a fitted presentation box. Its minimum and price are pending.']);
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
-        $issue = 'The email guarantees production for one box without a confirmed minimum.';
+        $issue = 'One box is guaranteed.';
         $draft = fn ($body, $defect) => $this->providerOutput(['decision' => 'draft', 'subject' => 'Fitted box',
-            'body' => $body, 'review_notes' => ['Obtain the box minimum and unit price.'], 'material_issue' => $defect]);
-        $unsafe = $draft('One box is guaranteed.', $issue);
+            'body' => $body, 'review_notes' => ['Obtain the box minimum and unit price.'], 'unsafe_statement' => $defect]);
+        $unsafe = $draft('We can review the fitted box from your mockup. '.$issue, $issue);
         $safe = 'We can quote the fitted box from your mockup and show its minimum and unit price separately.';
         Http::fake(['api.openai.com/v1/responses' => Http::sequence()->push($unsafe)->push($draft($safe, ''))->push($unsafe)->push($unsafe)]);
         $run = fn () => $this->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
@@ -356,22 +361,23 @@ class LeadAssistantTest extends TestCase
         Http::assertSent(fn (Request $request) => (json_decode($request['input'], true)['corrections'][0] ?? '') === $issue);
         $run();
         $this->runLatest();
-        $this->getJson($path)->assertJsonPath('results.reply.reason_code', 'commercial_review')
-            ->assertJsonPath('results.reply.body', '')->assertJsonPath('results.reply.review_notes.0', $issue);
+        $this->getJson($path)->assertJsonPath('results.reply.decision', 'draft')
+            ->assertJsonPath('results.reply.body', 'We can review the fitted box from your mockup.')
+            ->assertJsonMissingPath('results.reply.reason_code');
         Mail::assertNothingSent();
     }
 
-    public function test_a_failed_correction_logs_its_stage_without_provider_text_or_a_customer_draft(): void
+    public function test_a_failed_correction_logs_its_stage_and_returns_the_safe_part_of_the_first_draft(): void
     {
         $lead = $this->lead(['notes' => 'Review the finish before pricing.']);
         $diagnostics = [];
         Event::listen(MessageLogged::class, static function (MessageLogged $event) use (&$diagnostics) {
-            if ($event->level === 'error' && $event->message === 'CRM assistant generation stage failed') {
+            if ($event->level === 'warning' && $event->message === 'CRM assistant correction unavailable') {
                 $diagnostics[] = $event->context;
             }
         });
         Http::fake(['api.openai.com/v1/responses' => Http::sequence()
-            ->push($this->providerOutput(['subject' => 'Finish', 'body' => 'Your price is USD 9837.', 'email_language' => 'en', 'review_notes' => []]))
+            ->push($this->providerOutput(['subject' => 'Finish', 'body' => "We can quote from your artwork.\n\nYour price is USD 9837.", 'email_language' => 'en', 'review_notes' => []]))
             ->push(['status' => 'incomplete', 'incomplete_details' => ['reason' => 'private provider diagnostic'],
                 'usage' => ['input_tokens' => 100, 'output_tokens' => 50]])]);
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
@@ -379,7 +385,8 @@ class LeadAssistantTest extends TestCase
         $this->runLatest();
         $this->assertSame([['organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'stage' => 'correction',
             'reason' => 'provider_incomplete', 'http_status' => 200]], $diagnostics);
-        $this->getJson($path)->assertJsonPath('run.error', 'ai_failed')->assertJsonMissingPath('results.reply');
+        $this->getJson($path)->assertJsonPath('run.status', 'ready')->assertJsonPath('run.error', null)
+            ->assertJsonPath('results.reply.body', 'We can quote from your artwork.');
         Mail::assertNothingSent();
     }
 
@@ -477,9 +484,10 @@ class LeadAssistantTest extends TestCase
         $this->asStaffMember()->putJson($url('/review'), $review)->assertForbidden();
         $this->asManager()->putJson($url('/review'), $review)->assertOk()->assertJsonPath('reviews.reply.body', $review['body']);
         $this->putJson($url('/review'), $review)->assertConflict();
-        $this->postJson($url(), ['mode' => 'proposal', 'language' => 'en'])->assertAccepted();
+        $this->postJson($url(), ['mode' => 'proposal', 'language' => 'en', 'focus' => 'Offer EUR 40.'])->assertAccepted();
         $this->runLatest();
-        $this->getJson($url())->assertOk()->assertJsonPath('results.proposal.reason_code', 'unverified_price')->assertJsonPath('results.proposal.body', '');
+        $this->getJson($url())->assertOk()->assertJsonPath('results.proposal.decision', 'draft')
+            ->assertJsonPath('results.proposal.body', trans('crm_email.confirm_details'))->assertJsonPath('results.proposal.review_notes.0', trans('crm_email.check_agreement'));
         $input = json_decode(Http::recorded()[1][0]['input'], true);
         $evidence = $input['project_evidence'];
         $this->assertSame('64.85', $evidence['approved_quote']['total']);
@@ -491,7 +499,7 @@ class LeadAssistantTest extends TestCase
         $this->getJson($url())->assertOk()->assertJsonPath('results.reply.reason_code', 'quote_changed')
             ->assertJsonPath('results.reply.body', '')->assertJsonMissingPath('reviews.reply');
         $this->postJson($this->adminApi("inquiries/$lead/draft-proposal?brand_id=all"))->assertOk()
-            ->assertJsonPath('decision', 'internal_action')->assertJsonPath('body', '');
+            ->assertJsonPath('decision', 'draft')->assertJsonPath('body', trans('crm_email.confirm_details'));
         $expired = json_decode(Http::recorded()[2][0]['input'], true)['project_evidence']['approved_quote'];
         $this->assertSame('expired', $expired['status']);
         $this->assertArrayNotHasKey('total', $expired);
@@ -627,51 +635,37 @@ class LeadAssistantTest extends TestCase
         Mail::assertNothingSent();
     }
 
-    public function test_private_unresolved_details_do_not_hold_a_supported_email(): void
+    public function test_only_manager_guidance_authorises_opportunity_prices_and_revisions_cannot_invent_them(): void
     {
-        $input = ['brand_knowledge' => ['plan' => ['questions' => [['id' => 'q1']]], 'answers' => [], 'documents' => []]];
-        $quality = ['fits_workflow' => true, 'useful_next_step' => false, 'grounded_commitments' => true,
-            'answers' => [['id' => 'q1', 'status' => 'open', 'email_excerpt' => '', 'pending' => 'Check the original attachment.']]];
-        $draft = ['subject' => 'Your sample', 'body' => 'We can work from your concept.'];
-        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $quality['answers'][0]['status'] = 'confirmed';
-        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $input['conversation'] = ['reply_target' => ['subject' => 'Sample'], 'recent_matched_emails' => [
-            ['subject' => 'Re: Sample', 'direction' => 'from_customer', 'body' => 'We sent the revised concept.'],
-        ]];
-        $quality['answers'][0] = ['id' => 'q1', 'status' => 'recorded', 'email_excerpt' => $draft['body'],
-            'evidence' => [['ref' => 'email-1', 'quote' => 'sent the revised concept']]];
-        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $input['brand_knowledge']['answers'][] = ['id' => 'faq-1', 'answer' => "Matte stock is available.\nCustom finishes need a quote."];
-        $labelled = \App\Services\Crm\CommercialEmailCheck::labelSources($input);
-        $this->assertStringContainsString('#2 Custom finishes need a quote.', $labelled['brand_knowledge']['answers'][0]['answer']);
-        $this->assertSame('email-1', $labelled['conversation']['recent_matched_emails'][0]['evidence_ref']);
-        $quality['answers'][0]['evidence'][0]['quote'] = '#1';
-        $quality['answers'][0]['status'] = 'partial';
-        $quality['answers'][0]['pending'] = 'Confirm the special finish.';
-        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $quality['answers'][0]['evidence'][] = ['ref' => 'faq-1', 'quote' => '#2'];
-        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $quality['answers'][0]['evidence'][1]['quote'] = '#3';
-        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $quality['answers'][0]['evidence'][1]['quote'] = '#2';
-        $input['conversation']['reply_target']['subject'] = 'Another order';
-        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $input['conversation']['recent_matched_emails'][0] = ['direction' => 'other', 'subject' => 'Original specifications',
-            'body' => 'The chip can be locked. Old prices have expired.', 'customer_quoted_team_text' => 'The chip can be locked.'];
-        $input['project_evidence']['multiple_projects'] = false;
-        $quality['answers'][0] = ['id' => 'q1', 'status' => 'recorded', 'email_excerpt' => $draft['body'],
-            'evidence' => [['ref' => 'history-1', 'quote' => '#1']]];
-        $labels = \App\Services\Crm\CommercialEmailCheck::labelSources($input);
-        $this->assertSame('history-1', $labels['conversation']['recent_matched_emails'][0]['previous_terms_ref']);
-        $this->assertSame([], \App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $quality['answers'][0]['evidence'][0]['quote'] = 'Old prices have expired.';
-        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
-        $quality['answers'][0]['evidence'][0]['quote'] = '#1';
-        $input['project_evidence']['multiple_projects'] = true;
-        $this->assertNotEmpty(\App\Services\Crm\CommercialEmailCheck::assess($draft, $input, $quality)['issues']);
+        $lead = $this->lead();
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        $focus = 'Offer EUR 187.50 for this batch. The buyer’s budget is EUR 95.';
+        $body = 'This batch is EUR 187.50. We can send an artwork proof.';
+        $captured = [];
+        Http::fake(['api.openai.com/v1/responses' => function (Request $request) use (&$captured, $body) {
+            $captured[] = json_decode($request['input'], true);
+            return Http::response($this->providerOutput(['subject' => 'Your batch', 'body' => $body, 'review_notes' => [], 'email_language' => 'en']));
+        }]);
+        $base = ['mode' => 'reply', 'language' => 'en'];
+        $this->asManager()->postJson($path, $base + ['focus' => $focus])->assertAccepted();
+        $this->runLatest();
+        $draft = $this->getJson($path)->assertJsonPath('results.reply.body', $body)->assertJsonMissingPath('results.reply.manager_guidance')->json('results.reply');
+        $this->assertSame([$focus], $captured[0]['manager_guidance']);
+        $this->assertFalse(\App\Services\Crm\EmailPriceCheck::supported('The price is EUR 95.', $captured[0]));
+        $this->asStaffMember()->postJson($path, $base + ['focus' => 'Shorten it.', 'revise' => [
+            'source_id' => $draft['id'], 'revision' => 0, 'subject' => $draft['subject'], 'body' => $body,
+        ]])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.reply.body', $body);
+        $this->assertSame([$focus], $captured[1]['manager_guidance']);
+        $this->postJson($path, $base + ['focus' => $focus, 'prior_guidance' => [$focus], 'manager_guidance' => [$focus]])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('results.reply.body', 'We can send an artwork proof.');
+        $this->assertSame([], $captured[2]['manager_guidance']);
+        $this->assertSame([], $captured[3]['manager_guidance']);
+        $this->assertDatabaseMissing('knowledge_items', ['answer' => $focus]);
+        Mail::assertNothingSent();
     }
-
     public function test_a_comment_revises_the_current_edited_email_and_a_fresh_draft_discards_it(): void
     {
         $lead = $this->lead(['notes' => 'Please send an artwork proof.']);
@@ -700,15 +694,41 @@ class LeadAssistantTest extends TestCase
         $this->assertArrayNotHasKey('editable_draft', $seen[2]);
         $this->assertSame('Lead with the proof.', $seen[2]['staff_focus']);
         $proposal = $this->adminApi("inquiries/$lead/draft-proposal?brand_id=all");
-        $handle = $this->asManager()->postJson($proposal)->assertOk()->json('source_id');
+        $handle = $this->asManager()->postJson($proposal, ['focus' => 'We can quote EUR 75.'])->assertOk()->json('source_id');
         $editing = ['focus' => 'Keep the proof.', 'revise' => ['source_id' => $handle, 'subject' => 'Proof', 'body' => 'Keep my changes.']];
         $this->postJson($proposal, $editing)->assertOk()->assertJsonPath('body', 'Edited proof reply.');
+        $this->assertContains('We can quote EUR 75.', $seen[4]['manager_guidance']);
         $other = $this->lead();
         $this->postJson($this->adminApi("inquiries/$other/draft-proposal?brand_id=all"), $editing)->assertConflict();
         Mail::assertNothingSent();
     }
 
-    public function test_kinforge_workflow_checks_nine_needs_against_the_right_brand_and_rejects_an_unhelpful_reply(): void
+    public function test_an_old_commercial_hold_is_replaced_by_the_new_editable_draft_and_survives_a_failed_revision(): void
+    {
+        $lead = $this->lead();
+        $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
+        \App\Models\CrmLeadAssistant::create(['inquiry_id' => $lead, 'brand_id' => $this->brandId, 'revision' => 0,
+            'results' => ['reply' => [...\App\Services\Crm\LeadEmailEvidence::hold('commercial_review', 'en'),
+                'id' => (string) Str::uuid(), 'review_notes' => ['q2 needs a verbatim passage']]]]);
+        $this->asManager()->getJson($path)->assertOk()->assertJsonMissingPath('results.reply');
+        Http::fake(['api.openai.com/v1/responses' => Http::sequence()->push($this->providerOutput([
+            'decision' => 'internal_action', 'reason' => 'q2 needs a verbatim passage', 'subject' => 'Your artwork',
+            'body' => 'We can start the artwork proof.', 'review_notes' => ['q2 needs a verbatim passage', 'Confirm Friday’s collection.'],
+        ]))->pushStatus(503)]);
+        $this->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
+        $this->runLatest();
+        $draft = $this->getJson($path)->assertJsonPath('results.reply.decision', 'draft')->assertJsonPath('results.reply.reason', '')
+            ->assertJsonPath('results.reply.review_notes', ['Confirm Friday’s collection.'])->assertJsonPath('run.error', null)->json('results.reply');
+        $this->postJson($path, ['mode' => 'reply', 'language' => 'en', 'focus' => 'Shorten.', 'revise' => [
+            'source_id' => $draft['id'], 'revision' => 0, 'subject' => $draft['subject'], 'body' => $draft['body'],
+        ]])->assertAccepted();
+        $this->runLatest();
+        $this->getJson($path)->assertJsonPath('run.error', 'ai_failed')->assertJsonPath('results.reply.id', $draft['id'])
+            ->assertJsonPath('results.reply.body', 'We can start the artwork proof.');
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_multipart_reseller_enquiry_retrieves_the_right_brand_and_returns_one_draft_with_an_open_question(): void
     {
         // Illustrative approved fixture terms. These rows are created only inside the test transaction.
         $fixture = [
@@ -723,9 +743,8 @@ class LeadAssistantTest extends TestCase
             ['samples', 'Reseller samples and human support', 'reseller samples human support', 'A partner sample pack is available through your reseller contact.'],
         ];
         $lead = $this->lead(['notes' => 'KinForge is a US reseller. We own client relationships, artwork and hosting. Please cover '.implode('; ', array_column($fixture, 1))]);
-        $questions = $refs = [];
+        $refs = [];
         foreach ($fixture as $index => [$scope, $need, $words, $answer]) {
-            $questions[] = ['need' => $need, 'search' => $index === 6 ? 'customer signoff workflow' : $words, 'alternate' => $words, 'scope' => $scope];
             if ($answer !== '') {
                 $refs[$index] = 'faq-'.DB::table('knowledge_items')->insertGetId(['organization_id' => $this->org->id, 'brand_id' => $this->brandId,
                     'question' => $need, 'answer' => $answer, 'is_active' => true]);
@@ -738,58 +757,32 @@ class LeadAssistantTest extends TestCase
             DB::table('knowledge_items')->insert(['organization_id' => $this->org->id, 'brand_id' => $brand, 'is_active' => $active,
                 'question' => 'Wholesale PVC metal tier', 'answer' => 'Private negotiated 80% discount.']);
         }
-        $writes = $reviews = 0;
-        $captured = null;
-        Http::fake(['api.openai.com/v1/responses' => function (Request $req) use ($fixture, $questions, $refs, &$writes, &$reviews, &$captured) {
-            $ctx = json_decode($req['input'], true);
-            $bad = $ctx['staff_focus'] === 'Review the integration.';
-            $format = $req['text']['format']['name'];
-            if ($format === 'crm_email_questions') {
-                $data = ['relationship' => 'Manufacturing and reseller partnership', 'customer_workflow' => 'Client-managed artwork, hosting and approval.',
-                    'partner_purchase' => true, 'questions' => $questions];
-            } elseif ($format === 'crm_email_commercial_review') {
-                $reviews++;
-                $this->assertArrayHasKey('recent_emails', $ctx);
-                $data = ['issues' => $bad ? ['The draft diverts the customer to an unnecessary integration.'] : [],
-                    'suggestions' => ['An optional greeting change.']];
-            } else {
-                $writes++;
-                $captured = $ctx;
-                $lines = $map = [];
-                foreach ($fixture as $index => [$scope, $need, $terms, $answer]) {
-                    $pending = match ($index) {3 => 'Check neutral parcels and invoices.', 7 => 'Check who handles customs.', default => ''};
-                    $line = trim($answer.' '.$pending);
-                    $lines[] = $line;
-                    $map[] = ['id' => 'q'.($index + 1), 'status' => $answer === '' ? 'open' : ($pending ? 'partial' : 'confirmed'),
-                        'email_excerpt' => $line, 'pending' => $pending, 'evidence' => isset($refs[$index]) ? [['ref' => $refs[$index], 'quote' => $answer]] : []];
-                }
-                $data = ['decision' => 'draft', 'intent' => 'Reseller partnership', 'subject' => 'Your trial order', 'email_language' => 'en',
-                    'body' => implode("\n", $lines).($bad ? "\nIntegrate our builder before we can help." : ''), 'review_notes' => [],
-                    'commercial_check' => ['fits_workflow' => true, 'useful_next_step' => true, 'grounded_commitments' => true, 'answers' => $map]];
-            }
-            return Http::response($this->providerOutput($data));
+        $captured = [];
+        Http::fake(['api.openai.com/v1/responses' => function (Request $req) use (&$captured) {
+            $captured[] = json_decode($req['input'], true);
+            $this->assertSame('crm_lead_assistant', $req['text']['format']['name']);
+            $this->assertArrayNotHasKey('commercial_check', $req['text']['format']['schema']['properties']);
+            return Http::response($this->providerOutput(['decision' => 'draft', 'subject' => 'Your trial order',
+                'body' => 'We can encode your own URL. I’ll confirm whether the invoice can be unbranded.',
+                'review_notes' => ['Confirm the packing slip and invoice options.']]));
         }]);
         $path = $this->crmApi("leads/$lead/assistant?brand_id=all");
         $this->asManager()->postJson($path, ['mode' => 'reply', 'language' => 'en'])->assertAccepted();
         $this->runLatest();
-        $result = $this->getJson($path)->assertJsonPath('results.reply.decision', 'draft')->json('results.reply');
-        $this->assertCount(9, $result['knowledge_trace']['assessment']);
-        foreach ($refs as $i => $ref) {
-            $this->assertContains($ref, array_column($result['knowledge_trace']['questions'][$i]['matches'], 'id'));
+        $result = $this->getJson($path)->assertJsonPath('results.reply.decision', 'draft')
+            ->assertJsonPath('results.reply.review_notes.0', 'Confirm the packing slip and invoice options.')->json('results.reply');
+        $this->assertCount(1, $captured);
+        $sourceIds = array_column($result['knowledge_trace']['sources'], 'id');
+        foreach ($refs as $ref) {
+            $this->assertContains($ref, $sourceIds);
         }
         $this->assertStringNotContainsString('80%', json_encode($captured));
         $this->assertStringNotContainsString('USD 65', json_encode($captured));
-        $this->assertSame('open', $result['knowledge_trace']['assessment'][3]['status']);
-        $this->assertSame('partial', $result['knowledge_trace']['assessment'][7]['status']);
-        $this->postJson($path, ['mode' => 'reply', 'language' => 'en', 'focus' => 'Review the integration.'])->assertAccepted();
-        $this->runLatest();
-        $this->getJson($path)->assertJsonPath('results.reply.reason_code', 'commercial_review')->assertJsonPath('results.reply.body', '');
-        $this->assertSame(3, $writes);
-        $this->assertSame(2, $reviews);
+        $this->assertArrayNotHasKey('plan', $captured[0]['brand_knowledge']);
+        $this->assertSame([], $result['knowledge_trace']['questions']);
         Mail::assertNothingSent();
     }
-
-    public function test_sample_prices_rank_for_the_requested_deliverable_and_only_the_buyers_actual_fallback_counts(): void
+    public function test_the_local_search_prioritises_the_requested_prototype_without_assuming_a_fallback(): void
     {
         $rows = ['Standard swatch sample' => 'Stock swatch sample, EUR 5.',
             'Assembled enclosure sample' => 'The assembled enclosure proof needs an individual quote.'];
@@ -799,18 +792,12 @@ class LeadAssistantTest extends TestCase
                 'brand_id' => $this->brandId, 'question' => $title, 'answer' => $answer, 'is_active' => true]);
         }
         $request = 'Please price the assembled enclosure sample. A feasibility answer is enough for now.';
-        $input = ['accepted_fallback' => 'A feasibility answer is enough for now.', 'questions' => [
-            ['need' => 'What is the prototype charge?', 'scope' => 'samples', 'search' => 'sample',
-                'alternate' => 'sample', 'price_subject' => 'assembled enclosure'],
-        ]];
-        $plan = \App\Services\Crm\EmailQuestionPlan::from($input, $request);
+        $plan = \App\Services\Crm\EmailQuestionPlan::searches($request);
         $brand = \App\Models\Brand::findOrFail($this->brandId);
         $knowledge = app(\App\Services\KnowledgeService::class)->forSalesQuestions($brand, $plan);
-        $this->assertSame($input['accepted_fallback'], $knowledge['plan']['accepted_fallback']);
         $this->assertSame($ids[1], $knowledge['plan']['questions'][0]['matches'][0]['id']);
-        $this->assertSame('', \App\Services\Crm\EmailQuestionPlan::from($input, 'Please quote the whole order.')['accepted_fallback']);
+        $this->assertArrayNotHasKey('accepted_fallback', $knowledge['plan']);
     }
-
     public function test_a_referral_percentage_does_not_authorise_a_reseller_discount(): void
     {
         $context = ['brand_knowledge' => ['answers' => [

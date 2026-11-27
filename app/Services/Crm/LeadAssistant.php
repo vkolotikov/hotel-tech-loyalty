@@ -56,6 +56,14 @@ final class LeadAssistant
                     $latest[$channel] > ($times === null ? strtotime($result['generated_at'] ?? '') : ($times[$channel] ?? 0)));
                 if ($code = LeadEmailEvidence::recheck($policy, $mode, $quote, (int) $brand->organization_id, $result)) {
                     $results[$mode] = [...$results[$mode], ...LeadEmailEvidence::hold($code, $result['language'] ?? 'en')];
+                } elseif (in_array($result['reason_code'] ?? '', ['commercial_review', 'unverified_price'], true) && empty($result['body'])) {
+                    // Historical audit holds have no recoverable draft. Offer normal generation with current facts.
+                    unset($results[$mode]);
+                    continue;
+                }
+                unset($results[$mode]['manager_guidance']);
+                if (isset($result['knowledge_trace'])) {
+                    $results[$mode]['knowledge_trace'] = ['questions' => [], 'sources' => $result['knowledge_trace']['sources'] ?? []];
                 }
             }
         }
@@ -102,6 +110,7 @@ final class LeadAssistant
                     EmailDraftRevision::changed();
                 }
                 $revision = ['revise' => $input['revise'], 'contact_id' => $current->guest_id,
+                    'prior_guidance' => $original['manager_guidance'] ?? [],
                     'quote_stamp' => $original['quote_stamp'] ?? LeadEmailEvidence::quoteStamp(null, (int) $brand->organization_id)];
             }
             $id = (string) Str::uuid();

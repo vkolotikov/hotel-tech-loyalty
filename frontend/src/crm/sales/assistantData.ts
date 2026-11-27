@@ -42,9 +42,7 @@ export type Result = {
   generated_at: string
   coverage: Coverage
   knowledge_trace?: {
-    questions: { id: string; need: string; matches: { id: string; score: number }[] }[]
     sources: { id: string; title: string }[]
-    assessment?: { id: string; sources: string[]; pending: string }[]
   }
   review_notes: string[]
   decision?: 'draft' | 'wait' | 'internal_action' | 'stop'
