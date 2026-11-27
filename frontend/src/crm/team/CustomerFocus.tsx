@@ -55,10 +55,13 @@ function FocusList({ title, items, empty, kind, open, lang }: { title: string; i
     {items.length ? <ul>{items.map(item => {
       const name = item.company || item.name || t('crm.team.unnamed', { id: item.lead_id })
       const age = item.age_days != null ? item.age_days === 0 ? t('crm.focus.under_day') : t('crm.focus.days', { n: count(item.age_days, lang) }) : ''
+      const signal = item.signals.find(key => ['key_account','overdue','due_today','high_priority','large_company'].includes(key))
+      const amount = Number(item.amount) > 0 && item.currency !== 'XXX' ? money(item.amount, item.currency, lang) : ''
       const reason = item.deadline && item.signals.includes('delivery_due') ? t('crm.team.delivery_date', { date: boardDay(item.deadline, lang) })
-        : item.ai_reason && item.ai_reason !== 'routine' ? t(`crm.team.ai_${item.ai_reason}`) : t(`crm.team.kind_${item.kind}`)
-      return <li key={item.key}><Link to={actionLink(item)} data-priority={item.priority}>
-        <div><strong>{name}</strong><small>{reason} · {item.owner || t('crm.dayplan.unassigned')}</small></div>
+        : item.ai_reason && item.ai_reason !== 'routine' ? t(`crm.team.ai_${item.ai_reason}`) : signal ? t(`crm.team.signal_${signal}`) : ''
+      const detail = [t(`crm.team.kind_${item.kind}`), reason, amount, item.owner || t('crm.dayplan.unassigned')].filter(Boolean).join(' · ')
+      return <li key={item.key}><Link to={actionLink(item)} data-priority={item.priority} title={item.subject || undefined}>
+        <div><strong>{name}</strong><small title={detail}>{detail}</small></div>
         {age ? <span className="crm-focus-age" data-long={(item.age_days ?? 0) >= 7}>{item.kind === 'checkin' ? <ArrowUpRight size={14} aria-hidden/> : item.kind === 'email' ? <Mail size={13} aria-hidden/> : <Clock3 size={13} aria-hidden/>}{age}</span>
           : <span className="crm-focus-age"><Clock3 size={13} aria-hidden/>{t(`crm.team.level_${item.priority}`)}</span>}</Link></li>
     })}</ul> : <p className="crm-focus-empty">{empty}</p>}</section>

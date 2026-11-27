@@ -72,7 +72,7 @@ describe('team dashboard', () => {
     const sent: TeamAction = { ...mail, key: 'sent', lead_id: 62, kind: 'checkin', company: 'Oak Group', at: 1000, age_days: 12, source: 'activity', message_id: '99' }
     const attention = { needed: 9, waiting_week: 4, checkin: 3, top: [{ ...mail, age_days: 8 }], followups: [sent] }
     const html = render('display=tv', { ...base, attention })
-    for (const label of ['Top customers','Aster Group','€8,275','3 of 4 valued','Waiting 7+ days for us','No customer reply for 7+ days','8 d','12 d','Oak Group']) expect(html).toContain(label)
+    for (const label of ['Top customers','Aster Group','€8,275','3 of 4 valued','Waiting 7+ days for us','No customer reply for 7+ days','8 d','12 d','Oak Group','€3,200']) expect(html).toContain(label)
     for (const link of ['/crm/contacts?tab=companies&amp;company=22','/crm/contacts?contact=7','mail_message=verified-message','rtab=activity&amp;activity=99']) expect(html).toContain(link)
     const empty = render('view=customers&customers=period', { ...base, attention: { needed: 0, waiting_week: 0, checkin: 0, top: [], followups: [] } })
     expect(empty).toContain('No leads need action')
