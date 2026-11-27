@@ -1,1 +1,0 @@
-import{er as e}from"./index-CDQGq-CU.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
