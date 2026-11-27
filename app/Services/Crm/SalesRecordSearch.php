@@ -3,6 +3,7 @@
 namespace App\Services\Crm;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Grammars\PostgresGrammar;
 
 final class SalesRecordSearch
 {
@@ -27,7 +28,7 @@ final class SalesRecordSearch
             if (strlen((string) $digits) >= 4 && preg_match('~^[+()\d\s./-]+$~u', $text)) {
                 foreach (['phone', 'mobile'] as $column) {
                     $number = "coalesce({$column}, '')";
-                    if ($q->getConnection()->getDriverName() === 'pgsql') {
+                    if ($q->getQuery()->getGrammar() instanceof PostgresGrammar) {
                         $number = "regexp_replace({$number}, '\D', '', 'g')";
                     } else {
                         foreach ([' ', '-', '+', '(', ')', '.', '/'] as $separator) {

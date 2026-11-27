@@ -70,6 +70,7 @@ class InquiryController extends Controller
         return response()->json($page);
     }
 
+    /** @param Builder<Inquiry> $query */
     private function applyLeadList(Builder $query, Request $request): void
     {
         $search = trim($request->string('search')->toString());

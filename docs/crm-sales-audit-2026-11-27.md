@@ -16,7 +16,7 @@
 
 Browser checks used the actual staff CRM with synthetic records. They covered keyboard-only record navigation, nested confirmations, invalid form submissions, simultaneous search and filter changes, tab switching, brand switching, mobile contact links and out-of-range pages. Core screens were inspected at 320, 390 and 1440 pixels. All five CRM languages were checked at 320 pixels, across light and dark themes.
 
-The API checks exercised search, exports, venue-local date boundaries, legacy won records, partial payments, reopening completed deals, currency conversion coverage, and brand and staff permissions. The CRM suite runs against SQLite and an independently migrated PostgreSQL database. Customer communication and existing customer records were kept out of write tests.
+The API checks exercised search, exports, venue-local date boundaries, legacy won records, partial payments, reopening completed deals, currency conversion coverage, and brand and staff permissions. The CRM suite runs against SQLite and an independently migrated PostgreSQL database. A workbook was opened and its row IDs compared with the expected filtered order. Fixture submissions covered new contacts, companies, leads and deals, including a failed lead save followed by a retry using the same contact. Customer communication and existing customer records were kept out of write tests.
 
 ## Coverage boundaries
 
