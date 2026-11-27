@@ -1,0 +1,1 @@
+import{er as e}from"./index-DwOLdNuU.js";import{Bt as t}from"./LoyaltyApp-CiW7GIt4.js";function n(){let{t:n}=e();return(e,r)=>n(`loyalty.scandesign.${e}`,{defaultValue:t[e],...r})}export{n as t};
