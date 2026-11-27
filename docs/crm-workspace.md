@@ -2,7 +2,13 @@
 
 ## Team dashboard
 
-Open **Team dashboard** from Today or Reports. Switch between the current calendar week (Monday onwards) and month in the venue’s time zone. **TV view** fills a signed-in screen, shows four actions at a time and refreshes every minute. The selected brand and the viewer’s permissions apply to every figure and link. Open an action to go directly to its opportunity, mailbox message or logged email.
+Open **Team dashboard** from Today or Reports. Switch between the current calendar week (Monday onwards) and month in the venue’s time zone. **Overview** shows total leads and recorded value across all statuses, the current open pipeline, and wins in the selected period. The value breakdown shows the original currencies, conversion date and number of records with usable amounts. Won value uses the amounts currently recorded on deals with a dated win in the period.
+
+The activity chart shows daily arrivals and first wins. Select a day or open the daily table for exact figures. Changes compare the elapsed part of the venue’s week or month with the same part of the previous one. The country chart groups the recorded contact country by lead, with period and all-time views. Missing and unrecognised countries have their own count.
+
+Follow-up signals open the corresponding due lists. The email and urgent signals open the filtered priority queue. Counts use the same lead, currency and follow-up rules as the CRM lead list. Priorities and statistics respect the selected brand and staff access.
+
+**TV view** refreshes every minute and alternates the overview and the four highest-ranked actions every 30 seconds. Pause it to keep a view on screen. Interacting with a chart control or switching views manually pauses rotation. Reduced-motion settings turn off animations and automatic rotation. Open an action to go directly to its opportunity or message.
 
 Leads received uses the lead creation date. Deals won counts each lead on its first recorded win. Older won records with no recorded date are listed under **How wins are counted**. Unanswered email threads is a current backlog across dates. The smaller figure counts the threads still waiting whose latest customer email came in during the selected period. A staff reply resolves its own thread. FDS Cards uses verified Zoho correspondence alongside direction-tagged CRM emails. Other brands use their logged correspondence.
 

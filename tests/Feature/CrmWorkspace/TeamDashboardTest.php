@@ -5,6 +5,7 @@ namespace Tests\Feature\CrmWorkspace;
 use App\Jobs\ReviewTeamPriorities;
 use App\Models\Brand;
 use App\Models\Organization;
+use App\Services\Crm\EuroReferenceRates;
 use App\Services\Crm\TeamPriorityReview;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Client\Request;
@@ -31,6 +32,7 @@ class TeamDashboardTest extends TestCase
         }
         config(['cache.shared' => 'array', 'openai.api_key' => null]);
         Http::preventStrayRequests();
+        Http::fake([EuroReferenceRates::URL => Http::response('<Envelope><Cube time="2026-11-04"><Cube currency="USD" rate="1.25"/></Cube></Envelope>')]);
     }
 
     private function activity(int $lead, array $data): int
@@ -58,6 +60,35 @@ class TeamDashboardTest extends TestCase
         $month = $this->board('?period=month');
         $this->assertSame(['2026-11-01', 2, 2], [$month['from'], $month['leads'], $month['wins']]);
         $this->getJson($this->crmApi('team-dashboard?period=yesterday'))->assertUnprocessable();
+    }
+
+    public function test_portfolio_countries_converted_values_followups_and_comparison_share_the_visible_leads(): void
+    {
+        $add = function (string $country, array $data): int {
+            $id = $this->lead($data + ['created_at' => now()->subHour()]);
+            $guest = DB::table('inquiries')->where('id', $id)->value('guest_id');
+            DB::table('guests')->where('id', $guest)->update(['country' => $country]);
+            return $id;
+        };
+        $waiting = $add('U.K.', ['total_value' => 125, 'currency' => 'USD', 'next_task_due' => '2026-11-01']);
+        $this->activity($waiting, ['subject' => 'Order']);
+        $add('United Kingdom', ['total_value' => 50, 'currency' => 'EUR', 'next_task_due' => '2026-11-04']);
+        $add('GBR', ['next_task_due' => '2026-11-02', 'next_task_completed' => true]);
+        $add('unconfirmed', ['currency' => 'XXX', 'total_value' => 40]);
+        $won = $add('Deutschland', ['status' => 'Confirmed', 'currency' => 'EUR', 'total_value' => 90, 'created_at' => '2026-10-26 12:00:00']);
+        $this->activity($won, ['type' => 'status_change', 'metadata' => '{"kind":"won"}']);
+        $this->activity($won, ['type' => 'status_change', 'metadata' => '{"kind":"won"}', 'occurred_at' => now()]);
+        $stats = $this->board();
+        $book = $stats['portfolio'];
+        $period = $stats['performance'];
+        $this->assertSame([5, 4, 1, 1], [$book['total'], $book['open'], $book['overdue'], $book['due_today']]);
+        $this->assertSame(['240.00', 3], [$book['total_value']['amount'], $book['total_value']['valued']]);
+        $this->assertSame(['150.00', 2, 1], [$book['open_value']['amount'], $book['open_value']['valued'], $book['open_value']['missing_currency']]);
+        $this->assertSame(['90.00', 1, 3, 1], [$period['won_value']['amount'], $period['won_value']['valued'], $period['lead_change'], $period['win_change']]);
+        $this->assertSame([['code' => 'GB', 'count' => 3], ['code' => 'DE', 'count' => 1]], $book['countries']['rows']);
+        $this->assertSame(['rows' => [['code' => 'GB', 'count' => 3]], 'unknown' => 1, 'total' => 4], $period['countries']);
+        $this->assertSame('2026-10-26', $period['previous_from']);
+        $this->assertSame($stats['urgent'], $this->board('?filter=urgent')['matching']);
     }
 
     public function test_thread_replies_urgency_and_no_duplicate_followup_and_payload_visibility(): void
@@ -98,6 +129,8 @@ class TeamDashboardTest extends TestCase
         $this->staffMember->brands()->attach($this->brandId);
         $board = $this->board('?brand_id=all');
         $this->assertSame([1, 0, $visible], [$board['actions_total'], $board['emails'], $board['actions'][0]['lead_id']]);
+        $this->assertSame(1, $board['portfolio']['total']);
+        $this->assertSame(1, $board['portfolio']['countries']['total']);
     }
 
     public function test_ai_batch_includes_recent_mail_while_a_large_old_backlog_is_being_reviewed(): void

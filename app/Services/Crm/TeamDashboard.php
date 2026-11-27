@@ -12,11 +12,10 @@ use App\Services\Portal\PortalBootstrap;
 use App\Support\SharedCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 final class TeamDashboard
 {
-    public function __construct(private TeamEmailThreads $threads, private TeamPriorityReview $review) {}
+    public function __construct(private TeamEmailThreads $threads, private TeamPriorityReview $review, private TeamPerformance $performance) {}
 
     public function for(Organization $org, User $user, string $period, string $filter, int $page, int $size): array
     {
@@ -32,12 +31,14 @@ final class TeamDashboard
         $now = CarbonImmutable::now(VenueClock::zone($orgId));
         $start = $period === 'month' ? $now->startOfMonth() : $now->startOfWeek(CarbonImmutable::MONDAY);
         $cache = SharedCache::store();
-        $key = 'crm:team:v1:'.$scope.':'.$now->toDateString();
+        $key = 'crm:team:v2:'.$scope.':'.$now->toDateString();
         $snapshot = $cache->remember($key, 45, fn () => $this->queue($visible, $org, $now, $mail));
-        $series = $cache->remember($key.':'.$period, 45, fn () => $this->series($visible, $start, $now, $orgId));
+        $portfolio = $cache->remember($key.':portfolio', 45, fn () => $this->performance->portfolio($visible, $org, $now));
+        $series = $cache->remember($key.':'.$period, 45, fn () => $this->performance->period($visible, $org, $start, $now, $period === 'month'));
         [$actions, $reviewed] = $this->review->rank($snapshot['actions'], $org, $user, $selected, $scope);
         $emails = array_filter($actions, fn ($row) => $row['kind'] === 'email');
-        $filtered = array_values(array_filter($actions, fn ($row) => $filter === 'all' || $row['kind'] === $filter));
+        $urgent = array_filter($actions, fn ($row) => $row['priority'] === 'urgent');
+        $filtered = array_values($filter === 'urgent' ? $urgent : array_filter($actions, fn ($row) => $filter === 'all' || $row['kind'] === $filter));
         $pages = max(1, (int) ceil(count($filtered) / $size));
         $page = min($pages, $page);
         $rows = array_slice($filtered, ($page - 1) * $size, $size);
@@ -51,37 +52,10 @@ final class TeamDashboard
             'leads' => array_sum(array_column($series['days'], 'leads')), 'wins' => array_sum(array_column($series['days'], 'wins')),
             'undated_wins' => $series['undated'], 'days' => $series['days'], 'emails' => count($emails),
             'period_emails' => count(array_filter($emails, fn ($r) => $r['at'] >= $start->timestamp)),
+            'portfolio' => $portfolio, 'performance' => $series['performance'], 'urgent' => count($urgent),
             'actions_total' => count($actions), 'reviewed' => $reviewed, 'page' => $page, 'pages' => $pages,
             'matching' => count($filtered), 'actions' => $rows,
         ];
-    }
-
-    /** @param Builder<Inquiry> $visible */
-    private function series(Builder $visible, CarbonImmutable $start, CarbonImmutable $now, int $orgId): array
-    {
-        $days = [];
-        for ($day = $start; $day->lte($now); $day = $day->addDay()) {
-            $key = $day->toDateString();
-            $days[$key] = ['date' => $key, 'leads' => 0, 'wins' => 0];
-        }
-        $range = [$start->utc(), $now->utc()];
-        $leads = (clone $visible)->whereBetween('created_at', $range)->toBase()->select('created_at')->cursor();
-        foreach ($leads as $lead) {
-            $days[CarbonImmutable::parse($lead->created_at, 'UTC')->setTimezone($now->timezone)->toDateString()]['leads']++;
-        }
-        // Only a dated win is a win in a particular interval. Later edits or fulfilment dates cannot date an old sale.
-        $wins = DB::table('activities as a')->joinSub((clone $visible)->select(['id', 'brand_id']), 'i', 'i.id', '=', 'a.inquiry_id')
-            ->where('a.organization_id', $orgId)->where(fn ($q) => $q->whereNull('a.brand_id')->orWhereColumn('a.brand_id', 'i.brand_id'))
-            ->where('a.type', 'status_change')->where('a.metadata->kind', 'won')->whereNotNull('a.occurred_at')
-            ->groupBy('a.inquiry_id')->selectRaw('a.inquiry_id, MIN(a.occurred_at) AS won_at');
-        $recorded = DB::query()->fromSub(clone $wins, 'wins')->whereBetween('won_at', $range)->cursor();
-        foreach ($recorded as $win) {
-            $days[CarbonImmutable::parse($win->won_at, 'UTC')->setTimezone($now->timezone)->toDateString()]['wins']++;
-        }
-        $undated = (clone $visible)->where(fn ($q) => $q->where('status', 'Confirmed')->orWhereHas('pipelineStage', fn ($s) => $s->where('kind', 'won')))
-            ->whereNotIn('id', DB::query()->fromSub($wins, 'wins')->select('inquiry_id'))->count();
-
-        return ['days' => array_values($days), 'undated' => $undated];
     }
 
     /** @param Builder<Inquiry> $visible */

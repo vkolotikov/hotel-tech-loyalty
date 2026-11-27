@@ -106,7 +106,7 @@ class WorkspaceController extends Controller
 
     public function teamDashboard(Request $request, TeamDashboard $dashboard): JsonResponse
     {
-        $args = $request->validate(['period' => 'sometimes|in:week,month', 'filter' => 'sometimes|in:all,email,followup,delivery,new',
+        $args = $request->validate(['period' => 'sometimes|in:week,month', 'filter' => 'sometimes|in:all,urgent,email,followup,delivery,new',
             'page' => 'sometimes|integer|min:1|max:100000', 'size' => 'sometimes|integer|in:4,8']);
         return response()->json($dashboard->for($request->attributes->get('workspace_org'), $request->user(), $args['period'] ?? 'week',
             $args['filter'] ?? 'all', (int) ($args['page'] ?? 1), (int) ($args['size'] ?? 8)))->header('Cache-Control', 'private, no-store');

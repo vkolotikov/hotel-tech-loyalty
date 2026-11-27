@@ -6,7 +6,7 @@ import { CrmContext } from '../CrmProvider'
 import type { Bootstrap } from '../lib/types'
 import words from '../i18n/team.en.json'
 import { TeamDashboardPage } from './TeamDashboardPage'
-import { actionLink, teamOptions, type TeamAction, type TeamBoard } from './teamBoard'
+import { actionLink, boardView, teamOptions, type TeamAction, type TeamBoard } from './teamBoard'
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   i18n: { language: 'en' },
@@ -18,7 +18,11 @@ const boot = { organization: { id: 8, name: 'Example studio' }, venue: { timezon
 const mail: TeamAction = { key: '14-mail', lead_id: 14, kind: 'email', priority: 'urgent', ai_reason: 'purchase_decision',
   company: 'Independent studio', name: 'Sam', owner: 'Anna', amount: '3200.00', currency: 'EUR', signals: ['delivery_due'],
   deadline: '2026-11-28', quantity: null, at: 1780000000, source: 'mail', message_id: 'verified-message', subject: 'Artwork approval' }
+const value = { currency: 'EUR', amount: '4500.00', rate_date: null, converted: false, groups: [], valued: 2, missing_currency: 0, missing_rate: 0 }
+const countries = { total: 14, unknown: 2, rows: [{ code: 'GB', count: 12 }] }
 const base: TeamBoard = { period: 'week', from: '2026-11-23', through: '2026-11-27', as_of: new Date().toISOString(), leads: 14, wins: 3,
+  urgent: 2, portfolio: { total: 31, total_value: value, open: 10, open_value: value, due_today: 3, overdue: 1, countries },
+  performance: { countries, won_value: value, lead_change: 2, win_change: 1, previous_from: '2026-11-16', previous_through: '2026-11-20' },
   undated_wins: 2, days: [{ date: '2026-11-23', leads: 2, wins: 1 }], emails: 7, period_emails: 4, actions_total: 10,
   matching: 10, reviewed: 2, page: 1, pages: 2, actions: [mail] }
 
@@ -33,7 +37,7 @@ function render(search = '', board = base) {
 
 describe('team dashboard', () => {
   it('renders scoped statistics and links the decision to the right correspondence', () => {
-    const html = render()
+    const html = render('view=actions')
     for (const label of ['Leads received','Deals won','Unanswered email threads','Priority actions','Buying decision','Delivery Nov 28','AI has reviewed 2 of 10 actions','Artwork approval','Independent studio']) expect(html).toContain(label)
     expect(html).toContain('mail_message=verified-message')
     expect(actionLink({ ...mail, source: 'activity', message_id: '52' })).toBe('/crm/leads?lead=14&rtab=activity&activity=52')
@@ -43,5 +47,14 @@ describe('team dashboard', () => {
     const html = render('period=month&display=tv&filter=email', { ...base, period: 'month', actions: [], reviewed: 0, matching: 0 })
     for (const label of ['<dialog','This month','Exit TV view','Ranked by current CRM signals','No actions waiting here','this month']) expect(html).toContain(label)
     expect(teamOptions(new URLSearchParams('period=unknown&filter=allx&page=-3'))).toEqual({ period: 'week', filter: 'all', page: 1, tv: false })
+  })
+  it('opens on the performance overview and keeps earlier filtered links on the queue', () => {
+    const html = render()
+    for (const label of ['Total leads','Open pipeline value','Won deal value','Lead and deal activity','United Kingdom','Country unknown · 2','Overdue follow-ups','Urgent actions']) expect(html).toContain(label)
+    expect(html).toContain('due=overdue')
+    expect(html).toContain('€4,500')
+    expect(boardView(new URLSearchParams('display=tv'))).toBe('overview')
+    expect(boardView(new URLSearchParams('filter=email'))).toBe('actions')
+    expect(boardView(new URLSearchParams('view=overview&filter=email'))).toBe('overview')
   })
 })

@@ -1,6 +1,11 @@
+import type { OpenLeadValue } from '../lib/types'
+
 export type Period = 'week' | 'month'
 export type Kind = 'email' | 'followup' | 'delivery' | 'new'
-export type Filter = 'all' | Kind
+export type Filter = 'all' | 'urgent' | Kind
+export type BoardView = 'overview' | 'actions'
+export interface CountryMix { rows: { code: string; count: number }[]; unknown: number; total: number }
+export interface BoardValue extends OpenLeadValue { valued: number }
 
 export interface TeamAction {
   key: string; lead_id: number; kind: Kind; priority: 'urgent' | 'next' | 'later'; ai_reason: string | null
@@ -12,14 +17,22 @@ export interface TeamBoard {
   period: Period; from: string; through: string; as_of: string; leads: number; wins: number
   undated_wins: number; days: { date: string; leads: number; wins: number }[]
   emails: number; period_emails: number; actions_total: number; reviewed: number; page: number; pages: number; matching: number; actions: TeamAction[]
+  urgent: number
+  portfolio: { total: number; total_value: BoardValue; open: number; open_value: BoardValue; overdue: number; due_today: number; countries: CountryMix }
+  performance: { won_value: BoardValue; countries: CountryMix; lead_change: number; win_change: number; previous_from: string; previous_through: string }
 }
 
 export function teamOptions(sp: URLSearchParams) {
   const period: Period = sp.get('period') === 'month' ? 'month' : 'week'
   const kind = sp.get('filter') as Filter
-  const filter: Filter = ['email','followup','delivery','new'].includes(kind) ? kind : 'all'
+  const filter: Filter = ['urgent','email','followup','delivery','new'].includes(kind) ? kind : 'all'
   const n = Number(sp.get('page'))
   return { period, filter, tv: sp.get('display') === 'tv', page: Number.isInteger(n) && n > 0 && n <= 100000 ? n : 1 }
+}
+
+export function boardView(sp: URLSearchParams): BoardView {
+  if (sp.get('view') === 'overview') return 'overview'
+  return sp.get('view') === 'actions' || sp.has('filter') || sp.has('page') ? 'actions' : 'overview'
 }
 
 export function actionLink(action: TeamAction): string {
