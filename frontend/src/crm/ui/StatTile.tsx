@@ -40,5 +40,5 @@ export function StatTile({ label, value, hint, icon: Icon, tone = 'neutral', to,
 /** A row of figures: two across on a phone, as many as fit on a wide screen (at most six). */
 export function StatRow({ label, children, count }: { label?: string; children: ReactNode; count: number }) {
   const cols = count >= 6 ? 'lg:grid-cols-6' : count === 5 ? 'lg:grid-cols-5' : count === 4 ? 'lg:grid-cols-4' : count === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
-  return <div role="group" aria-label={label} className={`grid grid-cols-2 gap-2 sm:gap-3 ${count >= 3 ? 'md:grid-cols-3' : ''} ${cols}`}>{children}</div>
+  return <div role="group" aria-label={label} className={`grid grid-cols-2 gap-2 max-[420px]:[&:has([data-open-value])]:grid-cols-1 sm:gap-3 ${count >= 3 ? 'md:grid-cols-3' : ''} ${cols}`}>{children}</div>
 }

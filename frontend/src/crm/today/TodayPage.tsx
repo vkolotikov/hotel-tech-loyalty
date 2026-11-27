@@ -125,7 +125,7 @@ function TodayBody({ data, lang, zone, currency }: { data: Today; lang: string; 
                   ? <StatTile icon={UserPlus} tone="accent" label={t('crm.today.new_leads', 'New leads')} value={count(data.leads.new, lang)} hint={t('crm.today.last_24h_short', '24 h')} to="/crm/leads" />
                   : <OpenValueTile label={t('crm.today.pipeline', 'Open pipeline')} valuation={data.pipeline.valuation} fallback={money(data.pipeline.open_value, currency, lang)}
                       hint={t('crm.today.open_short', '{{count}} open', { count: data.pipeline.open_count })} to="/crm/pipeline" />
-              return <div key={key} className={last ? 'col-span-2 lg:col-span-1' : undefined}>{tile}</div>
+              return <div key={key} className={last ? 'col-span-2 lg:col-span-1' : key === 'pipeline' ? 'max-[420px]:col-span-2' : undefined}>{tile}</div>
             })}
           </div>
         )}

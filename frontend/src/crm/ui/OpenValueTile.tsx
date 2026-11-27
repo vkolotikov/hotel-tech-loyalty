@@ -18,19 +18,20 @@ export function OpenValueTile({ label, valuation, fallback, to, hint }: {
   const lang = i18n.language
   const amount = valuation ? reportingValue(valuation, lang) : fallback
   if (!valuation || (!valuation.converted && !valuation.missing_currency && !valuation.missing_rate)) {
-    return <StatTile icon={Coins} tone="success" label={label} value={amount} hint={hint} to={to} />
+    return <div data-open-value="" className="min-w-0"><StatTile icon={Coins} tone="success" label={label} value={amount} hint={hint} to={to} /></div>
   }
   const known = valuation.groups.filter(group => group.currency !== 'XXX')
   const rateDate = valuation.rate_date && new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeZone: 'UTC' })
     .format(new Date(valuation.rate_date + 'T00:00:00Z'))
 
   return (
-    <section aria-label={label} className="min-w-0 rounded-2xl border border-a-border bg-a-surface px-3.5 py-3 shadow-a-sm">
+    <section data-open-value="" aria-label={label} className="@container min-w-0 rounded-2xl border border-a-border bg-a-surface px-3.5 py-3 shadow-a-sm">
       <div className="flex items-center gap-2 sm:gap-3">
-        <span aria-hidden className={`hidden h-9 w-9 shrink-0 place-items-center rounded-xl sm:grid ${TONE_CHIP.success}`}><Coins size={17} /></span>
+        <span aria-hidden className={`hidden h-9 w-9 shrink-0 place-items-center rounded-xl @[14rem]:grid ${TONE_CHIP.success}`}><Coins size={17} /></span>
         <div className="min-w-0">
           <p className="text-xs font-medium text-a-text-2">{to ? <Link to={to} className="hover:underline">{label}</Link> : label}</p>
-          <p className="break-words font-a-display text-xl leading-tight text-a-text sm:text-2xl">{amount}</p>
+          <p className="break-words font-a-display text-xl leading-tight text-a-text @[14rem]:text-2xl">{amount}</p>
+          {hint && <p className="text-xs text-a-text-2">{hint}</p>}
         </div>
       </div>
       {valuation.missing_currency > 0 && (
