@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Building2, Plus, UserRound } from 'lucide-react'
@@ -40,17 +40,12 @@ export function CompaniesTab() {
   const list = useQuery({
     queryKey: [...CONTACTS, 'companies', query],
     queryFn: () => get<Paginated<Company>>(`corporate-accounts${params(query)}`),
-    placeholderData: keepPreviousData,
   })
   const update = (key: string, value: string | null) => setSearch(prev => {
-    const next = withParam(prev, key, value)
-    if (key !== 'cpage') next.delete('cpage')
-    return next
+    return withParam(prev, key, value, 'cpage')
   }, { replace: true })
   const onSearch = useCallback((value: string | null) => setSearch(prev => {
-    const next = withParam(prev, 'cq', value)
-    next.delete('cpage')
-    return next
+    return withParam(prev, 'cq', value, 'cpage')
   }, { replace: true }), [setSearch])
   const rows = list.data?.data ?? []
   useRecordList('company', rows.map(row => row.id))
@@ -67,7 +62,7 @@ export function CompaniesTab() {
         {manager && <FilterChip label={t('crm.contacts.chip.manager', 'Manager: {{value}}', { value: manager })} removeLabel={removeLabel} onRemove={() => update('cmanager', null)} />}
       </> : undefined}>
         <div className="min-w-0 sm:min-w-56 sm:flex-1">
-          <SearchBox label={t('crm.contacts.company_search', 'Search by company, contact or industry')} value={q} onSearch={onSearch} />
+          <SearchBox placeholder={t('crm.contacts.company_search_short', 'Search companies')} label={t('crm.contacts.company_search', 'Search by company, contact or industry')} value={q} onSearch={onSearch} />
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
           <label className="min-w-0 sm:w-40">

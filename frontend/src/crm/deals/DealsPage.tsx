@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +8,9 @@ import { Field } from '../../workspace/ui/Field'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { count, money } from '../lib/format'
+import { useListSearch } from '../lib/useListSearch'
+import type { OpenLeadValue } from '../lib/types'
+import { count, reportingValue } from '../lib/format'
 import { useRecordList, useRecords } from '../lib/useRecords'
 import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
@@ -65,19 +67,10 @@ export function DealsPage() {
 
   const set = (patch: Partial<DealView>) => setSp(writeDealView(withDealView(view, patch), sp), { replace: true })
   const query = dealsQuery(view.filter, view.page, view.sort, { q: view.q, payment: view.payment, owner: view.owner })
-  const deals = useQuery({ queryKey: ['crm', 'deals', 'list', query], queryFn: () => get<Paginated<DealRow>>(`deals${params(query)}`), placeholderData: p => p })
+  const deals = useQuery({ queryKey: ['crm', 'deals', 'list', query], queryFn: () => get<Paginated<DealRow>>(`deals${params(query)}`) })
   const kpis = useQuery({ queryKey: ['crm', 'deals', 'kpis'], queryFn: () => get<DealKpis>('deals/kpis'), staleTime: 60_000, refetchInterval: 60_000 })
 
-  // The search answers as one types, without asking the server at every key.
-  const [q, setQ] = useState(view.q)
-  const [seen, setSeen] = useState(view.q)
-  if (view.q !== seen) { setSeen(view.q); setQ(view.q) }
-  useEffect(() => {
-    if (q === view.q) return undefined
-    const timer = window.setTimeout(() => set({ q }), 350)
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q])
+  const [q, setQ] = useListSearch(view.q, q => set({ q }))
 
   const exportFile = async (format: ExportFormat) => {
     setExporting(true)
@@ -97,7 +90,12 @@ export function DealsPage() {
   const owners = ownerOptions(boot.staff.name, lists.owners, team.data ?? [], view.owner || null)
   const filtered = view.filter !== 'all' || dealFilterCount(view) > 0
   const panelCount = [view.payment, view.owner].filter(Boolean).length
-  const fig = (value: number | undefined) => (value === undefined ? undefined : money(value, boot.venue.currency, lang))
+  const fig = (valuation?: OpenLeadValue) => {
+    if (!valuation?.groups.length) return undefined
+    const excluded = valuation.missing_currency + valuation.missing_rate
+    const amount = valuation.amount === null ? '' : reportingValue(valuation, lang)
+    return [amount && t('crm.deals.deal_value', 'Deal value {{amount}}', { amount }), excluded > 0 && t('crm.deals.excluded', '{{count}} excluded', { count: excluded })].filter(Boolean).join(' · ')
+  }
   const k = kpis.data
   const shown = dealFigures(k)
   const filtersLabel = t('crm.deals.filters', 'Filters')
@@ -113,15 +111,15 @@ export function DealsPage() {
               <Sparkles size={15} aria-hidden /><span className="hidden sm:inline">{t('crm.deals.capture', 'From a message')}</span><span className="sr-only sm:hidden">{t('crm.deals.capture', 'From a message')}</span>
             </button>
           )}
-          <Button onClick={() => records.create('deal')} className="min-h-10"><Plus size={15} aria-hidden />{t('crm.deals.new_short', 'Add')}</Button>
+          <Button onClick={() => records.create('deal')} className="min-h-10"><Plus size={15} aria-hidden />{t('crm.deals.new_title', 'Add a deal')}</Button>
         </>
       )}>
       {k && shown.length > 0 && (
         <StatRow label={t('crm.deals.figures', 'Deals at a glance')} count={shown.length}>
-          {shown.includes('active') && <StatTile icon={Trophy} tone="accent" label={t('crm.deals.kpi_active', 'Deals in progress')} value={count(k.total ?? 0, lang)} />}
-          {shown.includes('unpaid') && <StatTile icon={CreditCard} tone="pending" label={t('crm.deals.kpi_unpaid', 'Not paid in full')} value={count(k.awaiting_payment.count, lang)} hint={fig(k.awaiting_payment.value)} />}
-          {shown.includes('ready') && <StatTile icon={PackageCheck} tone="accent" label={fulfilmentLabel(t, 'ready_to_ship')} value={count(k.ready_to_ship.count, lang)} hint={fig(k.ready_to_ship.value)} to="/crm/deals?filter=ready_to_ship" active={view.filter === 'ready_to_ship'} />}
-          {shown.includes('completed') && <StatTile icon={CheckCircle2} tone="success" label={t('crm.deals.kpi_completed', 'Completed this month')} value={count(k.completed_month.count, lang)} hint={fig(k.completed_month.value)} />}
+          {shown.includes('active') && <StatTile icon={Trophy} tone="accent" label={t('crm.deals.kpi_active', 'Deals in progress')} value={count(k.total ?? 0, lang)} to="/crm/deals?filter=active" active={view.filter === 'active'} />}
+          {shown.includes('unpaid') && <StatTile icon={CreditCard} tone="pending" label={t('crm.deals.kpi_unpaid', 'Not paid in full')} value={count(k.awaiting_payment.count, lang)} hint={fig(k.awaiting_payment.valuation)} to="/crm/deals?filter=unpaid" active={view.filter === 'unpaid'} />}
+          {shown.includes('ready') && <StatTile icon={PackageCheck} tone="accent" label={fulfilmentLabel(t, 'ready_to_ship')} value={count(k.ready_to_ship.count, lang)} hint={fig(k.ready_to_ship.valuation)} to="/crm/deals?filter=ready_to_ship" active={view.filter === 'ready_to_ship'} />}
+          {shown.includes('completed') && <StatTile icon={CheckCircle2} tone="success" label={t('crm.deals.kpi_completed', 'Completed this month')} value={count(k.completed_month.count, lang)} hint={fig(k.completed_month.valuation)} to="/crm/deals?filter=completed_month" active={view.filter === 'completed_month'} />}
         </StatRow>
       )}
 
@@ -141,7 +139,7 @@ export function DealsPage() {
           </div>
         )}>
         <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <div className="min-w-0 flex-1 sm:w-64 sm:flex-none"><SearchInput label={t('crm.deals.search', 'Search a name or company')} value={q} onChange={setQ} /></div>
+          <div className="min-w-0 flex-1 sm:w-64 sm:flex-none"><SearchInput placeholder={t('crm.deals.search_short', 'Search deals')} label={t('crm.leads.search', 'Search name, email, phone or company')} value={q} onChange={setQ} /></div>
           <Popover label={panelCount > 0 ? `${filtersLabel} · ${panelCount}` : filtersLabel} align="left" width="w-72"
             className={`${BUTTON} shrink-0 ${panelCount > 0 ? 'border-a-accent/40 bg-a-accent/12 text-a-accent-text' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}
             button={<><Filter size={15} aria-hidden /><span className="hidden sm:inline">{filtersLabel}</span>{panelCount > 0 && <span className="rounded-full bg-a-accent px-1.5 text-xs font-semibold leading-5 text-a-accent-ink">{panelCount}</span>}</>}>
@@ -164,12 +162,10 @@ export function DealsPage() {
       </Toolbar>
 
       <div className="flex items-center gap-2">
-        {/* The step pills scroll sideways on a phone rather than wrap onto more rows. */}
-        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
-          <div className="w-max">
-            <Tabs label={t('crm.deals.which', 'Which deals')} value={view.filter} onChange={filter => set({ filter })}
-              items={DEAL_FILTERS.map(key => ({ key, label: dealFilterLabel(t, key), count: filterCount(key, k) }))} />
-          </div>
+        <div className="min-w-0 flex-1">
+          <Tabs compact label={t('crm.deals.which', 'Which deals')} value={view.filter} onChange={filter => set({ filter })}
+            items={DEAL_FILTERS.filter(key => !['active', 'unpaid', 'completed_month'].includes(key) || key === view.filter)
+              .map(key => ({ key, label: dealFilterLabel(t, key), count: filterCount(key, k) }))} />
         </div>
         {deals.data && rows.length > 0 && (
           <span className="shrink-0 text-xs text-a-text-2" aria-live="polite">

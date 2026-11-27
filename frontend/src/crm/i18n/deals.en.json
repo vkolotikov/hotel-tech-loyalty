@@ -1,4 +1,7 @@
 {
+  "search_short": "Search deals",
+  "deal_value": "Deal value {{amount}}",
+  "excluded": "{{count}} excluded",
   "add": "Add the deal",
   "added": "Deal added",
   "ai_next": "AI:",

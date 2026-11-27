@@ -1,4 +1,6 @@
 {
+  "search_short": "Chercher un prospect",
+  "view_all_count": "Voir les {{count}}",
   "lead_date": "Date du prospect",
   "set_currency": "Renseigner la devise",
   "currency_missing": "Devise non renseignée",

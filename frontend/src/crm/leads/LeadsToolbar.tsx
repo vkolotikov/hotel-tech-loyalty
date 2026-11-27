@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useListSearch } from '../lib/useListSearch'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Bookmark, BookmarkPlus, Columns3, Filter, Kanban, List, Star, StarOff, Trash2, Users, X } from 'lucide-react'
@@ -48,16 +49,7 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
   const count = activeFilterCount(filters)
   const onList = view === 'list'
 
-  // The search box answers as one types, without asking the server at every key.
-  const [q, setQ] = useState(filters.q)
-  const [seen, setSeen] = useState(filters.q)
-  if (filters.q !== seen) { setSeen(filters.q); setQ(filters.q) }
-  useEffect(() => {
-    if (q === filters.q) return undefined
-    const timer = window.setTimeout(() => onChange({ q }), 350)
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q])
+  const [q, setQ] = useListSearch(filters.q, q => onChange({ q }))
 
   const chipLabel = (key: ReturnType<typeof activeChips>[number]['key']): string => {
     switch (key) {
@@ -106,7 +98,7 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
           </div>
         )}>
         <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <div data-leads-search className="min-w-0 flex-1 sm:w-72 sm:flex-none"><SearchInput label={t('crm.leads.search', 'Search name, email, phone or company')} value={q} onChange={setQ} /></div>
+          <div data-leads-search className="min-w-0 flex-1 sm:w-72 sm:flex-none"><SearchInput placeholder={t('crm.leads.search_short', 'Search leads')} label={t('crm.leads.search', 'Search name, email, phone or company')} value={q} onChange={setQ} /></div>
           <button type="button" aria-expanded={panel} aria-label={count > 0 ? `${filtersLabel} · ${count}` : filtersLabel} title={filtersLabel}
             onClick={() => setPanel(p => !p)} className={`${BUTTON} ${count > 0 ? ON : QUIET} shrink-0`}>
             <Filter size={15} aria-hidden /><span className="hidden sm:inline">{filtersLabel}</span>{count > 0 && <span className="rounded-full bg-a-accent px-1.5 text-xs font-semibold leading-5 text-a-accent-ink">{count}</span>}

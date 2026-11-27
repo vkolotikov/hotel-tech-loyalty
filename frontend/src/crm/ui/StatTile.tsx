@@ -23,10 +23,10 @@ export function StatTile({ label, value, hint, icon: Icon, tone = 'neutral', to,
     <div className="flex min-w-0 items-center gap-3">
       {Icon && <span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONE_CHIP[tone]}`}><Icon size={17} /></span>}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-a-text-2" title={label}>{label}</p>
-        <p className="flex min-w-0 items-baseline gap-2">
+        <p className="text-xs font-medium leading-snug text-a-text-2" title={label}>{label}</p>
+        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2">
           <span className="shrink-0 font-a-display text-2xl leading-tight text-a-text">{value}</span>
-          {hint && <span className="min-w-0 truncate text-xs text-a-text-2">{hint}</span>}
+          {hint && <span className="min-w-0 text-xs leading-snug text-a-text-2">{hint}</span>}
         </p>
       </div>
     </div>

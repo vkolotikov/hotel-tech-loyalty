@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../workspace/ui/Button'
@@ -6,7 +6,7 @@ import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { failureOf, send } from '../lib/api'
-import { errorText } from '../lib/errors'
+import { errorText, focusInvalid } from '../lib/errors'
 import { Select, TextArea, TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
@@ -38,6 +38,7 @@ export function CompanyFormPanel({ company, onClose, onSaved }: { company?: Comp
   const [form, setForm] = useState<CompanyForm>(company ? companyFormOf(company) : EMPTY_COMPANY)
   const [extra, setExtra] = useState<CustomValues | null>(null)
   const values = extra ?? customDraft(fields, company?.custom_data)
+  const formRef = useRef<HTMLFormElement>(null)
   const [tried, setTried] = useState(false)
   const errors = companyErrors(form)
   const shown = tried ? errors : {}
@@ -63,7 +64,8 @@ export function CompanyFormPanel({ company, onClose, onSaved }: { company?: Comp
   const set = (key: keyof CompanyForm) => (value: string) => setForm(prev => ({ ...prev, [key]: value }))
   const submit = () => {
     setTried(true)
-    if (Object.keys(errors).length === 0 && missing.length === 0) save.mutate()
+    if (Object.keys(errors).length > 0 || missing.length > 0) return focusInvalid(formRef.current)
+    save.mutate()
   }
   const text = (key: keyof CompanyForm, label: string, type = 'text', list?: string) => (
     <FieldWithError label={label} error={errorOf(shown[key])}>
@@ -80,7 +82,7 @@ export function CompanyFormPanel({ company, onClose, onSaved }: { company?: Comp
           <Button onClick={submit} loading={save.isPending}>{mode === 'edit' ? t('crm.common.save', 'Save') : t('crm.contacts.company_add', 'Add company')}</Button>
         </div>
       )}>
-      <form className="space-y-3" onSubmit={e => { e.preventDefault(); submit() }}>
+      <form ref={formRef} className="space-y-3" onSubmit={e => { e.preventDefault(); submit() }}>
         {save.isError && <Notice tone="danger">{errorText(t, save.error)}</Notice>}
         {text('company_name', t('crm.contacts.company.company_name', 'Company name'))}
         <datalist id="crm-company-industries">{lists.industries.map(v => <option key={v} value={v} />)}</datalist>

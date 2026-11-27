@@ -1,4 +1,7 @@
 {
+  "search_short": "Aufträge suchen",
+  "deal_value": "Auftragswert {{amount}}",
+  "excluded": "{{count}} ausgeschlossen",
   "add": "Deal anlegen",
   "added": "Deal angelegt",
   "ai_next": "KI:",

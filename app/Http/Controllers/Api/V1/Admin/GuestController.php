@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Crm\SalesRecordSearch;
 use App\Models\AuditLog;
 use App\Models\CustomField;
 use App\Models\Guest;
@@ -31,6 +32,13 @@ class GuestController extends Controller
         $query = Guest::query();
         $this->applyFilters($query, $request);
 
+        $this->orderList($query, $request);
+
+        return response()->json($query->paginate($request->get('per_page', 25)));
+    }
+
+    private function orderList(\Illuminate\Database\Eloquent\Builder $query, Request $request): void
+    {
         // Whitelist sort + dir — Eloquent's orderBy() does NOT parameter-bind
         // the column name. Without an allowlist, attacker can sort by columns
         // the UI never exposes (passport_no, id_number, custom_data) and use
@@ -41,12 +49,16 @@ class GuestController extends Controller
         // `total_revenue` (the CRM's contact list) are allowed.
         $aliases = ['stays_count' => 'total_stays', 'last_check_in' => 'last_stay_date'];
         $allowedSorts = ['created_at','updated_at','first_name','last_name','full_name','email','phone','country','lifecycle_status','importance','total_stays','last_stay_date','last_activity_at','total_revenue','loyalty_tier','owner_name'];
-        $asked = $aliases[$request->get('sort')] ?? $request->get('sort');
+        $asked = $aliases[$request->string('sort')->toString()] ?? $request->string('sort')->toString();
         $sort = in_array($asked, $allowedSorts, true) ? $asked : 'created_at';
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
-        $query->orderBy($sort, $dir);
-
-        return response()->json($query->paginate($request->get('per_page', 25)));
+        if ($sort === 'full_name') {
+            $name = "LOWER(NULLIF(TRIM(full_name), ''))";
+            $query->orderByRaw("{$name} IS NULL")->orderByRaw("{$name} {$dir}");
+        } else {
+            $query->orderBy($sort, $dir);
+        }
+        $query->orderBy('id', $dir);
     }
 
     /**
@@ -605,7 +617,11 @@ class GuestController extends Controller
     {
         $query = Guest::query();
         $this->applyFilters($query, $request);
-        $query->orderBy('full_name');
+        if ($request->filled('sort')) {
+            $this->orderList($query, $request);
+        } else {
+            $query->orderBy('full_name')->orderBy('id');
+        }
 
         $customFields = CustomField::where('entity', 'guest')
             ->where('is_active', true)
@@ -727,15 +743,8 @@ class GuestController extends Controller
 
     private function applyFilters($query, Request $request): void
     {
-        if ($s = $request->get('search')) {
-            $query->where(function ($q) use ($s) {
-                $q->where('full_name', 'ilike', "%$s%")
-                  ->orWhere('email', 'ilike', "%$s%")
-                  ->orWhere('phone', 'ilike', "%$s%")
-                  ->orWhere('company', 'ilike', "%$s%")
-                  ->orWhere('nationality', 'ilike', "%$s%");
-            });
-        }
+        $search = trim($request->string('search')->toString());
+        if ($search !== '') SalesRecordSearch::people($query, $search, includeNationality: true);
         if ($v = $request->get('country'))          $query->where('country', $v);
         if ($v = $request->get('nationality'))      $query->where('nationality', $v);
         if ($v = $request->get('guest_type'))        $query->where('guest_type', $v);

@@ -29,11 +29,10 @@ export function ContactsPage() {
   const duplicates = useDuplicates()
   const pairs = duplicates.data?.pairs.length ?? 0
 
-  // Changing tab keeps an open record (its panel stays) but drops the other tab's filters.
   const choose = (next: ContactsTab) => setSearch(prev => {
-    const out = new URLSearchParams()
-    if (next !== 'people') out.set('tab', next)
-    for (const key of ['contact', 'company', 'lead', 'rtab']) { const v = prev.get(key); if (v) out.set(key, v) }
+    const out = new URLSearchParams(prev)
+    if (next === 'people') out.delete('tab')
+    else out.set('tab', next)
     return out
   }, { replace: true })
 
@@ -47,8 +46,7 @@ export function ContactsPage() {
     <Page icon={Contact} title={t('crm.nav.contacts', 'Contacts')} line={t('crm.contacts.line', 'The people and companies you deal with, and everything you know about them.')}
       actions={tab !== 'duplicates' && (
         <Button onClick={() => records.create(tab === 'companies' ? 'company' : 'contact')}>
-          <Plus size={15} aria-hidden />{t('crm.common.add', 'Add')}
-          <span className="sr-only">{' '}{tab === 'companies' ? t('crm.create.company', 'Company') : t('crm.create.contact', 'Contact')}</span>
+          <Plus size={15} aria-hidden />{tab === 'companies' ? t('crm.contacts.company_new', 'Add a company') : t('crm.contacts.new_title', 'Add a contact')}
         </Button>
       )}>
       <SectionNav label={t('crm.contacts.sections', 'Contacts sections')} idPrefix={PREFIX} panelId={PANEL} sections={sections} value={tab} onChange={choose} />

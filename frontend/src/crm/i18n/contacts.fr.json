@@ -1,4 +1,6 @@
 {
+  "people_search_short": "Chercher un contact",
+  "company_search_short": "Chercher une entreprise",
   "activity": {
     "call": "Appel",
     "email": "E-mail",
@@ -231,6 +233,8 @@
   "sections": "Sections des contacts",
   "sort": "Ordre",
   "sorts": {
+    "name_asc": "Nom de A à Z",
+    "name_desc": "Nom de Z à A",
     "newest": "Plus récents d’abord",
     "oldest": "Plus anciens d’abord",
     "updated": "Modifiés récemment"

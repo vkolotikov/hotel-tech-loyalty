@@ -1,4 +1,6 @@
 {
+  "people_search_short": "Найти контакт",
+  "company_search_short": "Найти компанию",
   "activity": {
     "call": "Звонок",
     "email": "Письмо",
@@ -231,6 +233,8 @@
   "sections": "Разделы контактов",
   "sort": "Порядок",
   "sorts": {
+    "name_asc": "Имя А–Я",
+    "name_desc": "Имя Я–А",
     "newest": "Сначала новые",
     "oldest": "Сначала старые",
     "updated": "Недавно изменённые"

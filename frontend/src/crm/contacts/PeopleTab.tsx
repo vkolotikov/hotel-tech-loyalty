@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowUpDown, Bookmark, Download, FileSpreadsheet, FileText, Plus, Trash2, Users, X } from 'lucide-react'
+import { ArrowUpDown, Bookmark, Download, FileSpreadsheet, FileText, Mail, Phone, Plus, Trash2, Users, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -25,7 +25,7 @@ import { useToast } from '../ui/Toast'
 import { FilterChip, Toolbar } from '../ui/Toolbar'
 import {
   BULK_FIELDS, BULK_MAX, SORT_KEYS, activeFilterCount, activeFilters, allOnPage, bulkBody, displayName, exportParams, filtersFrom, listParams,
-  pageFrom, segmentFilters, toggleId, togglePage, withParam, withSegment, withoutFilters,
+  mailLink, phoneLink, pageFrom, segmentFilters, toggleId, togglePage, withParam, withSegment, withoutFilters,
   type BulkField, type ExportFormat, type FilterKey, type PeopleFilters, type SortKey,
 } from './contactsLogic'
 import { downloadContacts } from './download'
@@ -35,7 +35,8 @@ import { SearchBox } from './SearchBox'
 import { CONTACTS, refreshAfterContactChange, useContactLists, useTags, type ContactLists } from './queries'
 import type { Guest, Paginated, Segment } from './types'
 
-const SORT_FALLBACK: Record<SortKey, string> = { newest: 'Newest first', oldest: 'Oldest first', updated: 'Recently changed' }
+const REACH = 'inline-flex h-9 w-9 max-w-full items-center justify-center gap-2 rounded-lg border border-a-border text-xs text-a-text-2 hover:text-a-accent-text focus-visible:outline-2 focus-visible:outline-a-accent lg:h-6 lg:w-auto lg:justify-start lg:border-0 [&>svg]:shrink-0'
+const SORT_FALLBACK: Record<SortKey, string> = { newest: 'Newest first', oldest: 'Oldest first', updated: 'Recently changed', name_asc: 'Name A–Z', name_desc: 'Name Z–A' }
 
 /** A secondary control of the toolbar: an icon with its name as a tooltip (and a count beside it when one is set). */
 const TOOL = 'relative inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-a-border bg-a-surface text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'
@@ -61,7 +62,6 @@ export function PeopleTab() {
   const list = useQuery({
     queryKey: [...CONTACTS, 'list', query],
     queryFn: () => get<Paginated<Guest>>(`guests${params(query)}`),
-    placeholderData: keepPreviousData,
   })
 
   // What is chosen belongs to the rows on screen: another page or filter starts with nothing chosen.
@@ -135,7 +135,7 @@ export function PeopleTab() {
         </> : undefined}>
         {/* The search and the Filters button share a row on every screen, so the filters panel opens leftwards from its edge. */}
         <div className="flex min-w-0 items-center gap-2 sm:min-w-56 sm:flex-1">
-          <div className="min-w-0 flex-1"><SearchBox label={t('crm.contacts.search', 'Search by name, email, phone or company')} value={filters.q} onSearch={onSearch} /></div>
+          <div className="min-w-0 flex-1"><SearchBox placeholder={t('crm.contacts.people_search_short', 'Search people')} label={t('crm.contacts.search', 'Search by name, email, phone or company')} value={filters.q} onSearch={onSearch} /></div>
           <PeopleFiltersPanel filters={filters} lists={lists} tags={tags.data ?? []} onSet={update} onClear={clearAll} />
         </div>
       </Toolbar>
@@ -169,6 +169,9 @@ export function PeopleTab() {
             <ul className="divide-y divide-a-border">
               {rows.map(row => {
                 const name = displayName(row) ?? t('crm.common.no_name', 'No name')
+                const email = mailLink(row.email)
+                const number = phoneLink(row.phone) ? row.phone : row.mobile
+                const phone = phoneLink(number)
                 const chosen = selected.includes(row.id)
                 const open = records.current?.kind === 'contact' && records.current.id === row.id
                 return (
@@ -181,15 +184,19 @@ export function PeopleTab() {
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium text-a-text">{name}</span>
                         <span className="block truncate text-xs text-a-text-2">
-                          {[row.position_title, row.company].filter(Boolean).join(' · ') || row.email || row.phone || '—'}
+                          {[row.position_title, row.company].filter(Boolean).join(' · ') || row.email || number || '—'}
                         </span>
                         <span className="mt-1 flex md:hidden"><StandingPills lifecycle={row.lifecycle_status} importance={row.importance} levels={lists.importance} /></span>
                       </span>
                     </Link>
-                    <span className="hidden w-56 min-w-0 text-xs text-a-text-2 lg:block">
-                      <span className="block truncate">{row.email ?? '—'}</span>
-                      <span className="block truncate">{row.phone ?? row.mobile ?? ''}</span>
-                    </span>
+                    <div className="flex shrink-0 gap-1 lg:w-56 lg:flex-col lg:items-start lg:gap-0">
+                      {email && <a href={email} aria-label={t('crm.leads.write_to', 'Email {{name}}', { name })} title={row.email ?? undefined} className={REACH}>
+                        <Mail size={15} aria-hidden /><span className="hidden truncate lg:inline">{row.email}</span>
+                      </a>}
+                      {phone && <a href={phone} aria-label={t('crm.leads.call_to', 'Call {{name}}', { name })} title={number ?? undefined} className={REACH}>
+                        <Phone size={15} aria-hidden /><span className="hidden truncate lg:inline">{number}</span>
+                      </a>}
+                    </div>
                     <span className="hidden w-40 md:block"><StandingPills lifecycle={row.lifecycle_status} importance={row.importance} levels={lists.importance} /></span>
                     <span className="hidden w-20 text-right text-xs text-a-text-2 md:block">{timeAgo(row.created_at, lang)}</span>
                   </li>

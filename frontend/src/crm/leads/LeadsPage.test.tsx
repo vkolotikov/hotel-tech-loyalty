@@ -105,7 +105,7 @@ describe('Leads', () => {
     expect(html).toContain('2 d late')
     expect(html).toContain('€1,250')
     // Round 5: the tools are icons named for a screen reader and a tooltip; the export is Excel or CSV.
-    for (const tool of ['aria-label="Export"', '>Add<', 'Due now', 'aria-label="Filters"', 'aria-label="Select this page"', 'aria-label="Saved views"', 'aria-label="Columns"', 'Sort: Newest first']) expect(html).toContain(tool)
+    for (const tool of ['aria-label="Export"', '>Add a lead<', 'Due now', 'aria-label="Filters"', 'aria-label="Select this page"', 'aria-label="Saved views"', 'aria-label="Columns"', 'Sort: Newest first']) expect(html).toContain(tool)
     expect(html).not.toContain('Export CSV')
     // The AI capture is every staff member's, without the staff AI (owner 2026-11-08).
     expect(html).toContain('From a message')

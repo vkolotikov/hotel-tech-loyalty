@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useRef, useId, useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +8,7 @@ import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { failureOf, get, params, send } from '../lib/api'
-import { errorText } from '../lib/errors'
+import { errorText, focusInvalid } from '../lib/errors'
 import { withRecord } from '../lib/records'
 import { CONTROL, Select, TextArea, TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
@@ -69,6 +69,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
   const [madeGuest, setMadeGuest] = useState<number | null>(null)
   /** A deal's lead made by an earlier try whose close as won failed: closed again, never made twice. */
   const [madeLead, setMadeLead] = useState<LeadDetail | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const [tried, setTried] = useState(false)
   const set = (patch: Partial<LeadDraft>) => setDraft(d => ({ ...d, ...patch }))
 
@@ -119,7 +120,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setTried(true)
-    if (Object.keys(errors).length > 0 || missing.length > 0) return
+    if (Object.keys(errors).length > 0 || missing.length > 0) return focusInvalid(formRef.current)
     create.mutate()
   }
 
@@ -137,7 +138,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
           <Button type="submit" form={formId} loading={create.isPending}>{deal ? t('crm.deals.add', 'Add the deal') : t('crm.leads.add', 'Add the lead')}</Button>
         </div>
       )}>
-      <form id={formId} onSubmit={submit} noValidate className="space-y-5">
+      <form ref={formRef} id={formId} onSubmit={submit} noValidate className="space-y-5">
         {initial && <Notice tone="info"><span className="inline-flex items-start gap-2"><Sparkles size={15} aria-hidden className="crm-ai-text mt-0.5 shrink-0" />{deal
           ? t('crm.deals.capture_filled', 'Filled in by the AI from the message. Check it before you add the deal.')
           : t('crm.leads.capture_filled', 'Filled in by the AI from the message. Check it before you add the lead.')}</span></Notice>}

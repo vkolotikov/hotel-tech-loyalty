@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Crm\DealListQuery;
+use App\Services\Crm\SalesRecordSearch;
 use App\Exceptions\AiHelperRefused;
 use App\Models\Activity;
 use App\Models\AuditLog;
@@ -27,6 +29,7 @@ use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
@@ -60,31 +63,17 @@ class InquiryController extends Controller
             'pipelineStage:id,name,color,kind',
         ]);
 
-        if ($s = $request->get('search')) {
-            // Search covers what staff actually paste into the box: a name,
-            // a company, an email, or a phone number. Email/phone were
-            // missing, so looking up a lead by the address it was captured
-            // with returned "No leads match these filters" even though the
-            // row was right there. Phone is matched on digits only, so
-            // "26123456" still finds a number stored as "26 123 456" or
-            // "+371 26 123 456".
-            $digits = preg_replace('/\D/', '', $s);
-            $query->where(function ($q) use ($s, $digits) {
-                $q->where('event_name', 'ilike', "%$s%")
-                  ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', function ($q2) use ($s, $digits) {
-                      $q2->where('full_name', 'ilike', "%$s%")
-                         ->orWhere('company', 'ilike', "%$s%")
-                         ->orWhere('email', 'ilike', "%$s%")
-                         ->orWhere('phone', 'ilike', "%$s%")
-                         ->orWhere('mobile', 'ilike', "%$s%");
-                      if (strlen((string) $digits) >= 4) {
-                          $q2->orWhereRaw("regexp_replace(coalesce(phone, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"])
-                             ->orWhereRaw("regexp_replace(coalesce(mobile, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"]);
-                      }
-                  });
-            });
-        }
+        $this->applyLeadList($query, $request);
+        $page = $query->paginate($request->get('per_page', 25));
+        LeadReplyBadges::attach($page->getCollection(), $request->user());
+
+        return response()->json($page);
+    }
+
+    private function applyLeadList(Builder $query, Request $request): void
+    {
+        $search = trim($request->string('search')->toString());
+        if ($search !== '') SalesRecordSearch::inquiries($query, $search);
         if ($v = $request->get('status'))        $query->where('status', $v);
         if ($v = $request->get('priority'))      $query->where('priority', $v);
         if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
@@ -110,6 +99,7 @@ class InquiryController extends Controller
             // `next_task_due` is a calendar day: "today" is the venue's (2026-11-08), not the server's UTC day.
             $today = $this->venueToday();
             match ($v) {
+                'now'     => $query->where('next_task_due', '<=', $today)->where('next_task_completed', false),
                 'today'   => $query->where('next_task_due', $today)->where('next_task_completed', false),
                 'overdue' => $query->where('next_task_due', '<', $today)->where('next_task_completed', false),
                 'soon'    => $query->whereBetween('next_task_due', [$today, self::dayAfter($today, 3)])->where('next_task_completed', false),
@@ -135,11 +125,6 @@ class InquiryController extends Controller
         // alike (2026-11-08: "largest value first" listed every lead without a value at the top); the id keeps pages
         // stable among equal values. `$sort` is one of the names above.
         $query->orderByRaw("{$sort} IS NULL")->orderByRaw("{$sort} {$dir}")->orderBy('id', $dir);
-
-        $page = $query->paginate($request->get('per_page', 25));
-        LeadReplyBadges::attach($page->getCollection(), $request->user());
-
-        return response()->json($page);
     }
 
     public function store(Request $request): JsonResponse
@@ -982,60 +967,12 @@ class InquiryController extends Controller
             'lostReason:id,label',
         ]);
 
-        if ($s = $request->get('search')) {
-            // Search covers what staff actually paste into the box: a name,
-            // a company, an email, or a phone number. Email/phone were
-            // missing, so looking up a lead by the address it was captured
-            // with returned "No leads match these filters" even though the
-            // row was right there. Phone is matched on digits only, so
-            // "26123456" still finds a number stored as "26 123 456" or
-            // "+371 26 123 456".
-            $digits = preg_replace('/\D/', '', $s);
-            $query->where(function ($q) use ($s, $digits) {
-                $q->where('event_name', 'ilike', "%$s%")
-                  ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', function ($q2) use ($s, $digits) {
-                      $q2->where('full_name', 'ilike', "%$s%")
-                         ->orWhere('company', 'ilike', "%$s%")
-                         ->orWhere('email', 'ilike', "%$s%")
-                         ->orWhere('phone', 'ilike', "%$s%")
-                         ->orWhere('mobile', 'ilike', "%$s%");
-                      if (strlen((string) $digits) >= 4) {
-                          $q2->orWhereRaw("regexp_replace(coalesce(phone, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"])
-                             ->orWhereRaw("regexp_replace(coalesce(mobile, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"]);
-                      }
-                  });
-            });
+        if ($request->input('list') === 'deals') {
+            DealListQuery::apply($query, $request);
+        } else {
+            $this->applyLeadList($query, $request);
         }
-        if ($v = $request->get('status'))        $query->where('status', $v);
-        if ($v = $request->get('priority'))      $query->where('priority', $v);
-        if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
-        if ($v = $request->get('property_id'))   $query->where('property_id', $v);
-        if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
-        // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
-        if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
-        if ($v = $request->get('source'))        $query->where('source', $v);
-        if ($request->boolean('missing_currency')) $query->missingValueCurrency();
-        if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
-        // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
-        if ($v = $request->get('has_phone')) {
-            $has = fn ($g) => $g->where(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', '')
-                ->orWhere(fn ($q3) => $q3->whereNotNull('mobile')->where('mobile', '!=', '')));
-            if ($v === 'yes') $query->whereHas('guest', $has);
-            elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
-        }
-        $this->createdOnVenueDays($query, $request);
-        if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
-        if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
-        if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);
-        if ($v = $request->get('task_due')) {
-            match ($v) {
-                'today'   => $query->where('next_task_due', now()->toDateString())->where('next_task_completed', false),
-                'overdue' => $query->where('next_task_due', '<', now()->toDateString())->where('next_task_completed', false),
-                'soon'    => $query->whereBetween('next_task_due', [now()->toDateString(), now()->addDays(3)->toDateString()])->where('next_task_completed', false),
-                default   => null,
-            };
-        }
+
         // `ids` filter — bulk export of checked rows only. Accepts an
         // array or a comma-separated list (parity with guests/export).
         if ($v = $request->get('ids')) {

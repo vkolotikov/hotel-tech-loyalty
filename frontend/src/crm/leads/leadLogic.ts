@@ -189,7 +189,7 @@ export function listQuery(filters: LeadFilters, me: string, perPage = 25): Query
     has_phone: filters.phone,
     ...(filters.missingCurrency ? { missing_currency: 1 } : {}),
     ...dateRange(filters.from, filters.to),
-    task_due: filters.due === 'now' ? '' : filters.due,
+    task_due: filters.due,
     sort: sort.sort,
     dir: sort.dir,
     page: filters.page,
@@ -222,10 +222,10 @@ export function formatParam(format: ExportFormat): { format?: 'csv' } {
  * CSV. Before, the CSV was asked of `GET inquiries`, which answers JSON, so the file came out empty.
  */
 export function exportQuery(filters: LeadFilters, me: string, format: ExportFormat = 'xlsx'): Query {
-  const { page: _page, per_page: _perPage, task_due, ...rest } = listQuery(filters, me)
+  const { page: _page, per_page: _perPage, ...rest } = listQuery(filters, me)
   void _page
   void _perPage
-  return { ...rest, task_due: filters.due === 'now' ? '' : task_due, ...formatParam(format) }
+  return { ...rest, ...formatParam(format) }
 }
 
 /* ─── Pipelines and stages ───────────────────────────────────────────────── */

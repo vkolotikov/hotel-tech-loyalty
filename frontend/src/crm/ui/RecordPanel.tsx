@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Maximize2, X, type LucideIcon } from 'lucide-react'
-import { handBackFocus } from '../../workspace/lib/handBack'
+import { modalScope } from '../../workspace/lib/modalScope'
 import { sectionAfter } from './SectionNav'
 import { IconButton } from './IconButton'
 
@@ -143,11 +143,11 @@ export function RecordPanel({ label, onClose, fullHref, onPrev, onNext, children
   const handlers = useRef({ onClose, onPrev, onNext })
   useEffect(() => { handlers.current = { onClose, onPrev, onNext } }, [onClose, onPrev, onNext])
   useEffect(() => {
-    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    box.current?.focus()
+    const panel = box.current
+    if (!panel) return
+    const release = modalScope(panel, () => handlers.current.onClose(), { afterChildren: true })
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.defaultPrevented) return
-      if (e.key === 'Escape') { e.preventDefault(); handlers.current.onClose(); return }
+      if (e.defaultPrevented || !(e.target instanceof HTMLElement) || e.target.closest('[aria-modal="true"]') !== panel) return
       const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))
       if (typing || e.altKey || e.ctrlKey || e.metaKey) return
       if (e.key === '[' && handlers.current.onPrev) { e.preventDefault(); handlers.current.onPrev() }
@@ -156,7 +156,7 @@ export function RecordPanel({ label, onClose, fullHref, onPrev, onNext, children
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
-      if (before?.isConnected) handBackFocus(before)
+      release()
     }
   }, [])
   const tools = (
@@ -168,8 +168,7 @@ export function RecordPanel({ label, onClose, fullHref, onPrev, onNext, children
     </>
   )
   return (
-    <div className="fixed inset-0 z-50 m-0!">
-      <button type="button" tabIndex={-1} aria-label={t('crm.common.close', 'Close')} onClick={onClose} className="absolute inset-0 cursor-default bg-a-scrim/40 animate-a-fade" />
+    <div className="fixed inset-0 z-50 m-0! bg-a-scrim/40" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div ref={box} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}
         className="absolute inset-y-0 right-0 flex w-full flex-col border-l border-a-border bg-a-surface shadow-a-lg outline-hidden animate-a-slide-in sm:max-w-[min(56rem,calc(100vw-3rem))]">
         {children(tools, titleId)}

@@ -30,8 +30,8 @@ describe('the list filters, as the address keeps them and GuestController reads 
 
   it('exports the chosen rows when there are some, else what the filters show, as CSV', () => {
     const f = filtersFrom(sp('importance=VIP&page=3'))
-    expect(exportParams(f, [4, 9])).toEqual({ ids: '4,9', format: 'csv' })
-    expect(exportParams(f, [])).toEqual({ importance: 'VIP', format: 'csv' })
+    expect(exportParams(f, [4, 9])).toEqual({ sort: 'created_at', dir: 'desc', ids: '4,9', format: 'csv' })
+    expect(exportParams(f, [])).toEqual({ sort: 'created_at', dir: 'desc', importance: 'VIP', format: 'csv' })
   })
 
   it('reads a page from 1 and goes back to the first page when a filter changes', () => {
@@ -327,9 +327,9 @@ describe('round 5: the full admin’s filters, in the address and as GET guests 
 
   it('exports the workbook by default and CSV on request, the chosen rows first', () => {
     const f = filtersFrom(sp('vip=1'))
-    expect(exportParams(f, [], 'xlsx')).toEqual({ vip_level: 'VIP' })
-    expect(exportParams(f, [], 'csv')).toEqual({ vip_level: 'VIP', format: 'csv' })
-    expect(exportParams(f, [3, 4], 'xlsx')).toEqual({ ids: '3,4' })
+    expect(exportParams(f, [], 'xlsx')).toEqual({ sort: 'created_at', dir: 'desc', vip_level: 'VIP' })
+    expect(exportParams(f, [], 'csv')).toEqual({ sort: 'created_at', dir: 'desc', vip_level: 'VIP', format: 'csv' })
+    expect(exportParams(f, [3, 4], 'xlsx')).toEqual({ sort: 'created_at', dir: 'desc', ids: '3,4' })
     expect(exportName('2026-11-12', 'xlsx')).toBe('contacts-2026-11-12.xlsx')
     expect(exportName('2026-11-12')).toBe('contacts-2026-11-12.csv')
   })

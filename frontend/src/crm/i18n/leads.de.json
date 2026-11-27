@@ -1,4 +1,6 @@
 {
+  "search_short": "Leads suchen",
+  "view_all_count": "Alle {{count}} anzeigen",
   "lead_date": "Eingangsdatum",
   "set_currency": "Währung festlegen",
   "currency_missing": "Währung nicht angegeben",

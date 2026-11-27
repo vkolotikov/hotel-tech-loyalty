@@ -102,6 +102,8 @@ class LeadsAndDealsTest extends TestCase
             'phone_calls_made' => fn ($t) => $t->integer('phone_calls_made')->default(0),
             'last_contacted_at' => fn ($t) => $t->date('last_contacted_at')->nullable(),
             'custom_data' => fn ($t) => $t->text('custom_data')->nullable(),
+            'fulfillment_started_at' => fn ($t) => $t->timestamp('fulfillment_started_at')->nullable(),
+            'paid_amount' => fn ($t) => $t->decimal('paid_amount', 12, 2)->nullable(),
             'fulfillment_stage' => fn ($t) => $t->string('fulfillment_stage', 32)->nullable(),
             'fulfillment_completed_at' => fn ($t) => $t->timestamp('fulfillment_completed_at')->nullable(),
             'payment_status' => fn ($t) => $t->string('payment_status', 32)->nullable(),
@@ -285,6 +287,88 @@ class LeadsAndDealsTest extends TestCase
         $this->assertSame([$sixth], $ids('date_from=2026-11-06'));
         $this->assertSame([$early, $late], $ids('date_to=2026-11-05'));
         $this->assertSame([$early, $late, $sixth], $ids('date_from=not-a-day'), 'a value that is not a day is ignored');
+    }
+
+    /** The first column of both enquiry and deal CSVs is the record id. */
+    private function exportedIds(string $query): array
+    {
+        $csv = $this->get($this->adminApi('inquiries/export?format=csv&'.$query))->assertOk()->streamedContent();
+        $lines = array_slice(preg_split('/\r?\n/', trim($csv)), 1);
+        return array_map(fn ($line) => (int) str_getcsv($line, ',', '"', '')[0], $lines);
+    }
+
+    public function test_deal_search_filters_and_order_match_the_export_including_legacy_wins(): void
+    {
+        $fields = ['fulfillment_stage' => 'design_sent', 'payment_status' => 'partial', 'assigned_to' => 'Alex'];
+        $first = $this->lead($fields + ['total_value' => 900], 'Birch Press');
+        $second = $this->lead($fields + ['status' => 'Confirmed', 'total_value' => 300], 'Birch Works');
+        $won = $this->lead(['pipeline_stage_id' => $this->stages['Booked']], 'Birch legacy');
+        $this->lead(['payment_status' => 'paid'] + $fields, 'Birch Shop');
+        $this->lead(['assigned_to' => 'Pat'] + $fields, 'Birch East');
+        $this->lead([], 'Birch open');
+        $query = 'stage=design_sent&payment=partial&owner=Alex&search=birch&sort=amount';
+        $this->asStaffMember();
+        $this->assertSame([$first, $second], collect($this->getJson($this->adminApi('deals?'.$query))->assertOk()->json('data'))->pluck('id')->all());
+        $this->assertSame([$first, $second], $this->exportedIds('list=deals&'.$query));
+        $this->assertSame([$won], $this->exportedIds('list=deals&search=legacy'));
+        $guest = DB::table('inquiries')->where('id', $first)->value('guest_id');
+        DB::table('guests')->where('id', $guest)->update(['email' => 'sales@birch.example', 'mobile' => '+44 (7700) 900-123']);
+        $lookalike = $this->lead(['status' => 'Confirmed'], 'Other customer');
+        DB::table('guests')->where('id', DB::table('inquiries')->where('id', $lookalike)->value('guest_id'))->update(['phone' => '555-2000']);
+        $this->getJson($this->adminApi('deals?search=2000%40unrelated.example'))->assertOk()->assertJsonPath('total', 0);
+        foreach (['deals', 'inquiries', 'guests'] as $list) {
+            foreach (['900123', 'sales%40birch'] as $term) {
+                $this->getJson($this->adminApi($list.'?search='.$term))->assertOk()->assertJsonPath('total', 1)
+                    ->assertJsonPath('data.0.id', $list === 'guests' ? $guest : $first);
+            }
+        }
+    }
+
+    public function test_fulfilment_and_payment_apply_only_after_a_win_and_completed_deals_can_reopen(): void
+    {
+        $open = $this->lead([]);
+        $won = $this->lead(['pipeline_stage_id' => $this->stages['Booked']]);
+        $this->asStaffMember();
+        foreach (['stage' => ['stage' => 'completed'], 'payment' => ['payment_status' => 'paid']] as $path => $body) {
+            $this->patchJson($this->adminApi('deals/'.$open.'/'.$path), $body)->assertNotFound();
+        }
+        $this->patchJson($this->adminApi('deals/'.$won.'/stage'), ['stage' => 'completed'])->assertOk();
+        $this->patchJson($this->adminApi('deals/'.$won.'/payment'), ['payment_status' => 'partial', 'paid_amount' => 70])->assertOk();
+        $this->assertDatabaseHas('inquiries', ['id' => $won, 'fulfillment_stage' => 'completed', 'paid_amount' => 70, 'payment_status' => 'partial']);
+        $this->patchJson($this->adminApi('deals/'.$won.'/stage'), ['stage' => 'design_sent'])->assertOk()->assertJsonPath('fulfillment_completed_at', null);
+        $this->assertDatabaseHas('inquiries', ['id' => $open, 'status' => 'New', 'payment_status' => null]);
+    }
+
+    public function test_deal_card_currency_and_month_boundary_match_the_drill_down(): void
+    {
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-30 23:00:00 UTC'));
+        app()->forgetScopedInstances();
+        $this->org->forceFill(['currency' => 'EUR'])->saveQuietly();
+        config(['cache.shared' => 'array']);
+        Http::fake([EuroReferenceRates::URL => Http::response('', 503)]);
+        $this->lead(['fulfillment_stage' => 'ready_to_ship', 'currency' => 'EUR', 'total_value' => 150]);
+        $this->lead(['fulfillment_stage' => 'ready_to_ship', 'currency' => 'GBP', 'total_value' => 90, 'payment_status' => 'paid']);
+        $completed = $this->lead(['fulfillment_stage' => 'completed', 'fulfillment_completed_at' => now()->subMinutes(20)]);
+        $this->lead(['fulfillment_stage' => 'completed', 'fulfillment_completed_at' => now()->subHours(2)]);
+        $this->lead([]);
+        $this->asStaffMember()->getJson($this->adminApi('deals/kpis'))->assertOk()->assertJsonPath('total', 2)
+            ->assertJsonPath('ready_to_ship.valuation.amount', '150.00')->assertJsonPath('ready_to_ship.valuation.currency', 'EUR')
+            ->assertJsonPath('ready_to_ship.valuation.missing_rate', 1)->assertJsonPath('completed_month.count', 1)->assertJsonPath('awaiting_payment.count', 1);
+        $this->getJson($this->adminApi('deals?focus=completed_month'))->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.id', $completed);
+        $this->getJson($this->adminApi('deals?focus=unpaid'))->assertOk()->assertJsonPath('total', 1);
+        $this->getJson($this->adminApi('deals?focus=active'))->assertOk()->assertJsonPath('total', 2);
+    }
+
+    public function test_due_now_export_uses_the_venue_day_and_ignores_finished_tasks(): void
+    {
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-04 23:30:00 UTC'));
+        app()->forgetScopedInstances();
+        $overdue = $this->lead(['next_task_due' => '2026-11-04']);
+        $today = $this->lead(['next_task_due' => '2026-11-05']);
+        $this->lead(['next_task_due' => '2026-11-06']);
+        $this->lead(['next_task_due' => '2026-11-02', 'next_task_completed' => true]);
+        $this->asStaffMember();
+        $this->assertSame([$overdue, $today], $this->exportedIds('task_due=now&sort=next_task_due&dir=asc'));
     }
 
     public function test_the_deals_total_counts_deals_only(): void

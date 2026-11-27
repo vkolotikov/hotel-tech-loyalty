@@ -1,4 +1,6 @@
 {
+  "search_short": "Buscar prospectos",
+  "view_all_count": "Ver los {{count}}",
   "lead_date": "Fecha de entrada",
   "set_currency": "Indicar moneda",
   "currency_missing": "Moneda sin especificar",

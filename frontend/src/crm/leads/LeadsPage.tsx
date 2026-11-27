@@ -26,7 +26,7 @@ import { LostDialog, WonDialog } from './LeadClose'
 import { useLeadFields, useLeadKpis, useCrmSettings, usePipelines } from './leadData'
 import { DeleteLead } from './LeadDelete'
 import {
-  activeFields, activeFilterCount, defaultPipeline, DUE_FILTERS, dueSections, exportQuery, listQuery, readFilters, sortedStages,
+  activeFields, activeFilterCount, defaultPipeline, DUE_FILTERS, PANEL_CLEARED, dueSections, exportQuery, listQuery, readFilters, sortedStages,
   toggled, toggledAll, withFilter, writeFilters, type ExportFormat, type LeadFilters,
 } from './leadLogic'
 import { LeadForm } from './LeadForm'
@@ -117,7 +117,7 @@ export function LeadsPage() {
               <Sparkles size={15} aria-hidden /><span className="hidden sm:inline">{t('crm.leads.capture', 'From a message')}</span><span className="sr-only sm:hidden">{t('crm.leads.capture', 'From a message')}</span>
             </button>
           )}
-          <Button onClick={() => records.create('lead')} className="min-h-10"><UserPlus size={15} aria-hidden />{t('crm.leads.new_short', 'Add')}</Button>
+          <Button onClick={() => records.create('lead')} className="min-h-10"><UserPlus size={15} aria-hidden />{t('crm.leads.new_title', 'Add a lead')}</Button>
         </>
       )}>
       <Figures kpis={kpis.data} lang={lang} currency={boot.venue.currency} />
@@ -187,7 +187,6 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
     queryFn: () => get<Paginated<LeadRow>>(`inquiries${params(query)}`),
     refetchInterval: boot.features.whatsapp_brand_id ? 60_000 : 0,
     enabled: sections.length === 0,
-    placeholderData: previous => previous,
   })
   const due = useQueries({
     queries: sections.map(section => ({
@@ -226,12 +225,9 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        {/* The pills scroll sideways on a phone rather than wrap onto a second row. */}
-        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
-          <div className="w-max">
-            <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value, sort: value === 'now' && filters.sort === 'newest' ? 'follow_up' : filters.sort })}
-              items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
-          </div>
+        <div className="min-w-0 flex-1">
+          <Tabs compact label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value, sort: value === 'now' && filters.sort === 'newest' ? 'follow_up' : filters.sort })}
+            items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
         </div>
         {sections.length === 0 && list.data && (
           <span className="shrink-0 text-xs text-a-text-2" aria-live="polite">
@@ -250,7 +246,10 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
             return (
               <Card key={section.key} padded={false} icon={CalendarClock} tone={section.key === 'overdue' ? 'danger' : 'pending'}
                 title={section.key === 'overdue' ? t('crm.leads.section_overdue', 'Overdue') : t('crm.leads.section_today', 'Due today')}
-                hint={result?.data ? count(result.data.total, i18n.language) : undefined}>
+                hint={result?.data ? count(result.data.total, i18n.language) : undefined}
+                action={result?.data && result.data.total > leads.length ? (
+                  <Button variant="secondary" onClick={() => change({ due: section.key })}>{t('crm.leads.view_all_count', 'View all {{count}}', { count: result.data.total })}</Button>
+                ) : undefined}>
                 <QueryState loading={result?.isLoading ?? true} error={result?.error} onRetry={() => { void result?.refetch() }} rows={2}>
                   {leads.length === 0
                     ? <p className="px-4 py-6 text-center text-sm text-a-text-2">{section.key === 'overdue' ? t('crm.leads.none_overdue', 'Nothing overdue.') : t('crm.leads.none_today', 'Nothing due today.')}</p>
@@ -266,7 +265,7 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
             {rows.length === 0 ? (
               filtered
                 ? <EmptyState icon={Target} title={t('crm.leads.none_found', 'No lead matches')} line={t('crm.leads.none_found_line', 'Try another search or clear the filters.')}
-                    action={<Button variant="secondary" onClick={() => apply({ ...filters, q: '', due: '', status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '', page: 1 })}>{t('crm.leads.clear', 'Clear filters')}</Button>} />
+                    action={<Button variant="secondary" onClick={() => apply({ ...filters, ...PANEL_CLEARED, q: '', due: '', page: 1 })}>{t('crm.leads.clear', 'Clear filters')}</Button>} />
                 : <EmptyState icon={Target} title={t('crm.leads.empty', 'No open leads yet')} line={t('crm.leads.empty_line_short', 'From the chat, your forms, or by hand.')}
                     action={<Button onClick={onAdd}><Plus size={15} aria-hidden />{t('crm.leads.new', 'Add a lead')}</Button>} />
             ) : (

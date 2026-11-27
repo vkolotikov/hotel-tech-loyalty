@@ -26,12 +26,12 @@ export function RecordListProvider({ children }: { children: ReactNode }) {
 /** Says which records the page shows, in its order, for the panel's previous and next. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useRecordList(kind: RecordKind, ids: readonly number[]): void {
-  const ctx = useContext(ListContext)
+  const setList = useContext(ListContext)?.setList
   const key = ids.join(',')
   useEffect(() => {
-    ctx?.setList(kind, key ? key.split(',').map(Number) : [])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, key])
+    setList?.(kind, key ? key.split(',').map(Number) : [])
+    return () => setList?.(kind, [])
+  }, [kind, key, setList])
 }
 
 /** The records the current page listed (for the panel). */

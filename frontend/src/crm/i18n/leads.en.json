@@ -1,4 +1,6 @@
 {
+  "search_short": "Search leads",
+  "view_all_count": "View all {{count}}",
   "lead_date": "Lead date",
   "set_currency": "Set currency",
   "currency_missing": "Currency not set",

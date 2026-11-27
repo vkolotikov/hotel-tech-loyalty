@@ -16,7 +16,7 @@ function cover() {
     branch = branch.parentElement
   }
 }
-export function modalScope(element: HTMLElement, escape: () => void) {
+export function modalScope(element: HTMLElement, escape: () => void, { afterChildren = false } = {}) {
   const before = document.activeElement instanceof HTMLElement ? document.activeElement : null
   // A resize may turn a dock into a modal while its child dialog is already open.
   const child = scopes.findIndex(scope => element.contains(scope))
@@ -27,7 +27,7 @@ export function modalScope(element: HTMLElement, escape: () => void) {
     if (scopes.at(-1) !== element || event.defaultPrevented) return
     if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); escape(); return }
     if (event.key !== 'Tab') return
-    const items = [...element.querySelectorAll<HTMLElement>(focusable)].filter(visible)
+    const items = [...element.querySelectorAll<HTMLElement>(focusable)].filter(item => item.tabIndex >= 0 && visible(item))
     const index = items.indexOf(document.activeElement as HTMLElement)
     if (!items.length || index < 0 || (!event.shiftKey && index === items.length - 1) || (event.shiftKey && index === 0)) {
       event.preventDefault()
@@ -36,10 +36,10 @@ export function modalScope(element: HTMLElement, escape: () => void) {
     }
   }
   const focus = (event: FocusEvent) => { if (scopes.at(-1) === element && !element.contains(event.target as Node)) element.focus() }
-  window.addEventListener('keydown', key, true)
+  window.addEventListener('keydown', key, !afterChildren)
   document.addEventListener('focusin', focus)
   return () => {
-    window.removeEventListener('keydown', key, true)
+    window.removeEventListener('keydown', key, !afterChildren)
     document.removeEventListener('focusin', focus)
     const index = scopes.indexOf(element)
     if (index >= 0) scopes.splice(index, 1)

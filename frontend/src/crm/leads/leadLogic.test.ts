@@ -73,7 +73,7 @@ describe('what GET inquiries is asked', () => {
     expect(sections.map(s => s.key)).toEqual(['overdue', 'today'])
     expect(sections[0].query).toMatchObject({ task_due: 'overdue', sort: 'next_task_due', page: 1, per_page: 100 })
     expect(dueSections({ ...NO_FILTERS, due: 'today' }, 'Me')).toEqual([])
-    expect(listQuery({ ...NO_FILTERS, due: 'now' }, 'Me').task_due).toBe('')
+    expect(listQuery({ ...NO_FILTERS, due: 'now' }, 'Me').task_due).toBe('now')
   })
 
   it('exports the same filters, every page, as the full admin\'s workbook or as CSV (round 5)', () => {
@@ -84,7 +84,7 @@ describe('what GET inquiries is asked', () => {
     expect(q).not.toHaveProperty('page')
     expect(q).not.toHaveProperty('per_page')
     expect(exportQuery({ ...NO_FILTERS, owner: '_nobody' }, 'Me', 'csv')).toMatchObject({ format: 'csv', unassigned: 1, active_only: true })
-    expect(exportQuery({ ...NO_FILTERS, due: 'now' }, 'Me', 'csv').task_due).toBe('')
+    expect(exportQuery({ ...NO_FILTERS, due: 'now' }, 'Me', 'csv').task_due).toBe('now')
   })
 })
 

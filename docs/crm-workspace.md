@@ -1,5 +1,9 @@
 # HexaTech CRM — runbook
 
+## Sales lists
+
+Leads, Deals and Contacts share searches by name, company, email and phone. In Deals, select a summary card to inspect its records. Export downloads the current filters and order across all pages. On a phone, use the labeled selector above the list to change follow-up period or fulfilment stage. People and Companies retain their individual searches when switching tabs. See the [sales workflow audit](crm-sales-audit-2026-11-27.md) for the changes and verification.
+
 ## Lead list
 
 The Leads table shows the date each lead entered the CRM in the venue’s time zone. Select a column heading to order the filtered list, then select it again to reverse the order. On phones, the date appears on the card and the Sort menu controls the order.

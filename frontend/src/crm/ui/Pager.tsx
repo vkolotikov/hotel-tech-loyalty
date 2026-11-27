@@ -1,10 +1,14 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 /** Previous and next under a long list (Laravel's paginator: current_page, last_page, total). */
 export function Pager({ page, last, total, onPage }: { page: number; last: number; total?: number; onPage: (page: number) => void }) {
   const { t } = useTranslation()
-  if (last <= 1) return null
+  useEffect(() => {
+    if (page > Math.max(1, last)) onPage(Math.max(1, last))
+  }, [page, last, onPage])
+  if (page > last || last <= 1) return null
   const button = 'inline-flex min-h-9 items-center gap-1 rounded-full border border-a-border bg-a-surface px-3 text-sm text-a-text disabled:opacity-40'
   return (
     <nav aria-label={t('crm.common.pages', 'Pages')} className="flex items-center justify-between gap-3 pt-2">

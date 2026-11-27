@@ -1,4 +1,7 @@
 {
+  "search_short": "Chercher une affaire",
+  "deal_value": "Valeur des affaires {{amount}}",
+  "excluded": "{{count}} hors total",
   "add": "Ajouter le deal",
   "added": "Deal ajouté",
   "ai_next": "IA :",

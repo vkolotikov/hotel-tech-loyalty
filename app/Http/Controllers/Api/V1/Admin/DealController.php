@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inquiry;
+use App\Models\Organization;
+use App\Services\Crm\DealListQuery;
+use App\Services\Crm\OpenLeadValue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -54,78 +57,22 @@ class DealController extends Controller
             'guest:id,full_name,company,email,phone,mobile',
             'property:id,name,code',
             'pipelineStage:id,name,color,kind',
-        ])->where(function ($q) {
-            $q->whereNotNull('fulfillment_stage')
-              ->orWhere('status', 'Confirmed')
-              ->orWhereHas('pipelineStage', fn ($p) => $p->where('kind', 'won'));
-        });
-
-        if ($s = $request->get('search')) {
-            $query->where(function ($q) use ($s) {
-                $q->where('event_name', 'ilike', "%$s%")
-                  ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', fn ($g) => $g
-                      ->where('full_name', 'ilike', "%$s%")
-                      ->orWhere('company', 'ilike', "%$s%"));
-            });
-        }
-
-        if ($stage = $request->get('stage'))     $query->where('fulfillment_stage', $stage);
-        if ($p     = $request->get('payment'))   $query->where('payment_status', $p);
-        if ($prop  = $request->get('property_id')) $query->where('property_id', $prop);
-        if ($own   = $request->get('owner'))     $query->where('assigned_to', $own);
-
-        $focus = $request->get('focus');
-        if ($focus === 'overdue') {
-            $query->where('next_task_completed', false)
-                  ->whereNotNull('next_task_due')
-                  ->where('next_task_due', '<', \App\Services\Appointments\VenueClock::today((int) app('current_organization_id')));
-        } elseif ($focus === 'high_value') {
-            // Top quartile by total_value over open (not completed) deals.
-            // Cheap heuristic: anything >= 500 is "high value" — staff can
-            // change the threshold per-org later via crm_settings.
-            $query->whereNotNull('total_value')
-                  ->where('total_value', '>=', 500)
-                  ->where(fn ($q) => $q->whereNull('fulfillment_stage')
-                                       ->orWhere('fulfillment_stage', '!=', 'completed'));
-        }
-
-        $sort = $request->get('sort', 'due_date');
-        if ($sort === 'amount') {
-            $query->orderByDesc('total_value');
-        } elseif ($sort === 'created') {
-            $query->orderByDesc('created_at');
-        } else {
-            // Default: due date asc, with overdue at the top
-            $query->orderByRaw('next_task_due IS NULL, next_task_due ASC');
-        }
-
-        $perPage = (int) $request->get('per_page', 10);
-        $page = $query->paginate(min($perPage, 50));
-
+        ]);
+        DealListQuery::apply($query, $request);
+        $page = $query->paginate(max(1, min($request->integer('per_page', 10), 50)));
         return response()->json($page);
     }
 
     /**
      * GET /v1/admin/deals/kpis — 6 headline numbers for the page header.
      *
-     * total + per-stage counts + per-stage sum(total_value) + completed-
-     * this-month bucket. All inside one query pass so the page stays
-     * snappy regardless of pipeline size.
+     * Counts and reporting-currency values for the same records as each list filter.
      */
-    public function kpis(): JsonResponse
+    public function kpis(OpenLeadValue $valuation): JsonResponse
     {
-        $base = Inquiry::query()->where(function ($q) {
-            $q->whereNotNull('fulfillment_stage')
-              ->orWhere('status', 'Confirmed')
-              ->orWhereHas('pipelineStage', fn ($p) => $p->where('kind', 'won'));
-        });
-
-        // Deals not yet completed. The "no stage yet" alternative is grouped with its pair (2026-11-08): a bare
-        // orWhereNull() beside the deal condition counted every inquiry without a fulfilment stage as a deal.
-        $total = (clone $base)
-            ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
-            ->count();
+        $base = DealListQuery::deals(Inquiry::query());
+        $organization = Organization::findOrFail(app('current_organization_id'));
+        $total = DealListQuery::active(clone $base)->count();
 
         $byStage = (clone $base)
             ->whereNotNull('fulfillment_stage')
@@ -134,24 +81,13 @@ class DealController extends Controller
             ->get()
             ->keyBy('fulfillment_stage');
 
-        // Awaiting Payment — count deals whose payment_status is not paid.
-        // Distinct from fulfillment_stage=payment_pending because a deal
-        // can be in_production with payment still partial.
-        $awaitingPay = (clone $base)
-            ->where(function ($q) {
-                $q->whereIn('payment_status', ['pending', 'invoice_sent', 'partial'])
-                  ->orWhereNull('payment_status');
-            })
-            ->where(fn ($q) => $q->whereNull('fulfillment_stage')
-                                 ->orWhere('fulfillment_stage', '!=', 'completed'));
-        $awaitingPayCount = (clone $awaitingPay)->count();
-        $awaitingPayValue = (clone $awaitingPay)->sum('total_value');
-
-        $completedThisMonth = (clone $base)
-            ->where('fulfillment_stage', 'completed')
-            ->where('fulfillment_completed_at', '>=', now()->startOfMonth());
-        $completedCount = (clone $completedThisMonth)->count();
-        $completedValue = (clone $completedThisMonth)->sum('total_value');
+        $awaitingPay = DealListQuery::unpaid(clone $base);
+        $completedThisMonth = DealListQuery::completedThisMonth(clone $base);
+        $figure = fn ($query) => [
+            'count' => (clone $query)->count(),
+            'value' => round((float) (clone $query)->sum('total_value'), 2),
+            'valuation' => $valuation->summary($query, $organization),
+        ];
 
         $stageRow = fn (string $key) => [
             'count' => (int) ($byStage[$key]->cnt ?? 0),
@@ -161,13 +97,17 @@ class DealController extends Controller
         return response()->json([
             'total'              => $total,
             // Deals not paid in full, whatever their step (the full admin's figure, kept as it was).
-            'awaiting_payment'   => ['count' => $awaitingPayCount, 'value' => round((float) $awaitingPayValue, 2)],
+            'awaiting_payment'   => $figure($awaitingPay),
             // The step "Awaiting payment" itself (2026-11-08): what `?stage=payment_pending` lists, so its pill can count.
             'payment_pending'    => $stageRow('payment_pending'),
             'design_needed'      => $stageRow('design_needed'),
+            'design_sent'        => $stageRow('design_sent'),
+            'completed'          => $stageRow('completed'),
             'in_production'      => $stageRow('in_production'),
-            'ready_to_ship'      => $stageRow('ready_to_ship'),
-            'completed_month'    => ['count' => $completedCount, 'value' => round((float) $completedValue, 2)],
+            'ready_to_ship'      => $stageRow('ready_to_ship') + [
+                'valuation' => $valuation->summary((clone $base)->where('fulfillment_stage', 'ready_to_ship'), $organization),
+            ],
+            'completed_month'    => $figure($completedThisMonth),
         ]);
     }
 
@@ -323,7 +263,7 @@ class DealController extends Controller
             'stage' => 'required|string|in:' . implode(',', self::STAGES),
         ]);
 
-        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+        $inquiry = DealListQuery::deals(Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class))->findOrFail($id);
         $oldStage = $inquiry->fulfillment_stage;
         $inquiry->fulfillment_stage = $validated['stage'];
 
@@ -360,7 +300,7 @@ class DealController extends Controller
             'paid_amount'    => 'nullable|numeric|min:0',
         ]);
 
-        $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+        $inquiry = DealListQuery::deals(Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class))->findOrFail($id);
         if (array_key_exists('payment_status', $validated)) {
             $inquiry->payment_status = $validated['payment_status'];
         }

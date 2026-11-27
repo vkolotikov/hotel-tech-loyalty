@@ -1,4 +1,7 @@
 {
+  "search_short": "Buscar acuerdos",
+  "deal_value": "Valor de los acuerdos {{amount}}",
+  "excluded": "{{count}} fuera del total",
   "add": "Añadir el deal",
   "added": "Deal añadido",
   "ai_next": "IA:",

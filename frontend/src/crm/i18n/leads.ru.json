@@ -1,4 +1,6 @@
 {
+  "search_short": "Найти лид",
+  "view_all_count": "Показать все ({{count}})",
   "lead_date": "Дата поступления",
   "set_currency": "Указать валюту",
   "currency_missing": "Валюта не указана",

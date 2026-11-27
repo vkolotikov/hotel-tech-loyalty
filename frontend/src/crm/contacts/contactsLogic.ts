@@ -15,6 +15,8 @@ export const SORTS = {
   newest: { sort: 'created_at', dir: 'desc' },
   oldest: { sort: 'created_at', dir: 'asc' },
   updated: { sort: 'updated_at', dir: 'desc' },
+  name_asc: { sort: 'full_name', dir: 'asc' },
+  name_desc: { sort: 'full_name', dir: 'desc' },
 } as const
 export type SortKey = keyof typeof SORTS
 export const SORT_KEYS = Object.keys(SORTS) as SortKey[]
@@ -116,7 +118,7 @@ export type ExportFormat = 'xlsx' | 'csv'
  */
 export function exportParams(f: PeopleFilters, ids: number[], format: ExportFormat = 'csv'): Record<string, string> {
   const base: Record<string, string> = ids.length > 0 ? { ids: ids.join(',') } : filterParams(f)
-  return format === 'csv' ? { ...base, format: 'csv' } : base
+  return { ...base, ...SORTS[f.sort], ...(format === 'csv' ? { format: 'csv' } : {}) }
 }
 
 /** How many filters narrow the list now (the search is not one of the Filters panel's). */
@@ -130,11 +132,11 @@ export function activeFilters(f: PeopleFilters): { key: FilterKey; value: string
 }
 
 /** The address with one filter set or cleared; any change of filter goes back to the first page. */
-export function withParam(search: URLSearchParams, key: string, value: string | null): URLSearchParams {
+export function withParam(search: URLSearchParams, key: string, value: string | null, pageKey = 'page'): URLSearchParams {
   const next = new URLSearchParams(search)
   if (value === null || value === '') next.delete(key)
   else next.set(key, value)
-  if (key !== 'page') next.delete('page')
+  if (key !== pageKey) next.delete(pageKey)
   return next
 }
 

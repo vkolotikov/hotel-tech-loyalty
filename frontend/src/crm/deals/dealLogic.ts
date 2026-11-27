@@ -1,5 +1,6 @@
 import { amount, formatParam, type ExportFormat } from '../leads/leadLogic'
 import { columnsOf } from '../leads/listLogic'
+import type { OpenLeadValue } from '../lib/types'
 import type { LeadRow } from '../leads/leadTypes'
 
 /**
@@ -21,7 +22,7 @@ export interface DealRow extends LeadRow {
   property?: { id: number; name: string } | null
 }
 
-export interface StageFigure { count: number; value: number }
+export interface StageFigure { count: number; value: number; valuation?: OpenLeadValue }
 
 /** `GET deals/kpis` (DealController::kpis); `total` is the deals not yet completed. */
 export interface DealKpis {
@@ -31,6 +32,8 @@ export interface DealKpis {
   /** The step "Awaiting payment" itself, what its pill lists (since 2026-11-08; absent from an older server). */
   payment_pending?: StageFigure
   design_needed: StageFigure
+  design_sent?: StageFigure
+  completed?: StageFigure
   in_production: StageFigure
   ready_to_ship: StageFigure
   completed_month: StageFigure
@@ -43,7 +46,7 @@ export const PAYMENTS = ['pending', 'invoice_sent', 'partial', 'paid', 'refunded
 export type Payment = (typeof PAYMENTS)[number]
 
 /** The quick filters (the full admin's Deals pills, with the Ready step the server filters too). */
-export const DEAL_FILTERS = ['all', 'payment_pending', 'design_needed', 'in_production', 'ready_to_ship', 'overdue', 'high_value'] as const
+export const DEAL_FILTERS = ['all', ...FULFILMENT, 'overdue', 'high_value', 'active', 'unpaid', 'completed_month'] as const
 export type DealFilter = (typeof DEAL_FILTERS)[number]
 
 export const DEAL_SORTS = ['due_date', 'amount', 'created'] as const
@@ -103,27 +106,22 @@ export function withDealView(view: DealView, patch: Partial<DealView>): DealView
 
 /** `GET deals` for a filter, a page and a sort (round 1's call), and the search, payment and owner when set. */
 export function dealsQuery(filter: DealFilter, page: number, sort: DealSort = 'due_date', extra: { q?: string; payment?: string; owner?: string } = {}): Record<string, string | number> {
-  const q: Record<string, string | number> = { page, per_page: 20, sort }
-  if (filter === 'payment_pending' || filter === 'design_needed' || filter === 'in_production' || filter === 'ready_to_ship') q.stage = filter
-  if (filter === 'overdue' || filter === 'high_value') q.focus = filter
+  return { page, per_page: 20, ...dealFilters(filter, sort, extra) }
+}
+
+function dealFilters(filter: DealFilter, sort: DealSort, extra: Partial<Pick<DealView, 'q' | 'payment' | 'owner'>>): Record<string, string> {
+  const q: Record<string, string> = { sort }
+  if (isFulfilment(filter)) q.stage = filter
+  else if (filter !== 'all') q.focus = filter
   if (extra.q?.trim()) q.search = extra.q.trim()
   if (extra.payment) q.payment = extra.payment
   if (extra.owner) q.owner = extra.owner
   return q
 }
 
-/**
- * The won leads as a file (`GET inquiries/export`, the full admin exports `status=Confirmed`): its Excel workbook, or
- * CSV; with the search and the owner when set. Round 5: asked of the export itself (it was asked of `GET inquiries`,
- * which answers JSON, so the CSV came out empty).
- */
-export function dealsExportQuery(view: DealView, format: ExportFormat = 'xlsx'): Record<string, string> {
-  return {
-    status: 'Confirmed',
-    ...formatParam(format),
-    ...(view.q.trim() ? { search: view.q.trim() } : {}),
-    ...(view.owner ? { assigned_to: view.owner } : {}),
-  }
+/** Export the current list in its displayed order across every page. */
+export function dealsExportQuery(view: DealView, format: ExportFormat = 'xlsx'): Record<string, string | number> {
+  return { list: 'deals', ...dealFilters(view.filter, view.sort, view), ...formatParam(format) }
 }
 
 /** How many of the toolbar's filters are set (search, payment, owner). */
@@ -134,8 +132,9 @@ export function dealFilterCount(view: DealView): number {
 /** A filter pill's count where the server's figure counts exactly what the filter lists; none otherwise. */
 export function filterCount(filter: DealFilter, kpis: DealKpis | null | undefined): number | undefined {
   if (!kpis) return undefined
-  if (filter === 'design_needed' || filter === 'in_production' || filter === 'ready_to_ship') return kpis[filter]?.count
-  if (filter === 'payment_pending') return kpis.payment_pending?.count
+  if (isFulfilment(filter) || filter === 'completed_month') return kpis[filter]?.count
+  if (filter === 'active') return kpis.total
+  if (filter === 'unpaid') return kpis.awaiting_payment?.count
   return undefined
 }
 

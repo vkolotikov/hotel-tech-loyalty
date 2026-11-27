@@ -1,5 +1,9 @@
 # Handoff — 27 November 2026
 
+## CRM sales workflows
+
+The [sales workflow audit](../crm-sales-audit-2026-11-27.md) covers Leads, Deals and Contacts. The deal list and its export share the same query. Deal summary cards use reporting-currency valuations and open their matching lists. The staff CRM also has mobile follow-up and fulfilment selectors, contact shortcuts, and keyboard focus management for record and form panels.
+
 ## Lead list
 
 The Leads table shows the date each lead entered the CRM in the venue’s time zone. Select a column heading to order the filtered list, then select it again to reverse the order. On phones, the date appears on the card and the Sort menu controls the order.
