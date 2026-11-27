@@ -157,7 +157,7 @@ final class LeadAssistantWriter
                     }
                 }
             } catch (CrmAssistantGenerationFailed $error) {
-                Log::warning('CRM assistant correction unavailable', ['organization_id' => $org->id, 'brand_id' => $brand->id,
+                Log::error('CRM assistant correction unavailable', ['organization_id' => $org->id, 'brand_id' => $brand->id,
                     'stage' => $error->stage, 'reason' => $error->reason, 'http_status' => $error->httpStatus]);
             } catch (AiHelperRefused $error) {
                 if ($error->errorCode !== 'ai_budget_used_up') {

@@ -372,7 +372,7 @@ class LeadAssistantTest extends TestCase
         $lead = $this->lead(['notes' => 'Review the finish before pricing.']);
         $diagnostics = [];
         Event::listen(MessageLogged::class, static function (MessageLogged $event) use (&$diagnostics) {
-            if ($event->level === 'warning' && $event->message === 'CRM assistant correction unavailable') {
+            if ($event->level === 'error' && $event->message === 'CRM assistant correction unavailable') {
                 $diagnostics[] = $event->context;
             }
         });
