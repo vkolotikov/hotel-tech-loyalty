@@ -60,7 +60,7 @@ export function SortMenu<T extends string>({ value, choices, label, word, onChan
   onChange: (next: T) => void
 }) {
   return (
-    <span title={`${label}: ${word(value)}`} className="inline-flex">
+    <span title={`${label}: ${word(value)}`} className="inline-flex [&_[role=menu]]:max-h-[min(50dvh,24rem)] [&_[role=menu]]:overflow-y-auto">
       <ActionMenu label={`${label}: ${word(value)}`} className={TOOL} button={<ArrowDownUp size={16} aria-hidden />}
         items={[{ heading: label }, ...choices.map(choice => ({ key: choice, label: word(choice), checked: choice === value, onSelect: () => onChange(choice) }))]} />
     </span>
