@@ -47,6 +47,7 @@ export function boardQuery(filters?: LeadFilters, me = ''): Record<string, strin
   put('inquiry_type', filters.type)
   put('country', filters.country)
   put('has_phone', filters.phone)
+  if (filters.missingCurrency) q.missing_currency = 1
   const range = dateRange(filters.from, filters.to)
   if (range.date_from) q.date_from = range.date_from
   if (range.date_to) q.date_to = range.date_to

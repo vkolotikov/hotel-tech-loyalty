@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\CrmWorkspace;
 
+use App\Services\Crm\EuroReferenceRates;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpCrmWorkspace;
 use Tests\TestCase;
@@ -43,6 +45,21 @@ class LeadsAndDealsTest extends TestCase
         $this->asStaffMember()->putJson($url, ['inquiry_type' => 'Bespoke production'])->assertOk()->assertJsonPath('inquiry_type', 'Bespoke production');
         $this->putJson($url, ['inquiry_type' => null, 'currency' => 'EUR', 'total_value' => 78.5])->assertOk()->assertJsonPath('inquiry_type', null)->assertJsonPath('value_currency', 'EUR');
         $this->putJson($url, ['currency' => 'XXX', 'total_value' => 78.5])->assertUnprocessable();
+    }
+
+    public function test_open_value_handles_missing_rates_and_uses_the_venues_currency_for_unlabelled_venue_amounts(): void
+    {
+        config(['cache.shared' => 'array']);
+        Http::fake([EuroReferenceRates::URL => Http::response('', 503)]);
+        $this->org->forceFill(['currency' => 'CAD'])->saveQuietly();
+        $this->lead(['total_value' => '150', 'currency' => 'GBP']);
+        $url = $this->adminApi('inquiries/kpis');
+        $this->asStaffMember()->getJson($url)->assertOk()->assertJsonPath('open_value.amount', null)
+            ->assertJsonPath('open_value.missing_rate', 1)->assertJsonPath('open_value.groups.0.included', false);
+        $this->lead(['total_value' => 90]);
+        $this->getJson($url)->assertOk()->assertJsonPath('open_value.currency', 'CAD')->assertJsonPath('open_value.amount', '90.00')
+            ->assertJsonPath('open_value.converted', false)->assertJsonPath('open_value.missing_currency', 0);
+        Http::assertSentCount(1);
     }
 
     private function widenTables(): void

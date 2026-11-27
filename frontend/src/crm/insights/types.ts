@@ -49,6 +49,7 @@ export interface ChatAnalytics {
 
 /** `GET inquiries/kpis` (InquiryController::kpis). */
 export interface LeadKpis {
+  open_value?: import('../lib/types').OpenLeadValue
   total: number
   due_today: number
   overdue: number

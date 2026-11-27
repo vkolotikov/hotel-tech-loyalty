@@ -1,4 +1,11 @@
 {
+  "set_currency": "Indicar moneda",
+  "currency_missing": "Moneda sin especificar",
+  "currency_to_review": "Sin moneda ({{count}} sin incluir)",
+  "rate_missing": "Sin tipo de cambio ({{count}} sin incluir)",
+  "currency_breakdown": "Desglose por moneda",
+  "rate_unavailable": "Tipo no disponible",
+  "rate_date": "Tipos del BCE · {{date}}",
   "currency": "Moneda",
   "needs_reply": "Necesita respuesta",
   "awaiting_customer": "Esperando al cliente",

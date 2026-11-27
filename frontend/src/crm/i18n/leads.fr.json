@@ -1,4 +1,11 @@
 {
+  "set_currency": "Renseigner la devise",
+  "currency_missing": "Devise non renseignée",
+  "currency_to_review": "Devise manquante ({{count}} hors total)",
+  "rate_missing": "Taux manquant ({{count}} hors total)",
+  "currency_breakdown": "Détail par devise",
+  "rate_unavailable": "Taux indisponible",
+  "rate_date": "Taux de la BCE · {{date}}",
   "currency": "Devise",
   "needs_reply": "À répondre",
   "awaiting_customer": "En attente du client",

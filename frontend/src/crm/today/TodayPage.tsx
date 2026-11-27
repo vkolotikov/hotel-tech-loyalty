@@ -2,9 +2,10 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { OpenValueTile } from '../ui/OpenValueTile'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity, AlarmClock, ArrowRight, BarChart3, CalendarClock, CalendarPlus, Check, CheckSquare, Coins, Inbox, Loader2, MessageCircle,
+  Activity, AlarmClock, ArrowRight, BarChart3, CalendarClock, CalendarPlus, Check, CheckSquare, Inbox, Loader2, MessageCircle,
   PartyPopper, Rocket, Sun, UserPlus, UserX,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -122,7 +123,7 @@ function TodayBody({ data, lang, zone, currency }: { data: Today; lang: string; 
                     hint={data.chats.unassigned > 0 ? t('crm.today.with_nobody', '{{count}} with nobody', { count: data.chats.unassigned }) : undefined} to="/crm/inbox" />
                 : key === 'new_leads'
                   ? <StatTile icon={UserPlus} tone="accent" label={t('crm.today.new_leads', 'New leads')} value={count(data.leads.new, lang)} hint={t('crm.today.last_24h_short', '24 h')} to="/crm/leads" />
-                  : <StatTile icon={Coins} tone="success" label={t('crm.today.pipeline', 'Open pipeline')} value={money(data.pipeline.open_value, currency, lang)}
+                  : <OpenValueTile label={t('crm.today.pipeline', 'Open pipeline')} valuation={data.pipeline.valuation} fallback={money(data.pipeline.open_value, currency, lang)}
                       hint={t('crm.today.open_short', '{{count}} open', { count: data.pipeline.open_count })} to="/crm/pipeline" />
               return <div key={key} className={last ? 'col-span-2 lg:col-span-1' : undefined}>{tile}</div>
             })}

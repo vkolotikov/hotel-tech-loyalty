@@ -70,6 +70,7 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
       case 'type': return t('crm.leads.chip_type', 'Type: {{value}}', { value: filters.type })
       case 'country': return t('crm.leads.chip_country', 'Country: {{value}}', { value: filters.country })
       case 'phone': return phoneLabel(t, filters.phone)
+      case 'missingCurrency': return t('crm.leads.currency_missing', 'Currency not set')
       default: return t('crm.leads.chip_dates', 'Came in: {{from}} – {{to}}', { from: dayLabel(filters.from, i18n.language) || '…', to: dayLabel(filters.to, i18n.language) || '…' })
     }
   }
@@ -289,6 +290,10 @@ function FilterPanel({ filters, stages, onChange, onClear }: { filters: LeadFilt
           {(['', 'yes', 'no'] as const).map(p => <option key={p} value={p}>{phoneLabel(t, p)}</option>)}
         </Select>
       </Field>
+      <label className="flex min-h-11 items-center gap-2 text-sm text-a-text">
+        <input type="checkbox" checked={filters.missingCurrency} onChange={e => onChange({ missingCurrency: e.target.checked })} />
+        {t('crm.leads.currency_missing', 'Currency not set')}
+      </label>
       <Field label={t('crm.leads.created_from', 'Came in from')}>
         <TextInput type="date" value={filters.from} onChange={e => onChange({ from: e.target.value })} />
       </Field>

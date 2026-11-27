@@ -21,6 +21,7 @@ use App\Services\Crm\LeadAssistantWriter;
 use App\Services\Crm\EmailDraftRevision;
 use App\Services\Crm\LeadEmailEvidence;
 use App\Services\Crm\LeadReplyBadges;
+use App\Services\Crm\OpenLeadValue;
 use App\Services\Crm\SalesBrand;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
@@ -92,6 +93,7 @@ class InquiryController extends Controller
         // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
         if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($request->boolean('missing_currency')) $query->missingValueCurrency();
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
         if ($v = $request->get('has_phone')) {
@@ -420,7 +422,7 @@ class InquiryController extends Controller
         if ($request->has('currency')) {
             $currency = $request->validate(['currency' => ['required', \Illuminate\Validation\Rule::in(\App\Services\Crm\EmailPriceCheck::currencyCodes())],
                 'total_value' => 'present|nullable|numeric|min:0'])['currency'];
-            abort_if($inquiry->currency && ($inquiry->paid_amount > 0 || $inquiry->rate_offered !== null) && $currency !== $inquiry->currency, 422);
+            abort_if($inquiry->currency && $inquiry->value_currency !== 'XXX' && ($inquiry->paid_amount > 0 || $inquiry->rate_offered !== null) && $currency !== $inquiry->currency, 422);
             $v['currency'] = $currency;
         }
         $checkIn  = $v['check_in'] ?? $inquiry->check_in?->toDateString();
@@ -602,12 +604,12 @@ class InquiryController extends Controller
      *   - total          : total open inquiries (everything not Confirmed/Lost)
      *   - due_today      : open inquiries with next_task_due == today and not done
      *   - overdue        : open inquiries with next_task_due < today and not done
-     *   - estimated_value: sum(total_value) over open inquiries
+     *   - estimated_value: known open value in the reporting currency (open_value includes coverage and rates)
      *   - new_this_week  : inquiries created in last 7 days
      *
      * Deltas are vs prior period (last 7 days for "new", last 30 days for "total").
      */
-    public function kpis(): JsonResponse
+    public function kpis(OpenLeadValue $valuation): JsonResponse
     {
         // Follow-up days are the venue's calendar days (2026-11-08); the periods below are instants.
         $todayStr     = $this->venueToday();
@@ -640,11 +642,8 @@ class InquiryController extends Controller
             ->where('next_task_due', '<', $todayStr)
             ->count();
 
-        $amounts = Inquiry::where($openScope)->whereNotNull('total_value')
-            ->selectRaw('organization_id, brand_id, currency, SUM(total_value) as amount')->groupBy('organization_id', 'brand_id', 'currency')->toBase()->get()
-            ->map(fn ($row) => ['amount' => $row->amount, 'currency' => $row->currency ?? (
-                (int) $row->organization_id === \App\Services\Integrations\CrmMail::ORGANIZATION && (int) $row->brand_id === \App\Services\Integrations\CrmMail::BRAND ? 'XXX' : null)]);
-        $estimatedValue = (float) $amounts->sum('amount');
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : auth()->user()?->organization_id;
+        $openValue = $valuation->summary(Inquiry::where($openScope), Organization::findOrFail($orgId));
 
         $newThisWeek = Inquiry::where('created_at', '>=', $weekAgo)->count();
         $newLastWeek = Inquiry::whereBetween('created_at', [$twoWeeksAgo, $weekAgo])->count();
@@ -657,8 +656,9 @@ class InquiryController extends Controller
             'total_delta_pct' => $totalPct,
             'due_today'       => $dueToday,
             'overdue'         => $overdue,
-            'estimated_value' => round($estimatedValue, 2),
-            'values_by_currency' => $amounts,
+            'estimated_value' => (float) $openValue['amount'],
+            'values_by_currency' => $openValue['groups'],
+            'open_value'      => $openValue,
             'new_this_week'   => $newThisWeek,
             'new_delta_pct'   => $newPct,
         ]);
@@ -1000,6 +1000,7 @@ class InquiryController extends Controller
         // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
         if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($request->boolean('missing_currency')) $query->missingValueCurrency();
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
         if ($v = $request->get('has_phone')) {

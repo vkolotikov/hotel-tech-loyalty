@@ -53,6 +53,7 @@ class WorkspaceController extends Controller
                 'timezone' => VenueClock::zone($orgId),
                 'today'    => VenueClock::today($orgId),
                 'currency' => PortalBootstrap::currency($org),
+                'lead_currencies' => \App\Services\Crm\EmailPriceCheck::currencyCodes(),
                 'lead_currency' => $orgId === \App\Services\Integrations\CrmMail::ORGANIZATION
                     && (int) $newLeadBrand === \App\Services\Integrations\CrmMail::BRAND
                     ? 'EUR' : PortalBootstrap::currency($org),

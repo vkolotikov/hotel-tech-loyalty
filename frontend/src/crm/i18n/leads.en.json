@@ -1,4 +1,11 @@
 {
+  "set_currency": "Set currency",
+  "currency_missing": "Currency not set",
+  "currency_to_review": "Missing currency ({{count}} excluded)",
+  "rate_missing": "No exchange rate ({{count}} excluded)",
+  "currency_breakdown": "Currency breakdown",
+  "rate_unavailable": "Rate unavailable",
+  "rate_date": "ECB rates · {{date}}",
   "currency": "Currency",
   "needs_reply": "Needs reply",
   "awaiting_customer": "Awaiting customer",

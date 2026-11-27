@@ -58,7 +58,7 @@ function Fact({ icon: Icon, label, children, wide = false }: { icon: LucideIcon;
  * The facts that decide the next move (round 5): the value, the owner, the priority and the next step, each changed
  * where it stands (`PUT inquiries/{id}`, one field at a time); the next step is done in one press (`complete-task`).
  */
-export function KeyFacts({ lead }: { lead: LeadDetail }) {
+export function KeyFacts({ lead, onEdit }: { lead: LeadDetail; onEdit: () => void }) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const lang = i18n.language
@@ -81,8 +81,13 @@ export function KeyFacts({ lead }: { lead: LeadDetail }) {
     <div className="space-y-3">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <Fact icon={Coins} label={t('crm.leads.value', 'Value')}>
-          <InlineField label={t('crm.leads.value', 'Value')} kind="number" busy={busy} value={value === null ? '' : String(value)} onSave={save('value')}
-            display={value === null ? undefined : <span className="font-a-display text-lg leading-tight">{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>} />
+          {lead.value_currency === 'XXX' && value !== null ? (
+            <button type="button" onClick={onEdit} className="text-start">
+              <span className="block font-a-display text-lg leading-tight">{new Intl.NumberFormat(lang).format(value)}</span>
+              <span className="text-xs text-a-accent-text underline">{t('crm.leads.set_currency', 'Set currency')}</span>
+            </button>
+          ) : <InlineField label={t('crm.leads.value', 'Value')} kind="number" busy={busy} value={value === null ? '' : String(value)} onSave={save('value')}
+            display={value === null ? undefined : <span className="font-a-display text-lg leading-tight">{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>} />}
         </Fact>
         <Fact icon={UserRound} label={t('crm.leads.field_owner', 'Owner')}>
           <InlineField label={t('crm.leads.field_owner', 'Owner')} kind="select" busy={busy} value={lead.assigned_to ?? ''} options={owners} onSave={save('owner')}

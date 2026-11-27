@@ -1,3 +1,6 @@
+import i18n from 'i18next'
+import type { OpenLeadValue } from './types'
+
 /**
  * How HexaTech CRM writes times, days and money, in the person's language (i18n.language). Pure: the tests render to a
  * string. An instant (a chat's last message, a task's due time) is shown in the venue's zone; a day (a lead's
@@ -53,18 +56,29 @@ export function money(amount: number | string | null | undefined, currency: stri
 }
 
 export function currencyLabel(code: string, lang: string): string {
-  return code === 'XXX' ? new Intl.DisplayNames([lang], { type: 'currency' }).of(code) ?? code : code
+  return code === 'XXX' ? i18n.t('crm.leads.currency_missing', { lng: lang, defaultValue: 'Currency not set' }) || 'Currency not set' : code
+}
+
+export function reportingValue(value: OpenLeadValue, lang: string): string {
+  return (value.converted && value.amount !== null ? '≈ ' : '') + money(value.amount, value.currency, lang)
 }
 
 /** Keep original currencies separate when an opportunity list spans markets. */
 export function moneyTotals(rows: readonly { amount: number | string | null; currency?: string | null }[], fallback: string, lang: string): string {
   const totals = new Map<string, number>()
+  let missing = 0
   for (const row of rows) {
     if (row.amount == null) continue
     const code = row.currency || fallback
+    if (code === 'XXX') {
+      if (Number(row.amount) !== 0) missing++
+      continue
+    }
     totals.set(code, (totals.get(code) ?? 0) + Math.round(Number(row.amount) * 100))
   }
-  return [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, cents]) => money(cents / 100, code, lang)).join(' + ') || money(0, fallback, lang)
+  const parts = [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, cents]) => money(cents / 100, code, lang))
+  if (missing) parts.push(`${currencyLabel('XXX', lang)} (${count(missing, lang)})`)
+  return parts.join(' · ') || money(0, fallback, lang)
 }
 
 /** A plain count in the person's language: "1 250". */

@@ -64,6 +64,7 @@ export interface LeadFilters {
   /** The contact's country. */
   country: string
   phone: PhoneFilter
+  missingCurrency: boolean
   /** Created from / to, `YYYY-MM-DD`. */
   from: string
   to: string
@@ -72,11 +73,13 @@ export interface LeadFilters {
 }
 
 export const NO_FILTERS: LeadFilters = {
+  missingCurrency: false,
   q: '', due: '', status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '', sort: 'newest', page: 1,
 }
 
 /** The "Filters" panel's choices, all cleared (search, follow-up and sort stay). */
-export const PANEL_CLEARED: Pick<LeadFilters, 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'from' | 'to'> = {
+export const PANEL_CLEARED: Pick<LeadFilters, 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'missingCurrency' | 'from' | 'to'> = {
+  missingCurrency: false,
   status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '',
 }
 
@@ -96,6 +99,7 @@ export function readFilters(sp: URLSearchParams): LeadFilters {
     priority: read(sp, 'priority'),
     type: read(sp, 'type'),
     country: read(sp, 'country'),
+    missingCurrency: read(sp, 'missing_currency') === '1',
     phone: read(sp, 'phone') === 'yes' || read(sp, 'phone') === 'no' ? (read(sp, 'phone') as PhoneFilter) : '',
     from: isDay(from) ? from : '',
     to: isDay(to) ? to : '',
@@ -117,6 +121,7 @@ export function writeFilters(filters: LeadFilters, current: URLSearchParams = ne
   set('type', filters.type)
   set('country', filters.country)
   set('phone', filters.phone)
+  set('missing_currency', filters.missingCurrency ? '1' : '')
   set('from', filters.from)
   set('to', filters.to)
   set('sort', filters.sort === 'newest' ? '' : filters.sort)
@@ -131,7 +136,7 @@ export function withFilter(filters: LeadFilters, patch: Partial<LeadFilters>): L
 
 /** How many of the "Filters" panel's choices are set (stage, source, owner, priority, type, country, phone, dates). */
 export function activeFilterCount(filters: LeadFilters): number {
-  return [filters.status, filters.source, filters.owner, filters.priority, filters.type, filters.country, filters.phone, filters.from || filters.to]
+  return [filters.status, filters.source, filters.owner, filters.priority, filters.type, filters.country, filters.phone, filters.missingCurrency, filters.from || filters.to]
     .filter(Boolean).length
 }
 
@@ -166,6 +171,7 @@ export function listQuery(filters: LeadFilters, me: string, perPage = 25): Query
     inquiry_type: filters.type,
     country: filters.country,
     has_phone: filters.phone,
+    ...(filters.missingCurrency ? { missing_currency: 1 } : {}),
     ...dateRange(filters.from, filters.to),
     task_due: filters.due === 'now' ? '' : filters.due,
     sort: sort.sort,

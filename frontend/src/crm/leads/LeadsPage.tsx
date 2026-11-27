@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarClock, Coins, Plus, Sparkles, Target, TrendingUp, UserPlus } from 'lucide-react'
+import { CalendarClock, Plus, Sparkles, Target, TrendingUp, UserPlus } from 'lucide-react'
 import { useRecordList, useRecords } from '../lib/useRecords'
 import { Button } from '../../workspace/ui/Button'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { count, money, moneyTotals } from '../lib/format'
+import { count, money } from '../lib/format'
+import { OpenValueTile } from '../ui/OpenValueTile'
 import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { Page } from '../ui/Page'
@@ -142,7 +143,7 @@ function Figures({ kpis, lang, currency }: { kpis: LeadKpis | undefined; lang: s
   return (
     <StatRow label={t('crm.leads.figures', 'The open pipeline')} count={shown.length}>
       {shown.includes('open') && <StatTile icon={Target} tone="accent" label={t('crm.leads.kpi_open', 'Open leads')} value={count(kpis.total, lang)} />}
-      {shown.includes('value') && <StatTile icon={Coins} tone="success" label={t('crm.leads.kpi_value', 'Open value')} value={kpis.values_by_currency ? moneyTotals(kpis.values_by_currency, currency, lang) : money(kpis.estimated_value, currency, lang)} />}
+      {shown.includes('value') && <OpenValueTile label={t('crm.leads.kpi_value', 'Open value')} valuation={kpis.open_value} fallback={money(kpis.estimated_value, currency, lang)} />}
       {/* A phone keeps two figures, so the list starts on its first screen; the follow-up pills carry the due counts. */}
       {shown.includes('due') && (
         <div className="hidden min-w-0 sm:block">

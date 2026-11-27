@@ -6,6 +6,7 @@ use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\Guest;
 use App\Models\Inquiry;
+use App\Models\Organization;
 use App\Models\Task;
 use App\Models\User;
 use App\Scopes\TenantScope;
@@ -46,7 +47,7 @@ final class CrmToday
             'chats'    => $this->chats(),
             'leads'    => $this->leads($today),
             'tasks'    => $this->tasks($user, $dayStarts, $dayEnds),
-            'pipeline' => $this->pipeline(),
+            'pipeline' => $this->pipeline($orgId),
             'week'     => $this->week(),
         ];
     }
@@ -170,14 +171,14 @@ final class CrmToday
         ];
     }
 
-    /** @return array{open_count: int, open_value: float} The open leads' estimated value (InquiryController::kpis). */
-    private function pipeline(): array
+    private function pipeline(int $orgId): array
     {
         $open = Inquiry::query()->whereNotIn('status', ['Confirmed', 'Lost']);
+        $value = app(OpenLeadValue::class)->summary($open, Organization::findOrFail($orgId));
 
         return [
             'open_count' => (clone $open)->count(),
-            'open_value' => (float) (clone $open)->whereNotNull('total_value')->sum('total_value'),
+            'open_value' => (float) $value['amount'], 'valuation' => $value,
         ];
     }
 

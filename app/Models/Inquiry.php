@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\Integrations\CrmMail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -40,17 +42,32 @@ class Inquiry extends Model
 
     public function getValueCurrencyAttribute(): ?string
     {
-        if ($this->currency) {
-            return strtoupper($this->currency);
+        return self::currencyForValue($this->currency, $this->total_value !== null, (int) $this->organization_id, (int) $this->brand_id);
+    }
+
+    public static function currencyForValue(?string $stored, bool $hasValue, int $orgId, int $brandId): ?string
+    {
+        $code = strtoupper(trim($stored ?? ''));
+        if ($code !== '') {
+            return $code;
         }
 
-        return $this->isFdsCards() ? ($this->total_value === null ? 'EUR' : 'XXX') : null;
+        return $orgId === CrmMail::ORGANIZATION && $brandId === CrmMail::BRAND
+            ? ($hasValue ? 'XXX' : 'EUR') : null;
+    }
+
+    public function scopeMissingValueCurrency(Builder $query): void
+    {
+        $query->whereNotNull('total_value')->where('total_value', '<>', 0)->where(fn ($q) => $q
+            ->whereRaw('upper(trim(currency)) = ?', ['XXX'])
+            ->orWhere(fn ($fds) => $fds->where('organization_id', CrmMail::ORGANIZATION)
+                ->where('brand_id', CrmMail::BRAND)
+                ->where(fn ($c) => $c->whereNull('currency')->orWhereRaw("trim(currency) = ''"))));
     }
 
     private function isFdsCards(): bool
     {
-        return (int) $this->organization_id === \App\Services\Integrations\CrmMail::ORGANIZATION
-            && (int) $this->brand_id === \App\Services\Integrations\CrmMail::BRAND;
+        return (int) $this->organization_id === CrmMail::ORGANIZATION && (int) $this->brand_id === CrmMail::BRAND;
     }
 
     protected static function booted(): void

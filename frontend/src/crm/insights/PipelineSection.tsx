@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { AlarmClock, CircleDollarSign, Coins, Filter, Snowflake, Target, Trophy, UserMinus, UserPlus, XCircle, type LucideIcon } from 'lucide-react'
+import { AlarmClock, CircleDollarSign, Filter, Snowflake, Target, Trophy, UserMinus, UserPlus, XCircle, type LucideIcon } from 'lucide-react'
+import { OpenValueTile } from '../ui/OpenValueTile'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
 import { count as countOf, money } from '../lib/format'
@@ -67,8 +68,8 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
           hint={fresh.data && before.data ? <ChangeLine change={countChange(fresh.data.total, before.data.total)} upIsGood days={days} /> : undefined} />
         <StatTile icon={Target} tone="progress" label={t('crm.insights.open_leads', 'Open leads')} value={kpis.data ? n(kpis.data.total) : '—'}
           hint={kpis.data && kpis.data.overdue > 0 ? t('crm.insights.overdue_short', '{{count}} overdue', { count: kpis.data.overdue }) : undefined} />
-        <StatTile icon={Coins} tone="success" label={t('crm.insights.open_value', 'Open pipeline')}
-          value={kpis.data ? money(kpis.data.estimated_value, boot.venue.currency, lang) : '—'} />
+        <OpenValueTile label={t('crm.insights.open_value', 'Open pipeline')} valuation={kpis.data?.open_value}
+          fallback={kpis.data ? money(kpis.data.estimated_value, boot.venue.currency, lang) : '—'} />
         <StatTile icon={Trophy} tone="success" label={t('crm.insights.win_rate', 'Win rate')} value={summary?.winRate === null || !summary ? '—' : `${summary.winRate} %`}
           hint={summary ? t('crm.insights.win_rate_short', '{{won}}/{{closed}}', { won: n(summary.won), closed: n(summary.won + summary.lost) }) : undefined} />
       </StatRow>

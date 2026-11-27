@@ -211,10 +211,11 @@ export interface DeleteImpact {
 
 /** `GET inquiries/kpis`. */
 export interface LeadKpis {
+  open_value?: import('../lib/types').OpenLeadValue
   total: number
   due_today: number
   overdue: number
-  values_by_currency?: { currency: string | null; amount: number | string }[]
+  values_by_currency?: { currency: string | null; amount: number | string | null }[]
   estimated_value: number
   new_this_week: number
   /** New this week against the week before, in percent (null without a week before). */

@@ -461,6 +461,15 @@ correction changes a fact. Copying, opening an email or composing an activity le
 
 ### Lead navigation and FDS Cards pricing
 
+**Open value** on Leads, Today and Insights shows one total. FDS Cards and its organisation's all-brand view report in euros. Other brands use the venue
+currency. Expand **Currency breakdown** to see the original amounts and the European Central Bank reference date.
+The approximation sign marks a converted total. A missing rate excludes only the affected amounts. A recent cached
+rate can be used for up to seven days after publication.
+
+**Missing currency** opens the affected open leads for the selected brand. Open a lead, choose **Set currency**, select the
+currency recorded in its quote and save. The dashboard then includes the amount when a rate is available. Older FDS
+leads with an amount and no currency stay out of the estimate until their currency is confirmed.
+
 Both the lead panel and full page have five sections. **Overview** includes activity and the deal once won. **Messages**
 opens email history and offers WhatsApp or website chat when available. **Tasks** and **Files** open directly.
 **AI tools** includes the assistant and customer research. The arrow beside **Send email** lists the contact's available

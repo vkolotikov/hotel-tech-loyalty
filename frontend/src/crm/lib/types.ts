@@ -1,9 +1,20 @@
+/** An open pipeline valued in one reporting currency using a single reference-rate date. */
+export interface OpenLeadValue {
+  currency: string
+  amount: string | null
+  converted: boolean
+  rate_date: string | null
+  missing_currency: number
+  missing_rate: number
+  groups: { currency: string; amount: string | null; count: number; included: boolean }[]
+}
+
 /** What `GET /v1/admin/crm/bootstrap` answers (App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController). */
 export interface Bootstrap {
   name: string
   organization: { id: number; name: string; industry: string }
   accent: string | null
-  venue: { timezone: string; today: string; currency: string; lead_currency?: string }
+  venue: { timezone: string; today: string; currency: string; lead_currency?: string; lead_currencies?: string[] }
   /** What the plan holds; `ai_capture` is the AI capture of a lead or a deal from pasted text (`crm-ai/capture-*`), every staff member's (RequireAiCapture). */
   features: { chatbot: boolean; engagement: boolean; ai_capture: boolean; whatsapp_brand_id?: number | null }
   ai: { status: 'unlimited' | 'under' | 'warn' | 'over'; percent: number | null }
@@ -87,7 +98,7 @@ export interface Today {
   chats: { waiting: number; open: number; unassigned: number; list: TodayChat[] }
   leads: { open: number; new: number; due_today: number; overdue: number; follow_ups: TodayFollowUp[]; new_list: TodayNewLead[] }
   tasks: { due_today: number; overdue: number; list: TodayTask[] }
-  pipeline: { open_count: number; open_value: number }
+  pipeline: { open_count: number; open_value: number; valuation?: OpenLeadValue }
   week: { conversations: number; ai_resolved: number; leads_from_chat: number }
 }
 

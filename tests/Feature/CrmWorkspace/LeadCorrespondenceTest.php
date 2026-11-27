@@ -5,6 +5,7 @@ namespace Tests\Feature\CrmWorkspace;
 use App\Models\Brand;
 use App\Models\Inquiry;
 use App\Models\Organization;
+use App\Services\Crm\EuroReferenceRates;
 use App\Services\Crm\LeadCorrespondenceSync;
 use App\Services\Crm\LeadReplyBadges;
 use App\Services\Integrations\CrmMail;
@@ -67,6 +68,34 @@ class LeadCorrespondenceTest extends TestCase
     private function thread(string $subject, string $direction): array
     {
         return ['subject_key' => hash('sha256', strtolower($subject)), 'message_id' => $subject.'-'.$direction, 'direction' => $direction, 'at' => now()->toISOString()];
+    }
+
+    public function test_fds_open_value_converts_known_amounts_and_lists_only_open_leads_missing_a_currency(): void
+    {
+        config(['cache.shared' => 'array']);
+        $this->org->forceFill(['currency' => 'USD'])->saveQuietly();
+        $day = now('Europe/Berlin')->toDateString();
+        Http::fake([EuroReferenceRates::URL => Http::response('<Cube><Cube time="'.$day.'"><Cube currency="USD" rate="1.0975"/><Cube currency="GBP" rate="0.83755"/></Cube></Cube>')]);
+        foreach (['EUR' => 6595, 'GBP' => 15292.80, 'USD' => 1577] as $code => $value) {
+            $this->lead(['currency' => $code, 'total_value' => $value]);
+        }
+        $unknown = $this->lead(['total_value' => 17405]);
+        $this->lead(['total_value' => 100, 'status' => 'Lost']);
+        $this->lead(['total_value' => 0]);
+        $this->lead(['total_value' => 200, 'brand_id' => 80000023]);
+        $api = $this->adminApi('inquiries');
+        $this->asStaffMember()->getJson($api.'/kpis?brand_id=23')->assertOk()
+            ->assertJsonPath('open_value.currency', 'EUR')->assertJsonPath('open_value.amount', '26290.87')
+            ->assertJsonPath('open_value.converted', true)->assertJsonPath('open_value.rate_date', $day)
+            ->assertJsonPath('open_value.missing_currency', 1)->assertJsonPath('open_value.missing_rate', 0);
+        $list = $api.'?brand_id=23&active_only=1&missing_currency=1';
+        $this->getJson($list)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $unknown);
+        $this->getJson($this->crmApi('today?brand_id=23'))->assertOk()->assertJsonPath('pipeline.valuation.amount', '26290.87');
+        $this->putJson($api.'/'.$unknown.'?brand_id=23', ['currency' => 'EUR', 'total_value' => 17405])->assertOk();
+        $this->getJson($list)->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson($api.'/kpis?brand_id=23')->assertOk()->assertJsonPath('open_value.amount', '43695.87')
+            ->assertJsonPath('open_value.missing_currency', 0);
+        $this->getJson($api.'/kpis?brand_id=80000023')->assertOk()->assertJsonPath('open_value.currency', 'USD')->assertJsonPath('open_value.amount', '200.00');
     }
 
     private function badges(int $id): ?array

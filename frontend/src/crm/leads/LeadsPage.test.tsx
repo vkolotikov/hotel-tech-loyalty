@@ -72,6 +72,21 @@ function render(at: string, seed: (qc: QueryClient) => void, bootstrap: Bootstra
 }
 
 describe('Leads', () => {
+  it('shows one estimate, original currencies on demand and a filtered list for excluded values', () => {
+    const filters = readFilters(new URLSearchParams('missing_currency=1'))
+    expect(listQuery(filters, 'Anna').missing_currency).toBe(1)
+    expect(boardQuery(filters, 'Anna').missing_currency).toBe(1)
+    const html = render('/crm/leads?missing_currency=1', qc => {
+      qc.setQueryData(['crm', 'leads', 'list', listQuery(filters, 'Anna')], page([ada]))
+      qc.setQueryData(['crm', 'leads', 'kpis'], { total: 110, due_today: 0, overdue: 0, estimated_value: 26290.87, open_value: {
+        currency: 'EUR', amount: '26290.87', converted: true, rate_date: '2026-11-26', missing_currency: 23, missing_rate: 0,
+        groups: [{ currency: 'GBP', amount: '15292.80', count: 52, included: true }, { currency: 'XXX', amount: null, count: 23, included: false }],
+      } })
+    })
+    for (const part of ['≈ €26,290.87', '<details', 'Currency breakdown', '£15,292.80', 'Nov 26, 2026', 'href="/crm/leads?missing_currency=1"', 'Missing currency (23 excluded)', 'Currency not set']) expect(html).toContain(part)
+    expect(html).not.toContain('XXX')
+  })
+
   it('lists the open leads with their stage, follow-up, value and owner, and the list\'s tools; a row opens its panel', () => {
     const html = render('/crm/leads', qc => {
       qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)

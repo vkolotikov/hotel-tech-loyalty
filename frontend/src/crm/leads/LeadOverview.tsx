@@ -45,7 +45,7 @@ export function OverviewTab({ lead, stages, onPick, busy, brief, onBrief, onEdit
       )}
       <section aria-label={t('crm.leads.overview', 'Overview')} className="space-y-4 rounded-2xl border border-a-border bg-a-surface p-4 shadow-a-sm">
         <StageBar lead={lead} stages={stages} onPick={onPick} busy={busy} />
-        <KeyFacts lead={lead} />
+        <KeyFacts lead={lead} onEdit={onEdit} />
       </section>
       <AiCard lead={lead} brief={brief} onOpen={onBrief} />
       <div className="@container">

@@ -1,4 +1,11 @@
 {
+  "set_currency": "Указать валюту",
+  "currency_missing": "Валюта не указана",
+  "currency_to_review": "Без валюты (вне суммы: {{count}})",
+  "rate_missing": "Без курса (вне суммы: {{count}})",
+  "currency_breakdown": "По валютам",
+  "rate_unavailable": "Курс недоступен",
+  "rate_date": "Курсы ЕЦБ · {{date}}",
   "currency": "Валюта",
   "needs_reply": "Нужен ответ",
   "awaiting_customer": "Ждём ответа клиента",

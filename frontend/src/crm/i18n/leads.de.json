@@ -1,4 +1,11 @@
 {
+  "set_currency": "Währung festlegen",
+  "currency_missing": "Währung nicht angegeben",
+  "currency_to_review": "Währung fehlt ({{count}} ausgeschlossen)",
+  "rate_missing": "Kein Wechselkurs ({{count}} ausgeschlossen)",
+  "currency_breakdown": "Nach Währung",
+  "rate_unavailable": "Kein Wechselkurs",
+  "rate_date": "EZB-Kurse · {{date}}",
   "currency": "Währung",
   "needs_reply": "Antwort nötig",
   "awaiting_customer": "Wartet auf Kundenantwort",
