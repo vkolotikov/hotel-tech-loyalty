@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, ChevronDown, ExternalLink, Globe, ListPlus, Mail, Phone, Trash2, Trophy, UserRound, XCircle } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronDown, ExternalLink, Globe, ListPlus, Mail, Phone, Trash2, Trophy, UserRound, XCircle } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { send } from '../lib/api'
 import { errorText } from '../lib/errors'
@@ -11,7 +11,7 @@ import { Avatar } from '../ui/Avatar'
 import { Pill } from '../ui/Pill'
 import { useToast } from '../ui/Toast'
 import { useLeadChanged, useLeadSettings } from './leadData'
-import { amount, customText, dayOf, followUp, kindOf, moveTo, resolveStage } from './leadLogic'
+import { amount, HEADER_SORTS, SORTS, type SortKey, customText, dayOf, followUp, kindOf, moveTo, resolveStage } from './leadLogic'
 import { priorityTone, type LeadColumn } from './listLogic'
 import { ActionMenu, type MenuItem } from '../ui/Menu'
 import { AiCell, ContactLinks, FreshChip, ReplyBadges, NextCell, StagePill } from './parts'
@@ -30,7 +30,9 @@ export type RowAsk = { kind: 'won' | 'lost' | 'delete' | 'task'; lead: LeadRow }
  * (changed in place), value, the AI's signal, the next step, owner and source, the touches, a hotel's stay and the
  * organisation's own list fields — with a "…" menu; on a phone each lead is a card. A box chooses it for a bulk change.
  */
-export function LeadList({ leads, stages, selected, onSelect, onSelectAll, columns, fields, onAsk, now }: {
+export function LeadList({ leads, stages, selected, onSelect, onSelectAll, columns, fields, onAsk, now, sort, onSort }: {
+  sort?: SortKey
+  onSort?: (sort: SortKey) => void
   leads: LeadRow[]
   stages: Stage[]
   selected: ReadonlySet<number>
@@ -43,13 +45,29 @@ export function LeadList({ leads, stages, selected, onSelect, onSelectAll, colum
   onAsk: (ask: RowAsk) => void
   now: Date
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const boot = useBoot()
+  const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: boot.venue.timezone })
+  const leadDate = (lead: LeadRow) => {
+    const iso = lead.created_at
+    return iso && Number.isFinite(Date.parse(iso)) ? <time dateTime={iso}>{dateFormat.format(new Date(iso))}</time> : '—'
+  }
+  const heading = (field: keyof typeof HEADER_SORTS, label: string, css = '') => {
+    const [first, reverse] = HEADER_SORTS[field]
+    const direction = sort === first || sort === reverse ? SORTS[sort].dir : null
+    const Icon = direction === 'asc' ? ArrowUp : direction === 'desc' ? ArrowDown : ArrowUpDown
+    return <th scope="col" className={`px-3 py-2.5 font-medium ${css}`} aria-sort={direction ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}>
+      {onSort ? <button type="button" onClick={() => onSort(sort === first ? reverse : first)} className="inline-flex items-center gap-1 hover:underline focus-visible:outline-a-accent">
+        {label}<Icon size={13} aria-hidden className={direction ? 'text-a-accent-text' : 'text-a-text-2'}/>
+      </button> : label}
+    </th>
+  }
   const { priorities } = useLeadSettings()
   const records = useRecords()
   const actions = useRowActions(stages, onAsk)
   const name = (lead: LeadRow) => lead.guest?.full_name || lead.guest?.email || t('crm.common.no_name', 'No name')
   const all = leads.length > 0 && leads.every(l => selected.has(l.id))
-  const row = { stages, now, priorities, actions, href: (id: number) => records.href('lead', id), open: (id: number) => records.open('lead', id) }
+  const row = { leadDate, stages, now, priorities, actions, href: (id: number) => records.href('lead', id), open: (id: number) => records.open('lead', id) }
 
   return (
     <>
@@ -63,14 +81,15 @@ export function LeadList({ leads, stages, selected, onSelect, onSelectAll, colum
                   ? <input type="checkbox" className="h-4 w-4 accent-a-accent" checked={all} onChange={onSelectAll} aria-label={t('crm.leads.select_page', 'Select this page')} title={t('crm.leads.select_page', 'Select this page')} />
                   : <span className="sr-only">{t('crm.leads.choose_col', 'Choose')}</span>}
               </th>
-              <th scope="col" className="px-3 py-2.5 font-medium">{t('crm.leads.col_lead', 'Lead')}</th>
-              <th scope="col" className="px-3 py-2.5 font-medium">{t('crm.leads.field_stage', 'Stage')}</th>
-              {columns.value && <th scope="col" className="px-3 py-2.5 text-right font-medium">{t('crm.leads.col_value', 'Value')}</th>}
-              {columns.ai_signal && <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">{t('crm.leads.col_ai_short', 'AI')}</th>}
-              {columns.next_task && <th scope="col" className="px-3 py-2.5 font-medium">{t('crm.leads.col_next', 'Next step')}</th>}
-              {columns.owner && <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">{t('crm.leads.col_owner_short', 'Owner')}</th>}
-              {columns.touches && <th scope="col" className="hidden px-3 py-2.5 font-medium 2xl:table-cell">{t('crm.leads.col_touches', 'Calls and emails')}</th>}
-              {columns.stay && <th scope="col" className="hidden px-3 py-2.5 font-medium 2xl:table-cell">{t('crm.leads.col_stay', 'Stay')}</th>}
+              {heading('name', t('crm.leads.col_lead', 'Lead'))}
+              {heading('newest', t('crm.leads.lead_date', 'Lead date'))}
+              {heading('stage', t('crm.leads.field_stage', 'Stage'))}
+              {columns.value && heading('value', t('crm.leads.col_value', 'Value'), 'text-right')}
+              {columns.ai_signal && heading('ai', t('crm.leads.col_ai_short', 'AI'), 'hidden lg:table-cell')}
+              {columns.next_task && heading('follow_up', t('crm.leads.col_next', 'Next step'))}
+              {columns.owner && heading('owner', t('crm.leads.col_owner_short', 'Owner'), 'hidden lg:table-cell')}
+              {columns.touches && heading('touches', t('crm.leads.col_touches', 'Calls and emails'), 'hidden 2xl:table-cell')}
+              {columns.stay && heading('arrival', t('crm.leads.col_stay', 'Stay'), 'hidden 2xl:table-cell')}
               {fields.map(f => <th key={f.key} scope="col" className="hidden px-3 py-2.5 font-medium 2xl:table-cell">{f.label}</th>)}
               <th scope="col" className="w-12 py-2.5 pr-3"><span className="sr-only">{t('crm.leads.actions', 'Actions')}</span></th>
             </tr>
@@ -149,6 +168,7 @@ function useRowActions(stages: Stage[], onAsk: (ask: RowAsk) => void) {
 }
 
 interface RowProps {
+  leadDate: (lead: LeadRow) => React.ReactNode
   lead: LeadRow
   name: string
   stages: Stage[]
@@ -171,7 +191,7 @@ function StageMenu({ lead, name, stages, actions, wide }: Pick<RowProps, 'lead' 
   )
 }
 
-function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen, onSelect, actions, href, open }: RowProps & {
+function WideRow({ leadDate, lead, name, stages, columns, fields, now, priorities, chosen, onSelect, actions, href, open }: RowProps & {
   columns: Record<LeadColumn, boolean>
   fields: readonly CustomField[]
 }) {
@@ -206,6 +226,9 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
           </div>
           <span className="shrink-0 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100"><ContactLinks guest={lead.guest} name={name} /></span>
         </div>
+      </td>
+      <td className="px-3 py-3">
+        {leadDate(lead)}
       </td>
       <td className="px-3 py-3">
         <span className="flex flex-wrap items-center gap-1.5">
@@ -263,7 +286,7 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
   )
 }
 
-function PhoneCard({ lead, name, stages, now, priorities, chosen, onSelect, actions, href }: RowProps) {
+function PhoneCard({ leadDate, lead, name, stages, now, priorities, chosen, onSelect, actions, href }: RowProps) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const lang = i18n.language
@@ -281,6 +304,7 @@ function PhoneCard({ lead, name, stages, now, priorities, chosen, onSelect, acti
               <ReplyBadges status={lead.reply_status} />
             </div>
             {lead.guest?.company && <p className="truncate text-xs text-a-text-2">{lead.guest.company}</p>}
+            <p className="text-xs text-a-text-2">{t('crm.leads.lead_date')} · {leadDate(lead)}</p>
           </div>
           {value !== null && <span className="shrink-0 pt-0.5 text-sm font-medium tabular-nums text-a-text">{money(value, lead.value_currency ?? boot.venue.currency, lang)}</span>}
           <ActionMenu label={t('crm.leads.menu_named', 'More for {{name}}', { name })} items={actions.menu(lead, priorities)} />

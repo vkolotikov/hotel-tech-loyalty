@@ -1,4 +1,5 @@
 {
+  "lead_date": "Date du prospect",
   "set_currency": "Renseigner la devise",
   "currency_missing": "Devise non renseignée",
   "currency_to_review": "Devise manquante ({{count}} hors total)",

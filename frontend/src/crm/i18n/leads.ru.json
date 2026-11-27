@@ -1,4 +1,5 @@
 {
+  "lead_date": "Дата поступления",
   "set_currency": "Указать валюту",
   "currency_missing": "Валюта не указана",
   "currency_to_review": "Без валюты (вне суммы: {{count}})",

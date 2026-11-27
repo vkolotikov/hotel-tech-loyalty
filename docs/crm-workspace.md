@@ -1,5 +1,9 @@
 # HexaTech CRM — runbook
 
+## Lead list
+
+The Leads table shows the date each lead entered the CRM in the venue’s time zone. Select a column heading to order the filtered list, then select it again to reverse the order. On phones, the date appears on the card and the Sort menu controls the order.
+
 ## Team dashboard
 
 Open **Team dashboard** from Today or Reports. Switch between the current calendar week (Monday onwards) and month in the venue’s time zone. **Overview** shows total leads and recorded value across all statuses, the current open pipeline, and wins in the selected period. The value breakdown shows the original currencies, conversion date and number of records with usable amounts. Won value uses the amounts currently recorded on deals with a dated win in the period.

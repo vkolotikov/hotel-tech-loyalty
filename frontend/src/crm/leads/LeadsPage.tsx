@@ -220,7 +220,8 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
   const filtered = Boolean(filters.q || filters.due || activeFilterCount(filters) > 0)
   const counts: Partial<Record<LeadFilters['due'], number>> = kpis ? { now: kpis.overdue + kpis.due_today, overdue: kpis.overdue, today: kpis.due_today } : {}
   const name = (lead: LeadRow) => lead.guest?.full_name || lead.guest?.email || t('crm.common.no_name', 'No name')
-  const listProps = { stages, selected, onSelect: (id: number) => setSelected(s => toggled(s, id)), columns, fields: listFields, onAsk: setAsk, now }
+  const listProps = { stages, selected, onSelect: (id: number) => setSelected(s => toggled(s, id)), columns, fields: listFields, onAsk: setAsk, now,
+    sort: filters.sort, onSort: (sort: LeadFilters['sort']) => change({ sort }) }
 
   return (
     <div className="space-y-3">
@@ -228,7 +229,7 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
         {/* The pills scroll sideways on a phone rather than wrap onto a second row. */}
         <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
           <div className="w-max">
-            <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value })}
+            <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value, sort: value === 'now' && filters.sort === 'newest' ? 'follow_up' : filters.sort })}
               items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
           </div>
         </div>

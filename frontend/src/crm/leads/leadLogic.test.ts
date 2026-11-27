@@ -67,7 +67,8 @@ describe('what GET inquiries is asked', () => {
   })
 
   it('asks "due now" as overdue then today, soonest first, and nothing else as sections', () => {
-    const sections = dueSections({ ...NO_FILTERS, due: 'now', page: 3 }, 'Me')
+    const sections = dueSections(readFilters(new URLSearchParams('due=1&page=3')), 'Me')
+    expect(dueSections({ ...NO_FILTERS, due: 'now', sort: 'name_desc' }, 'Me')[0].query).toMatchObject({ sort: 'lead_name', dir: 'desc' })
     expect(sections.map(s => s.key)).toEqual(['overdue', 'today'])
     expect(sections[0].query).toMatchObject({ task_due: 'overdue', sort: 'next_task_due', page: 1, per_page: 100 })
     expect(dueSections({ ...NO_FILTERS, due: 'today' }, 'Me')).toEqual([])

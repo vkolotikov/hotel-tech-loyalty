@@ -1,4 +1,5 @@
 {
+  "lead_date": "Eingangsdatum",
   "set_currency": "Währung festlegen",
   "currency_missing": "Währung nicht angegeben",
   "currency_to_review": "Währung fehlt ({{count}} ausgeschlossen)",

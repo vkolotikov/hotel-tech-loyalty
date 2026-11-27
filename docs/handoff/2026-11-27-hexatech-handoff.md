@@ -1,5 +1,9 @@
 # Handoff — 27 November 2026
 
+## Lead list
+
+The Leads table shows the date each lead entered the CRM in the venue’s time zone. Select a column heading to order the filtered list, then select it again to reverse the order. On phones, the date appears on the card and the Sort menu controls the order.
+
 ## CRM team dashboard
 
 The [team dashboard](../crm-workspace.md#team-dashboard) at `/crm/team` includes a signed-in TV view, venue-local weekly and monthly lead and win counts, current unanswered threads and an actionable priority queue. Win dates now also follow individual and bulk lead status edits. The screen uses existing correspondence and background AI review. No database migration is required.

@@ -62,6 +62,20 @@ class LeadsAndDealsTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_row_headers_order_the_entire_result_before_pagination(): void
+    {
+        $z = $this->lead(['pipeline_stage_id' => $this->stages['Booked'], 'phone_calls_made' => 2, 'assigned_to' => 'Anna'], 'zeta');
+        $a = $this->lead(['pipeline_stage_id' => $this->stages['Contacted'], 'emails_sent' => 4], 'Alba');
+        $this->asStaffMember();
+        foreach (['lead_name' => $a, 'stage_name' => $z, 'touch_count' => $z] as $sort => $first) {
+            $url = $this->adminApi('inquiries?per_page=1&sort='.$sort);
+            $this->getJson($url.'&dir=asc')->assertOk()->assertJsonPath('data.0.id', $first);
+            $last = $first === $a ? $z : $a;
+            $this->getJson($url.'&dir=asc&page=2')->assertOk()->assertJsonPath('data.0.id', $last);
+            $this->getJson($url.'&dir=desc')->assertOk()->assertJsonPath('data.0.id', $last);
+        }
+    }
+
     private function widenTables(): void
     {
         foreach ([
@@ -84,6 +98,8 @@ class LeadsAndDealsTest extends TestCase
             'check_out' => fn ($t) => $t->date('check_out')->nullable(),
             'lost_reason_id' => fn ($t) => $t->unsignedBigInteger('lost_reason_id')->nullable(),
             'ai_win_probability' => fn ($t) => $t->integer('ai_win_probability')->nullable(),
+            'emails_sent' => fn ($t) => $t->integer('emails_sent')->default(0),
+            'phone_calls_made' => fn ($t) => $t->integer('phone_calls_made')->default(0),
             'last_contacted_at' => fn ($t) => $t->date('last_contacted_at')->nullable(),
             'custom_data' => fn ($t) => $t->text('custom_data')->nullable(),
             'fulfillment_stage' => fn ($t) => $t->string('fulfillment_stage', 32)->nullable(),

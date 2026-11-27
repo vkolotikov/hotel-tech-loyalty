@@ -122,12 +122,19 @@ class InquiryController extends Controller
         // Only real `inquiries` columns (2026-11-08): `guest_name`, `value_estimated` and `win_probability` were not
         // and answered a database error; the list's Value and AI-signal headers sort by these.
         $allowedSorts = ['created_at','updated_at','check_in','check_out','status','priority','total_value','ai_win_probability','next_task_due','assigned_to','last_contacted_at'];
-        $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
+        $requested = $request->get('sort');
+        $sort = match ($requested) {
+            'lead_name' => "(SELECT LOWER(COALESCE(NULLIF(TRIM(g.full_name), ''), NULLIF(TRIM(g.email), ''))) FROM guests g WHERE g.id = inquiries.guest_id AND g.organization_id = inquiries.organization_id)",
+            'stage_name' => "LOWER(COALESCE((SELECT s.name FROM pipeline_stages s WHERE s.id = inquiries.pipeline_stage_id AND s.organization_id = inquiries.organization_id), inquiries.status))",
+            'touch_count' => '(COALESCE(phone_calls_made, 0) + COALESCE(emails_sent, 0))',
+            'assigned_to' => "LOWER(NULLIF(TRIM(assigned_to), ''))",
+            default => in_array($requested, $allowedSorts, true) ? $requested : 'created_at',
+        };
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
         // Empty values last in either direction, on PostgreSQL (which puts NULLs first when descending) and SQLite
         // alike (2026-11-08: "largest value first" listed every lead without a value at the top); the id keeps pages
         // stable among equal values. `$sort` is one of the names above.
-        $query->orderByRaw("{$sort} IS NULL")->orderBy($sort, $dir)->orderBy('id', $dir);
+        $query->orderByRaw("{$sort} IS NULL")->orderByRaw("{$sort} {$dir}")->orderBy('id', $dir);
 
         $page = $query->paginate($request->get('per_page', 25));
         LeadReplyBadges::attach($page->getCollection(), $request->user());
