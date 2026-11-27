@@ -98,6 +98,21 @@ class TeamDashboardTest extends TestCase
         $this->assertSame([1, 0, $visible], [$board['actions_total'], $board['emails'], $board['actions'][0]['lead_id']]);
     }
 
+    public function test_ai_batch_includes_recent_mail_while_a_large_old_backlog_is_being_reviewed(): void
+    {
+        Queue::fake();
+        config(['openai.api_key' => 'fake-priority-test']);
+        $lead = $this->lead();
+        foreach (range(1, 12) as $days) {
+            $this->activity($lead, ['subject' => 'Project '.$days, 'occurred_at' => now()->subDays($days)]);
+        }
+        $this->board();
+        $subjects = array_column(Queue::pushed(ReviewTeamPriorities::class)->sole()->batch, 'subject');
+        $this->assertCount(8, $subjects);
+        $this->assertContains('Project 1', $subjects);
+        $this->assertContains('Project 12', $subjects);
+    }
+
     public function test_ai_reads_scoped_email_once_defers_acknowledgement_and_keeps_an_explicit_buyer_question_high(): void
     {
         Queue::fake();

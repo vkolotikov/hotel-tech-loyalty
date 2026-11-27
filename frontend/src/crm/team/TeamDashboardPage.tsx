@@ -65,7 +65,7 @@ export function TeamDashboardPage() {
         <h1 id="crm-team-heading">{t('crm.team.title')}</h1></div>
       <div className="crm-team-controls">
         <div role="group" aria-label={t('crm.team.period')} className="crm-team-switch">
-          {(['week','month'] as const).map(p => <button key={p} type="button" aria-pressed={period === p} onClick={() => change('period', p)}>{t('crm.team.' + p)}</button>)}
+          {(['week','month'] as const).map(p => <button key={p} type="button" aria-pressed={period === p} onClick={() => change('period', p)}>{t(`crm.team.${p}`)}</button>)}
         </div>
         <button type="button" className="crm-team-control" onClick={tv ? close : openTv}>{tv ? <X size={17} /> : <Monitor size={17} />}{t(tv ? 'crm.team.exit_tv' : 'crm.team.tv')}</button>
         {tv && typeof document !== 'undefined' && !document.fullscreenElement && document.fullscreenEnabled && <button type="button" className="crm-team-icon" aria-label={t('crm.team.fullscreen')} onClick={() => { void document.documentElement.requestFullscreen().catch(() => {}) }}><Expand size={18} /></button>}
@@ -76,7 +76,7 @@ export function TeamDashboardPage() {
     {data && <div className="crm-team-layout">
       <section className="crm-team-queue">
         <header className="crm-team-section"><div><h2>{t('crm.team.actions')}</h2><p>{data.reviewed ? t('crm.team.reviewed', { count: data.reviewed, total: data.actions_total }) : t('crm.team.records')}</p></div>
-          <select className="crm-team-filter" aria-label={t('crm.team.filter')} value={filter} onChange={e => change('filter', e.target.value)}>{filters.map(k => <option key={k} value={k}>{t('crm.team.filter_' + k)}</option>)}</select>
+          <select className="crm-team-filter" aria-label={t('crm.team.filter')} value={filter} onChange={e => change('filter', e.target.value)}>{filters.map(k => <option key={k} value={k}>{t(`crm.team.filter_${k}`)}</option>)}</select>
         </header>
         {data.actions.length ? <ol className="crm-team-list" start={(data.page - 1) * (tv ? 4 : 8) + 1}>
           {data.actions.map(a => <ActionRow key={a.key} item={a} lang={lang} />)}
@@ -87,7 +87,7 @@ export function TeamDashboardPage() {
         </footer>
       </section>
       <aside className="crm-team-ledger" aria-label={t('crm.team.performance')}>
-        <section className="crm-team-period"><h2>{t('crm.team.' + period)}</h2>
+        <section className="crm-team-period"><h2>{t(`crm.team.${period}`)}</h2>
           <dl className="crm-team-totals"><div><dt>{t('crm.team.leads')}</dt><dd>{count(data.leads, lang)}</dd></div><div><dt>{t('crm.team.wins')}</dt><dd>{count(data.wins, lang)}</dd></div></dl>
           <ActivityChart data={data} lang={lang} />
           {data.undated_wins > 0 && <details className="crm-team-history"><summary>{t('crm.team.win_dates')}</summary><p>{t('crm.team.undated', { count: data.undated_wins })}</p></details>}
@@ -112,12 +112,12 @@ function ActionRow({ item, lang }: { item: TeamAction; lang: string }) {
     if (k === 'delivery_due' && item.deadline) return t('crm.team.delivery_date', { date: boardDay(item.deadline, lang) })
     if (k === 'large_order' && item.quantity) return t('crm.team.units', { count: item.quantity })
     if (k === 'high_value') return money(item.amount, item.currency, lang)
-    return t('crm.team.signal_' + k)
+    return t(`crm.team.signal_${k}`)
   })
-  const reason = item.ai_reason && item.ai_reason !== 'routine' ? t('crm.team.ai_' + item.ai_reason) : ''
+  const reason = item.ai_reason && item.ai_reason !== 'routine' ? t(`crm.team.ai_${item.ai_reason}`) : ''
   return <li><Link className="crm-team-row" data-priority={item.priority} to={actionLink(item)}>
     <span className="crm-team-row-icon" aria-hidden><Icon size={20}/></span>
-    <div className="crm-team-item"><div className="crm-team-row-meta"><span>{t('crm.team.kind_' + kind)}</span><span className="crm-team-level">{t('crm.team.level_' + item.priority)}</span></div>
+    <div className="crm-team-item"><div className="crm-team-row-meta"><span>{t(`crm.team.kind_${kind}`)}</span><span className="crm-team-level">{t(`crm.team.level_${item.priority}`)}</span></div>
       <h3>{item.company || item.name || t('crm.team.unnamed', { id: item.lead_id })}</h3>
       {item.subject && <p className="crm-team-subject">{item.subject}</p>}
       <div className="crm-team-facts">{reason && <span><Sparkles size={12} aria-hidden/>{reason}</span>}{facts.slice(0, 3).map(f => <span key={f}>{f}</span>)}
