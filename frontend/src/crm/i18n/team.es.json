@@ -74,7 +74,7 @@
   "value_coverage": "{{valued}} de {{total}} con valor",
   "value_details": "Desglose de valores",
   "total_value": "Valor total de leads",
-  "amount_basis": "El valor total incluye leads abiertos, ganados y perdidos. El valor abierto corresponde a los leads abiertos. El valor ganado usa los importes registrados de los acuerdos ganados por primera vez en el período. Ambos usan la moneda de informes del CRM.",
+  "amount_basis": "Todos los importes se expresan en la moneda de informes del CRM. El valor total incluye los leads abiertos, ganados y perdidos. El valor del pipeline abierto incluye los leads que siguen abiertos. El valor de los acuerdos ganados usa los importes registrados actualmente para los acuerdos ganados por primera vez en el período seleccionado.",
   "activity_chart": "Actividad de leads y acuerdos",
   "daily_table": "Cifras diarias",
   "previous_day": "Día anterior",

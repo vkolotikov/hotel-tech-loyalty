@@ -74,7 +74,7 @@
   "value_coverage": "{{valued}} of {{total}} valued",
   "value_details": "Value breakdown",
   "total_value": "Total lead value",
-  "amount_basis": "Total lead value includes open, won and lost leads. Open value uses current open leads. Won value uses the recorded amounts of deals first won in the selected period. Both use the CRM reporting currency.",
+  "amount_basis": "All amounts use the CRM reporting currency. Total lead value covers open, won and lost leads. Open pipeline value covers currently open leads. Won deal value uses the amounts currently recorded on deals first won in the selected period.",
   "activity_chart": "Lead and deal activity",
   "daily_table": "Daily figures",
   "previous_day": "Previous day",

@@ -74,7 +74,7 @@
   "value_coverage": "{{valued}} sur {{total}} valorisés",
   "value_details": "Détail des valeurs",
   "total_value": "Valeur totale des prospects",
-  "amount_basis": "La valeur totale inclut les prospects ouverts, gagnés et perdus. La valeur ouverte couvre les prospects ouverts. La valeur gagnée utilise les montants enregistrés des affaires gagnées pour la première fois sur la période. Les deux sont exprimées dans la devise de reporting du CRM.",
+  "amount_basis": "Tous les montants sont exprimés dans la devise de reporting du CRM. La valeur totale couvre les prospects ouverts, gagnés et perdus. La valeur du pipeline ouvert correspond aux prospects encore ouverts. La valeur des affaires gagnées utilise les montants actuellement enregistrés pour les affaires gagnées pour la première fois pendant la période sélectionnée.",
   "activity_chart": "Évolution des prospects et des ventes",
   "daily_table": "Chiffres par jour",
   "previous_day": "Jour précédent",

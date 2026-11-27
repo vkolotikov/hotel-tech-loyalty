@@ -74,7 +74,7 @@
   "value_coverage": "{{valued}} von {{total}} mit Wert",
   "value_details": "Wertaufschlüsselung",
   "total_value": "Gesamtwert aller Leads",
-  "amount_basis": "Der Gesamtwert umfasst offene, gewonnene und verlorene Leads. Der offene Wert umfasst aktuell offene Leads. Der Gewinnwert umfasst die erfassten Beträge der im Zeitraum erstmals gewonnenen Deals. Beide Werte stehen in der Berichtswährung des CRM.",
+  "amount_basis": "Alle Beträge sind in der Berichtswährung des CRM angegeben. Der Gesamtwert umfasst offene, gewonnene und verlorene Leads. Der offene Pipelinewert umfasst die derzeit offenen Leads. Für den Wert gewonnener Deals zählen die aktuell erfassten Beträge der Deals, die im gewählten Zeitraum erstmals gewonnen wurden.",
   "activity_chart": "Leads und Abschlüsse",
   "daily_table": "Tageszahlen",
   "previous_day": "Vorheriger Tag",
