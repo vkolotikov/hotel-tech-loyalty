@@ -1,1 +1,0 @@
-import{er as e}from"./index-7tC42Trf.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
