@@ -50,9 +50,13 @@ function PersonSummary({ person, expand }: { person: PersonPlan; expand: boolean
 function StatusControl({ task }: { task: PlanTask }) {
   const { t } = useTranslation()
   const changed = useTaskChanged()
+  const qc = useQueryClient()
   const update = useMutation({ mutationFn: (status: PlanStatus) => task.source === 'planner'
     ? plannerApi.status(task.id, status) : send('post', `tasks/${task.id}/${status === 'done' ? 'complete' : 'reopen'}`),
-    onSuccess: changed })
+    onSuccess: () => {
+      if (task.source === 'planner') void qc.invalidateQueries({ queryKey: ['crm', 'team-day-plan'] })
+      else changed()
+    } })
   const options = task.source === 'planner' ? statuses : (['todo', 'done'] as const)
   return <div>{task.editable ? <select aria-label={t('crm.dayplan.status_for', { title: task.title })} value={task.status} disabled={update.isPending}
     onChange={e => update.mutate(e.target.value as PlanStatus)}>{options.map(s => <option key={s} value={s}>{t(`crm.dayplan.status_${s}`)}</option>)}</select> : <span>{t(`crm.dayplan.status_${task.status}`)}</span>}
@@ -108,6 +112,8 @@ export function TeamDay({ plan, board, lang, tv, page, pages, changePage, change
             <input type="date" aria-label={t('crm.team.date')} value={plan.date} onChange={e => { if (isDay(e.target.value)) changeDate(e.target.value) }}/>
             <button type="button" aria-label={t('crm.team.next_day')} onClick={() => changeDate(addDays(plan.date, 1))}><ChevronRight size={17}/></button>
             {plan.date !== plan.today && <button type="button" onClick={() => changeDate(plan.today)}>{t('crm.tasks.quick_today')}</button>}</div>}</header>
+        {!tv && <div className="crm-day-roster-tools"><button className="crm-day-add" type="button" onClick={() => plan.planner ? setAdding(true) : records.create('task', { taskDate: plan.date })}><Plus size={16}/>{t('crm.dayplan.add')}</button>
+          {plan.planner && <a href={`/time/plan?date=${plan.date}&all=1`}>{t('crm.dayplan.open_planner')}<ArrowUpRight size={15}/></a>}</div>}
         <div className="crm-day-progress"><div><span>{t('crm.dayplan.team_progress')}</span><strong>{progress}</strong></div>
           <progress value={plan.done} max={Math.max(plan.total, 1)} aria-label={progress}/></div>
         <ul className="crm-day-people">{people.map(p => <li key={p.key}>{tv || !p.tasks.length ? <PersonSummary person={p} expand={false}/> :
@@ -117,8 +123,7 @@ export function TeamDay({ plan, board, lang, tv, page, pages, changePage, change
         {!people.length && <p className="crm-day-empty">{t('crm.dayplan.empty_roster')}</p>}
         {tv && pages > 1 && <nav className="crm-day-pager" aria-label={t('crm.dayplan.people_pages')}><button type="button" disabled={page <= 1} aria-label={t('crm.common.previous')} onClick={() => changePage(page - 1)}><ChevronLeft size={16}/></button>
           <span>{page} / {pages}</span><button type="button" disabled={page >= pages} aria-label={t('crm.common.next')} onClick={() => changePage(page + 1)}><ChevronRight size={16}/></button></nav>}
-        {!tv && <footer className="crm-day-roster-tools"><button className="crm-day-add" type="button" onClick={() => plan.planner ? setAdding(true) : records.create('task', { taskDate: plan.date })}><Plus size={16}/>{t('crm.dayplan.add')}</button>
-          {plan.planner && <a href={`/time/plan?date=${plan.date}&all=1`}>{t('crm.dayplan.open_planner')}<ArrowUpRight size={15}/></a>}</footer>}
+
       </section>
       <aside className="crm-day-priorities"><section><header className="crm-day-sectionname"><ListTodo size={19}/><h2>{t('crm.dayplan.priority_tasks')}</h2></header>
         <ul>{plan.top_tasks.map(task => { const Icon = statusIcons[task.status]; return <li key={workKey(task)}><Icon aria-hidden size={17} className="crm-day-rank-icon" data-status={task.status}/>
