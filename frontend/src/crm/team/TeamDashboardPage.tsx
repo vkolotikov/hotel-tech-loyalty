@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, CalendarClock, Check, ChevronLeft, ChevronRight, ClipboardCheck, Expand, Mail, Monitor, RefreshCw, Sparkles, UserPlus, X } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
+import { useNow } from '../../hooks/useNow'
 import { get, params } from '../lib/api'
 import { currentBrand } from '../lib/brand'
 import { count, money, timeAgo } from '../lib/format'
@@ -58,7 +59,8 @@ export function TeamDashboardPage() {
   const data = board.data
   const lang = i18n.language
   const current = boot.brands?.find(b => b.id === brand)?.name ?? (brand === 'all' && (boot.brands?.length ?? 0) > 1 ? t('crm.team.all_brands') : boot.organization.name)
-  const stale = data && (Date.now() - Date.parse(data.as_of) > 180000 || board.isError)
+  const now = useNow(60_000)
+  const stale = data && (now.getTime() - Date.parse(data.as_of) > 180000 || board.isError)
   const content = <div className="crm-team">
     <header className="crm-team-head">
       <div><div className="crm-team-context">{current}{data && <><span aria-hidden>·</span><span>{boardDay(data.from, lang)} – {boardDay(data.through, lang)}</span></>}</div>
