@@ -64,6 +64,7 @@ class TeamDashboardTest extends TestCase
 
     public function test_portfolio_countries_converted_values_followups_and_comparison_share_the_visible_leads(): void
     {
+        $this->org->forceFill(['currency' => 'EUR'])->saveQuietly();
         $add = function (string $country, array $data): int {
             $id = $this->lead($data + ['created_at' => now()->subHour()]);
             $guest = DB::table('inquiries')->where('id', $id)->value('guest_id');
@@ -82,7 +83,7 @@ class TeamDashboardTest extends TestCase
         $book = $stats['portfolio'];
         $period = $stats['performance'];
         $this->assertSame([5, 4, 1, 1], [$book['total'], $book['open'], $book['overdue'], $book['due_today']]);
-        $this->assertSame(['240.00', 3], [$book['total_value']['amount'], $book['total_value']['valued']]);
+        $this->assertSame(['EUR', '240.00', 3], [$book['total_value']['currency'], $book['total_value']['amount'], $book['total_value']['valued']]);
         $this->assertSame(['150.00', 2, 1], [$book['open_value']['amount'], $book['open_value']['valued'], $book['open_value']['missing_currency']]);
         $this->assertSame(['90.00', 1, 3, 1], [$period['won_value']['amount'], $period['won_value']['valued'], $period['lead_change'], $period['win_change']]);
         $this->assertSame([['code' => 'GB', 'count' => 3], ['code' => 'DE', 'count' => 1]], $book['countries']['rows']);
