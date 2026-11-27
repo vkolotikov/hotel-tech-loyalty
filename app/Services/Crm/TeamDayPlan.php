@@ -66,8 +66,9 @@ final class TeamDayPlan
         }
         foreach ($tasks->orderBy('id')->get() as $task) {
             $assignee = $task->assignee;
-            $key = $assignee && (int) $assignee->organization_id === (int) $org->id ? 'u'.$assignee->id : 'unassigned';
-            $people[$key] ??= $this->lane($key, $key === 'unassigned' ? null : $assignee?->name, $key === 'unassigned' ? null : $assignee?->id, false);
+            $owner = $assignee instanceof User && (int) $assignee->organization_id === (int) $org->id ? $assignee : null;
+            $key = $owner ? 'u'.$owner->id : 'unassigned';
+            $people[$key] ??= $this->lane($key, $owner?->name, $owner?->id, false);
             $time = $task->due_at?->copy()->setTimezone($now->timezone)->format('H:i');
             $people[$key]['tasks'][] = [
                 'id' => (int) $task->id, 'source' => 'crm', 'title' => $task->title, 'time' => $time === '00:00' ? null : $time,
@@ -94,7 +95,7 @@ final class TeamDayPlan
             ?: strcasecmp((string) $a['name'], (string) $b['name']) ?: strcmp($a['key'], $b['key']));
 
         return ['date' => $day->toDateString(), 'today' => $now->toDateString(), 'as_of' => $now->utc()->toISOString(),
-            'planner' => $planner, 'people' => array_values($people), 'total' => $total, 'done' => $done, 'top_tasks' => array_slice($all, 0, 3)];
+            'planner' => $planner, 'people' => $people, 'total' => $total, 'done' => $done, 'top_tasks' => array_slice($all, 0, 3)];
     }
 
     private function lane(string $key, ?string $name, ?int $userId, bool $assignable): array
