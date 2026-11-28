@@ -249,7 +249,8 @@ bullet of `CLAUDE.md`'s Time Planner section.
   `planner_buddies`; `index-5zsG0N6r.css` holds `time-buddy-peek`, `time-bubble`, `time-buddy-leaf` and twenty-eight
   `time-*` keyframes (fifteen before); `/time`, `/time/wins`, `/time/settings`, `/time/assistant`, `/time/register`
   200; `PUT api/v1/admin/time/buddy` 401 without a login; `hexa-academy` 200, its kit 64,577 bytes.
-- CI on fcce8e4a: running when this was written; its result is the next line of this file.
+- CI on fcce8e4a: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/46174876371 — **green** (18:34 UTC; all
+  eight jobs: the three SQLite shards, PostgreSQL 18, Larastan, the SPA on Node 24 and 26, the dependency audit).
 - The branch was brought up to main again by a merge (`efa30095`, its tree main's own), so the **next source-patch
   baseline** is `git merge-base origin/main HEAD` = `fcce8e4a`.
 
