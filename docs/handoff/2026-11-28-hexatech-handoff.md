@@ -168,8 +168,7 @@ rules are a bullet of `CLAUDE.md`'s Time Planner section.
   `time-gold-hi` and fifteen `time-*` keyframes (ten before); `/time`, `/time/wins`, `/time/settings`,
   `/time/assistant`, `/time/register` 200; `api/v1/admin/time/recognition` 401 without a login (404 before the
   release); `hexa-academy` 200, its kit 64,577 bytes.
-- CI on 2051b621: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/46155360540 — running when this was
-  written; its result is the next line of this file.
+- CI on 2051b621: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/46155360540 — **green** (14:50 UTC).
 - The branch was brought up to main again by a merge (`968e6acb`, its tree main's own), so the **next source-patch
   baseline** is `git merge-base origin/main HEAD` = `2051b621`.
 
