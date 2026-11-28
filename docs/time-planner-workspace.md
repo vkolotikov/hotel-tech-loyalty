@@ -83,9 +83,10 @@ The workspace's own endpoints live under `/api/v1/admin/time/`, behind the admin
 | `PUT people/{user}` | a person's planner profile: knowledge, hours, work days, break (`PlannerProfiles`) | manager |
 | `GET insights?from=&to=&person=` | the period (`TimeInsights`, at most 92 days) and the one before | staff |
 | `GET estimate?title=&task_group=&task_category=` | how long such a task usually takes: the median of finished ones, at least three | staff |
-| `GET settings` | the planner's settings (the full admin's `crm_settings` rows, only the planner's keys: the day's hours, the standard day, types, tasks, preferences, the planning mode, recognition's two) | staff |
-| `PUT settings/{key}` | one of them, in the full admin's shapes (lists as JSON text, the day's hours as `{start, end}`, the mode `team` or `own`, who sees the ranking as its word, the daily goal as a number); `employees` and every other key are not written here (404) | manager |
-| `GET recognition` | my points, daily goal, streak and badges, and the week's ranking as far as the organisation lets me see it (`Recognition`; only `mode` and `manager` when it is switched off) | staff |
+| `GET settings` | the planner's settings (the full admin's `crm_settings` rows, only the planner's keys: the day's hours, the standard day, types, tasks, preferences, the planning mode, recognition's two, whether characters are shown) | staff |
+| `PUT settings/{key}` | one of them, in the full admin's shapes (lists as JSON text, the day's hours as `{start, end}`, the mode `team` or `own`, who sees the ranking as its word, the daily goal as a number, the characters `on` or `off`); `employees` and every other key are not written here (404) | manager |
+| `GET recognition` | my points, daily goal, streak and badges, and the week's ranking as far as the organisation lets me see it (`Recognition`; only `mode` and `manager` when it is switched off); each person's character (`Buddies`) | staff |
+| `PUT buddy` | my own character (`hexi`, `pip`, `miu`, `ember`) or `none` — the one field of a planner profile a person writes for themselves (`PlannerProfiles::chooseBuddy`) | staff, for oneself |
 | `POST tasks/{id}/start|pause|finish` | the task's clock (`TaskClock`; in `own` mode only one's own or nobody's) | staff |
 | `POST plan` | a day's plan: `scope` `me` (anyone), `person` or `team` (anyone in `team` mode, a manager in `own` mode); `include_pool`, `include_overdue`, `include_timed`, `use_ai`, `instruction`, `lang`. AI first when it can be asked, the rules otherwise (`source`, `ai_status`). Writes nothing. 20 a minute (`time-plan`) | staff |
 | `POST plan/apply` | writes the lines a person kept (`PlanApplier`) | staff (others' days: the planning mode) |
@@ -311,19 +312,53 @@ Gold is `--time-gold` (with `--time-gold-hi` as its light, so a fill reads as go
 bronze `--time-silver`, `--time-bronze`; `theme/timeContrast.test.ts` holds each to 3:1 on every surface and what is
 written on them to 4.5:1.
 
+### Buddies: the animated characters (2026-11-28)
+
+The owner: "add maybe some animated characters as well … to make it even more interesting."
+
+Four characters of our own drawing — **Hexi** (a hexagon in the organisation's accent), **Pip** (a sprout), **Miu** (a
+cat) and **Ember** (a flame) — on one SVG rig (`wins/Buddy.tsx`: a body, two arms, two feet, a face). A character is
+only a picture: it decides nothing and earns nothing.
+
+- **Whose is which** is the server's (`App\Services\Time\Buddies`): a person's own choice, kept in
+  `staff.planner_profile.buddy` and written only by `PlannerProfiles::chooseBuddy` through `PUT admin/time/buddy` (the
+  one field of a profile a person writes for themselves; a manager's save of the rest leaves it alone), or `none` for
+  no character. Someone who never chose gets one by their account, so a team is varied from the first day. The answer
+  of `time/recognition` carries `me.buddy` (the one shown), `me.buddy_choice` (what was chosen, if anything) and a
+  `buddy` on every row of the ranking the person may see.
+- **Whether at all** is the organisation's: `planner_buddies`, `on` unless a manager switches it `off` in Settings →
+  Recognition (through `PUT admin/time/settings/planner_buddies`); off, every `buddy` is null, `buddies` is false, and
+  the workspace offers none. The workspace shows characters only where the answer says `buddies: true`.
+- **The mood** is read from the same answer as the points (`wins/buddyLogic.ts` `moodOf`): asleep with nothing planned
+  (eyes shut, "z z z"), ready before the first task (blinking, a wave now and then), busy once work is under way,
+  proud with the daily goal met (arms up), a party when everything planned is done (hopping, sparkles). The week's
+  leader wears a crown.
+- **Where**: inside the daily goal's ring on My day and on Achievements (the count moves to a pill under the ring; on
+  Achievements what the character "says" is the day's sentence in a speech bubble, opened by a call such as "Let's
+  go!"); the team's characters on the podium (the winner crowned and celebrating) and beside the names in the ranking
+  (still, so a list does not flicker); on the celebration card, holding the medal, and for the big moments as a cameo
+  that comes up from the foot of the screen; and in the card **Your buddy** on Achievements, where a person picks.
+- **Motion** is `time-buddy-*` in `theme/time.css`. Every keyframe starts and ends in the pose itself, so under reduced
+  motion (the frame's rule) each character stands at rest in its mood; the cameo is not drawn at all then
+  (`motionOk()`).
+
+Colours: Hexi wears `--a-accent` (its face in `--a-accent-ink`, so it reads on a dark or a light brand colour), Pip
+`--time-buddy-leaf`, Miu `--time-buddy-rose`, Ember `--time-buddy-flame`, each held to 3:1 on every surface by
+`theme/timeContrast.test.ts`.
+
 ## The areas
 
 | Area | Address | What it does |
 |---|---|---|
 | My day | `/time` | greeting, quick add (type, With AI, Speak), the band of progress (daily goal, points, streak, place), figures, now / up next with Start / Pause / Finish, my day on the clock (press an hour to add, drag to move), without a time, AI briefing, heads-up, overdue (to today), from the pool (Take), my week, the day's note; "Plan my day with AI" |
-| Achievements | `/time/wins` | my week's points, place and streak, each day as a bar, today's goal; the week's ranking with its podium (as far as the organisation shows it); my badges; how points are earned; a manager's way to Settings → Recognition. Not in the menu when recognition is off |
+| Achievements | `/time/wins` | my week's points, place and streak, each day as a bar, today's goal with my character; the choice of a character; the week's ranking with the team's characters on its podium (as far as the organisation shows it); my badges; how points are earned; a manager's way to Settings → Recognition. Not in the menu when recognition is off |
 | Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI"; in the week view "Plan the team's week with AI", "Plan my week with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
 | AI assistant | `/time/assistant` (`?q=` asks at once) | ask about days, weeks, the pool and the team; an answer writes itself out, with what it looked at; proposed changes applied one by one or all at once, each with a way to its day; follow-ups; what the AI knows (a gauge) and every other AI tool; in the phone's top bar too |
 | AI coach | `/time/coach` (`?tab=overview|durations|people|knowledge`, `?weeks=4|8|12|26`) | readiness, the period's figures, the AI strategy with one-press fixes, task lengths planned against real, people by type, Teach the AI (a manager's) |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
-| Settings | `/time/settings` (`?tab=day|planning|recognition|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), recognition (who sees the ranking, the daily goal), task types, tasks, templates (shared with the full admin) |
+| Settings | `/time/settings` (`?tab=day|planning|recognition|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), recognition (who sees the ranking, the daily goal, whether characters are shown), task types, tasks, templates (shared with the full admin) |
 
 **The task form** (`task/TaskPanel.tsx`, 9 Nov round 3, the owner: "make something like we have before with icons, and
 the tasks shown after type selection as a grid"): the full admin's drawer's pickers — the types as a grid of tiles with
@@ -364,6 +399,12 @@ P Planner, B Backlog, ? shortcuts.
   the next step, badges, the podium, what is worth celebrating, the confetti, the area, the default words against the
   English bundle), `wins/WinsPage.test.tsx` (the band, the page in each choice, each celebration),
   `settings/SettingsPage.test.tsx`.
+- **Buddies** (2026-11-28): the character by account for someone who never chose, a person's own choice and `none`,
+  only an existing character and only for oneself, the rest of the profile kept and a manager's save keeping the
+  choice, the organisation's switch (a manager's), another organisation untouched
+  (`tests/Feature/TimeWorkspace/BuddiesTest.php`, on SQLite and PostgreSQL); frontend `wins/buddy.test.tsx` (which
+  character, the mood of the day, the crown, each character in each mood as drawn), `wins/WinsPage.test.tsx` (the ring,
+  the bubble, the podium and rows, the choice, the celebration's character and cameo), `settings/SettingsPage.test.tsx`.
 - **The planning mode** on the full admin's planner endpoints and the workspace's, a manager's choice, `team` by default
   (`PlanningModeTest`, `SettingsTest`, `GateAndBootstrapTest`; frontend `time/lib/rights.test.ts`,
   `settings/SettingsPage.test.tsx`).
@@ -396,6 +437,8 @@ P Planner, B Backlog, ? shortcuts.
   week's place is worked out again each time).
 - A celebration needs the page open: points earned while it was closed are simply there the next time, uncelebrated.
 - The ranking counts people with an account; work given to a name without one earns nobody points.
+- There are four characters, drawn in the workspace's code; a new one is a kind in `Buddies::KINDS` and its drawing in
+  `wins/Buddy.tsx`. A character has no memory: its mood is today's, read again with every answer.
 
 - The planning mode is chosen in the Time Planner's Settings only; the full admin's Settings → Planner does not show it
   (its Planner follows it, and says the server's sentence when a change is refused).

@@ -455,6 +455,16 @@ or add the next dated one, at the end of a session.
   person and rules, and more points — the first answer and points lost celebrate nothing). A new badge is a code in
   `Recognition::BADGES` with its words in all five `wins.<lang>.json` and `wins/words.ts`; confetti and the floating
   points ask `motionOk()`. The full admin's own Planner shows none of it.
+- Buddies (owner 2026-11-28, "animated characters"; `docs/time-planner-workspace.md` "Buddies"): whose character is
+  which is the server's (`App\Services\Time\Buddies`: a person's own choice in `staff.planner_profile.buddy`, written
+  only by `PlannerProfiles::chooseBuddy` through `PUT admin/time/buddy` — the one field of a profile a person writes for
+  themselves, which a manager's save must keep — or one by their account, or none), and whether any are shown is the
+  organisation's `planner_buddies` (a manager's, through the workspace's settings). The workspace draws a character only
+  where the answer says `buddies: true` and names one it can draw (`buddyLogic.ts` `buddiesOn`, `buddyOf`), and reads its
+  mood from the same answer as the points (`moodOf`); a character is a picture, never a rule, and is decoration
+  (`aria-hidden`) — what a mood means is said in words beside it. They are our own drawings on one rig
+  (`wins/Buddy.tsx`): never trace or imitate an existing character. Their motion is `time-buddy-*` keyframes that start
+  and end in the pose itself (so reduced motion rests each in its mood); in a list a character is `still`.
 - Days and times are the venue's wall clock (`task_date` + `start_time`, `VenueClock`); the frontend's day arithmetic is
   `time/lib/dates.ts`, never `new Date('YYYY-MM-DD')`. Figures (load, capacity, on time, accuracy, signals) are the
   server's (`DayBoard`, `TimeInsights`); the workspace only words and draws them. Decisions live in pure functions with

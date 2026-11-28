@@ -29,6 +29,8 @@ export interface Bootstrap {
     recognition?: RecognitionMode
     /** How many finished tasks of a day make the daily goal (1 to 20). */
     daily_goal?: number
+    /** Whether the organisation shows characters (Buddies; absent on an older answer: yes). */
+    buddies?: boolean
   }
   counts: { today_open: number; overdue: number; pool: number }
 }
@@ -343,13 +345,20 @@ export type RecognitionMode = 'ranking' | 'podium' | 'own' | 'off'
 export interface Badge { code: string; earned: boolean; have: number; need: number }
 
 /** A row of the week's ranking; `rank` is null for someone who is told no place. */
-export interface RankRow { person: string; name: string; manager: boolean; points: number; done: number; rank: number | null; me: boolean; streak: number; badges: number }
+export interface RankRow {
+  person: string; name: string; manager: boolean; points: number; done: number; rank: number | null; me: boolean; streak: number; badges: number
+  /** The person's character (Buddies), or none: they chose none, or the organisation shows no characters. */
+  buddy?: string | null
+}
 
 export interface RecognitionDay { date: string; future: boolean; points: number; planned: number; done: number; goal_met: boolean; sweep: boolean; day_planned: boolean }
 
 export interface RecognitionMe {
   person: string
   name: string
+  /** The character I am shown with, and what I chose myself (a kind, `none`, or nothing yet). */
+  buddy?: string | null
+  buddy_choice?: string | null
   today: { planned: number; done: number; goal: number; goal_met: boolean; sweep: boolean; day_planned: boolean; planned_pct: number | null; important_done: number; points: number }
   week: { points: number; done: number; important: number; on_time_pct: number | null; clocked: number; days_goal: number; days_sweep: number; days_planned: number; rank: number | null; of: number | null }
   streak: number
@@ -362,6 +371,8 @@ export interface RecognitionMe {
 export interface Recognition {
   mode: RecognitionMode
   manager: boolean
+  /** Whether the organisation shows characters at all (Buddies). */
+  buddies?: boolean
   today?: string
   week?: { from: string; to: string }
   rules?: { points: Record<string, number>; daily_goal: number; planned_share: number; day_task_cap: number; on_time_share?: number }

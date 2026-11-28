@@ -177,6 +177,25 @@ describe('Settings', () => {
     expect(staff).toMatch(/disabled="" aria-label="One task more"/)
   })
 
+  it('lets a manager switch the characters off for everyone, and hides the switch with recognition', () => {
+    const html = render('/time/settings?tab=recognition', true, undefined, { buddies: true })
+    expect(html).toContain('Animated characters')
+    // On, as the server says (it is on unless a manager said otherwise).
+    expect(html).toMatch(/<input type="checkbox" role="switch" class="peer sr-only" checked=""\/>/)
+    expect(html).toContain('Show the characters')
+    expect(html).toContain('data-buddies="on"')
+    expect((html.match(/width="52" height="52"[^>]*data-still="true"/g) ?? []).length).toBe(4)
+
+    const off = render('/time/settings?tab=recognition', true, undefined, { buddies: false })
+    expect(off).toMatch(/<input type="checkbox" role="switch" class="peer sr-only"\/>/)
+    expect(off).toContain('data-buddies="off"')
+
+    const staff = render('/time/settings?tab=recognition', false, undefined, { buddies: true })
+    expect(staff).toMatch(/<input type="checkbox" role="switch" class="peer sr-only" disabled="" checked=""\/>/)
+
+    expect(render('/time/settings?tab=recognition', true, undefined, { recognition: 'off' })).not.toContain('Animated characters')
+  })
+
   it('shows staff the settings read-only, with templates still theirs', () => {
     const html = render('/time/settings?tab=types', false)
     expect(html).toContain('Only a manager can change the working day, who plans, the types and the tasks; you can see them here.')

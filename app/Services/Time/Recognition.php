@@ -143,15 +143,20 @@ final class Recognition
     }
 
     /**
-     * Both choices in one read (the bootstrap asks every minute).
+     * The organisation's choices in one read (the bootstrap asks every minute): who sees the ranking, the daily goal,
+     * and whether characters are shown (Buddies).
      *
-     * @return array{mode: string, goal: int}
+     * @return array{mode: string, goal: int, buddies: bool}
      */
     public static function settings(): array
     {
-        $rows = CrmSetting::query()->whereIn('key', [self::KEY, self::GOAL_KEY])->pluck('value', 'key');
+        $rows = CrmSetting::query()->whereIn('key', [self::KEY, self::GOAL_KEY, Buddies::KEY])->pluck('value', 'key');
 
-        return ['mode' => self::readMode($rows[self::KEY] ?? null), 'goal' => self::readGoal($rows[self::GOAL_KEY] ?? null)];
+        return [
+            'mode'    => self::readMode($rows[self::KEY] ?? null),
+            'goal'    => self::readGoal($rows[self::GOAL_KEY] ?? null),
+            'buddies' => Buddies::readEnabled($rows[Buddies::KEY] ?? null),
+        ];
     }
 
     public static function readGoal(mixed $value): int
@@ -182,6 +187,8 @@ final class Recognition
 
         $this->today = VenueClock::today($orgId);
         $this->goal = $settings['goal'];
+        // Characters (Buddies): each person's, where the organisation shows them at all.
+        $buddies = $settings['buddies'];
         $this->orgWindow = WorkWindow::resolve();
         $this->standard = $this->catalogue->minutesPerDay();
         $day = CarbonImmutable::createFromFormat('!Y-m-d', $this->today, 'UTC');
@@ -214,6 +221,9 @@ final class Recognition
             $me = [
                 'person' => $key,
                 'name'   => $this->people[$key]['name'],
+                // The character shown with this person, and what they chose themselves (a kind, `none`, or nothing yet).
+                'buddy'        => $buddies ? Buddies::shown($this->people[$key]) : null,
+                'buddy_choice' => Buddies::choice($this->people[$key]['profile']['buddy'] ?? null),
                 'today'  => [
                     'planned'        => $state['planned'],
                     'done'           => $state['done'],
@@ -268,6 +278,7 @@ final class Recognition
         return [
             'mode'    => $mode,
             'manager' => $manager,
+            'buddies' => $buddies,
             'today'   => $this->today,
             'week'    => ['from' => $weekFrom, 'to' => $weekTo],
             'rules'   => [
@@ -278,12 +289,13 @@ final class Recognition
                 'on_time_share' => self::ON_TIME_SHARE,
             ],
             'me'      => $me,
-            'ranking' => array_map(function (array $r) use ($placed, $lastRanks, $key) {
+            'ranking' => array_map(function (array $r) use ($placed, $lastRanks, $key, $buddies) {
                 $streak = $this->streak($r['person']);
 
                 return [
                     'person'  => $r['person'],
                     'name'    => $r['name'],
+                    'buddy'   => $buddies ? Buddies::shown($this->people[$r['person']]) : null,
                     'manager' => $r['manager'],
                     'points'  => $r['points'],
                     'done'    => $r['done'],

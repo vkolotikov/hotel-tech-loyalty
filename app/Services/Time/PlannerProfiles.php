@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
  * - `break_minutes`: kept free in the middle of their day.
  * - `job_title`, `level` (LEVELS), `strengths` and `develop` (what they are learning or should grow in): the rest of what
  *   a manager teaches the planner's AI about a person (2026-11-14, the AI assistant); the AI reads them, nothing else.
+ * - `buddy` (2026-11-28): the character a person chose for themselves (Buddies::KINDS, or `none`), the one field a
+ *   person writes for their own profile (`chooseBuddy`); a manager's save of the rest leaves it alone.
  *
  * Which tasks fit a person best stays the full admin's `crm_settings.planner_employee_prefs` (by name), which the
  * workspace writes through `crm-settings` as the full admin does.
@@ -34,7 +36,7 @@ final class PlannerProfiles
     public const LEVELS = ['trainee', 'junior', 'experienced', 'senior', 'lead'];
 
     /**
-     * @return array{skills: ?list<string>, knowledge: string, work_start: ?string, work_end: ?string, work_days: ?list<int>, break_minutes: int, job_title: string, level: ?string, strengths: string, develop: string}
+     * @return array{skills: ?list<string>, knowledge: string, work_start: ?string, work_end: ?string, work_days: ?list<int>, break_minutes: int, job_title: string, level: ?string, strengths: string, develop: string, buddy: ?string}
      */
     public static function of(Staff $staff): array
     {
@@ -58,6 +60,8 @@ final class PlannerProfiles
             'level'         => in_array($profile['level'] ?? null, self::LEVELS, true) ? $profile['level'] : null,
             'strengths'     => mb_substr((string) ($profile['strengths'] ?? ''), 0, self::NOTE_MAX),
             'develop'       => mb_substr((string) ($profile['develop'] ?? ''), 0, self::NOTE_MAX),
+            // The person's own choice of character, or null for someone who never chose (Buddies).
+            'buddy'         => Buddies::choice($profile['buddy'] ?? null),
         ];
     }
 
@@ -65,7 +69,7 @@ final class PlannerProfiles
     public static function blank(): array
     {
         return ['skills' => null, 'knowledge' => '', 'work_start' => null, 'work_end' => null, 'work_days' => null, 'break_minutes' => 0,
-            'job_title' => '', 'level' => null, 'strengths' => '', 'develop' => ''];
+            'job_title' => '', 'level' => null, 'strengths' => '', 'develop' => '', 'buddy' => null];
     }
 
     /**
@@ -90,6 +94,8 @@ final class PlannerProfiles
                 'level'         => array_key_exists('level', $data) ? (in_array($data['level'], self::LEVELS, true) ? $data['level'] : null) : $current['level'],
                 'strengths'     => array_key_exists('strengths', $data) ? mb_substr(trim((string) $data['strengths']), 0, self::NOTE_MAX) : $current['strengths'],
                 'develop'       => array_key_exists('develop', $data) ? mb_substr(trim((string) $data['develop']), 0, self::NOTE_MAX) : $current['develop'],
+                // The person's own (chooseBuddy): a manager's save of the rest never changes or loses it.
+                'buddy'         => $current['buddy'],
             ];
             if ($profile['work_start'] !== null && $profile['work_end'] !== null
                 && WorkWindow::toMinutes($profile['work_end']) <= WorkWindow::toMinutes($profile['work_start'])) {
@@ -101,6 +107,27 @@ final class PlannerProfiles
                 sort($profile['work_days']);
             }
 
+            $staff->forceFill(['planner_profile' => $profile])->save();
+
+            return $staff->fresh();
+        });
+    }
+
+    /**
+     * A person's own choice of character (Buddies::KINDS, or `none`): the rest of their profile stays as it is.
+     * Nothing else of a profile is a person's own to write.
+     */
+    public function chooseBuddy(int $userId, string $buddy): Staff
+    {
+        return DB::transaction(function () use ($userId, $buddy) {
+            $staff = Staff::query()->where('user_id', $userId)->where('is_active', true)->lockForUpdate()->first()
+                ?? throw TimeRefused::notFound();
+            $choice = Buddies::choice($buddy) ?? throw new TimeRefused('invalid', 'There is no such character.', 422);
+
+            $profile = self::of($staff);
+            // Skills are a column of their own (the full admin's Team endpoint writes them), never part of the profile.
+            unset($profile['skills']);
+            $profile['buddy'] = $choice;
             $staff->forceFill(['planner_profile' => $profile])->save();
 
             return $staff->fresh();

@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check, EyeOff, Medal, Minus, Plus, Target, Trophy, User, type LucideIcon } from 'lucide-react'
+import { Check, EyeOff, Medal, Minus, Plus, Smile, Target, Trophy, User, type LucideIcon } from 'lucide-react'
 import { useBoot } from '../TimeProvider'
 import { errorText } from '../lib/errors'
 import { useRefresh } from '../lib/queries'
 import { plannerApi } from '../lib/tasks'
 import type { RecognitionMode } from '../lib/types'
 import { Card } from '../ui/Card'
+import { Toggle } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
+import { Buddy } from '../wins/Buddy'
+import { BUDDY_KINDS } from '../wins/buddyLogic'
 import { GOAL_MAX, GOAL_MIN, MODES, modeOf } from '../wins/winsLogic'
 import { MODE_WORDS } from '../wins/words'
 
@@ -20,7 +23,8 @@ const MODE_ICON: Record<RecognitionMode, LucideIcon> = { ranking: Trophy, podium
  * ranking — everyone, the top three and one's own place (where nobody chose), only one's own points, or nobody (off) —
  * and how many finished tasks make the daily goal. Both are the server's settings (`planner_recognition`, `planner_daily_goal`,
  * App\Services\Time\Recognition), saved as soon as a manager picks; how points are earned is the server's and is
- * shown on Achievements.
+ * shown on Achievements. And whether the organisation shows characters at all (`planner_buddies`, Buddies): which one
+ * is each person's own choice, on Achievements.
  */
 export function RecognitionSection({ can }: { can: boolean }) {
   const { t } = useTranslation()
@@ -35,11 +39,13 @@ export function RecognitionSection({ can }: { can: boolean }) {
   const goal = sent ?? saved
 
   const save = useMutation({
-    mutationFn: ({ key, value }: { key: 'planner_recognition' | 'planner_daily_goal'; value: string | number }) => plannerApi.saveSetting(key, value),
+    mutationFn: ({ key, value }: { key: 'planner_recognition' | 'planner_daily_goal' | 'planner_buddies'; value: string | number }) => plannerApi.saveSetting(key, value),
     onSuccess: () => { refresh(); toast(t('time.common.saved', 'Saved')) },
     onError: error => { setSent(null); refresh(); toast(errorText(t, error), 'danger') },
   })
   const setGoal = (next: number) => { setSent(next); save.mutate({ key: 'planner_daily_goal', value: next }) }
+  // Characters are shown where the server says so (on unless a manager switched them off).
+  const buddies = boot.settings.buddies === true
   const off = !can || save.isPending
   const step = 'grid h-10 w-10 shrink-0 place-items-center rounded-full border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2 disabled:pointer-events-none disabled:opacity-40'
 
@@ -88,6 +94,22 @@ export function RecognitionSection({ can }: { can: boolean }) {
           <p className="mt-4 text-sm">
             <Link to="/time/wins" className="font-semibold text-a-accent-text">{t('time.settings.recognition.see_rules', 'See how points are earned')}</Link>
           </p>
+        </Card>
+      )}
+
+      {current !== 'off' && (
+        <Card title={t('time.settings.recognition.buddies_title', 'Animated characters')} icon={Smile} tone="gold"
+          description={t('time.settings.recognition.buddies_line', 'Each person picks a character that reacts to their day and stands beside their name.')}>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div className="min-w-0 flex-1 basis-72">
+              <Toggle checked={buddies} disabled={off} onChange={on => save.mutate({ key: 'planner_buddies', value: on ? 'on' : 'off' })}
+                label={t('time.settings.recognition.buddies_toggle', 'Show the characters')}
+                hint={t('time.settings.recognition.buddies_hint', 'Switched off, nobody is shown a character and nobody is offered one. Points and badges stay as they are.')} />
+            </div>
+            <div aria-hidden data-buddies={buddies ? 'on' : 'off'} className={`flex items-end gap-1 ${buddies ? '' : 'opacity-40'}`}>
+              {BUDDY_KINDS.map(kind => <Buddy key={kind} kind={kind} mood="ready" still size={52} />)}
+            </div>
+          </div>
         </Card>
       )}
     </div>

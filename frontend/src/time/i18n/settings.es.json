@@ -63,6 +63,10 @@
   },
   "read_only": "Solo un responsable puede cambiar la jornada laboral, quién planifica, los tipos y las tareas; aquí puede verlos. Las plantillas son de todos.",
   "recognition": {
+    "buddies_hint": "Desactivado, nadie ve un personaje y a nadie se le ofrece uno. Los puntos y las insignias siguen como están.",
+    "buddies_line": "Cada persona elige un personaje que reacciona a su día y aparece junto a su nombre.",
+    "buddies_title": "Personajes animados",
+    "buddies_toggle": "Mostrar los personajes",
     "goal_less": "Una tarea menos",
     "goal_line": "Cuántas tareas terminadas en un día alcanzan el objetivo.",
     "goal_more": "Una tarea más",

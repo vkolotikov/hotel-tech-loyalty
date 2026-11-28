@@ -63,6 +63,10 @@
   },
   "read_only": "Nur eine Führungskraft kann den Arbeitstag, wer plant, die Typen und die Aufgaben ändern; hier können Sie sie ansehen. Vorlagen gehören allen.",
   "recognition": {
+    "buddies_hint": "Ausgeschaltet sieht niemand eine Figur, und niemandem wird eine angeboten. Punkte und Abzeichen bleiben, wie sie sind.",
+    "buddies_line": "Jede Person wählt eine Figur, die auf ihren Tag reagiert und neben ihrem Namen steht.",
+    "buddies_title": "Animierte Figuren",
+    "buddies_toggle": "Figuren anzeigen",
     "goal_less": "Eine Aufgabe weniger",
     "goal_line": "Wie viele abgeschlossene Aufgaben eines Tages das Ziel erreichen.",
     "goal_more": "Eine Aufgabe mehr",

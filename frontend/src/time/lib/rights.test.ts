@@ -42,6 +42,8 @@ describe('a planner setting is sent as the full admin writes it', () => {
     // Recognition (2026-11-28): who sees the ranking is one word the server checks, the daily goal a number.
     expect(settingBody('planner_recognition', 'podium')).toEqual({ value: 'podium' })
     expect(settingBody('planner_daily_goal', 4)).toEqual({ value: 4 })
+    // Buddies (2026-11-28): whether characters are shown is `on` or `off`, a word too.
+    expect(settingBody('planner_buddies', 'off')).toEqual({ value: 'off' })
     expect(settingBody('planner_work_hours_per_day', 7.5)).toEqual({ value: 7.5 })
     expect(settingBody('planner_groups', [{ name: 'Housekeeping' }])).toEqual({ value: '[{"name":"Housekeeping"}]' })
   })

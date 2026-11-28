@@ -1,15 +1,14 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, CalendarCheck, Check, Star, Trophy } from 'lucide-react'
+import { ArrowRight, CalendarCheck, Star, Trophy } from 'lucide-react'
 import { useRecognition } from '../lib/queries'
 import type { Recognition } from '../lib/types'
-import { Ring } from '../ui/motion'
-import { StreakChip, WeekDots } from './parts'
-import { goalPct, nextStep } from './winsLogic'
+import { GoalRing, StreakChip, WeekDots } from './parts'
+import { nextStep } from './winsLogic'
 
 /**
  * My day's band of progress (2026-11-28, the owner: "so they are interested to fill and do tasks"): the daily goal as
- * a ring, what earns the next points, today's and the week's points, the streak, how full the calendar is, the week
+ * a ring (the person's character inside it, in the mood of the day), what earns the next points, today's and the week's points, the streak, how full the calendar is, the week
  * day by day and the way to Achievements. Every figure is the server's (time/recognition); nothing shows when the
  * organisation switched recognition off or the person is not on the team list.
  */
@@ -35,13 +34,7 @@ export function ProgressBandView({ data }: { data: Recognition }) {
     <section aria-label={t('time.wins.band.title', 'My progress')} data-goal-met={today.goal_met ? 'true' : 'false'}
       className={`flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border p-4 shadow-a-sm ${today.goal_met ? 'time-gold-border time-gold-wash' : 'border-a-border bg-a-surface'}`}>
       <div className="flex min-w-0 flex-1 basis-72 items-center gap-3.5">
-        <Ring value={goalPct(today)} size={64} stroke={7} tone={today.goal_met ? 'gold' : 'accent'}
-          label={t('time.wins.band.ring', 'Daily goal: {{done}} of {{goal}} tasks done', { done: today.done, goal: today.goal })}>
-          {/* Under way it counts; met, a tick says so (more may be done than the goal names); a star for a clean sweep. */}
-          {today.sweep ? <Star size={22} className="time-gold-text time-pop" />
-            : today.goal_met ? <Check size={24} className="time-gold-text time-pop" />
-              : <span className="text-sm font-bold text-a-text">{today.done}/{today.goal}</span>}
-        </Ring>
+        <GoalRing data={data} me={me} at="band" />
         <div className="min-w-0">
           <p className={`text-xs font-semibold uppercase tracking-wide ${today.goal_met ? 'time-gold-text' : 'text-a-text-2'}`}>
             {today.goal_met ? t('time.wins.band.goal_met', 'Daily goal reached') : t('time.wins.band.goal', 'Today’s goal')}

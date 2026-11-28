@@ -6,6 +6,7 @@ import { SIGNAL_CODES } from '../lib/signals'
 import { REASONS, SKIPPED, UNPLACED } from '../plan/planLogic'
 import { SOURCES } from '../assistant/assistantLogic'
 import { READINESS } from '../coach/coachLogic'
+import { BUDDY_KINDS, MOODS } from '../wins/buddyLogic'
 import { BADGE_CODES, CHEER_KINDS, MODES, RULE_CODES } from '../wins/winsLogic'
 import { timeBundles, LANGS } from './index'
 
@@ -44,6 +45,9 @@ const built = [
   ...CHEER_KINDS.flatMap(kind => [`time.wins.cheer.${kind}`, `time.wins.cheer_line.${kind}`]),
   ...RULE_CODES.map(code => `time.wins.rule.${code}`),
   ...MODES.flatMap(mode => [`time.settings.recognition.mode.${mode}`, `time.settings.recognition.mode_line.${mode}`]),
+  // Buddies (2026-11-28): the characters' names and what each calls out in its mood.
+  ...BUDDY_KINDS.map(kind => `time.wins.buddy.name.${kind}`),
+  ...MOODS.map(mood => `time.wins.buddy.say.${mood}`),
   ...['planning', 'people', 'reports', 'setup', 'ai'].map(g => `time.nav.groups.${g}`),
   // The AI assistant and coach (2026-11-14): the words their codes pick.
   ...['plan_tomorrow_team', 'fill_week', 'best_at', 'last_week', 'longer_than_planned', 'plan_my_day', 'pool_for_me', 'my_week'].map(k => `time.assistant.suggest.${k}`),

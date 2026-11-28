@@ -63,6 +63,10 @@
   },
   "read_only": "Only a manager can change the working day, who plans, the types and the tasks; you can see them here. Templates are everyone’s.",
   "recognition": {
+    "buddies_hint": "Switched off, nobody is shown a character and nobody is offered one. Points and badges stay as they are.",
+    "buddies_line": "Each person picks a character that reacts to their day and stands beside their name.",
+    "buddies_title": "Animated characters",
+    "buddies_toggle": "Show the characters",
     "goal_less": "One task fewer",
     "goal_line": "How many finished tasks of a day reach the goal.",
     "goal_more": "One task more",

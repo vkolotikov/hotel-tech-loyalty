@@ -1,9 +1,11 @@
 import type { RecognitionMode } from '../lib/types'
+import type { BuddyKind, Mood } from './buddyLogic'
 import type { BadgeCode, CheerKind, RuleCode } from './winsLogic'
 
 /**
  * Recognition's default (English) words for the keys its codes pick: time.wins.badge.<code>, badge_hint.<code>,
- * cheer.<kind>, cheer_line.<kind>, rule.<code> and time.settings.recognition.mode.<mode>, mode_line.<mode>. The five
+ * cheer.<kind>, cheer_line.<kind>, rule.<code>, buddy.name.<kind>, buddy.say.<mood> and
+ * time.settings.recognition.mode.<mode>, mode_line.<mode>. The five
  * bundles hold the same keys (timeLocales.test.ts); these are what a missing bundle would fall back to.
  */
 
@@ -45,4 +47,16 @@ export const MODE_WORDS: Record<RecognitionMode, { title: string; line: string }
   podium: { title: 'The top three and one’s own place', line: 'Everyone sees the podium and where they stand themselves; the other places stay private.' },
   own: { title: 'Only one’s own points', line: 'Everyone sees their own points, goal, streak and badges; nobody is compared. Managers still see the table.' },
   off: { title: 'Switched off', line: 'No points, badges, ranking or celebrations for anyone.' },
+}
+
+/** The characters' names: proper names, the same in every language. */
+export const BUDDY_NAMES: Record<BuddyKind, string> = { hexi: 'Hexi', pip: 'Pip', miu: 'Miu', ember: 'Ember' }
+
+/** What a character calls out in each mood, before the sentence about the day. */
+export const BUDDY_SAYS: Record<Mood, string> = {
+  sleepy: 'Zzz…',
+  ready: 'Let’s go!',
+  busy: 'Nice!',
+  proud: 'Yes!',
+  party: 'Woohoo!',
 }
