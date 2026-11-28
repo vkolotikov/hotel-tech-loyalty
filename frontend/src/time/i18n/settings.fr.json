@@ -63,6 +63,10 @@
   },
   "read_only": "Seul un responsable peut modifier la journée de travail, qui planifie, les types et les tâches ; vous pouvez les consulter ici. Les modèles sont à tout le monde.",
   "recognition": {
+    "buddies_hint": "Désactivé, personne ne voit de personnage et aucun n’est proposé. Les points et les badges restent tels quels.",
+    "buddies_line": "Chacun choisit un personnage qui réagit à sa journée et se tient à côté de son nom.",
+    "buddies_title": "Personnages animés",
+    "buddies_toggle": "Afficher les personnages",
     "goal_less": "Une tâche de moins",
     "goal_line": "Combien de tâches terminées dans la journée atteignent l’objectif.",
     "goal_more": "Une tâche de plus",

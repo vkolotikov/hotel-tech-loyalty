@@ -129,6 +129,8 @@ export const timeApi = {
     send<ApplyResult>('post', 'time/plan/apply', { date, lines }),
   /** Recognition (2026-11-28): my points, daily goal, streak and badges, and the week's ranking as far as I may see it. */
   recognition: () => get<Recognition>('time/recognition'),
+  /** My character (Buddies): one of the kinds, or `none`. The one thing of a planner profile a person sets for themselves. */
+  chooseBuddy: (buddy: string) => send<{ buddy: string }>('put', 'time/buddy', { buddy }),
   /** A week's plan (2026-11-14): the pool, backlogs and overdue work to days and people, each day's times. */
   planWeek: (body: { start: string; scope: 'me' | 'team'; include_pool?: boolean; include_backlog?: boolean; include_overdue?: boolean; use_ai?: boolean; instruction?: string; lang?: string }) =>
     send<WeekPlanResult>('post', 'time/plan-week', body),

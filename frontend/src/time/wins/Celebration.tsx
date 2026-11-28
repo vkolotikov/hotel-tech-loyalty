@@ -5,6 +5,8 @@ import { CalendarCheck, CheckCheck, Crown, Flame, Star, Target, Trophy, X, Zap, 
 import { motionOk } from '../lib/motion'
 import { useRecognition } from '../lib/queries'
 import type { Recognition } from '../lib/types'
+import { Buddy } from './Buddy'
+import { buddiesOn, buddyOf, cheerMood, type BuddyKind } from './buddyLogic'
 import { confettiPieces } from './confetti'
 import { Medal } from './parts'
 import { useCheerText } from './useBadgeWords'
@@ -21,6 +23,7 @@ const POINTS_MS = 2400
  * they arrive on whatever page the work was finished: after a write every read is asked again, and when the server's
  * answer says something was earned since the last one — a badge, the lead, a clean sweep, the daily goal, a
  * well-planned day, an important task — a card says so, with confetti for the big ones; a plain task shows its points.
+ * The person's character (Buddies) cheers on the card, and for the big moments comes up from the foot of the screen.
  * The first answer of a session is only the starting line. Nothing is decided here: `cheersBetween` reads two answers.
  */
 export function Celebration() {
@@ -47,7 +50,9 @@ export function Celebration() {
   return (
     <>
       <p role="status" className="sr-only">{said ? [said.title, said.line, ...said.also, shown?.cheers.main ? said.gained : ''].filter(Boolean).join(' ') : ''}</p>
-      {shown && <CheerView key={shown.n} cheers={shown.cheers} rules={data?.rules} onClose={() => setShown(null)} />}
+      {shown && (
+        <CheerView key={shown.n} cheers={shown.cheers} rules={data?.rules} buddy={buddiesOn(data) ? buddyOf(data?.me?.buddy) : null} onClose={() => setShown(null)} />
+      )}
     </>
   )
 }
@@ -64,7 +69,7 @@ const KIND_ICON: Record<Exclude<CheerKind, 'badge'>, LucideIcon> = {
  * One celebration as it is drawn: the card (or only the points), and confetti where the device lets things move. What a
  * screen reader hears is the shell's status line (Celebration), so nothing here announces itself a second time.
  */
-export function CheerView({ cheers, rules, onClose }: { cheers: Cheers; rules?: Recognition['rules']; onClose: () => void }) {
+export function CheerView({ cheers, rules, buddy = null, onClose }: { cheers: Cheers; rules?: Recognition['rules']; buddy?: BuddyKind | null; onClose: () => void }) {
   const { t } = useTranslation()
   // Asked once, when the celebration appears: a device that wants less motion gets the card and no shower.
   const [lively] = useState(motionOk)
@@ -82,6 +87,8 @@ export function CheerView({ cheers, rules, onClose }: { cheers: Cheers; rules?: 
   }
 
   const badge = main.kind === 'badge' ? (main.badge ?? '') : ''
+  // The week's new leader cheers with the crown on.
+  const crown = main.kind === 'lead' || cheers.also.includes('lead')
 
   return (
     <>
@@ -93,9 +100,23 @@ export function CheerView({ cheers, rules, onClose }: { cheers: Cheers; rules?: 
           ))}
         </div>
       )}
+      {/* The cameo: for a big moment the character comes up from the foot of the screen, cheers and goes. */}
+      {lively && main.big && buddy && (
+        <div aria-hidden data-cameo={buddy} className="pointer-events-none fixed bottom-0 right-3 z-[69] overflow-hidden sm:right-8">
+          <Buddy kind={buddy} mood="party" crown={crown} size={148} className="time-buddy-peek" />
+        </div>
+      )}
       <div className="pointer-events-none fixed inset-x-0 top-16 z-[70] flex justify-center px-4">
         <div data-cheer={main.kind} className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border bg-a-surface p-4 time-cheer animate-a-rise">
-          {main.kind === 'badge'
+          {buddy ? (
+            // The character cheers, holding what was earned.
+            <span className="relative shrink-0" data-cheer-buddy={buddy}>
+              <Buddy kind={buddy} mood={cheerMood(main)} crown={crown} size={68} />
+              <span className="absolute -bottom-1 -right-2">
+                {main.kind === 'badge' ? <Medal code={badge} earned size="sm" /> : <Medal earned size="sm" icon={KIND_ICON[main.kind]} />}
+              </span>
+            </span>
+          ) : main.kind === 'badge'
             ? <Medal code={badge} earned size="md" />
             : <Medal earned size="md" icon={KIND_ICON[main.kind]} />}
           <div className="min-w-0 flex-1">

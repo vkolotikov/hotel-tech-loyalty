@@ -13,16 +13,19 @@ import { EmptyState } from '../ui/EmptyState'
 import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
-import { CountUp, Ring } from '../ui/motion'
-import { Medal, PlaceMark, StreakChip } from './parts'
+import { CountUp } from '../ui/motion'
+import { Buddy } from './Buddy'
+import { BuddyPicker } from './BuddyPicker'
+import { buddiesOn, buddyOf, moodOf, podiumBuddy } from './buddyLogic'
+import { GoalRing, Medal, PlaceMark, StreakChip } from './parts'
 import { useBadgeWords } from './useBadgeWords'
-import { badgePct, dayHeights, dotOf, earnedCount, goalPct, nextStep, podiumOf, rankingView, ruleRows, shareOf, sortBadges, type RuleRow } from './winsLogic'
-import { RULE_WORDS } from './words'
+import { badgePct, dayHeights, dotOf, earnedCount, nextStep, podiumOf, rankingView, ruleRows, shareOf, sortBadges, type RuleRow } from './winsLogic'
+import { BUDDY_SAYS, RULE_WORDS } from './words'
 
 /**
  * Achievements (2026-11-28, the owner: "badges … a week rating system … so they are interested to fill and do tasks"):
- * my week's points and place, the week day by day, today's goal, the week's ranking with its podium, my badges and how
- * points are earned. Every figure is the server's (time/recognition, App\Services\Time\Recognition); who sees the
+ * my week's points and place, the week day by day, today's goal (with my character and what it says), the choice of a
+ * character, the week's ranking with the team's characters on its podium, my badges and how points are earned. Every figure is the server's (time/recognition, App\Services\Time\Recognition); who sees the
  * ranking is the organisation's choice, and the page only shows what the answer holds.
  */
 export function WinsPage() {
@@ -59,6 +62,7 @@ export function WinsView({ data }: { data: Recognition }) {
   return (
     <div className="space-y-5">
       {me ? <Hero data={data} me={me} /> : <Notice tone="info">{t('time.wins.not_on_team', 'You are not on the planner’s team list, so you collect no points.')}</Notice>}
+      {me && buddiesOn(data) && <BuddyPicker me={me} />}
       {/* Two columns on a wide screen: the ranking over how points are earned, the badges beside them. On a phone the
           left column dissolves (`contents`) and the order is the ranking, the badges, then the rules. */}
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
@@ -79,6 +83,8 @@ function Hero({ data, me }: { data: Recognition; me: RecognitionMe }) {
   const today = me.today
   const step = nextStep(today)
   const heights = dayHeights(me.days)
+  const kind = buddiesOn(data) ? buddyOf(me.buddy) : null
+  const mood = moodOf(today)
   const range = data.week ? `${dayLabel(data.week.from, lang)} – ${dayLabel(data.week.to, lang)}` : ''
   const headline = step.code === 'plan' ? t('time.wins.band.plan', 'Plan your day to start earning points')
     : step.code === 'goal' ? t('time.wins.band.goal_left', '{{count}} more tasks to reach today’s goal', { count: step.left })
@@ -139,20 +145,15 @@ function Hero({ data, me }: { data: Recognition; me: RecognitionMe }) {
         </ol>
 
         <div className="flex min-w-0 items-center gap-4 lg:justify-end">
-          <Ring value={goalPct(today)} size={104} stroke={10} tone={today.goal_met ? 'gold' : 'accent'}
-            label={t('time.wins.band.ring', 'Daily goal: {{done}} of {{goal}} tasks done', { done: today.done, goal: today.goal })}>
-            <span className="grid justify-items-center text-center">
-              {today.sweep ? <Star size={30} className="time-gold-text time-pop" />
-                : today.goal_met ? <Check size={32} className="time-gold-text time-pop" />
-                  : <span className="block font-a-display text-2xl leading-none text-a-text">{today.done}/{today.goal}</span>}
-              <span className="mt-0.5 block text-xs text-a-text-2">{t('time.wins.today', 'today')}</span>
-            </span>
-          </Ring>
-          <div className="min-w-0">
+          <GoalRing data={data} me={me} at="hero" />
+          {/* With a character, the words are what it says: a bubble with its tail towards it, opened by its call. */}
+          <div data-says={kind ? mood : undefined} className={kind ? 'min-w-0 px-3.5 py-2.5 time-bubble' : 'min-w-0'}>
             <p className={`text-xs font-semibold uppercase tracking-wide ${today.goal_met ? 'time-gold-text' : 'text-a-text-2'}`}>
               {today.goal_met ? t('time.wins.band.goal_met', 'Daily goal reached') : t('time.wins.band.goal', 'Today’s goal')}
             </p>
-            <p className="text-sm font-semibold text-a-text">{headline}</p>
+            <p className="text-sm font-semibold text-a-text">
+              {kind && <span className="time-gold-text">{t(`time.wins.buddy.say.${mood}`, BUDDY_SAYS[mood])} </span>}{headline}
+            </p>
             <p className="mt-1 text-sm text-a-text-2">{t('time.wins.band.today', 'Today: {{count}} points', { count: today.points })}</p>
             <Link to="/time" className="mt-1 inline-block text-sm font-semibold text-a-accent-text">{t('time.wins.open_day', 'Open my day')}</Link>
           </div>
@@ -199,8 +200,15 @@ function RankingCard({ data }: { data: Recognition }) {
               {spots.map(({ row, step }) => (
                 <li key={row.person} className="flex w-24 min-w-0 flex-col items-center gap-1"
                   aria-label={`${t('time.wins.place_n', 'Place {{rank}}', { rank: step })}: ${row.name}, ${t('time.wins.points', '{{count}} points', { count: row.points })}`}>
-                  <span aria-hidden className="grid h-5 place-items-center time-gold-text">{step === 1 && <Crown size={18} className="time-pop" />}</span>
-                  <Avatar name={row.name} size="lg" tone={row.me ? 'accent' : 'neutral'} />
+                  {/* The person's character stands on the step — the winner's crowned and celebrating; without one, initials. */}
+                  {podiumBuddy(row, step)
+                    ? <Buddy {...podiumBuddy(row, step)!} size={76} />
+                    : (
+                      <>
+                        <span aria-hidden className="grid h-5 place-items-center time-gold-text">{step === 1 && <Crown size={18} className="time-pop" />}</span>
+                        <Avatar name={row.name} size="lg" tone={row.me ? 'accent' : 'neutral'} />
+                      </>
+                    )}
                   <span aria-hidden className="w-full truncate text-center text-sm font-semibold text-a-text">{row.me ? t('time.wins.you', 'You') : firstName(row.name)}</span>
                   <span aria-hidden className="text-xs font-semibold text-a-text-2">{row.points}</span>
                   <span aria-hidden className={`grid w-full justify-center rounded-t-xl pt-1.5 text-lg font-bold time-rise-y ${STEP_FILL[step]} ${STEP_HEIGHT[step]}`}
@@ -215,7 +223,7 @@ function RankingCard({ data }: { data: Recognition }) {
                 className={`flex items-center gap-3 rounded-xl px-2.5 py-2 ${row.me ? 'bg-a-accent/10 ring-1 ring-a-accent/40' : ''}`}>
                 <PlaceMark rank={row.rank} />
                 {row.rank !== null && <span className="sr-only">{t('time.wins.place_n', 'Place {{rank}}', { rank: row.rank })}</span>}
-                <Avatar name={row.name} size="sm" />
+                {buddyOf(row.buddy) ? <Buddy kind={buddyOf(row.buddy)!} size={34} still /> : <Avatar name={row.name} size="sm" />}
                 <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-semibold text-a-text">{row.name}</span>

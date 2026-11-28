@@ -1,12 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { AlarmClockCheck, Award, CalendarCheck, Check, CheckCheck, Crown, Flame, Medal as MedalIcon, Rocket, Star, Target, Timer, Zap, type LucideIcon } from 'lucide-react'
 import { dayLabel, weekdayName } from '../lib/format'
-import type { RecognitionDay } from '../lib/types'
-import { dotOf, type DotState } from './winsLogic'
+import type { Recognition, RecognitionDay, RecognitionMe } from '../lib/types'
+import { Ring } from '../ui/motion'
+import { Buddy } from './Buddy'
+import { buddiesOn, buddyOf, crowned, moodOf } from './buddyLogic'
+import { dotOf, goalPct, type DotState } from './winsLogic'
 
 /**
  * The pieces recognition's screens share (2026-11-28): a badge's medal, the streak's flame, the week as seven dots, a
- * place's mark. Their look is theme/time.css's recognition block (gold for what was earned).
+ * place's mark, and the daily goal's ring — with the person's character inside it when they have one. Their look is
+ * theme/time.css's recognition block (gold for what was earned).
  */
 
 const BADGE_ICONS: Record<string, LucideIcon> = {
@@ -83,5 +87,52 @@ export function WeekDots({ days, today }: { days: readonly RecognitionDay[]; tod
         )
       })}
     </ol>
+  )
+}
+
+const GOAL_RING = {
+  band: { plain: 64, buddy: 80, stroke: 7, figure: 60, mark: 23 },
+  hero: { plain: 104, buddy: 136, stroke: 10, figure: 104, mark: 31 },
+} as const
+
+/**
+ * The daily goal as a ring, on My day's band and on Achievements. With a character (Buddies) it stands inside the ring
+ * in the mood of the day — the week's leader crowned — and the count sits on a pill under it; without one the ring
+ * holds the count itself (a tick once the goal is met, a star for a clean sweep).
+ */
+export function GoalRing({ data, me, at }: { data: Recognition; me: RecognitionMe; at: keyof typeof GOAL_RING }) {
+  const { t } = useTranslation()
+  const today = me.today
+  const size = GOAL_RING[at]
+  const kind = buddiesOn(data) ? buddyOf(me.buddy) : null
+  const tone = today.goal_met ? 'gold' : 'accent'
+  const label = t('time.wins.band.ring', 'Daily goal: {{done}} of {{goal}} tasks done', { done: today.done, goal: today.goal })
+
+  if (kind) {
+    return (
+      <span className="relative inline-block shrink-0" data-buddy-ring={kind}>
+        <Ring value={goalPct(today)} size={size.buddy} stroke={size.stroke} tone={tone} label={label}>
+          <Buddy kind={kind} mood={moodOf(today)} crown={crowned(me.week)} size={size.figure} />
+        </Ring>
+        <span aria-hidden className={`absolute -bottom-2 left-1/2 inline-flex min-w-9 -translate-x-1/2 items-center justify-center gap-0.5 whitespace-nowrap rounded-full border px-1.5 text-xs font-bold leading-5 ${today.goal_met ? 'border-transparent time-gold-fill' : 'border-a-border bg-a-surface text-a-text'}`}>
+          {today.sweep ? <Star size={12} /> : today.goal_met ? <Check size={12} /> : null}
+          {today.goal_met ? today.done : `${today.done}/${today.goal}`}
+        </span>
+      </span>
+    )
+  }
+
+  // Under way it counts; met, a tick says so (more may be done than the goal names); a star for a clean sweep.
+  const mark = today.sweep ? <Star size={size.mark - 1} className="time-gold-text time-pop" />
+    : today.goal_met ? <Check size={size.mark + 1} className="time-gold-text time-pop" /> : null
+  return (
+    <Ring value={goalPct(today)} size={size.plain} stroke={size.stroke} tone={tone} label={label}>
+      {at === 'hero' ? (
+        <span className="grid justify-items-center text-center">
+          {mark ?? <span className="block font-a-display text-2xl leading-none text-a-text">{today.done}/{today.goal}</span>}
+          <span className="mt-0.5 block text-xs text-a-text-2">{t('time.wins.today', 'today')}</span>
+        </span>
+      ) : (mark ?? <span className="text-sm font-bold text-a-text">{today.done}/{today.goal}</span>)}
+    </Ring>
   )
 }

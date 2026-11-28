@@ -28,7 +28,7 @@ final class Buddies
     public const OFF = 'off';
 
     /** The characters there are; the workspace draws each by its code. */
-    public const KINDS = ['hexi', 'pip', 'kit', 'ember'];
+    public const KINDS = ['hexi', 'pip', 'miu', 'ember'];
 
     /** A person's choice of no character. */
     public const NONE = 'none';

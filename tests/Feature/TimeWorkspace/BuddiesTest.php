@@ -94,11 +94,11 @@ class BuddiesTest extends TestCase
         $this->assertArrayNotHasKey('buddy', $this->profileOf($this->anna));
 
         // There is no way to name somebody else: the endpoint takes no person, and a manager's profile form no buddy.
-        $this->asManager()->putJson($this->timeApi('people/' . $this->anna->id), ['buddy' => 'kit', 'knowledge' => 'Speaks Latvian'])->assertOk();
+        $this->asManager()->putJson($this->timeApi('people/' . $this->anna->id), ['buddy' => 'miu', 'knowledge' => 'Speaks Latvian'])->assertOk();
         $this->assertNull($this->seenBy($this->anna)['me']['buddy_choice']);
         // Signed out, nothing.
         $this->app['auth']->forgetGuards();
-        $this->putJson($this->timeApi('buddy'), ['buddy' => 'kit'])->assertStatus(401);
+        $this->putJson($this->timeApi('buddy'), ['buddy' => 'miu'])->assertStatus(401);
     }
 
     public function test_a_choice_keeps_the_rest_of_the_profile_and_a_managers_save_keeps_the_choice(): void
@@ -108,10 +108,10 @@ class BuddiesTest extends TestCase
             'job_title' => 'Housekeeper', 'level' => 'senior', 'strengths' => 'Fast', 'develop' => 'Languages',
         ])]);
 
-        $this->choose($this->anna, 'kit')->assertOk();
+        $this->choose($this->anna, 'miu')->assertOk();
 
         $profile = $this->profileOf($this->anna);
-        $this->assertSame('kit', $profile['buddy']);
+        $this->assertSame('miu', $profile['buddy']);
         $this->assertSame(['Deep cleans', '07:00', '15:00', [1, 2, 3], 30, 'Housekeeper', 'senior', 'Fast', 'Languages'], [
             $profile['knowledge'], $profile['work_start'], $profile['work_end'], $profile['work_days'], $profile['break_minutes'],
             $profile['job_title'], $profile['level'], $profile['strengths'], $profile['develop'],
@@ -122,8 +122,8 @@ class BuddiesTest extends TestCase
         // A manager changes her hours: the character she chose is still hers.
         $this->asManager()->putJson($this->timeApi('people/' . $this->anna->id), ['work_start' => '08:00', 'knowledge' => 'Deep cleans, stains'])->assertOk();
         $profile = $this->profileOf($this->anna);
-        $this->assertSame(['kit', '08:00', 'Deep cleans, stains'], [$profile['buddy'], $profile['work_start'], $profile['knowledge']]);
-        $this->assertSame('kit', $this->seenBy($this->anna)['me']['buddy']);
+        $this->assertSame(['miu', '08:00', 'Deep cleans, stains'], [$profile['buddy'], $profile['work_start'], $profile['knowledge']]);
+        $this->assertSame('miu', $this->seenBy($this->anna)['me']['buddy']);
     }
 
     public function test_the_organisation_switches_characters_off_for_everyone_and_only_a_manager_may(): void

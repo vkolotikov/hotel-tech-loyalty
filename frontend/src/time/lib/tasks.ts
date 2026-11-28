@@ -107,12 +107,12 @@ export function payloadOf(form: TaskForm, person: PersonRef | null, creating: bo
 }
 
 /** The settings whose value is one word the server checks as it is (never JSON text). */
-const WORD_SETTINGS: readonly string[] = ['planner_planning_mode', 'planner_recognition']
+const WORD_SETTINGS: readonly string[] = ['planner_planning_mode', 'planner_recognition', 'planner_buddies']
 
 /**
  * A setting's body, written as the full admin writes it: lists as JSON text (its plannerMeta parsers read both), the
- * work day's hours as an object (the only shape WorkWindow reads), numbers as numbers, the planning mode and who sees
- * the ranking as their word.
+ * work day's hours as an object (the only shape WorkWindow reads), numbers as numbers, the planning mode, who sees
+ * the ranking and whether characters are shown as their word.
  */
 export function settingBody(key: string, value: unknown): { value: unknown } {
   if (key === 'business_hours_profile' || WORD_SETTINGS.includes(key) || typeof value === 'number') return { value }

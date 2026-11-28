@@ -51,6 +51,25 @@
     "week_one": "Esta semana: {{count}} punto",
     "week_other": "Esta semana: {{count}} puntos"
   },
+  "buddy": {
+    "name": {
+      "ember": "Ember",
+      "hexi": "Hexi",
+      "miu": "Miu",
+      "pip": "Pip"
+    },
+    "none": "Sin personaje",
+    "pick_line": "Elija el personaje que le acompaña. Sus compañeros lo ven junto a su nombre.",
+    "pick_title": "Su personaje",
+    "say": {
+      "busy": "¡Bien hecho!",
+      "party": "¡Yuju!",
+      "proud": "¡Conseguido!",
+      "ready": "¡Vamos!",
+      "sleepy": "Zzz…"
+    },
+    "yours": "El suyo"
+  },
   "cheer": {
     "badge": "Nueva insignia: {{badge}}",
     "goal": "¡Objetivo diario alcanzado!",
