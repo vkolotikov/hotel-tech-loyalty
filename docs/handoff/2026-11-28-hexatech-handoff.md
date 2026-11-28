@@ -228,6 +228,32 @@ bullet of `CLAUDE.md`'s Time Planner section.
   to a Russian speaker (it is Miu); the ranking showed characters even where the answer said the organisation shows
   none.
 
+### Deploy (28 Nov, 18:15 UTC)
+
+- Production **fcce8e4a** by the source-patch recipe on `origin/main` **2051b621** (its CI green; nothing landed while
+  the round was built): source patch **96a7c1cd** — the merge-base `2051b621` to the branch's **672cf80d**, 39 files (6
+  added, 33 changed, none deleted: `frontend/src/time/**`, five server files — `Buddies`, `PlannerProfiles`,
+  `Recognition`, the workspace's `WorkspaceController` and `SettingsController` — `routes/api.php`, `BuddiesTest`, the
+  runbook, `CLAUDE.md` and this handoff). Parity: the artifact's source equals the branch tip, file for file. Fresh
+  build **fcce8e4a**. No migration.
+- **On the artifact**: the scoped PHP sweep — **8,065 passed, none failed** (the usual skips), every suite but
+  TimeWorkspace (80) and AdminAccess (95, more assertions for the new route) with the last release's counts;
+  TimeWorkspace 80 again on PostgreSQL; `tsc -b` clean; lint baseline passed (1,377 legacy, none new); **Vitest 504
+  files / 7,481 tests**; `npm run build`; the built SPA served by `php artisan serve` shows the character in the ring
+  bobbing and blinking in the organisation's colour, the bubble, the team's characters on the podium (the winner
+  hopping under the crown), a choice saved from the built bundle, a celebration with the character on the card, the
+  cameo coming up and 44 pieces of confetti, the manager's switch, and the earlier rounds' pages.
+- **Live by content** (18:18 UTC, three minutes after the push): `index-7ViqIwac.js` → `TimeApp-C0_XKgRp.js` (the
+  celebration's `data-cameo`) → `WinsPage-BKtuA4NA.js` ("Your buddy", `time-bubble`), the rig in
+  `winsLogic-wB85kM9A.js`, the save call `time/buddy` in `tasks-z4wpR_3c.js`; `SettingsPage-C1aBsDDy.js` holds
+  `planner_buddies`; `index-5zsG0N6r.css` holds `time-buddy-peek`, `time-bubble`, `time-buddy-leaf` and twenty-eight
+  `time-*` keyframes (fifteen before); `/time`, `/time/wins`, `/time/settings`, `/time/assistant`, `/time/register`
+  200; `PUT api/v1/admin/time/buddy` 401 without a login; `hexa-academy` 200, its kit 64,577 bytes.
+- CI on fcce8e4a: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/46174876371 — **green** (18:34 UTC; all
+  eight jobs: the three SQLite shards, PostgreSQL 18, Larastan, the SPA on Node 24 and 26, the dependency audit).
+- The branch was brought up to main again by a merge (`efa30095`, its tree main's own), so the **next source-patch
+  baseline** is `git merge-base origin/main HEAD` = `fcce8e4a`.
+
 ## What the owner does by hand
 
 Nothing. To open the whole ranking to the team, to change the daily goal, or to switch the characters off: Time
@@ -241,3 +267,5 @@ Planner → Settings → Recognition. Each person picks their own character on A
 - Recognition has no history beyond what the tasks say: no hall of fame of past weeks, no monthly ranking, no prizes
   attached to points. Each would need something stored (and a decision on what a task un-done does to it).
 - A celebration needs the page open; nothing is pushed to a phone when a colleague takes the lead.
+- There are four characters and no way for an organisation to add its own; a character has no outfits or levels, and
+  nothing is unlocked by points. Each would be a drawing in `wins/Buddy.tsx` and a decision on what earns it.
