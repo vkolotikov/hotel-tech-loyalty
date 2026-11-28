@@ -146,6 +146,33 @@ rules are a bullet of `CLAUDE.md`'s Time Planner section.
   places are now counted in both); a lead that came together with a badge was not said (the card now names what else
   came with it); the goal's ring read "5/3" once more was done than the goal names (a tick now).
 
+### Deploy (28 Nov, 14:34 UTC)
+
+- Production **2051b621** by the source-patch recipe on `origin/main` **c1244823** (its CI green; nothing landed while
+  the round was built): source patch **74d979c2** — the merge-base `c1244823` to the branch's **1d9797cc**, 55 files (18
+  added, 37 changed, none deleted: `frontend/src/time/**`, six server files — `Recognition`, `WorkWindow`, `DayBoard`,
+  the workspace's `WorkspaceController` and `SettingsController`, `routes/api.php` — `RecognitionTest`, the runbook,
+  `CLAUDE.md` and this handoff). Parity: the artifact's source equals the branch tip, file for file. Fresh build
+  **2051b621**. No migration.
+- **On the artifact**: the scoped PHP sweep — every `tests/Feature/*` and `tests/Unit/*` directory and file, one run
+  each — **8,059 passed, none failed** (the usual skips: Auth 6, Booking 6, Content 3, CrmWorkspace 1, Dashboard 1,
+  LoyaltyWorkspace 1, Stripe 7, `LeadIntakeApiTest` 6), with TimeWorkspace 74, AdminAccess 95, Planner 59, Security
+  11, Unit/Support 221; TimeWorkspace 74 again on PostgreSQL; `tsc -b` clean; lint baseline passed (1,377 legacy, none
+  new); **Vitest 503 files / 7,450 tests**; `npm run build`; the built SPA served by `php artisan serve` shows the
+  band, a real celebration from the built bundle (the points floating, a badge card with 44 pieces of confetti
+  falling and the medal's light passing), Achievements in the default choice (the top three and "and 2 more
+  colleagues" for staff, all five for the manager), Settings → Recognition, and the earlier rounds' pages.
+- **Live by content** (14:38 UTC, three minutes after the push): `index-aqnBN5Mw.js` → `TimeApp-DiVmk98O.js` ("See
+  achievements": the celebration in the shell) → `WinsPage-B7UvrOMP.js` ("It starts again every week", "How points are
+  earned"); `SettingsPage-BjGTBjj3.js` holds `planner_recognition`; `index-B_q5Q-xt.css` holds `time-confetti`,
+  `time-gold-hi` and fifteen `time-*` keyframes (ten before); `/time`, `/time/wins`, `/time/settings`,
+  `/time/assistant`, `/time/register` 200; `api/v1/admin/time/recognition` 401 without a login (404 before the
+  release); `hexa-academy` 200, its kit 64,577 bytes.
+- CI on 2051b621: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/46155360540 — running when this was
+  written; its result is the next line of this file.
+- The branch was brought up to main again by a merge (`968e6acb`, its tree main's own), so the **next source-patch
+  baseline** is `git merge-base origin/main HEAD` = `2051b621`.
+
 ## What the owner does by hand
 
 Nothing. To open the whole ranking to the team, or to change the daily goal: Time Planner → Settings → Recognition.
