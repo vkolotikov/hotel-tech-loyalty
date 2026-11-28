@@ -443,6 +443,18 @@ or add the next dated one, at the end of a session.
   a fresh answer writes itself out only through `useReveal` over blocks read whole (`cutBlocks`), and a screen reader
   gets it once from the status line. The plan dialogs share `plan/PlanParts.tsx`; a waiting view pictures the work and
   never claims a step is done. A question reaches the assistant through its address (`?q=`), never a second way.
+- Recognition (owner 2026-11-28, "badges … a week rating system"; `docs/time-planner-workspace.md` "Recognition"):
+  points, the daily goal, the streak, badges and the week's ranking are read from the planner's tasks every time by
+  `App\Services\Time\Recognition` and **nothing is stored** — never add an awards table or a counter (a task set back
+  must take its points with it). Only finished work is counted and shown; nobody's late or unfinished work is shown to
+  anyone. Who sees the ranking is the organisation's `planner_recognition` (`ranking`, `podium` — where nobody chose —
+  `own`, `off`), the daily goal `planner_daily_goal`, both written only by `PUT admin/time/settings/…` (a manager's, the
+  choice audited); the server leaves out what a person may not see, the workspace never hides rows it was sent. The
+  workspace has no points of its own: every figure and rule is the answer's (`time/recognition`, its `rules`), and
+  `wins/winsLogic.ts` only says what a screen shows and what changed between two answers (`cheersBetween`: the same day,
+  person and rules, and more points — the first answer and points lost celebrate nothing). A new badge is a code in
+  `Recognition::BADGES` with its words in all five `wins.<lang>.json` and `wins/words.ts`; confetti and the floating
+  points ask `motionOk()`. The full admin's own Planner shows none of it.
 - Days and times are the venue's wall clock (`task_date` + `start_time`, `VenueClock`); the frontend's day arithmetic is
   `time/lib/dates.ts`, never `new Date('YYYY-MM-DD')`. Figures (load, capacity, on time, accuracy, signals) are the
   server's (`DayBoard`, `TimeInsights`); the workspace only words and draws them. Decisions live in pure functions with

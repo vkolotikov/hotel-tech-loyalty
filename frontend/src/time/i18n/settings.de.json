@@ -14,6 +14,7 @@
     "account": "Team & Fähigkeiten und die vollständige Verwaltung",
     "day": "Zeiten des Betriebs und die Standardarbeitszeit",
     "planning": "Alle für das Team oder jede Person ihren Tag",
+    "recognition": "Punkte, Abzeichen und wer die Rangliste sieht",
     "tasks": "Woraus jeder Aufgabentyp besteht",
     "templates": "Fertige Aufgaben als Ausgangspunkt",
     "types": "Die Arten von Arbeit, mit Symbolen und Farben"
@@ -61,6 +62,29 @@
     "title": "Wer plant wessen Tag"
   },
   "read_only": "Nur eine Führungskraft kann den Arbeitstag, wer plant, die Typen und die Aufgaben ändern; hier können Sie sie ansehen. Vorlagen gehören allen.",
+  "recognition": {
+    "goal_less": "Eine Aufgabe weniger",
+    "goal_line": "Wie viele abgeschlossene Aufgaben eines Tages das Ziel erreichen.",
+    "goal_more": "Eine Aufgabe mehr",
+    "goal_note": "Ein Tag mit wenigen langen Aufgaben erreicht es auch, wenn an einem gut gefüllten Tag alles Geplante erledigt ist. Die Serie zählt die Tage in Folge mit erreichtem Ziel.",
+    "goal_title": "Das Tagesziel",
+    "line": "Punkte und Abzeichen gehören jeder Person selbst. Wählen Sie, wie viel vom Vergleich Ihr Team sieht.",
+    "mode": {
+      "off": "Ausgeschaltet",
+      "own": "Nur die eigenen Punkte",
+      "podium": "Die ersten drei und der eigene Platz",
+      "ranking": "Alle sehen die Rangliste"
+    },
+    "mode_line": {
+      "off": "Keine Punkte, Abzeichen, Rangliste oder Glückwünsche, für niemanden.",
+      "own": "Alle sehen ihre eigenen Punkte, ihr Ziel, ihre Serie und ihre Abzeichen; niemand wird verglichen. Führungskräfte sehen die Tabelle weiterhin.",
+      "podium": "Alle sehen das Podium und den eigenen Platz; die übrigen Plätze bleiben privat.",
+      "ranking": "Das ganze Team sieht die Tabelle der Woche: jeden Platz, die Punkte und das Podium."
+    },
+    "note": "Gezählt und gezeigt wird nur erledigte Arbeit; verspätete oder offene Aufgaben einer Person erscheinen nirgends. Eine Führungskraft sieht immer die ganze Rangliste.",
+    "see_rules": "So werden Punkte verdient",
+    "title": "Wer die Rangliste der Woche sieht"
+  },
   "remove": "Entfernen",
   "remove_named": "Entfernen: {{name}}",
   "save_changes": "Änderungen speichern",
@@ -69,6 +93,7 @@
     "account": "Konto",
     "day": "Arbeitstag",
     "planning": "Wer plant",
+    "recognition": "Anerkennung",
     "tasks": "Aufgaben",
     "templates": "Vorlagen",
     "types": "Aufgabentypen"

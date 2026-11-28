@@ -81,7 +81,8 @@
     "plan": "Planificador",
     "settings": "Ajustes",
     "team": "Equipo y habilidades",
-    "today": "Mi día"
+    "today": "Mi día",
+    "wins": "Logros"
   },
   "priority": {
     "high": "Alta",

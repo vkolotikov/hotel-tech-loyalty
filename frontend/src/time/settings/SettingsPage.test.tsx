@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../lib/api', () => ({ api: {} }))
 
 const can = { plan_team: true, edit_people: true, team_buckets: true, manage_settings: true, manage_templates: true }
-const boot = (manager: boolean, mode?: 'team' | 'own'): Bootstrap => ({
+const boot = (manager: boolean, mode?: 'team' | 'own', extra: Partial<Bootstrap['settings']> = {}): Bootstrap => ({
   name: 'HexaTech Time Planner',
   organization: { id: 7, name: 'Villa Riga', industry: 'hotel' },
   accent: null,
@@ -36,6 +36,7 @@ const boot = (manager: boolean, mode?: 'team' | 'own'): Bootstrap => ({
       { key: 'old_task', label: 'Old task', icon: 'phone', color: '#22d3ee', groups: ['Gone type'] },
     ],
     ...(mode ? { planning_mode: mode } : {}),
+    ...extra,
   },
   counts: { today_open: 0, overdue: 0, pool: 0 },
 })
@@ -49,13 +50,13 @@ const TEMPLATES = [
   template(2, { name: 'Linen count', task_group: 'Housekeeping', task_category: 'room_check', duration_minutes: 45 }),
 ]
 
-function render(path: string, manager = true, mode?: 'team' | 'own') {
+function render(path: string, manager = true, mode?: 'team' | 'own', extra: Partial<Bootstrap['settings']> = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   qc.setQueryData(['time', 'templates'], TEMPLATES)
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
-        <TimeContext.Provider value={{ data: boot(manager, mode), isLoading: false, isError: false, error: null, refetch: () => {} }}>
+        <TimeContext.Provider value={{ data: boot(manager, mode, extra), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <Routes><Route path="/time/settings" element={<SettingsPage />} /></Routes>
         </TimeContext.Provider>
       </MemoryRouter>
@@ -77,7 +78,7 @@ describe('Settings', () => {
     expect(html).not.toContain('Only a manager can change')
     expect(html).not.toContain('You have unsaved changes.') // nothing changed yet
     // The other sections stay mounted, hidden.
-    expect(html.match(/<div hidden="">/g)?.length).toBe(5)
+    expect(html.match(/<div hidden="">/g)?.length).toBe(6)
   })
 
   it('lists the task types with their looks and every way to change them', () => {
@@ -133,7 +134,47 @@ describe('Settings', () => {
     expect(own).toMatch(/role="radio" aria-checked="true"[^>]*>.*Each person plans their own day/)
 
     const staff = render('/time/settings?tab=planning', false, 'own')
-    expect(staff.match(/role="radio" aria-checked="(true|false)" disabled=""/g)?.length).toBe(2)
+    // The two ways of planning (recognition's choices, mounted beside them, carry `data-mode`).
+    expect(staff.match(/role="radio" aria-checked="(true|false)" disabled=""(?! data-mode)/g)?.length).toBe(2)
+  })
+
+  it('offers who sees the ranking and the daily goal, the choice in use marked', () => {
+    const html = render('/time/settings?tab=recognition')
+    expect(html).toContain('aria-selected="true" aria-controls="time-settings-panel" tabindex="0" data-section="recognition"')
+    expect(html).toContain('Who sees the week’s ranking')
+    // No choice made yet: the top three and one's own place, and three finished tasks make the goal.
+    expect([...html.matchAll(/role="radio" aria-checked="(true|false)" data-mode="(\w+)"/g)].map(m => `${m[2]}:${m[1]}`))
+      .toEqual(['ranking:false', 'podium:true', 'own:false', 'off:false'])
+    expect(html).toContain('Everyone sees the ranking')
+    expect(html).toContain('The top three and one’s own place')
+    expect(html).toContain('Only one’s own points')
+    expect(html).toContain('Switched off')
+    expect(html).toContain('A manager always sees the whole ranking.')
+    expect(html).toMatch(/<output aria-live="polite"[^>]*>3<\/output>/)
+    expect(html).toMatch(/<button type="button" class="[^"]*" aria-label="One task fewer">/)
+    expect(html).toMatch(/<button type="button" class="[^"]*" aria-label="One task more">/)
+    expect(html).toContain('href="/time/wins"')
+
+    const own = render('/time/settings?tab=recognition', true, undefined, { recognition: 'own', daily_goal: 5 })
+    expect([...own.matchAll(/role="radio" aria-checked="(true|false)" data-mode="(\w+)"/g)].map(m => `${m[2]}:${m[1]}`))
+      .toEqual(['ranking:false', 'podium:false', 'own:true', 'off:false'])
+    expect(own).toMatch(/<output aria-live="polite"[^>]*>5<\/output>/)
+  })
+
+  it('keeps the daily goal between 1 and 20, hides it when recognition is off, and shows staff the choice read-only', () => {
+    expect(render('/time/settings?tab=recognition', true, undefined, { daily_goal: 1 })).toMatch(/<button type="button" class="[^"]*" disabled="" aria-label="One task fewer">/)
+    expect(render('/time/settings?tab=recognition', true, undefined, { daily_goal: 20 })).toMatch(/<button type="button" class="[^"]*" disabled="" aria-label="One task more">/)
+
+    const off = render('/time/settings?tab=recognition', true, undefined, { recognition: 'off' })
+    expect(off).toMatch(/role="radio" aria-checked="true" data-mode="off"/)
+    expect(off).not.toContain('The daily goal')
+    expect(off).not.toContain('<output')
+
+    const staff = render('/time/settings?tab=recognition', false, undefined, { recognition: 'podium' })
+    expect(staff.match(/role="radio" aria-checked="(true|false)" disabled="" data-mode/g)?.length).toBe(4)
+    expect(staff).toMatch(/role="radio" aria-checked="true" disabled="" data-mode="podium"/)
+    expect(staff).toMatch(/disabled="" aria-label="One task fewer"/)
+    expect(staff).toMatch(/disabled="" aria-label="One task more"/)
   })
 
   it('shows staff the settings read-only, with templates still theirs', () => {

@@ -81,7 +81,8 @@
     "plan": "Planner",
     "settings": "Settings",
     "team": "Team & skills",
-    "today": "My day"
+    "today": "My day",
+    "wins": "Achievements"
   },
   "priority": {
     "high": "High",

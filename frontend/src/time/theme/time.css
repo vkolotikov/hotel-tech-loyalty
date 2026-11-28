@@ -29,6 +29,14 @@
   --time-load-ok: 21 128 61;
   --time-load-high: 180 83 9;
   --time-load-over: 220 38 38;
+  /* Recognition: the medals' gold, silver and bronze (marks, 3:1 on every surface), the light on gold (a fill runs from
+     it to the gold, so a medal reads as gold on a white page too), gold as text, and the ink on gold. */
+  --time-gold: 180 116 8;
+  --time-gold-hi: 245 190 55;
+  --time-gold-text: 140 84 6;
+  --time-gold-ink: 13 18 30;
+  --time-silver: 100 116 139;
+  --time-bronze: 176 96 52;
   --a-shadow-sm: 0 1px 2px rgb(11 17 32 / 0.06);
   --a-shadow: 0 10px 30px rgb(11 17 32 / 0.08);
 }
@@ -52,6 +60,11 @@
   --time-load-ok: 74 222 128;
   --time-load-high: 251 191 36;
   --time-load-over: 248 113 113;
+  --time-gold: 250 204 21;
+  --time-gold-hi: 253 230 138;
+  --time-gold-text: 250 204 21;
+  --time-silver: 203 213 225;
+  --time-bronze: 234 152 97;
   --a-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
   --a-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
   --a-shadow-lg: 0 28px 70px rgb(0 0 0 / 0.5);
@@ -141,6 +154,60 @@
 [data-time] .time-composer { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 [data-time] .time-composer:focus-within { border-color: rgb(var(--time-ai) / 0.6); box-shadow: 0 0 0 3px rgb(var(--time-ai) / 0.16); }
 
+/*
+ * Recognition (2026-11-28, the owner: "animated stimulus … badges … a week rating"): gold for what was earned, a medal
+ * with a light passing over it, a flame for the streak, the podium's bars rising, a "+N" that floats up, and confetti
+ * for the moments worth it. Confetti and the floating points are not drawn at all for a device that asked for less
+ * motion (the component asks motionOk()); the rest stops with everything else.
+ */
+@keyframes time-shine { 0%, 60% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@keyframes time-flicker { 0%, 100% { transform: scale(1) rotate(-2deg); } 50% { transform: scale(1.14) rotate(3deg); } }
+@keyframes time-rise-y { from { transform: scaleY(0); } }
+@keyframes time-confetti {
+  0% { transform: translate3d(0, -12vh, 0) rotate(0deg); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translate3d(var(--time-drift, 0px), 108vh, 0) rotate(var(--time-turn, 540deg)); opacity: 0; }
+}
+@keyframes time-float-up { 0% { transform: translateY(8px); opacity: 0; } 15% { transform: translateY(0); opacity: 1; } 75% { opacity: 1; } 100% { transform: translateY(-18px); opacity: 0; } }
+
+[data-time] .time-gold-fill { background-color: rgb(var(--time-gold)); background-image: linear-gradient(135deg, rgb(var(--time-gold-hi)), rgb(var(--time-gold))); color: rgb(var(--time-gold-ink)); }
+[data-time] .time-gold-soft { background-color: rgb(var(--time-gold) / 0.12); color: rgb(var(--time-gold-text)); }
+[data-time] .time-gold-text { color: rgb(var(--time-gold-text)); }
+/* A large figure in gold (the week's points): the gold itself, which large type may use. */
+[data-time] .time-gold-figure { color: rgb(var(--time-gold)); }
+[data-time] .time-gold-border { border-color: rgb(var(--time-gold) / 0.45); }
+[data-time] .time-silver-fill { background-color: rgb(var(--time-silver)); color: rgb(var(--a-surface)); }
+[data-time] .time-bronze-fill { background-color: rgb(var(--time-bronze)); color: rgb(var(--a-surface)); }
+/* A gauge that is not the AI's: the daily goal in the accent, gold once it is met. */
+[data-time] .time-ring-accent { stroke: rgb(var(--a-accent)); }
+[data-time] .time-ring-gold { stroke: rgb(var(--time-gold)); }
+/* A surface that holds something earned: a wash of gold from one corner. */
+[data-time] .time-gold-wash { background-color: rgb(var(--a-surface)); background-image: linear-gradient(135deg, rgb(var(--time-gold) / 0.16), rgb(var(--time-gold) / 0.03) 55%, transparent); }
+/* A medal: earned, it is gold with a light passing over it; still to earn, the surface's grey. */
+[data-time] .time-medal { position: relative; display: grid; place-items: center; overflow: hidden; border-radius: 9999px; background-color: rgb(var(--a-surface-2)); color: rgb(var(--a-text-2)); }
+[data-time] .time-medal[data-earned="true"] {
+  background-image: linear-gradient(135deg, rgb(var(--time-gold-hi)), rgb(var(--time-gold)));
+  color: rgb(var(--time-gold-ink));
+  box-shadow: 0 0 0 2px rgb(var(--time-gold) / 0.3), 0 6px 18px rgb(var(--time-gold) / 0.25);
+}
+[data-time] .time-medal[data-earned="true"]::after {
+  content: ''; position: absolute; inset: 0;
+  background-image: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.55) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: time-shine 3.6s ease-in-out infinite;
+}
+[data-time] .time-flicker { transform-origin: 50% 90%; animation: time-flicker 1.4s ease-in-out infinite; }
+[data-time] .time-rise-y { transform-origin: center bottom; animation: time-rise-y 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+[data-time] .time-confetti { position: absolute; top: 0; border-radius: 2px; animation: time-confetti 2.8s cubic-bezier(0.25, 0.6, 0.45, 1) both; }
+[data-time] .time-confetti[data-tone="0"] { background-color: rgb(var(--time-gold)); }
+[data-time] .time-confetti[data-tone="1"] { background-color: rgb(var(--a-accent)); }
+[data-time] .time-confetti[data-tone="2"] { background-color: rgb(var(--time-ai)); }
+[data-time] .time-confetti[data-tone="3"] { background-color: rgb(var(--a-st-confirmed)); }
+[data-time] .time-confetti[data-tone="4"] { background-color: rgb(var(--a-st-progress)); }
+[data-time] .time-float-up { animation: time-float-up 2.4s ease-out both; }
+/* The card of a celebration: gold at its edge and under it. */
+[data-time] .time-cheer { border-color: rgb(var(--time-gold) / 0.55); box-shadow: 0 0 0 1px rgb(var(--time-gold) / 0.35), 0 18px 50px rgb(var(--time-gold) / 0.25); }
+
 @media (prefers-reduced-motion: reduce) {
-  [data-time] .time-orb::before, [data-time] .time-orb::after { animation: none; }
+  [data-time] .time-orb::before, [data-time] .time-orb::after, [data-time] .time-medal[data-earned="true"]::after { animation: none; }
 }

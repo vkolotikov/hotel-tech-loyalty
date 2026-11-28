@@ -1,6 +1,6 @@
-export type Tone = 'neutral' | 'accent' | 'pending' | 'progress' | 'success' | 'danger' | 'ai'
+export type Tone = 'neutral' | 'accent' | 'pending' | 'progress' | 'success' | 'danger' | 'ai' | 'gold'
 
-/** The icon's chip per tone: a 12 % tint of the tone with the tone as ink (the Atelier status tones, the AI's violet). */
+/** The icon's chip per tone: a 12 % tint of the tone with the tone as ink (the Atelier status tones, the AI's violet, recognition's gold). */
 export const TONE_CHIP: Record<Tone, string> = {
   neutral: 'bg-a-surface-2 text-a-text-2',
   accent: 'bg-a-accent/12 text-a-accent-text',
@@ -9,4 +9,5 @@ export const TONE_CHIP: Record<Tone, string> = {
   success: 'bg-a-st-confirmed/12 text-a-st-confirmed',
   danger: 'bg-a-danger/12 text-a-danger',
   ai: 'time-ai-soft',
+  gold: 'time-gold-soft',
 }

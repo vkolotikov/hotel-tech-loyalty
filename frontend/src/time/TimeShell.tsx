@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, Bot, CalendarRange, GraduationCap, Home, Inbox, Mic, Plus, Search, Settings2, Users, type LucideIcon } from 'lucide-react'
+import { BarChart3, Bot, CalendarRange, GraduationCap, Home, Inbox, Mic, Plus, Search, Settings2, Trophy, Users, type LucideIcon } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -19,10 +19,12 @@ import { TimeFind } from './find/TimeFind'
 import { failureOf } from './lib/api'
 import { APP_NAME, FULL_ADMIN } from './lib/links'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
-import { AREAS, areaOf, countOf, type AreaGroup, type AreaKey } from './shell/nav'
+import { areaOf, areasFor, countOf, type AreaGroup, type AreaKey } from './shell/nav'
+import { Celebration } from './wins/Celebration'
 
 const ICONS: Record<AreaKey, LucideIcon> = {
   today: Home,
+  wins: Trophy,
   plan: CalendarRange,
   backlog: Inbox,
   assistant: Bot,
@@ -34,7 +36,7 @@ const ICONS: Record<AreaKey, LucideIcon> = {
 
 /** The default (English) name of each area, beside its key time.nav.<area>. */
 const NAV_DEFAULTS: Record<AreaKey, string> = {
-  today: 'My day', plan: 'Planner', backlog: 'Backlog & pool', assistant: 'AI assistant', coach: 'AI coach', team: 'Team & skills', insights: 'Insights', settings: 'Settings',
+  today: 'My day', wins: 'Achievements', plan: 'Planner', backlog: 'Backlog & pool', assistant: 'AI assistant', coach: 'AI coach', team: 'Team & skills', insights: 'Insights', settings: 'Settings',
 }
 
 /** The groups' default (English) names, beside their keys time.nav.groups.<group>. */
@@ -101,7 +103,8 @@ export function TimeShell({ children }: { children: ReactNode }) {
     })
   }, [ready, navigate, openTask, openCapture, mine])
 
-  const nav: WorkspaceNavItem[] = AREAS.map(area => ({
+  // Achievements goes from the menu when recognition is switched off; its address still says what it is.
+  const nav: WorkspaceNavItem[] = areasFor(data).map(area => ({
     to: area.to,
     end: area.end,
     icon: ICONS[area.key],
@@ -111,7 +114,7 @@ export function TimeShell({ children }: { children: ReactNode }) {
     section: area.group ? t(`time.nav.groups.${area.group}`, GROUP_DEFAULTS[area.group]) : undefined,
   }))
   const area = areaOf(pathname)
-  const pageName = nav[AREAS.findIndex(a => a.key === area)]?.label ?? ''
+  const pageName = t(`time.nav.${area}`, NAV_DEFAULTS[area])
   const findLabel = t('time.shell.find', 'Find a person or an action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
   const fullAdmin = modules.onModules ? null : FULL_ADMIN
@@ -169,6 +172,7 @@ export function TimeShell({ children }: { children: ReactNode }) {
       </>}
       overlays={ready ? <>
         <ActionPanels />
+        <Celebration />
         <TimeFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} nav={nav} dark={look.resolved === 'dark'} slim={slim}
           fallbackFocus={[findButton, findPhone, main]} />
         <ShortcutsSheet open={helpOpen} onClose={() => setHelpOpen(false)} fallbackFocus={[findButton, findPhone, main]}

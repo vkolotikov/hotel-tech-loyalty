@@ -92,6 +92,33 @@ describe('My day', () => {
     expect(html).toContain('Inspection at 15:00')
     expect(html).toContain('Say what needs doing')
   })
+
+  it('shows the band of progress once recognition has answered, and none before or when it is off', () => {
+    expect(html).not.toContain('aria-label="My progress"')
+    const recognition = {
+      mode: 'podium', manager: false, today: '2026-11-04', week: { from: '2026-11-02', to: '2026-11-08' },
+      rules: { points: { task: 5 }, daily_goal: 3, planned_share: 60, day_task_cap: 15 },
+      me: {
+        person: 'u3', name: 'Anna Berzina',
+        today: { planned: 2, done: 1, goal: 3, goal_met: false, sweep: false, day_planned: false, planned_pct: 25, important_done: 0, points: 12 },
+        week: { points: 40, done: 3, important: 0, on_time_pct: 100, clocked: 0, days_goal: 0, days_sweep: 0, days_planned: 0, rank: 2, of: 3 },
+        streak: 0, badges: [], last_week: null,
+        days: today.week.map(d => ({ date: d.date, future: d.date > '2026-11-04', points: 0, planned: 0, done: 0, goal_met: false, sweep: false, day_planned: false })),
+      },
+      ranking: [], hidden: 0,
+    }
+    const seed = (qc: QueryClient) => {
+      qc.setQueryData(['time', 'today'], today)
+      qc.setQueryData(['time', 'people'], { people: [], knowledge_max: 1000 })
+      qc.setQueryData(['time', 'recognition'], recognition)
+    }
+    const withBand = render('/time', <TodayPage />, seed)
+    expect(withBand).toContain('aria-label="My progress"')
+    expect(withBand).toContain('aria-label="Daily goal: 1 of 3 tasks done"')
+    // The band sits above the day's figures.
+    expect(withBand.indexOf('aria-label="My progress"')).toBeLessThan(withBand.indexOf('Done today'))
+    expect(withBand).toContain('href="/time/wins"')
+  })
 })
 
 describe('the Planner', () => {

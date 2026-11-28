@@ -31,9 +31,10 @@ use Carbon\CarbonImmutable;
  *   points, then finished tasks, then name; equal points share a place.
  *
  * Who sees the ranking is the organisation's choice (`planner_recognition`, a manager's, written only by
- * `PUT admin/time/settings/…`): `ranking` (the default: everyone sees the week's table), `podium` (the top three and
- * one's own place), `own` (only one's own points and badges) or `off` (none of it). A manager sees the whole table in
- * every mode but `off`.
+ * `PUT admin/time/settings/…`): `ranking` (everyone sees the week's whole table), `podium` (the top three and one's
+ * own place), `own` (only one's own points and badges) or `off` (none of it). A manager sees the whole table in every
+ * mode but `off`. Where nobody chose, it is `podium`: the best are celebrated and everyone knows their own place, but
+ * nobody's last place is put before the whole team until a manager decides it should be.
  */
 final class Recognition
 {
@@ -116,7 +117,10 @@ final class Recognition
     {
     }
 
-    /** The organisation's choice (the current tenant's row); anything unreadable is the default, `ranking`. */
+    /** Where no manager chose: the top three and one's own place. */
+    public const DEFAULT_MODE = self::PODIUM;
+
+    /** The organisation's choice (the current tenant's row); anything unreadable is the default. */
     public static function mode(): string
     {
         return self::readMode(CrmSetting::query()->where('key', self::KEY)->value('value'));
@@ -129,13 +133,25 @@ final class Recognition
             $value = is_string($decoded) ? $decoded : $value;
         }
 
-        return in_array($value, self::MODES, true) ? $value : self::RANKING;
+        return in_array($value, self::MODES, true) ? $value : self::DEFAULT_MODE;
     }
 
     /** How many of a day's tasks make the daily goal: 1 to GOAL_MAX, else the default. */
     public static function goal(): int
     {
         return self::readGoal(CrmSetting::query()->where('key', self::GOAL_KEY)->value('value'));
+    }
+
+    /**
+     * Both choices in one read (the bootstrap asks every minute).
+     *
+     * @return array{mode: string, goal: int}
+     */
+    public static function settings(): array
+    {
+        $rows = CrmSetting::query()->whereIn('key', [self::KEY, self::GOAL_KEY])->pluck('value', 'key');
+
+        return ['mode' => self::readMode($rows[self::KEY] ?? null), 'goal' => self::readGoal($rows[self::GOAL_KEY] ?? null)];
     }
 
     public static function readGoal(mixed $value): int
@@ -157,14 +173,15 @@ final class Recognition
      */
     public function for(int $orgId, User $user): array
     {
-        $mode = self::mode();
+        $settings = self::settings();
+        $mode = $settings['mode'];
         $manager = TimeAccess::isManager($user);
         if ($mode === self::OFF) {
             return ['mode' => $mode, 'manager' => $manager];
         }
 
         $this->today = VenueClock::today($orgId);
-        $this->goal = self::goal();
+        $this->goal = $settings['goal'];
         $this->orgWindow = WorkWindow::resolve();
         $this->standard = $this->catalogue->minutesPerDay();
         $day = CarbonImmutable::createFromFormat('!Y-m-d', $this->today, 'UTC');
@@ -181,7 +198,13 @@ final class Recognition
         // A staff member in `own` mode is told no place: neither theirs nor anyone's.
         $placed = $manager || $mode !== self::OWN;
         // Last week's place counts only for someone who earned something that week.
-        $lastRank = $mineLast && $mineLast['points'] > 0 ? $mineLast['rank'] : null;
+        $lastRanks = [];
+        foreach ($last as $r) {
+            if ($r['points'] > 0) {
+                $lastRanks[$r['person']] = $r['rank'];
+            }
+        }
+        $lastRank = $lastRanks[$key] ?? null;
 
         $me = null;
         if (isset($this->people[$key])) {
@@ -247,19 +270,33 @@ final class Recognition
             'manager' => $manager,
             'today'   => $this->today,
             'week'    => ['from' => $weekFrom, 'to' => $weekTo],
-            'rules'   => ['points' => self::POINTS, 'daily_goal' => $this->goal, 'planned_share' => self::PLANNED_SHARE, 'day_task_cap' => self::DAY_TASK_CAP],
+            'rules'   => [
+                'points'        => self::POINTS,
+                'daily_goal'    => $this->goal,
+                'planned_share' => self::PLANNED_SHARE,
+                'day_task_cap'  => self::DAY_TASK_CAP,
+                'on_time_share' => self::ON_TIME_SHARE,
+            ],
             'me'      => $me,
-            'ranking' => array_map(fn (array $r) => [
-                'person'  => $r['person'],
-                'name'    => $r['name'],
-                'manager' => $r['manager'],
-                'points'  => $r['points'],
-                'done'    => $r['done'],
-                'rank'    => $placed ? $r['rank'] : null,
-                'me'      => $r['person'] === $key,
-                'streak'  => $this->streak($r['person']),
-                'badges'  => count(array_filter($this->badges($r['score'], $this->streak($r['person']), null, false), fn ($b) => $b['earned'])),
-            ], $shown),
+            'ranking' => array_map(function (array $r) use ($placed, $lastRanks, $key) {
+                $streak = $this->streak($r['person']);
+
+                return [
+                    'person'  => $r['person'],
+                    'name'    => $r['name'],
+                    'manager' => $r['manager'],
+                    'points'  => $r['points'],
+                    'done'    => $r['done'],
+                    'rank'    => $placed ? $r['rank'] : null,
+                    'me'      => $r['person'] === $key,
+                    'streak'  => $streak,
+                    // The same badges the person's own page counts (last week's places only where places are told).
+                    'badges'  => count(array_filter(
+                        $this->badges($r['score'], $streak, $placed ? ($lastRanks[$r['person']] ?? null) : null, $placed),
+                        fn ($b) => $b['earned'],
+                    )),
+                ];
+            }, $shown),
             'hidden'  => count($ranking) - count($shown),
         ];
     }
@@ -282,6 +319,8 @@ final class Recognition
                 $q->where(fn ($d) => $d->whereDate('task_date', '>=', $since)->whereDate('task_date', '<=', $today))
                     ->orWhere('completed_at', '>=', $sinceUtc);
             })
+            // The newest first, so a planner with more rows than the limit still counts this week whole.
+            ->orderByDesc('id')
             ->limit(20000)
             ->get(['id', 'task_date', 'duration_minutes', 'start_time', 'end_time', 'actual_minutes', 'completed_at',
                 'assigned_to_user_id', 'employee_name', 'completed', 'status', 'priority']);

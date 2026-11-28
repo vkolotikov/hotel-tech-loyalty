@@ -49,6 +49,7 @@ class WorkspaceController extends Controller
         $window = WorkWindow::resolve();
         $today = VenueClock::today($orgId);
         $me = 'u' . $user->id;
+        $recognition = Recognition::settings();
 
         $counts = ['today_open' => 0, 'overdue' => 0, 'pool' => 0];
         if ($entitled) {
@@ -89,8 +90,10 @@ class WorkspaceController extends Controller
                 'channels'        => $catalogue->channels(),
                 // Who may put work on whose day (PlanningMode): `team` or `own`; `staff.can.plan_team` is this person's answer.
                 'planning_mode'   => PlanningMode::current(),
-                // Recognition (points, badges, the week's ranking): who sees the ranking, or `off` (2026-11-28).
-                'recognition'     => Recognition::mode(),
+                // Recognition (points, badges, the week's ranking): who sees the ranking, or `off`, and how many
+                // finished tasks make the daily goal (2026-11-28).
+                'recognition'     => $recognition['mode'],
+                'daily_goal'      => $recognition['goal'],
             ],
             'counts'       => $counts,
         ]);

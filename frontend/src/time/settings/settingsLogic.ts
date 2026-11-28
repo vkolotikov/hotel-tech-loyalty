@@ -13,7 +13,7 @@ import type { Bootstrap, ChannelDef, GroupDef, Template } from '../lib/types'
 
 /* ─── The page's sections ────────────────────────────────────────── */
 
-export const SETTINGS_TABS = ['day', 'planning', 'types', 'tasks', 'templates', 'account'] as const
+export const SETTINGS_TABS = ['day', 'planning', 'recognition', 'types', 'tasks', 'templates', 'account'] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 export function settingsTabOf(value: string | null | undefined): SettingsTab {

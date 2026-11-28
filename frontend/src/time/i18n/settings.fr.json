@@ -14,6 +14,7 @@
     "account": "Équipe et compétences, et l’administration complète",
     "day": "Les horaires de l’établissement et le temps de travail standard",
     "planning": "Tous pour l’équipe, ou chacun sa journée",
+    "recognition": "Points, badges et qui voit le classement",
     "tasks": "Ce que comprend chaque type de travail",
     "templates": "Des tâches toutes prêtes pour commencer",
     "types": "Les types de travail, avec icônes et couleurs"
@@ -61,6 +62,29 @@
     "title": "Qui planifie la journée de qui"
   },
   "read_only": "Seul un responsable peut modifier la journée de travail, qui planifie, les types et les tâches ; vous pouvez les consulter ici. Les modèles sont à tout le monde.",
+  "recognition": {
+    "goal_less": "Une tâche de moins",
+    "goal_line": "Combien de tâches terminées dans la journée atteignent l’objectif.",
+    "goal_more": "Une tâche de plus",
+    "goal_note": "Une journée de quelques longues tâches l’atteint aussi lorsque tout ce qui était planifié est terminé et que l’agenda était bien rempli. La série compte les jours de suite avec l’objectif atteint.",
+    "goal_title": "L’objectif du jour",
+    "line": "Les points et les badges sont propres à chacun. Choisissez ce que votre équipe voit de la comparaison.",
+    "mode": {
+      "off": "Désactivé",
+      "own": "Seulement ses propres points",
+      "podium": "Les trois premiers et sa propre place",
+      "ranking": "Tout le monde voit le classement"
+    },
+    "mode_line": {
+      "off": "Ni points, ni badges, ni classement, ni célébrations, pour personne.",
+      "own": "Chacun voit ses propres points, son objectif, sa série et ses badges ; personne n’est comparé. Les responsables voient toujours le tableau.",
+      "podium": "Chacun voit le podium et sa propre place ; les autres places restent privées.",
+      "ranking": "Toute l’équipe voit le tableau de la semaine : chaque place, les points et le podium."
+    },
+    "note": "Seul le travail terminé est compté et montré ; les tâches en retard ou inachevées de quiconque n’apparaissent nulle part. Un responsable voit toujours tout le classement.",
+    "see_rules": "Voir comment gagner des points",
+    "title": "Qui voit le classement de la semaine"
+  },
   "remove": "Retirer",
   "remove_named": "Retirer : {{name}}",
   "save_changes": "Enregistrer les modifications",
@@ -69,6 +93,7 @@
     "account": "Compte",
     "day": "Journée de travail",
     "planning": "Qui planifie",
+    "recognition": "Reconnaissance",
     "tasks": "Tâches",
     "templates": "Modèles",
     "types": "Types de tâches"

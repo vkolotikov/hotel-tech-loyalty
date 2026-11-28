@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import type {
-  ApplyResult, AssistantAnswer, AssistantProposal, Board, Bootstrap, CaptureDraft, CoachOverview, Drafts, Insights, Person, PlanResult, Review, Strategy, Task, Today, Week,
+  ApplyResult, AssistantAnswer, AssistantProposal, Board, Bootstrap, CaptureDraft, CoachOverview, Drafts, Insights, Person, PlanResult, Recognition, Review, Strategy, Task, Today, Week,
   WeekPlanResult,
 } from './types'
 import type { Pulse } from '../../lib/venuePulse'
@@ -127,6 +127,8 @@ export const timeApi = {
   plan: (body: PlanRequest) => send<PlanResult>('post', 'time/plan', body),
   apply: (date: string, lines: { task_id: number; person: string; start_time: string; duration_minutes: number; seen: string | null; date?: string }[]) =>
     send<ApplyResult>('post', 'time/plan/apply', { date, lines }),
+  /** Recognition (2026-11-28): my points, daily goal, streak and badges, and the week's ranking as far as I may see it. */
+  recognition: () => get<Recognition>('time/recognition'),
   /** A week's plan (2026-11-14): the pool, backlogs and overdue work to days and people, each day's times. */
   planWeek: (body: { start: string; scope: 'me' | 'team'; include_pool?: boolean; include_backlog?: boolean; include_overdue?: boolean; use_ai?: boolean; instruction?: string; lang?: string }) =>
     send<WeekPlanResult>('post', 'time/plan-week', body),

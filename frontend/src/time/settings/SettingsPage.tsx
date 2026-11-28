@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Building2, ClipboardList, Clock, ListChecks, Shapes, Users } from 'lucide-react'
+import { Building2, ClipboardList, Clock, ListChecks, Shapes, Trophy, Users } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../TimeProvider'
 import { Page } from '../ui/Page'
@@ -8,6 +8,7 @@ import { SectionNav, type Section } from '../ui/SectionNav'
 import { AccountSection } from './AccountSection'
 import { DaySection } from './DaySection'
 import { PlanningSection } from './PlanningSection'
+import { RecognitionSection } from './RecognitionSection'
 import { TasksSection } from './TasksSection'
 import { TemplatesSection } from './TemplatesSection'
 import { TypesSection } from './TypesSection'
@@ -19,8 +20,9 @@ const PREFIX = 'time-settings-section'
 /**
  * Settings (2026-11-09): the planner's settings, shared with the full admin — the same `crm_settings` rows (through
  * the workspace's own `time/settings`) and
- * planner templates its Settings → Planner edits. Six sections (`?tab=`): the working day, who plans whose day (the
- * planning mode, 2026-11-09), task types, tasks, templates and the account's pages. Only a manager changes the settings (`manage_settings`, which mirrors the full
+ * planner templates its Settings → Planner edits. Seven sections (`?tab=`): the working day, who plans whose day (the
+ * planning mode, 2026-11-09), recognition (who sees the week's ranking and the daily goal, 2026-11-28), task types,
+ * tasks, templates and the account's pages. Only a manager changes the settings (`manage_settings`, which mirrors the full
  * admin's menu); everyone else sees them read-only. Templates are everyone's (`manage_templates`). Every section stays
  * mounted while another is shown, so a draft survives a look at another section.
  */
@@ -34,6 +36,7 @@ export function SettingsPage() {
   const sections: Section<SettingsTab>[] = [
     { key: 'day', icon: Clock, tone: 'accent', title: t('time.settings.tab.day', 'The working day'), caption: t('time.settings.caption.day', 'The venue’s hours and the standard working time') },
     { key: 'planning', icon: Users, tone: 'ai', title: t('time.settings.tab.planning', 'Who plans'), caption: t('time.settings.caption.planning', 'Everyone for the team, or each their own day') },
+    { key: 'recognition', icon: Trophy, tone: 'gold', title: t('time.settings.tab.recognition', 'Recognition'), caption: t('time.settings.caption.recognition', 'Points, badges and who sees the ranking') },
     { key: 'types', icon: Shapes, tone: 'progress', title: t('time.settings.tab.types', 'Task types'), caption: t('time.settings.caption.types', 'The kinds of work, with icons and colours') },
     { key: 'tasks', icon: ListChecks, tone: 'success', title: t('time.settings.tab.tasks', 'Tasks'), caption: t('time.settings.caption.tasks', 'What each type of work consists of') },
     { key: 'templates', icon: ClipboardList, tone: 'pending', title: t('time.settings.tab.templates', 'Templates'), caption: t('time.settings.caption.templates', 'Ready-made tasks to start from') },
@@ -50,6 +53,7 @@ export function SettingsPage() {
       <div id={PANEL} role="tabpanel" aria-labelledby={`${PREFIX}-${tab}`}>
         <div hidden={tab !== 'day'}><DaySection can={can} /></div>
         <div hidden={tab !== 'planning'}><PlanningSection can={can} /></div>
+        <div hidden={tab !== 'recognition'}><RecognitionSection can={can} /></div>
         <div hidden={tab !== 'types'}><TypesSection can={can} /></div>
         <div hidden={tab !== 'tasks'}><TasksSection can={can} /></div>
         <div hidden={tab !== 'templates'}><TemplatesSection can={boot.staff.can.manage_templates} /></div>

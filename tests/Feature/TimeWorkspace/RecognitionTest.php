@@ -55,7 +55,7 @@ class RecognitionTest extends TestCase
 
         $seen = $this->seenBy($this->anna);
 
-        $this->assertSame('ranking', $seen['mode']);
+        $this->assertSame('podium', $seen['mode']);
         $this->assertSame(['from' => '2026-11-02', 'to' => '2026-11-08'], $seen['week']);
         $this->assertSame(3, $seen['rules']['daily_goal']);
         $this->assertSame(8, $seen['rules']['points']['important']);
@@ -191,14 +191,19 @@ class RecognitionTest extends TestCase
         }
         $names = fn (array $seen) => array_column($seen['ranking'], 'name');
 
-        // The default: everyone sees the whole table.
-        $this->assertSame(['Anna Berzina', 'Boris Ozols', 'Dana Eglite', 'Emil Krumins', 'Sam Staff'], $names($this->seenBy($this->staffMember)));
-
-        // The top three and one's own place.
-        $this->setting('planner_recognition', 'podium');
+        // Where nobody chose: the top three and one's own place — nobody's last place is shown to the team.
         $podium = $this->seenBy($this->staffMember);
+        $this->assertSame('podium', $podium['mode']);
         $this->assertSame(['Anna Berzina', 'Boris Ozols', 'Dana Eglite', 'Sam Staff'], $names($podium));
-        $this->assertSame([5, 1], [$podium['me']['week']['rank'], $podium['hidden']]);
+        $this->assertSame([5, 5, 1], [$podium['me']['week']['rank'], $podium['me']['week']['of'], $podium['hidden']]);
+        $this->assertSame(['Anna Berzina', 'Boris Ozols', 'Dana Eglite'], $names($this->seenBy($this->anna)), 'someone on the podium sees the three');
+        $this->setting('planner_recognition', 'podium');
+        $this->assertSame(['Anna Berzina', 'Boris Ozols', 'Dana Eglite', 'Sam Staff'], $names($this->seenBy($this->staffMember)));
+
+        // The whole table, when a manager opens it to everyone.
+        $this->setting('planner_recognition', 'ranking');
+        $this->assertSame(['Anna Berzina', 'Boris Ozols', 'Dana Eglite', 'Emil Krumins', 'Sam Staff'], $names($this->seenBy($this->staffMember)));
+        $this->assertSame(0, $this->seenBy($this->staffMember)['hidden']);
 
         // Only one's own points: no place for anyone, and no badge that would tell one.
         $this->setting('planner_recognition', 'own');
@@ -239,28 +244,47 @@ class RecognitionTest extends TestCase
         $this->assertFalse($anna['streak_7']['earned']);
         $this->assertSame([true, false], [$boris['podium']['earned'], $boris['champion']['earned']]);
         $this->assertSame([false, 0, 3], [$boris['priority_hero']['earned'], $boris['priority_hero']['have'], $boris['priority_hero']['need']]);
+
+        // A row of the ranking counts the same badges as the person's own page, last week's places included …
+        $this->task(['title' => 'Something this week', 'task_date' => '2026-11-06', 'assigned_to_user_id' => $this->boris->id]);
+        $seen = $this->seenBy($this->anna);
+        $rows = collect($seen['ranking'])->keyBy('person');
+        $this->assertSame(9, $rows['u' . $this->anna->id]['badges']);
+        $this->assertSame(9, collect($seen['me']['badges'])->where('earned', true)->count());
+        $this->assertSame(1, $rows['u' . $this->boris->id]['badges']);
+        // … and none of them where nobody is told a place.
+        $this->setting('planner_recognition', 'own');
+        $own = $this->seenBy($this->anna);
+        $this->assertSame(7, $own['ranking'][0]['badges']);
+        $this->assertSame(7, collect($own['me']['badges'])->where('earned', true)->count());
     }
 
     public function test_a_manager_sets_who_sees_the_ranking_and_the_daily_goal_and_the_choice_is_audited(): void
     {
         $settings = $this->asStaffMember()->getJson($this->timeApi('settings'))->assertOk()->json();
-        $this->assertSame(['ranking', 3], [$settings['planner_recognition'], $settings['planner_daily_goal']]);
+        $this->assertSame(['podium', 3], [$settings['planner_recognition'], $settings['planner_daily_goal']]);
 
         $this->asStaffMember()->putJson($this->timeApi('settings/planner_recognition'), ['value' => 'off'])->assertStatus(403);
         $this->asManager()->putJson($this->timeApi('settings/planner_recognition'), ['value' => 'loud'])->assertStatus(422);
         $this->asManager()->putJson($this->timeApi('settings/planner_daily_goal'), ['value' => 0])->assertStatus(422);
         $this->asManager()->putJson($this->timeApi('settings/planner_daily_goal'), ['value' => 21])->assertStatus(422);
 
+        // Saving what already holds (the default) is no change, and nothing is put on record.
         $this->asManager()->putJson($this->timeApi('settings/planner_recognition'), ['value' => 'podium'])->assertOk()->assertJsonPath('value', 'podium');
+        $this->assertSame(0, DB::table('audit_logs')->where('action', 'planner.recognition')->count());
+
+        $this->asManager()->putJson($this->timeApi('settings/planner_recognition'), ['value' => 'ranking'])->assertOk()->assertJsonPath('value', 'ranking');
         $this->asManager()->putJson($this->timeApi('settings/planner_daily_goal'), ['value' => 5])->assertOk()->assertJsonPath('value', 5);
-        $this->asManager()->putJson($this->timeApi('settings/planner_recognition'), ['value' => 'podium'])->assertOk();
+        $this->asManager()->putJson($this->timeApi('settings/planner_recognition'), ['value' => 'ranking'])->assertOk();
 
         $settings = $this->asStaffMember()->getJson($this->timeApi('settings'))->json();
-        $this->assertSame(['podium', 5], [$settings['planner_recognition'], $settings['planner_daily_goal']]);
-        $this->asStaffMember()->getJson($this->timeApi('bootstrap'))->assertJsonPath('settings.recognition', 'podium');
+        $this->assertSame(['ranking', 5], [$settings['planner_recognition'], $settings['planner_daily_goal']]);
+        $this->asStaffMember()->getJson($this->timeApi('bootstrap'))
+            ->assertJsonPath('settings.recognition', 'ranking')->assertJsonPath('settings.daily_goal', 5);
         $this->assertSame(5, $this->seenBy($this->anna)['rules']['daily_goal']);
         $audit = DB::table('audit_logs')->where('action', 'planner.recognition')->get();
         $this->assertCount(1, $audit, 'the same choice again is no change');
-        $this->assertSame(['mode' => 'podium'], json_decode($audit[0]->new_values, true));
+        $this->assertSame(['mode' => 'ranking'], json_decode($audit[0]->new_values, true));
+        $this->assertSame(['mode' => 'podium'], json_decode($audit[0]->old_values, true));
     }
 }
