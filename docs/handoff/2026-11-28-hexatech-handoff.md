@@ -54,9 +54,22 @@ answers arrived at once, figures were plain text, and the AI's functions were sp
   scrolled to its end (the orb out of sight) and the box to write in was below the fold; a change card's icon sat alone
   on its own line at 390 px; the Task lengths bars were too short.
 
-## Deploy
+## Deploy (28 Nov, 12:44 UTC)
 
-(recorded below once done)
+- Production **a41f0deb** by the source-patch recipe on `origin/main` **fefe2ca1** (its CI green; nothing landed while
+  the round was built): source patch **313f375a** — the merge-base `fefe2ca1` to the branch's **2bcb6191**, 66 files (9
+  added, 57 changed, none deleted: `frontend/src/time/**`, the runbook, `CLAUDE.md`, this handoff and the 14 Nov
+  handoff's two post-deploy notes). Parity: the artifact's source equals the branch tip, file for file. Fresh build
+  **a41f0deb**. No server file changed.
+- **On the artifact**: TimeWorkspace 63, AdminAccess 95, Unit/Support 221, Planner 59 passed; `tsc -b` clean; lint
+  baseline passed (1,377 legacy, none new); **Vitest 501 files / 7,385 tests**; `npm run build`; the built SPA served by
+  `php artisan serve` renders the assistant, the coach, Task lengths, the week plan from Find's address and My day's ask
+  box, with the orb and the ring animating (`time-spin`, `time-ring`) and all ten `time-*` keyframes in the built CSS.
+- **Live by content** (12:48 UTC): `index-CGXgnBFS.js` → `TimeApp-0CkLeFyJ.js` ("Ask the AI: ") →
+  `AssistantPage-CuT_-U61.js` ("Looked at", "AI tools"); `index-BrZwK6Dt.css` holds `time-orb` and the ten keyframes;
+  `/time`, `/time/assistant`, `/time/coach`, `/time/plan`, `/time/register` 200; `api/v1/admin/time/assistant` 401
+  without a login; `hexa-academy` 200, its kit 64,577 bytes.
+- **Next source-patch baseline**: `git merge-base origin/main HEAD` (the branch contains main since the merge).
 
 ## What the owner does by hand
 
