@@ -44,8 +44,8 @@ export function RecognitionSection({ can }: { can: boolean }) {
     onError: error => { setSent(null); refresh(); toast(errorText(t, error), 'danger') },
   })
   const setGoal = (next: number) => { setSent(next); save.mutate({ key: 'planner_daily_goal', value: next }) }
-  // Characters are shown unless a manager switched them off (an answer that does not say: shown).
-  const buddies = boot.settings.buddies !== false
+  // Characters are shown where the server says so (on unless a manager switched them off).
+  const buddies = boot.settings.buddies === true
   const off = !can || save.isPending
   const step = 'grid h-10 w-10 shrink-0 place-items-center rounded-full border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2 disabled:pointer-events-none disabled:opacity-40'
 

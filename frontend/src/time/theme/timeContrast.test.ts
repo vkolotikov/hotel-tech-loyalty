@@ -34,7 +34,7 @@ const PAIRS: [string, string][] = [
 const SURFACES = ['a-canvas', 'a-surface', 'a-surface-2']
 // 2026-11-28, recognition: gold as text (on gold's own tint), and the medals' gold, silver and bronze as marks.
 const TONES = ['a-danger', 'a-st-pending', 'a-st-confirmed', 'a-st-progress', 'a-st-completed', 'a-st-cancelled', 'time-ai-text', 'time-gold-text']
-const MARKS = ['time-now', 'time-load-ok', 'time-load-high', 'time-load-over', 'time-gold', 'time-silver', 'time-bronze']
+const MARKS = ['time-now', 'time-load-ok', 'time-load-high', 'time-load-over', 'time-gold', 'time-silver', 'time-bronze', 'time-buddy-leaf', 'time-buddy-rose', 'time-buddy-flame']
 const BRANDS = ['#3b82f6', '#1e3a8a', '#0f766e', '#f5c518', '#e11d48', '#ffffff', '#000000']
 
 for (const theme of ['light', 'dark'] as const) {
@@ -74,6 +74,12 @@ for (const theme of ['light', 'dark'] as const) {
       expect(ratio(t['time-gold-ink'], t['time-gold-hi']), 'ink on the light of gold').toBeGreaterThanOrEqual(4.5)
       expect(ratio(t['a-surface'], t['time-silver']), 'surface on silver').toBeGreaterThanOrEqual(4.5)
       expect(ratio(t['a-surface'], t['time-bronze']), 'surface on bronze').toBeGreaterThanOrEqual(4.5)
+    })
+
+    it('a character’s face reads on its body (3:1: a mouth and closed eyes are lines, not text)', () => {
+      for (const body of ['time-buddy-leaf', 'time-buddy-rose', 'time-buddy-flame']) {
+        expect(ratio(t['time-gold-ink'], t[body]), `the face on ${body}`).toBeGreaterThanOrEqual(3)
+      }
     })
 
     it('works the accent out so its text reads on the surfaces, and its ink on the accent by the 3:1 rule of bold labels', () => {

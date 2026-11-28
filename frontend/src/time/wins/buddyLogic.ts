@@ -26,9 +26,12 @@ export function choiceOf(value: unknown): BuddyChoice | null {
   return value === NO_BUDDY ? NO_BUDDY : buddyOf(value)
 }
 
-/** Whether the organisation shows characters at all (an answer that does not say: yes). */
+/**
+ * Whether the organisation shows characters: only where the answer says so. An answer that does not say (an older
+ * server, for the moment a release takes) shows none, so nothing is offered that could not be saved.
+ */
 export function buddiesOn(data: Pick<Recognition, 'buddies'> | undefined): boolean {
-  return data?.buddies !== false
+  return data?.buddies === true
 }
 
 /**
@@ -50,9 +53,14 @@ export function crowned(week: Pick<RecognitionMe['week'], 'rank' | 'of'>): boole
   return week.rank === 1 && (week.of ?? 0) > 1
 }
 
+/** The character beside a name in the ranking, where the organisation shows characters and the person has one. */
+export function rowBuddy(data: Pick<Recognition, 'buddies'>, row: Pick<RankRow, 'buddy'>): BuddyKind | null {
+  return buddiesOn(data) ? buddyOf(row.buddy) : null
+}
+
 /** On the podium the winner celebrates and wears the crown; the others are proud. */
-export function podiumBuddy(row: Pick<RankRow, 'buddy'>, step: 1 | 2 | 3): { kind: BuddyKind; mood: Mood; crown: boolean } | null {
-  const kind = buddyOf(row.buddy)
+export function podiumBuddy(data: Pick<Recognition, 'buddies'>, row: Pick<RankRow, 'buddy'>, step: 1 | 2 | 3): { kind: BuddyKind; mood: Mood; crown: boolean } | null {
+  const kind = rowBuddy(data, row)
   return kind ? { kind, mood: step === 1 ? 'party' : 'proud', crown: step === 1 } : null
 }
 

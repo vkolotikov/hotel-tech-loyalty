@@ -303,6 +303,10 @@
 [data-time] .time-buddy-peek { animation: time-buddy-peek 4.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 /* What a character says: a bubble with its tail towards the character. */
 [data-time] .time-bubble { position: relative; border-radius: 1rem; border: 1px solid rgb(var(--a-border)); background-color: rgb(var(--a-surface)); }
+[data-time] .time-bubble::before {
+  content: ''; position: absolute; left: -6px; top: 50%; width: 11px; height: 11px; margin-top: -6px; transform: rotate(45deg);
+  background-color: rgb(var(--a-surface)); border-left: 1px solid rgb(var(--a-border)); border-bottom: 1px solid rgb(var(--a-border));
+}
 
 @media (prefers-reduced-motion: reduce) {
   [data-time] .time-orb::before, [data-time] .time-orb::after, [data-time] .time-medal[data-earned="true"]::after { animation: none; }

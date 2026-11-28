@@ -272,6 +272,96 @@ describe('Achievements', () => {
   })
 })
 
+describe('the characters in the screens', () => {
+  const withBuddy = (buddy: string | null, choice: string | null = buddy, today: Partial<RecognitionMe['today']> = {}, week: Partial<RecognitionMe['week']> = {}) =>
+    seen({ buddies: true, me: me(today, week, { buddy, buddy_choice: choice }), ranking: RANKING.map((r, i) => ({ ...r, buddy: ['pip', buddy, 'ember', null][i] })) })
+
+  it('stands my character in the band’s ring in the mood of the day, the count on a pill under it', () => {
+    const html = render(<ProgressBandView data={withBuddy('hexi')} />)
+    expect(html).toContain('data-buddy-ring="hexi"')
+    expect(html).toMatch(/<svg viewBox="0 0 120 120" width="60" height="60"[^>]*data-kind="hexi" data-mood="busy"/)
+    expect(html).toContain('aria-label="Daily goal: 2 of 3 tasks done"')
+    // The ring is larger to hold it, and the count moved to the pill.
+    expect(html).toMatch(/role="img" aria-label="Daily goal: 2 of 3 tasks done"[^>]*style="width:80px;height:80px"/)
+    expect(html).toMatch(/absolute -bottom-2[^>]*>2\/3<\/span>/)
+    expect(html).not.toContain('data-crown')
+
+    const met = render(<ProgressBandView data={withBuddy('miu', 'miu', { done: 3, goal_met: true }, { rank: 1, of: 4 })} />)
+    expect(met).toMatch(/data-kind="miu" data-mood="proud" data-crown="true"/)
+    expect(met).toMatch(/absolute -bottom-2[^>]*time-gold-fill[^>]*><svg[^>]*lucide-check[^>]*>.*?<\/svg>3<\/span>/)
+    expect(render(<ProgressBandView data={withBuddy('pip', 'pip', { planned: 0, done: 0, planned_pct: null })} />)).toContain('data-mood="sleepy"')
+    expect(render(<ProgressBandView data={withBuddy('pip', 'pip', { planned: 4, done: 4, goal_met: true, sweep: true })} />)).toContain('data-mood="party"')
+  })
+
+  it('keeps the plain ring for someone without a character, or where the organisation shows none', () => {
+    for (const data of [withBuddy(null, 'none'), { ...withBuddy('hexi'), buddies: false }, withBuddy('dragon')]) {
+      const html = render(<ProgressBandView data={data} />)
+      expect(html).not.toContain('data-buddy-ring')
+      expect(html).not.toContain('time-buddy')
+      expect(html).toMatch(/style="width:64px;height:64px"/)
+      expect(text(html)).toContain('2/3')
+    }
+  })
+
+  it('lets my character say the day’s sentence on Achievements, in a bubble opened by its call', () => {
+    const html = render(<WinsView data={withBuddy('ember')} />)
+    expect(html).toContain('data-buddy-ring="ember"')
+    expect(html).toMatch(/width="104" height="104"[^>]*data-kind="ember" data-mood="busy"/)
+    expect(html).toMatch(/data-says="busy" class="min-w-0 px-3\.5 py-2\.5 time-bubble"/)
+    expect(text(html)).toContain('Nice! 1 more tasks to reach today’s goal')
+    // Without a character the words stand as they did, with no bubble and no call.
+    const plain = render(<WinsView data={withBuddy(null, 'none')} />)
+    expect(plain).not.toContain('time-bubble')
+    expect(plain).not.toContain('data-says')
+    expect(text(plain)).not.toContain('Nice!')
+    expect(text(plain)).toContain('1 more tasks to reach today’s goal')
+  })
+
+  it('stands the team’s characters on the podium — the winner crowned and celebrating — and beside the names', () => {
+    const html = render(<WinsView data={withBuddy('hexi')} />)
+    const podium = html.slice(html.indexOf('aria-label="The top three"'), html.indexOf('aria-label="This week’s ranking"'))
+    expect([...podium.matchAll(/data-kind="(\w+)" data-mood="(\w+)"( data-crown="true")?/g)].map(m => `${m[1]}:${m[2]}${m[3] ? ':crown' : ''}`))
+      .toEqual(['hexi:proud', 'pip:party:crown', 'ember:proud'])
+    // The crown is the winner's character's: no second one over it.
+    expect(podium).not.toContain('lucide-crown')
+    const table = html.slice(html.indexOf('<ol class="space-y-1.5"'))
+    const rows = table.slice(0, table.indexOf('</ol>'))
+    expect([...rows.matchAll(/width="34" height="34"[^>]*data-kind="(\w+)"[^>]*data-still="true"/g)].map(m => m[1])).toEqual(['pip', 'hexi', 'ember'])
+    // The fourth has no character: initials, as before.
+    expect((rows.match(/<span aria-hidden="true" class="grid shrink-0 place-items-center rounded-full font-semibold h-7 w-7/g) ?? []).length).toBe(1)
+
+    // An answer that says nothing of characters (an older server): the podium is initials under the crown, and nothing is offered.
+    const none = render(<WinsView data={seen()} />)
+    expect(none).not.toContain('time-buddy')
+    expect(none).toContain('lucide-crown')
+  })
+
+  it('offers the choice of a character, the one in use marked, and "no character" for a choice of none', () => {
+    const html = render(<WinsView data={withBuddy('ember', null)} />)
+    expect(text(html)).toContain('Your buddy')
+    expect(text(html)).toContain('Your colleagues see it beside your name.')
+    // Never chosen: the one the account was given is the one in use.
+    expect([...html.matchAll(/role="radio" aria-checked="(true|false)" data-buddy="(\w+)"/g)].map(m => `${m[2]}:${m[1]}`))
+      .toEqual(['hexi:false', 'pip:false', 'miu:false', 'ember:true', 'none:false'])
+    const picker = html.slice(html.indexOf('role="radiogroup" aria-label="Your buddy"'), html.indexOf('aria-label="The top three"'))
+    expect((picker.match(/Yours/g) ?? []).length).toBe(1)
+    for (const name of ['Hexi', 'Pip', 'Miu', 'Ember', 'No character']) expect(text(picker)).toContain(name)
+    // The one in use moves; the others wait.
+    expect(picker).toMatch(/data-kind="ember" data-mood="proud" class/)
+    expect((picker.match(/data-still="true"/g) ?? []).length).toBe(3)
+
+    const none = render(<WinsView data={withBuddy(null, 'none')} />)
+    expect([...none.matchAll(/role="radio" aria-checked="(true|false)" data-buddy="(\w+)"/g)].map(m => `${m[2]}:${m[1]}`))
+      .toEqual(['hexi:false', 'pip:false', 'miu:false', 'ember:false', 'none:true'])
+  })
+
+  it('offers no choice where the organisation shows no characters, or to someone outside the team list', () => {
+    expect(render(<WinsView data={{ ...withBuddy('ember'), buddies: false }} />)).not.toContain('data-buddy=')
+    expect(render(<WinsView data={{ ...withBuddy('ember'), buddies: false }} />)).not.toContain('time-buddy')
+    expect(render(<WinsView data={seen({ me: null, buddies: true })} />)).not.toContain('data-buddy=')
+  })
+})
+
 describe('a celebration', () => {
   const cheers = (main: Cheers['main'], extra: Partial<Cheers> = {}): Cheers => ({ main, also: [], points: 28, streak: 3, of: 4, done: 3, ...extra })
   const rules = seen().rules
@@ -333,6 +423,25 @@ describe('a celebration', () => {
     expect(html).toContain('time-float-up')
     expect(html).not.toContain('time-confetti')
     expect(html).not.toContain('time-cheer')
+  })
+
+  it('lets my character cheer on the card, holding what was earned, and come up for the big moments', () => {
+    const big = render(<CheerView cheers={cheers({ kind: 'badge', badge: 'on_time', big: true }, { also: ['lead'] })} rules={rules} buddy="miu" onClose={() => {}} />)
+    expect(big).toMatch(/data-cheer-buddy="miu"[^>]*><svg[^>]*width="68" height="68"[^>]*data-kind="miu" data-mood="party" data-crown="true"/)
+    // The medal is in its hand, small; the cameo comes up from the foot of the screen.
+    expect(big).toMatch(/absolute -bottom-1 -right-2"><span aria-hidden="true" data-earned="true" class="time-medal shrink-0 h-9 w-9"/)
+    expect(big).toMatch(/aria-hidden="true" data-cameo="miu" class="pointer-events-none fixed bottom-0[^"]*"><svg[^>]*width="148" height="148"[^>]*class="time-buddy shrink-0 time-buddy-peek"/)
+
+    const small = render(<CheerView cheers={cheers({ kind: 'important', big: false })} rules={rules} buddy="pip" onClose={() => {}} />)
+    expect(small).toMatch(/data-kind="pip" data-mood="proud" class/)
+    expect(small).not.toContain('data-cameo')
+    expect(small).not.toContain('data-crown')
+
+    // Without a character the card is as it was; a plain task's points bring no character.
+    const none = render(<CheerView cheers={cheers({ kind: 'goal', big: true })} rules={rules} onClose={() => {}} />)
+    expect(none).not.toContain('time-buddy')
+    expect(none).toContain('class="time-medal shrink-0 h-12 w-12"')
+    expect(render(<CheerView cheers={cheers(null, { points: 12 })} rules={rules} buddy="hexi" onClose={() => {}} />)).not.toContain('time-buddy')
   })
 
   it('starts quiet: the first answer of a session is only the starting line, with a status line ready for what comes', () => {

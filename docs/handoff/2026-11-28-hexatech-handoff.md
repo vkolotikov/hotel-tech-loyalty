@@ -1,7 +1,7 @@
-# HexaTech handoff — 28 November 2026 (Time Planner: the AI's look and motion; recognition)
+# HexaTech handoff — 28 November 2026 (Time Planner: the AI's look and motion; recognition; buddies)
 
-Two rounds on this day: the AI's look and motion (below, deployed at midday) and **recognition** — points, badges and
-the week's ranking — at the end of this file.
+Three rounds on this day: the AI's look and motion (below, deployed at midday), **recognition** — points, badges and
+the week's ranking — and **buddies**, the animated characters, at the end of this file.
 
 Previous state for the Time Planner: `2026-11-14-hexatech-handoff.md` (the AI assistant, deployed). Other sessions'
 handoffs run to `2026-11-27-hexatech-handoff.md` (CRM, dashboards, booking). Branch `ccr-e74852c3-mco7tm`. Runbook:
@@ -172,9 +172,66 @@ rules are a bullet of `CLAUDE.md`'s Time Planner section.
 - The branch was brought up to main again by a merge (`968e6acb`, its tree main's own), so the **next source-patch
   baseline** is `git merge-base origin/main HEAD` = `2051b621`.
 
+## Third round: buddies (the animated characters)
+
+### The owner's request
+
+"Lets add maybe some animated characters as well or smth to make it even more interesting."
+
+### What was built
+
+Runbook: `docs/time-planner-workspace.md`, "Buddies: the animated characters (2026-11-28)"; the code rules are a
+bullet of `CLAUDE.md`'s Time Planner section.
+
+- **Four characters of our own drawing** on one SVG rig (`frontend/src/time/wins/Buddy.tsx`): Hexi (a hexagon in the
+  organisation's colour), Pip (a sprout), Miu (a cat) and Ember (a flame). Each has five moods read from the person's
+  day — asleep with nothing planned, ready, busy, proud at the daily goal, a party when everything is done — and the
+  week's leader wears a crown.
+- **Where they are**: inside the daily goal's ring on My day and on Achievements (there the day's sentence is what
+  the character says, in a speech bubble); the team's characters on the podium and beside the names in the ranking; on
+  the celebration card holding the medal, and for the big moments coming up from the foot of the screen; a card
+  **Your buddy** on Achievements where each person picks one, or none.
+- **Server** (`App\Services\Time\Buddies`): a person's choice is `staff.planner_profile.buddy`, written only through
+  `PUT admin/time/buddy` (`PlannerProfiles::chooseBuddy`, the one field of a profile a person writes for themselves;
+  a manager's save of the rest keeps it); someone who never chose is given one by their account, so a team is varied
+  from the first day. Recognition answers each person's character. No migration.
+- **The organisation's switch**: Settings → Recognition → Animated characters (`planner_buddies`, on unless a manager
+  switches it off): off, nobody is shown or offered a character; points and badges stay as they are.
+
+### Decisions worth knowing
+
+- Everyone has a character from the first day (by their account) rather than an empty place until they choose; a
+  person who wants none picks "No character", and a manager can switch them off for the whole organisation.
+- A person's choice is kept on the server with their profile, so colleagues see it and it follows them to every
+  device. It is not audited (it changes what nobody may see or do).
+- The characters are decoration: nothing is read out for them, and what a mood means is always said in words too.
+- The workspace shows characters only where the server's answer says so, so nothing is offered that could not be
+  saved while a release is under way.
+
+### Checks (this container, 28 November)
+
+- **PHP**: `BuddiesTest` 6 tests / 70 assertions; `tests/Feature/TimeWorkspace/` 80 passed on SQLite and on
+  PostgreSQL; AdminAccess 95 (the new route has its key), Planner 59; Larastan clean on `app/Services/Time` and the
+  workspace's controllers.
+- **Frontend**: `tsc -b` clean; lint baseline passed (1,377 legacy, none new); **Vitest 504 files / 7,481 tests**
+  (new: `wins/buddy.test.tsx`; additions in `wins/WinsPage.test.tsx`, `settings/SettingsPage.test.tsx`,
+  `lib/rights.test.ts`, `theme/timeContrast.test.ts`, `i18n/timeLocales.test.ts`); every word in five languages.
+- **Real browser** (the Riga demo; 1440 Dark and Light, 390 Light): every character in every mood on a sheet, large
+  and small (the blink, the wave and the hop caught in the act); My day's ring and Achievements with the team's
+  chosen characters; a staff member choosing Hexi (the ring, her row and the card follow, and choosing celebrates
+  nothing); finishing her day — the character on each card holding its medal, crowned when she took the lead, and the
+  cameo coming up and going; the manager's switch off (no character, no choice, no bubble, initials on the podium)
+  and on again; with **reduced motion** the characters at rest in their pose, no cameo, no confetti. No console error,
+  failed request or sideways scroll at 390 px.
+- Found and fixed on the way: a manager's save of a person's profile would have dropped their character (the profile
+  is rebuilt from its known fields; `buddy` is now one of them, pinned by a test); the cat's first name read as "whale"
+  to a Russian speaker (it is Miu); the ranking showed characters even where the answer said the organisation shows
+  none.
+
 ## What the owner does by hand
 
-Nothing. To open the whole ranking to the team, or to change the daily goal: Time Planner → Settings → Recognition.
+Nothing. To open the whole ranking to the team, to change the daily goal, or to switch the characters off: Time
+Planner → Settings → Recognition. Each person picks their own character on Achievements.
 
 ## Left open
 

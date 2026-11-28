@@ -16,7 +16,7 @@ import { QueryState } from '../ui/QueryState'
 import { CountUp } from '../ui/motion'
 import { Buddy } from './Buddy'
 import { BuddyPicker } from './BuddyPicker'
-import { buddiesOn, buddyOf, moodOf, podiumBuddy } from './buddyLogic'
+import { buddiesOn, buddyOf, moodOf, podiumBuddy, rowBuddy } from './buddyLogic'
 import { GoalRing, Medal, PlaceMark, StreakChip } from './parts'
 import { useBadgeWords } from './useBadgeWords'
 import { badgePct, dayHeights, dotOf, earnedCount, nextStep, podiumOf, rankingView, ruleRows, shareOf, sortBadges, type RuleRow } from './winsLogic'
@@ -201,8 +201,8 @@ function RankingCard({ data }: { data: Recognition }) {
                 <li key={row.person} className="flex w-24 min-w-0 flex-col items-center gap-1"
                   aria-label={`${t('time.wins.place_n', 'Place {{rank}}', { rank: step })}: ${row.name}, ${t('time.wins.points', '{{count}} points', { count: row.points })}`}>
                   {/* The person's character stands on the step — the winner's crowned and celebrating; without one, initials. */}
-                  {podiumBuddy(row, step)
-                    ? <Buddy {...podiumBuddy(row, step)!} size={76} />
+                  {podiumBuddy(data, row, step)
+                    ? <Buddy {...podiumBuddy(data, row, step)!} size={76} />
                     : (
                       <>
                         <span aria-hidden className="grid h-5 place-items-center time-gold-text">{step === 1 && <Crown size={18} className="time-pop" />}</span>
@@ -223,7 +223,7 @@ function RankingCard({ data }: { data: Recognition }) {
                 className={`flex items-center gap-3 rounded-xl px-2.5 py-2 ${row.me ? 'bg-a-accent/10 ring-1 ring-a-accent/40' : ''}`}>
                 <PlaceMark rank={row.rank} />
                 {row.rank !== null && <span className="sr-only">{t('time.wins.place_n', 'Place {{rank}}', { rank: row.rank })}</span>}
-                {buddyOf(row.buddy) ? <Buddy kind={buddyOf(row.buddy)!} size={34} still /> : <Avatar name={row.name} size="sm" />}
+                {rowBuddy(data, row) ? <Buddy kind={rowBuddy(data, row)!} size={34} still /> : <Avatar name={row.name} size="sm" />}
                 <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-semibold text-a-text">{row.name}</span>
