@@ -1735,6 +1735,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::get('people', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'people']);
                     Route::put('people/{user}', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'updatePerson'])->whereNumber('user');
                     Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'insights']);
+                    // Recognition (2026-11-28): points, the daily goal, badges and the week's ranking, read from the tasks.
+                    Route::get('recognition', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'recognition']);
                     // The planner's settings without the CRM's settings area (an organisation may have bought the Time Planner alone).
                     Route::get('settings', [\App\Http\Controllers\Api\V1\Admin\Time\SettingsController::class, 'index']);
                     Route::put('settings/{key}', [\App\Http\Controllers\Api\V1\Admin\Time\SettingsController::class, 'update'])->where('key', '[a-z_]+');

@@ -81,7 +81,8 @@
     "plan": "Planificateur",
     "settings": "Paramètres",
     "team": "Équipe et compétences",
-    "today": "Ma journée"
+    "today": "Ma journée",
+    "wins": "Réussites"
   },
   "priority": {
     "high": "Haute",

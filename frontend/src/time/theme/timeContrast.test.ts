@@ -32,8 +32,9 @@ const PAIRS: [string, string][] = [
   ['a-side-text', 'a-side'], ['a-side-text', 'a-side-2'], ['a-side-text-2', 'a-side'], ['a-side-text-2', 'a-side-2'],
 ]
 const SURFACES = ['a-canvas', 'a-surface', 'a-surface-2']
-const TONES = ['a-danger', 'a-st-pending', 'a-st-confirmed', 'a-st-progress', 'a-st-completed', 'a-st-cancelled', 'time-ai-text']
-const MARKS = ['time-now', 'time-load-ok', 'time-load-high', 'time-load-over']
+// 2026-11-28, recognition: gold as text (on gold's own tint), and the medals' gold, silver and bronze as marks.
+const TONES = ['a-danger', 'a-st-pending', 'a-st-confirmed', 'a-st-progress', 'a-st-completed', 'a-st-cancelled', 'time-ai-text', 'time-gold-text']
+const MARKS = ['time-now', 'time-load-ok', 'time-load-high', 'time-load-over', 'time-gold', 'time-silver', 'time-bronze']
 const BRANDS = ['#3b82f6', '#1e3a8a', '#0f766e', '#f5c518', '#e11d48', '#ffffff', '#000000']
 
 for (const theme of ['light', 'dark'] as const) {
@@ -53,7 +54,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     for (const tone of TONES) {
       it(`--${tone} reads on every surface and on its own 12 % tint`, () => {
-        const ink = tone === 'time-ai-text' ? t['time-ai'] : t[tone]
+        const ink = tone === 'time-ai-text' ? t['time-ai'] : tone === 'time-gold-text' ? t['time-gold'] : t[tone]
         for (const surface of SURFACES) {
           expect(ratio(t[tone], t[surface]), `${tone} on ${surface}`).toBeGreaterThanOrEqual(4.5)
           expect(ratio(t[tone], mix(t[surface], ink, 0.12)), `${tone} on its tint over ${surface}`).toBeGreaterThanOrEqual(4.5)
@@ -66,6 +67,14 @@ for (const theme of ['light', 'dark'] as const) {
         for (const surface of SURFACES) expect(ratio(t[mark], t[surface]), `${mark} on ${surface}`).toBeGreaterThanOrEqual(3)
       })
     }
+
+    it('the ink on a medal reads on its fill (4.5:1: a place is written small)', () => {
+      // A gold fill runs from its light to the gold: small text sits on it ("+12 points", a place), so both ends count.
+      expect(ratio(t['time-gold-ink'], t['time-gold']), 'ink on gold').toBeGreaterThanOrEqual(4.5)
+      expect(ratio(t['time-gold-ink'], t['time-gold-hi']), 'ink on the light of gold').toBeGreaterThanOrEqual(4.5)
+      expect(ratio(t['a-surface'], t['time-silver']), 'surface on silver').toBeGreaterThanOrEqual(4.5)
+      expect(ratio(t['a-surface'], t['time-bronze']), 'surface on bronze').toBeGreaterThanOrEqual(4.5)
+    })
 
     it('works the accent out so its text reads on the surfaces, and its ink on the accent by the 3:1 rule of bold labels', () => {
       for (const brand of BRANDS) {

@@ -27,6 +27,7 @@ import { Page } from '../ui/Page'
 import { QueryState } from '../ui/QueryState'
 import { StatTile } from '../ui/StatTile'
 import { useToast } from '../ui/Toast'
+import { ProgressBand } from '../wins/ProgressBand'
 import { partOfDay, progressOf, timed, untimed, weekHeights } from './todayLogic'
 import { PulseCard, PulseFact } from '../../workspace/pulse/PulseCard'
 
@@ -108,6 +109,9 @@ export function TodayPage() {
               </button>
               {boot.features.voice && <VoiceButton big language={i18n.language} onText={words => openCapture(boot.venue.today, words)} label={t('time.today.speak', 'Say what needs doing')} />}
             </form>
+
+            {/* Recognition (2026-11-28): the daily goal, the points and the streak, where the day's work is. */}
+            <ProgressBand />
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile icon={CalendarCheck} tone="success" label={t('time.today.done', 'Done today')} value={`${progress.done}/${progress.total}`}

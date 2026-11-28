@@ -83,8 +83,9 @@ The workspace's own endpoints live under `/api/v1/admin/time/`, behind the admin
 | `PUT people/{user}` | a person's planner profile: knowledge, hours, work days, break (`PlannerProfiles`) | manager |
 | `GET insights?from=&to=&person=` | the period (`TimeInsights`, at most 92 days) and the one before | staff |
 | `GET estimate?title=&task_group=&task_category=` | how long such a task usually takes: the median of finished ones, at least three | staff |
-| `GET settings` | the planner's settings (the full admin's `crm_settings` rows, only the planner's keys: the day's hours, the standard day, types, tasks, preferences, the planning mode) | staff |
-| `PUT settings/{key}` | one of them, in the full admin's shapes (lists as JSON text, the day's hours as `{start, end}`, the mode `team` or `own`); `employees` and every other key are not written here (404) | manager |
+| `GET settings` | the planner's settings (the full admin's `crm_settings` rows, only the planner's keys: the day's hours, the standard day, types, tasks, preferences, the planning mode, recognition's two) | staff |
+| `PUT settings/{key}` | one of them, in the full admin's shapes (lists as JSON text, the day's hours as `{start, end}`, the mode `team` or `own`, who sees the ranking as its word, the daily goal as a number); `employees` and every other key are not written here (404) | manager |
+| `GET recognition` | my points, daily goal, streak and badges, and the week's ranking as far as the organisation lets me see it (`Recognition`; only `mode` and `manager` when it is switched off) | staff |
 | `POST tasks/{id}/start|pause|finish` | the task's clock (`TaskClock`; in `own` mode only one's own or nobody's) | staff |
 | `POST plan` | a day's plan: `scope` `me` (anyone), `person` or `team` (anyone in `team` mode, a manager in `own` mode); `include_pool`, `include_overdue`, `include_timed`, `use_ai`, `instruction`, `lang`. AI first when it can be asked, the rules otherwise (`source`, `ai_status`). Writes nothing. 20 a minute (`time-plan`) | staff |
 | `POST plan/apply` | writes the lines a person kept (`PlanApplier`) | staff (others' days: the planning mode) |
@@ -245,18 +246,84 @@ animated features". Nothing on the server changed; the screens did.
   the page's own text and writes the count into React's own text node, so tests, screen readers and a device without
   motion get the figure itself. Checked in a browser with reduced motion: nothing turns, an answer is whole at once.
 
+## Recognition: points, badges and the week's ranking (2026-11-28)
+
+The owner: "add some animated stimulus to employees, like badges … when they finish important tasks, finish day minimum
+tasks, do more than others, fill calendar … a week rating system … so they are interested to fill and do tasks."
+
+**Nothing is stored.** `App\Services\Time\Recognition` reads the planner's own tasks (35 days back) each time it is
+asked, so a task set back to not done takes its points with it and a day re-planned is judged as it now stands. Only
+finished work is counted and shown: nobody's late or unfinished tasks appear to anyone. Days are the venue's.
+
+- **Points for a finished task**, credited on the venue day it was finished (`completed_at`; a row from before that was
+  recorded: its own day): 5, plus 1 per planned quarter of an hour (12 at most), plus 8 when high priority, 3 when
+  finished on its day or earlier, 2 when timed with Start and Finish. The best 15 tasks of a day count, so a day of
+  made-up small tasks buys little.
+- **Points for a day** (its own tasks, by `task_date`): **the daily goal** +20 — `planner_daily_goal` tasks finished
+  (3 unless a manager says otherwise, 1 to 20), or everything finished on a well-filled day, for work that comes in few
+  long tasks; **a clean sweep** +25 — everything planned finished, on a day with at least the goal's number of tasks or
+  a well-filled one; **a filled calendar** +10 — at least 60 % of the person's working time planned
+  (`WorkWindow::capacityFor`, the rule the day board's capacity uses).
+- **The streak**: days in a row with the daily goal met. A day without tasks is skipped (a weekend does not break it),
+  and today does not break it until it is over.
+- **Badges** (earned anew every week; `Recognition::BADGES`): Priority hero (3 high-priority tasks), Goal getter (the
+  goal on 3 days), Clean sweep (once), Well planned (a filled calendar on 3 days), Right on time (5 or more finished,
+  90 % on their day), Timekeeper (5 timed), On a roll and Unstoppable (a streak of 3 and 7), On the podium and Champion
+  of the week (last week's top three and first place, for someone who earned something that week).
+- **The week's ranking** (Monday to Sunday) of everyone with an account who has work that week, by points, then finished
+  tasks, then name; equal points share a place. A name without an account is not ranked.
+
+**Who sees the ranking** is the organisation's choice, `planner_recognition`, a manager's (Settings → Recognition, saved
+through `PUT admin/time/settings/planner_recognition`, the change audited as `planner.recognition`):
+
+| Choice | A staff member sees |
+|---|---|
+| `ranking` | the week's whole table |
+| `podium` (**where nobody chose**) | the top three and their own place; `hidden` says how many are not shown |
+| `own` | only their own points, goal, streak and badges — no place for anyone, and no badge that would tell one |
+| `off` | nothing: no points, badges, ranking or celebrations, and Achievements leaves the menu |
+
+A manager sees the whole table in every choice but `off`. The default is `podium` on purpose: the best are celebrated
+and everyone knows their own place, but no organisation has its last places put before the whole team until a manager
+decides so.
+
+**The screens** (`frontend/src/time/wins/`; every figure is the server's, `wins/winsLogic.ts` only says what a screen
+shows of it):
+
+- **My day's band** (`ProgressBand`): the daily goal as a ring (a tick once met, a star for a clean sweep), what earns
+  the next points ("2 more tasks to reach today's goal", "Finish the last task for a clean sweep"), today's and the
+  week's points, the place, the streak (a flame), how full the calendar is, and the week as seven dots.
+- **Achievements** (`/time/wins`, under My day in the menu; on a phone in the menu, since the top bar is full, and My
+  day's band leads to it): my week (points counting up, place, streak, last week, each day as a bar, today's goal), the
+  ranking with its podium (the winner in the middle, bars rising; my row marked), my badges (gold with a passing light
+  once earned, the others with how far they have got), and how points are earned, in the server's own figures.
+- **Celebrations** (`Celebration`, mounted once in the shell): after any write every read is asked again, and when two
+  consecutive answers of `time/recognition` show something earned (`cheersBetween`: the same day, person and rules, and
+  more points) a card says so — a new badge, taking the lead, a clean sweep, the daily goal, a well-planned day, an
+  important task, the best one winning and the others named on it — with confetti for the big ones; a plain task shows
+  a floating "+12 points". The first answer of a session is only the starting line, and points lost celebrate nothing.
+  A screen reader hears it once from a status line that is always on the page. With reduced motion there is no confetti
+  and the points stand still (`motionOk()`); the medal's light and the flame stop with everything else.
+- **Settings → Recognition** (`settings/RecognitionSection.tsx`): the four choices and the daily goal (− / +), saved at
+  once, read-only for staff.
+
+Gold is `--time-gold` (with `--time-gold-hi` as its light, so a fill reads as gold on a white page too), silver and
+bronze `--time-silver`, `--time-bronze`; `theme/timeContrast.test.ts` holds each to 3:1 on every surface and what is
+written on them to 4.5:1.
+
 ## The areas
 
 | Area | Address | What it does |
 |---|---|---|
-| My day | `/time` | greeting, quick add (type, With AI, Speak), figures, now / up next with Start / Pause / Finish, my day on the clock (press an hour to add, drag to move), without a time, AI briefing, heads-up, overdue (to today), from the pool (Take), my week, the day's note; "Plan my day with AI" |
+| My day | `/time` | greeting, quick add (type, With AI, Speak), the band of progress (daily goal, points, streak, place), figures, now / up next with Start / Pause / Finish, my day on the clock (press an hour to add, drag to move), without a time, AI briefing, heads-up, overdue (to today), from the pool (Take), my week, the day's note; "Plan my day with AI" |
+| Achievements | `/time/wins` | my week's points, place and streak, each day as a bar, today's goal; the week's ranking with its podium (as far as the organisation shows it); my badges; how points are earned; a manager's way to Settings → Recognition. Not in the menu when recognition is off |
 | Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI"; in the week view "Plan the team's week with AI", "Plan my week with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
 | AI assistant | `/time/assistant` (`?q=` asks at once) | ask about days, weeks, the pool and the team; an answer writes itself out, with what it looked at; proposed changes applied one by one or all at once, each with a way to its day; follow-ups; what the AI knows (a gauge) and every other AI tool; in the phone's top bar too |
 | AI coach | `/time/coach` (`?tab=overview|durations|people|knowledge`, `?weeks=4|8|12|26`) | readiness, the period's figures, the AI strategy with one-press fixes, task lengths planned against real, people by type, Teach the AI (a manager's) |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
-| Settings | `/time/settings` (`?tab=day|planning|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), task types, tasks, templates (shared with the full admin) |
+| Settings | `/time/settings` (`?tab=day|planning|recognition|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), recognition (who sees the ranking, the daily goal), task types, tasks, templates (shared with the full admin) |
 
 **The task form** (`task/TaskPanel.tsx`, 9 Nov round 3, the owner: "make something like we have before with icons, and
 the tasks shown after type selection as a grid"): the full admin's drawer's pickers — the types as a grid of tiles with
@@ -290,6 +357,13 @@ P Planner, B Backlog, ? shortcuts.
   (an answer's sources, changes, progress and follow-ups; the plan dialogs' parts; the gauge, the counting figure and the
   load bar), `coach/coach.test.ts` (`cutBlocks`, `sourcesOf`, `followUps`, `questionOf`, `applyProgress`,
   `durationBars`), `plan/plan.test.ts` (`planSummary`, `unplacedShown`), and the stylesheet's rules in `tokens.test.ts`.
+- **Recognition** (2026-11-28): what a task and a day earn, late work, the day's cap, few long tasks, the streak, a
+  task un-done, the venue's days, the ranking (shared places, this organisation only, accounts only), who sees it in
+  each choice and a manager always, the badges, a manager's settings and their audit
+  (`tests/Feature/TimeWorkspace/RecognitionTest.php`, on SQLite and PostgreSQL); frontend `wins/wins.test.ts` (the goal,
+  the next step, badges, the podium, what is worth celebrating, the confetti, the area, the default words against the
+  English bundle), `wins/WinsPage.test.tsx` (the band, the page in each choice, each celebration),
+  `settings/SettingsPage.test.tsx`.
 - **The planning mode** on the full admin's planner endpoints and the workspace's, a manager's choice, `team` by default
   (`PlanningModeTest`, `SettingsTest`, `GateAndBootstrapTest`; frontend `time/lib/rights.test.ts`,
   `settings/SettingsPage.test.tsx`).
@@ -311,7 +385,17 @@ P Planner, B Backlog, ? shortcuts.
   (a full customer reaches every product as before); `PlannerController`'s writers ask `PlanningMode` (in `team` mode,
   the default, nothing changes for anyone).
 
+- 2026-11-28, recognition: `DayBoard` asks `WorkWindow::capacityFor` for a person's working time (the same rule,
+  moved, so recognition's "filled calendar" and the board's capacity cannot drift apart). The full admin's own Planner
+  shows nothing of recognition.
+
 ## Known limits
+
+- Recognition is read from the last 35 days of tasks on every request (20,000 rows at most, the newest first): a streak
+  cannot be longer than that, and nothing is kept once a week is over except what the tasks themselves say (last
+  week's place is worked out again each time).
+- A celebration needs the page open: points earned while it was closed are simply there the next time, uncelebrated.
+- The ranking counts people with an account; work given to a name without one earns nobody points.
 
 - The planning mode is chosen in the Time Planner's Settings only; the full admin's Settings → Planner does not show it
   (its Planner follows it, and says the server's sentence when a change is refused).

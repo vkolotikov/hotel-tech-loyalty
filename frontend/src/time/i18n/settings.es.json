@@ -14,6 +14,7 @@
     "account": "Equipo y habilidades, y la administración completa",
     "day": "El horario del establecimiento y la jornada estándar",
     "planning": "Todos para el equipo, o cada uno su día",
+    "recognition": "Puntos, insignias y quién ve la clasificación",
     "tasks": "En qué consiste cada tipo de trabajo",
     "templates": "Tareas ya preparadas para empezar",
     "types": "Los tipos de trabajo, con iconos y colores"
@@ -61,6 +62,29 @@
     "title": "Quién planifica el día de quién"
   },
   "read_only": "Solo un responsable puede cambiar la jornada laboral, quién planifica, los tipos y las tareas; aquí puede verlos. Las plantillas son de todos.",
+  "recognition": {
+    "goal_less": "Una tarea menos",
+    "goal_line": "Cuántas tareas terminadas en un día alcanzan el objetivo.",
+    "goal_more": "Una tarea más",
+    "goal_note": "Un día de pocas tareas largas también lo alcanza cuando se termina todo lo planificado en un día bien lleno. La racha cuenta los días seguidos con el objetivo alcanzado.",
+    "goal_title": "El objetivo diario",
+    "line": "Los puntos y las insignias son de cada persona. Elija cuánto de la comparación ve su equipo.",
+    "mode": {
+      "off": "Desactivado",
+      "own": "Solo los puntos propios",
+      "podium": "Los tres primeros y el puesto propio",
+      "ranking": "Todos ven la clasificación"
+    },
+    "mode_line": {
+      "off": "Sin puntos, insignias, clasificación ni celebraciones para nadie.",
+      "own": "Cada persona ve sus propios puntos, su objetivo, su racha y sus insignias; no se compara a nadie. Los responsables siguen viendo la tabla.",
+      "podium": "Cada persona ve el podio y su propio puesto; los demás puestos quedan en privado.",
+      "ranking": "Todo el equipo ve la tabla de la semana: cada puesto, los puntos y el podio."
+    },
+    "note": "Solo se cuenta y se muestra el trabajo terminado; nunca se muestran las tareas atrasadas o sin terminar de nadie. Un responsable siempre ve toda la clasificación.",
+    "see_rules": "Ver cómo se ganan los puntos",
+    "title": "Quién ve la clasificación de la semana"
+  },
   "remove": "Quitar",
   "remove_named": "Quitar: {{name}}",
   "save_changes": "Guardar los cambios",
@@ -69,6 +93,7 @@
     "account": "Cuenta",
     "day": "Jornada laboral",
     "planning": "Quién planifica",
+    "recognition": "Reconocimiento",
     "tasks": "Tareas",
     "templates": "Plantillas",
     "types": "Tipos de tarea"

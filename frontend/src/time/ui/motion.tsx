@@ -35,18 +35,21 @@ export function ShimmerLines({ widths = ['w-11/12', 'w-full', 'w-2/3'], classNam
   )
 }
 
+const RING_TONE = { ai: '', accent: 'time-ring-accent', gold: 'time-ring-gold' } as const
+
 /**
  * A gauge: a ring filled to `value` per cent, with what it says in the middle. The fill is drawn by the stylesheet
- * (pathLength 100, so the dash offset is the part still empty); `label` is what a screen reader hears.
+ * (pathLength 100, so the dash offset is the part still empty); `label` is what a screen reader hears. Its colour is
+ * the AI's violet unless `tone` says the accent (a goal under way) or gold (a goal met).
  */
-export function Ring({ value, size = 96, stroke = 9, label, children }: { value: number; size?: number; stroke?: number; label: string; children?: ReactNode }) {
+export function Ring({ value, size = 96, stroke = 9, label, tone = 'ai', children }: { value: number; size?: number; stroke?: number; label: string; tone?: keyof typeof RING_TONE; children?: ReactNode }) {
   const r = (size - stroke) / 2
   const filled = barWidth(value)
   return (
     <span role="img" aria-label={label} className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="time-ring-track" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} pathLength={100} strokeDasharray="100" strokeDashoffset={100 - filled} className="time-ring-value" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} pathLength={100} strokeDasharray="100" strokeDashoffset={100 - filled} className={['time-ring-value', RING_TONE[tone]].filter(Boolean).join(' ')} />
       </svg>
       <span aria-hidden className="absolute inset-0 grid place-items-center">{children}</span>
     </span>

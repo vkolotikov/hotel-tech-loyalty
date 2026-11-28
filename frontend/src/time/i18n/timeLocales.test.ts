@@ -6,6 +6,7 @@ import { SIGNAL_CODES } from '../lib/signals'
 import { REASONS, SKIPPED, UNPLACED } from '../plan/planLogic'
 import { SOURCES } from '../assistant/assistantLogic'
 import { READINESS } from '../coach/coachLogic'
+import { BADGE_CODES, CHEER_KINDS, MODES, RULE_CODES } from '../wins/winsLogic'
 import { timeBundles, LANGS } from './index'
 
 /**
@@ -37,7 +38,12 @@ const files = Object.fromEntries(fs.readdirSync(I18N).filter(f => f.endsWith('.j
 const bundles = timeBundles(files)
 const used = [...new Set(sources(DIR).flatMap(file => [...fs.readFileSync(file, 'utf8').matchAll(/\bt\(\s*['"`](time\.[a-zA-Z0-9_.]+)['"`]/g)].map(m => m[1])))].sort()
 const built = [
-  ...['today', 'plan', 'backlog', 'team', 'insights', 'settings', 'assistant', 'coach'].map(a => `time.nav.${a}`),
+  ...['today', 'wins', 'plan', 'backlog', 'team', 'insights', 'settings', 'assistant', 'coach'].map(a => `time.nav.${a}`),
+  // Recognition (2026-11-28): the words its codes pick — badges, celebrations, the ways to earn, who sees the ranking.
+  ...BADGE_CODES.flatMap(code => [`time.wins.badge.${code}`, `time.wins.badge_hint.${code}`]),
+  ...CHEER_KINDS.flatMap(kind => [`time.wins.cheer.${kind}`, `time.wins.cheer_line.${kind}`]),
+  ...RULE_CODES.map(code => `time.wins.rule.${code}`),
+  ...MODES.flatMap(mode => [`time.settings.recognition.mode.${mode}`, `time.settings.recognition.mode_line.${mode}`]),
   ...['planning', 'people', 'reports', 'setup', 'ai'].map(g => `time.nav.groups.${g}`),
   // The AI assistant and coach (2026-11-14): the words their codes pick.
   ...['plan_tomorrow_team', 'fill_week', 'best_at', 'last_week', 'longer_than_planned', 'plan_my_day', 'pool_for_me', 'my_week'].map(k => `time.assistant.suggest.${k}`),

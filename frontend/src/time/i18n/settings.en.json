@@ -14,6 +14,7 @@
     "account": "Team & skills, and the full admin",
     "day": "The venue’s hours and the standard working time",
     "planning": "Everyone for the team, or each their own day",
+    "recognition": "Points, badges and who sees the ranking",
     "tasks": "What each type of work consists of",
     "templates": "Ready-made tasks to start from",
     "types": "The kinds of work, with icons and colours"
@@ -61,6 +62,29 @@
     "title": "Who plans whose day"
   },
   "read_only": "Only a manager can change the working day, who plans, the types and the tasks; you can see them here. Templates are everyone’s.",
+  "recognition": {
+    "goal_less": "One task fewer",
+    "goal_line": "How many finished tasks of a day reach the goal.",
+    "goal_more": "One task more",
+    "goal_note": "A day of few long tasks also reaches it when everything planned is finished on a well-filled day. The streak counts the days in a row with the goal reached.",
+    "goal_title": "The daily goal",
+    "line": "Points and badges are each person’s own. Choose how much of the comparison your team sees.",
+    "mode": {
+      "off": "Switched off",
+      "own": "Only one’s own points",
+      "podium": "The top three and one’s own place",
+      "ranking": "Everyone sees the ranking"
+    },
+    "mode_line": {
+      "off": "No points, badges, ranking or celebrations for anyone.",
+      "own": "Everyone sees their own points, goal, streak and badges; nobody is compared. Managers still see the table.",
+      "podium": "Everyone sees the podium and where they stand themselves; the other places stay private.",
+      "ranking": "The whole team sees the week’s table: every place, the points and the podium."
+    },
+    "note": "Only finished work is counted and shown; nobody’s late or unfinished tasks appear anywhere. A manager always sees the whole ranking.",
+    "see_rules": "See how points are earned",
+    "title": "Who sees the week’s ranking"
+  },
   "remove": "Remove",
   "remove_named": "Remove: {{name}}",
   "save_changes": "Save changes",
@@ -69,6 +93,7 @@
     "account": "Account",
     "day": "The working day",
     "planning": "Who plans",
+    "recognition": "Recognition",
     "tasks": "Tasks",
     "templates": "Templates",
     "types": "Task types"

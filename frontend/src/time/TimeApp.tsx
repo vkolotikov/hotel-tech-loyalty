@@ -20,6 +20,7 @@ const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ d
 const SettingsPage = lazy(() => import('./settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const AssistantPage = lazy(() => import('./assistant/AssistantPage').then(m => ({ default: m.AssistantPage })))
 const CoachPage = lazy(() => import('./coach/CoachPage').then(m => ({ default: m.CoachPage })))
+const WinsPage = lazy(() => import('./wins/WinsPage').then(m => ({ default: m.WinsPage })))
 
 function PageLoad({ children }: { children: ReactNode }) {
   return (
@@ -52,6 +53,7 @@ export function TimeApp() {
             <PageLoad>
               <Routes>
                 <Route index element={<TodayPage />} />
+                <Route path="wins" element={<WinsPage />} />
                 <Route path="plan" element={<PlanPage />} />
                 <Route path="backlog" element={<BacklogPage />} />
                 <Route path="assistant" element={<AssistantPage />} />

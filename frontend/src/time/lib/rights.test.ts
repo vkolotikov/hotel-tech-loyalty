@@ -39,6 +39,9 @@ describe('a planner setting is sent as the full admin writes it', () => {
   it('keeps the work day as an object, numbers and the planning mode as they are, lists as JSON text', () => {
     expect(settingBody('business_hours_profile', { start: '08:00', end: '17:00' })).toEqual({ value: { start: '08:00', end: '17:00' } })
     expect(settingBody('planner_planning_mode', 'own')).toEqual({ value: 'own' })
+    // Recognition (2026-11-28): who sees the ranking is one word the server checks, the daily goal a number.
+    expect(settingBody('planner_recognition', 'podium')).toEqual({ value: 'podium' })
+    expect(settingBody('planner_daily_goal', 4)).toEqual({ value: 4 })
     expect(settingBody('planner_work_hours_per_day', 7.5)).toEqual({ value: 7.5 })
     expect(settingBody('planner_groups', [{ name: 'Housekeeping' }])).toEqual({ value: '[{"name":"Housekeeping"}]' })
   })

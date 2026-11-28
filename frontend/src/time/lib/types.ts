@@ -25,6 +25,10 @@ export interface Bootstrap {
     channels: ChannelDef[]
     /** Who may put work on whose day (PlanningMode): everyone for everyone, or each their own; `staff.can.plan_team` is mine. */
     planning_mode?: 'team' | 'own'
+    /** Recognition (2026-11-28): who sees the week's ranking, or `off` (where nobody chose: the top three). */
+    recognition?: RecognitionMode
+    /** How many finished tasks of a day make the daily goal (1 to 20). */
+    daily_goal?: number
   }
   counts: { today_open: number; overdue: number; pool: number }
 }
@@ -329,4 +333,39 @@ export interface RawTask {
   task_date: string | null
   start_time: string | null
   updated_at?: string | null
+}
+
+/* ─── Recognition (time/recognition, App\Services\Time\Recognition) ─── */
+
+export type RecognitionMode = 'ranking' | 'podium' | 'own' | 'off'
+
+/** A badge and how far it has got. */
+export interface Badge { code: string; earned: boolean; have: number; need: number }
+
+/** A row of the week's ranking; `rank` is null for someone who is told no place. */
+export interface RankRow { person: string; name: string; manager: boolean; points: number; done: number; rank: number | null; me: boolean; streak: number; badges: number }
+
+export interface RecognitionDay { date: string; future: boolean; points: number; planned: number; done: number; goal_met: boolean; sweep: boolean; day_planned: boolean }
+
+export interface RecognitionMe {
+  person: string
+  name: string
+  today: { planned: number; done: number; goal: number; goal_met: boolean; sweep: boolean; day_planned: boolean; planned_pct: number | null; important_done: number; points: number }
+  week: { points: number; done: number; important: number; on_time_pct: number | null; clocked: number; days_goal: number; days_sweep: number; days_planned: number; rank: number | null; of: number | null }
+  streak: number
+  badges: Badge[]
+  last_week: { points: number; rank: number | null; of: number | null } | null
+  days: RecognitionDay[]
+}
+
+/** What a person sees of recognition; when it is switched off only `mode` and `manager` come. */
+export interface Recognition {
+  mode: RecognitionMode
+  manager: boolean
+  today?: string
+  week?: { from: string; to: string }
+  rules?: { points: Record<string, number>; daily_goal: number; planned_share: number; day_task_cap: number; on_time_share?: number }
+  me?: RecognitionMe | null
+  ranking?: RankRow[]
+  hidden?: number
 }
