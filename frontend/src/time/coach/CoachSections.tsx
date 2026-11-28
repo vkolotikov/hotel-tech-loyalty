@@ -71,19 +71,19 @@ function DurationCard({ title, icon, rows, kind, manager }: { title: string; ico
     <Card title={title} icon={icon} padded={false}>
       {/* relative: the header's screen-reader-only label is positioned, and must scroll with the table, not widen the page. */}
       <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[52rem] text-sm">
+        <table className="w-full min-w-[56rem] text-sm">
           <thead>
             <tr className="border-b border-a-border text-left text-xs text-a-text-2">
               <th scope="col" className="px-4 py-2 font-medium">{kind === 'type' ? t('time.coach.col.type', 'Type') : t('time.coach.col.task', 'Task')}</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.done', 'Done')}</th>
-              <th scope="col" className="w-2/5 px-3 py-2 font-medium">
+              <th scope="col" className="w-1/3 px-3 py-2 font-medium">
                 <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-a-text-2/50" />{t('time.coach.col.planned', 'Planned')}</span>
                   <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-a-st-confirmed" />{t('time.coach.col.real', 'Really took')}</span>
                 </span>
               </th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.suggested', 'Suggested')}</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.typical', 'Written down')}</th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('time.coach.col.suggested', 'Suggested')}</th>
+              <th scope="col" className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('time.coach.col.typical', 'Written down')}</th>
               <th scope="col" className="px-4 py-2 font-medium"><span className="sr-only">{t('time.coach.col.advice', 'Advice')}</span></th>
             </tr>
           </thead>
@@ -96,7 +96,7 @@ function DurationCard({ title, icon, rows, kind, manager }: { title: string; ico
               return (
                 <tr key={row.key}>
                   <th scope="row" className="max-w-[14rem] px-4 py-2.5 text-left font-medium text-a-text"><span className="line-clamp-2 break-words">{row.name}</span></th>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-a-text">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-a-text">
                     {row.samples}
                     <span className="block text-xs text-a-text-2">{t('time.coach.clocked_n', 'clocked: {{count}}', { count: row.clocked })}</span>
                   </td>
@@ -118,15 +118,15 @@ function DurationCard({ title, icon, rows, kind, manager }: { title: string; ico
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-a-text">{duration(row.suggested, units)}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-a-text-2">{duration(row.typical, units)}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums text-a-text">{duration(row.suggested, units)}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-a-text-2">{duration(row.typical, units)}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center justify-end gap-2">
                       <Pill tone={row.advice === 'longer' ? 'danger' : row.advice === 'shorter' ? 'progress' : row.advice === 'set_typical' ? 'pending' : row.advice === 'ok' ? 'success' : 'neutral'}>
                         {t(`time.coach.advice.${row.advice}`, ADVICE_DEFAULTS[row.advice])}
                       </Pill>
                       {manager && canUseSuggested(row) && (
-                        <Button size="sm" variant="secondary" onClick={() => write.mutate(row)} loading={write.isPending && write.variables?.key === row.key} disabled={write.isPending}>
+                        <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => write.mutate(row)} loading={write.isPending && write.variables?.key === row.key} disabled={write.isPending}>
                           {t('time.coach.use_length', 'Use {{length}}', { length: duration(row.suggested, units) })}
                         </Button>
                       )}
