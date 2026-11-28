@@ -12,6 +12,8 @@ import { assignable, usePeople, useRefresh } from '../lib/queries'
 import { choosable, rightsOf } from '../lib/rights'
 import { PRIORITIES, plannerApi } from '../lib/tasks'
 import { Select, TextArea, TextInput } from '../ui/inputs'
+import { staggerDelay } from '../lib/motion'
+import { Orb, ShimmerLines } from '../ui/motion'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
 import { VoiceButton } from './VoiceButton'
@@ -78,7 +80,21 @@ export function CaptureDialog({ onClose, date, initialText = '' }: { onClose: ()
           </Button>
         </div>
       )}>
-      {!rows ? (
+      {!rows && read.isPending ? (
+        <div role="status" className="space-y-4 py-6 animate-a-fade">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Orb size="lg" busy />
+            <p className="font-a-display text-xl text-a-text">{t('time.capture.reading', 'The AI is reading your notes…')}</p>
+            <p className="text-sm text-a-text-2">{t('time.capture.reading_line', 'It writes the tasks; you check them before anything is added.')}</p>
+          </div>
+          {[0, 1].map(i => (
+            <div key={i} aria-hidden className="space-y-2.5 rounded-2xl border border-a-border p-3">
+              <span className="block h-4 w-1/2 rounded-full time-shimmer" />
+              <ShimmerLines widths={['w-full', 'w-3/4']} />
+            </div>
+          ))}
+        </div>
+      ) : !rows ? (
         <div className="space-y-4">
           <p className="text-sm text-a-text-2">{t('time.capture.line', 'Paste a message or notes, or speak: “Tomorrow at 10 Anna deep-cleans room 204, then the boiler check, about an hour.” The AI writes the tasks; you check them before anything is saved.')}</p>
           {!ready && <Notice tone="warning">{t(`time.ai_state.${boot.ai.state}`, t('time.ai_state.unknown', 'The AI cannot be asked just now.'))}</Notice>}
@@ -97,7 +113,7 @@ export function CaptureDialog({ onClose, date, initialText = '' }: { onClose: ()
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-sm time-ai-text"><Sparkles size={15} aria-hidden />{t('time.capture.found', 'Check each task. Untick what should not be added.')}</p>
           {rows.map((row, i) => (
-            <div key={i} className={`space-y-2.5 rounded-2xl border p-3 ${row.keep ? 'border-a-border bg-a-surface' : 'border-dashed border-a-border bg-a-surface-2 opacity-70'}`}>
+            <div key={i} style={{ animationDelay: `${staggerDelay(i, 70)}ms` }} className={`space-y-2.5 rounded-2xl border p-3 animate-a-rise ${row.keep ? 'border-a-border bg-a-surface' : 'border-dashed border-a-border bg-a-surface-2 opacity-70'}`}>
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={row.keep} onChange={e => update(i, { keep: e.target.checked })} aria-label={t('time.capture.keep', 'Add this task')} className="h-4 w-4 accent-[rgb(var(--a-accent))]" />
                 <TextInput value={row.title} onChange={e => update(i, { title: e.target.value })} maxLength={200} aria-label={t('time.task.title', 'Title')} />

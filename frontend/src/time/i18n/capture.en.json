@@ -11,6 +11,8 @@
   "none": "No task was found in the text. Say what needs doing, by whom and when.",
   "placeholder": "What needs doing, by whom and when…",
   "read": "Find the tasks",
+  "reading": "The AI is reading your notes…",
+  "reading_line": "It writes the tasks; you check them before anything is added.",
   "saved": "{{count}} tasks added",
   "saved_one": "{{count}} task added",
   "saved_other": "{{count}} tasks added",

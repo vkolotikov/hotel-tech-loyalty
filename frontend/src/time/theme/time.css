@@ -85,3 +85,62 @@
 [data-time] .time-block { border-left-width: 3px; }
 [data-time] .time-drop { outline: 2px dashed rgb(var(--a-accent) / 0.6); outline-offset: -2px; }
 [data-time] .time-scroll { scrollbar-width: thin; }
+
+/*
+ * Motion (2026-11-28, the owner: "modern, animated"): the AI's screens move — a waiting line shimmers, the AI's orb
+ * turns while it works, a gauge fills, bars grow, a tick pops. Every keyframe is named time-*; the frame's rule
+ * (workspace.css) stops every element's animation under prefers-reduced-motion, and the block at the end of this file
+ * stops the ones drawn on pseudo-elements, which that rule cannot reach.
+ */
+@keyframes time-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes time-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-3px); opacity: 1; } }
+@keyframes time-spin { to { transform: rotate(360deg); } }
+@keyframes time-breathe { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 0.85; } }
+@keyframes time-ring { from { stroke-dashoffset: 100; } }
+@keyframes time-grow { from { transform: scaleX(0); } }
+@keyframes time-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes time-flash { 0% { box-shadow: 0 0 0 0 rgb(var(--time-ai) / 0.55); } 60% { box-shadow: 0 0 0 5px rgb(var(--time-ai) / 0.18); } 100% { box-shadow: 0 0 0 0 rgb(var(--time-ai) / 0); } }
+@keyframes time-blink { 50% { opacity: 0; } }
+@keyframes time-phase { 0%, 100% { opacity: 0.45; } 12%, 40% { opacity: 1; } }
+
+/* A line that is still being written: the surface's own grey with the AI's violet passing over it. */
+[data-time] .time-shimmer {
+  background-image: linear-gradient(100deg, rgb(var(--a-surface-2)) 30%, rgb(var(--time-ai) / 0.24) 50%, rgb(var(--a-surface-2)) 70%);
+  background-size: 200% 100%;
+  animation: time-shimmer 1.6s linear infinite;
+}
+/* Three dots while the AI thinks. */
+[data-time] .time-dots { display: inline-flex; align-items: center; gap: 4px; }
+[data-time] .time-dots > span { width: 6px; height: 6px; border-radius: 9999px; background-color: rgb(var(--time-ai)); animation: time-dot 1.2s ease-in-out infinite; }
+[data-time] .time-dots > span:nth-child(2) { animation-delay: 0.15s; }
+[data-time] .time-dots > span:nth-child(3) { animation-delay: 0.3s; }
+/* The AI's orb: its violet with a slow halo; the halo turns faster while it works (data-busy). */
+[data-time] .time-orb { position: relative; isolation: isolate; display: grid; place-items: center; border-radius: 9999px; background-color: rgb(var(--time-ai)); color: rgb(var(--time-ai-ink)); }
+[data-time] .time-orb::before {
+  content: ''; position: absolute; inset: -20%; z-index: -1; border-radius: inherit; filter: blur(9px);
+  background: conic-gradient(from 0deg, rgb(var(--time-ai) / 0), rgb(var(--time-ai) / 0.8), rgb(var(--a-accent) / 0.65), rgb(var(--time-ai) / 0));
+  animation: time-spin 7s linear infinite;
+}
+[data-time] .time-orb::after { content: ''; position: absolute; inset: -8%; z-index: -1; border-radius: inherit; background-color: rgb(var(--time-ai) / 0.3); animation: time-breathe 3.4s ease-in-out infinite; }
+[data-time] .time-orb[data-busy="true"]::before { animation-duration: 1.5s; }
+/* A gauge: a ring that fills from empty to its value (the circle's pathLength is 100). */
+[data-time] .time-ring-track { stroke: rgb(var(--a-surface-2)); }
+[data-time] .time-ring-value { stroke: rgb(var(--time-ai)); stroke-linecap: round; animation: time-ring 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+/* A bar that grows to its width, a tick that pops, a field the AI just filled, a caret while it writes. */
+[data-time] .time-grow { transform-origin: left center; animation: time-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+[data-time] .time-pop { animation: time-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+[data-time] .time-flash { animation: time-flash 1.4s ease-out both; }
+[data-time] .time-caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background-color: rgb(var(--time-ai)); animation: time-blink 0.9s steps(1) infinite; }
+/* The steps of a plan being made, each lit in its turn (its delay is set inline). */
+[data-time] .time-phase { animation: time-phase 3.6s ease-in-out infinite; }
+/* The AI's quiet wash behind its own panels. */
+/* An ellipse that ends inside its box (half its width), so the wash never shows the box's edge. */
+[data-time] .time-ai-wash { background-image: radial-gradient(50% 85% at 50% 0%, rgb(var(--time-ai) / 0.16), rgb(var(--time-ai) / 0)); }
+
+/* The assistant's box to write in: one frame around the field and its buttons, lit in the AI's violet while it has the focus. */
+[data-time] .time-composer { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+[data-time] .time-composer:focus-within { border-color: rgb(var(--time-ai) / 0.6); box-shadow: 0 0 0 3px rgb(var(--time-ai) / 0.16); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-time] .time-orb::before, [data-time] .time-orb::after { animation: none; }
+}

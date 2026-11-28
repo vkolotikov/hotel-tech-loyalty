@@ -19,6 +19,8 @@ export interface ChatMessage {
   proposals?: AssistantProposal[]
   /** What became of each proposal applied from here: done, or refused (the planner said no). */
   outcome?: Record<string, 'done' | 'failed'>
+  /** What the answer looked at in the planner (the server's tool names), shown under it. */
+  used?: string[]
 }
 
 /** What a turn sends: the last messages, the person's first (a kept reply cannot open it), each cut to the limit. */
@@ -70,9 +72,11 @@ export function pending(message: ChatMessage): AssistantProposal[] {
   return (message.proposals ?? []).filter(p => !message.outcome?.[p.id])
 }
 
+export type Block = { kind: 'p'; text: string } | { kind: 'ul'; items: string[] }
+
 /** A reply as paragraphs and bullet lists (the AI writes short lines and "- " items); no markup is ever rendered. */
-export function blocks(text: string): ({ kind: 'p'; text: string } | { kind: 'ul'; items: string[] })[] {
-  const out: ({ kind: 'p'; text: string } | { kind: 'ul'; items: string[] })[] = []
+export function blocks(text: string): Block[] {
+  const out: Block[] = []
   for (const raw of text.split('\n')) {
     const line = raw.trim()
     if (line === '') continue
@@ -87,4 +91,72 @@ export function blocks(text: string): ({ kind: 'p'; text: string } | { kind: 'ul
     }
   }
   return out
+}
+
+/* ─── An answer that writes itself (2026-11-28) ─────────────────────── */
+
+/** How many characters a reply's blocks hold: what the reveal counts through. */
+export function blocksLength(list: readonly Block[]): number {
+  return list.reduce((sum, b) => sum + (b.kind === 'p' ? b.text.length : b.items.reduce((n, item) => n + item.length, 0)), 0)
+}
+
+/**
+ * The first `chars` characters of a reply, as blocks: whole blocks while they fit, then the one being written cut where
+ * the count ends, nothing after it. The reply is read as blocks first and cut after, so a half-written line never shows
+ * its markup.
+ */
+export function cutBlocks(list: readonly Block[], chars: number): Block[] {
+  const out: Block[] = []
+  let left = Math.max(0, chars)
+  for (const block of list) {
+    if (left <= 0) break
+    if (block.kind === 'p') {
+      out.push({ kind: 'p', text: block.text.slice(0, left) })
+      left -= block.text.length
+      continue
+    }
+    const items: string[] = []
+    for (const item of block.items) {
+      if (left <= 0) break
+      items.push(item.slice(0, left))
+      left -= item.length
+    }
+    out.push({ kind: 'ul', items })
+  }
+  return out
+}
+
+/** What an answer can have looked at, as the server names its tools, in the order they are shown. */
+export const SOURCES = ['get_day', 'get_week', 'get_pool', 'get_people', 'get_learning', 'get_insights', 'find_tasks'] as const
+export type SourceKey = (typeof SOURCES)[number]
+
+/** The sources under an answer: the ones the page has words for, each once, in the shown order. */
+export function sourcesOf(used: readonly string[] | undefined): SourceKey[] {
+  return SOURCES.filter(source => (used ?? []).includes(source))
+}
+
+export type FollowUpKey = 'why' | 'other' | 'plan_it'
+
+/** What is offered under the latest answer: about its changes when it proposed some, else to turn it into changes. */
+export function followUps(message: Pick<ChatMessage, 'role' | 'proposals'>): FollowUpKey[] {
+  if (message.role !== 'assistant') return []
+  return (message.proposals?.length ?? 0) > 0 ? ['why', 'other'] : ['plan_it']
+}
+
+/** Where an applied change is seen: its day on the planner; nowhere for a change without a day. */
+export function dayLink(p: Pick<AssistantProposal, 'date'>): string | null {
+  return p.date ? `/time/plan?date=${p.date}` : null
+}
+
+/** A question handed over in the address (`?q=`, from Find): trimmed, cut to the limit, null when there is none. */
+export function questionOf(search: URLSearchParams): string | null {
+  const q = (search.get('q') ?? '').trim().slice(0, MESSAGE_MAX)
+  return q.length >= 2 ? q : null
+}
+
+/** How far an "apply all" has got, for the button: `[done, of]` while it runs, null when nothing is being applied. */
+export function applyProgress(applying: { ids: readonly string[]; at: string | null } | null): [number, number] | null {
+  if (!applying) return null
+  const index = applying.at === null ? 0 : applying.ids.indexOf(applying.at)
+  return [Math.max(0, index), applying.ids.length]
 }

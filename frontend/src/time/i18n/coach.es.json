@@ -14,6 +14,7 @@
     "shorter": "Planificar más corto"
   },
   "again": "De nuevo",
+  "ai_draft": "Borrador de IA",
   "all_set": "Todo está completo. Siga cronometrando tareas para que las duraciones sean fiables.",
   "ask": "Preguntar al asistente",
   "best": {
@@ -43,7 +44,6 @@
   "col": {
     "advice": "Consejo",
     "done": "Hechas",
-    "drift": "Frente al plan",
     "on_time": "A tiempo / equipo",
     "planned": "Planificado",
     "real": "Real",
@@ -56,6 +56,7 @@
   "completion": "Terminadas",
   "done_n": "hechas: {{count}}",
   "draft": "Borrador con IA",
+  "draft_hint": "Borrador de la IA. Léalo y corríjalo antes de guardar.",
   "drafted": "La IA completó lo que pudo. Revíselo, corrija lo que no sea correcto y guarde.",
   "fill_in": "Completar",
   "finished": "Terminadas",
@@ -115,6 +116,7 @@
   "no_people_line": "Elija un periodo más largo o vuelva cuando el equipo haya terminado algunas tareas.",
   "no_recs": "Por ahora no hay nada que cambiar.",
   "no_types": "Todavía no hay tipos de tarea configurados.",
+  "not_clocked": "pocas cronometradas",
   "now": "Ahora: {{text}}",
   "of": "{{count}} de {{total}}",
   "on_time": "A tiempo",
@@ -136,6 +138,7 @@
   "problem_text": "El negocio y las normas: como máximo {{max}} caracteres cada uno.",
   "readiness": "Lo que sabe la IA",
   "readiness_line": "Cuanto más sabe, mejor planifica.",
+  "ready_label": "{{pct}} % de lo que la IA podría saber",
   "rules": "Normas de la casa",
   "rules_hint": "Qué debe hacerse siempre, en qué orden y qué no puede hacer nadie a solas.",
   "rules_placeholder": "Las habitaciones se limpian antes de las 14:00; los aprendices nunca cierran la caja solos; el spa abre a las 9…",
@@ -153,10 +156,13 @@
     "low": "Todavía hay pocos datos",
     "mid": "Va por buen camino"
   },
+  "state_left": "Falta completar: {{count}}",
   "strategy": "Estrategia",
   "strategy_empty": "Todavía hay pocos datos. Enseñe a la IA, deje trabajar al equipo una semana y vuelva a preguntar.",
   "strategy_intro": "A quién formar, qué duraciones cambiar, cómo repartir mejor el trabajo: cada punto con su motivo y, cuando la hay, una corrección inmediata.",
   "strategy_line": "La IA lee las cifras y lo que usted le enseñó, y dice qué cambiar.",
+  "strategy_wait": "La IA está leyendo las cifras…",
+  "strategy_wait_line": "Lo planificado, lo que tardó de verdad y lo que usted le enseñó.",
   "tab": {
     "durations": "Duración de las tareas",
     "knowledge": "Enseñar a la IA",

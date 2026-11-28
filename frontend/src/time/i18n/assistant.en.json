@@ -2,18 +2,36 @@
   "applied": "Changes applied: {{count}}",
   "apply": "Apply",
   "apply_all": "Apply all ({{count}})",
+  "applying": "Applying {{done}} of {{count}}…",
+  "applying_one": "Applying…",
   "ask": "Ask the assistant",
   "conversation": "Conversation",
+  "copied": "Copied",
+  "copy": "Copy the answer",
+  "counter": "{{used}} of {{max}}",
   "done": "Applied",
+  "enter_hint": "Enter sends, Shift + Enter starts a new line.",
   "failed": "Not applied",
+  "follow": {
+    "other": "Another way",
+    "plan_it": "Make it changes I can apply",
+    "why": "Why these?"
+  },
+  "follow_ask": {
+    "other": "Suggest another way to do it.",
+    "plan_it": "Turn this into changes I can apply.",
+    "why": "Explain briefly why you suggest these changes."
+  },
   "hello": "What shall we plan, {{name}}?",
   "hello_line": "I know the team’s skills, hours and history, the pool and the plan. I suggest; you decide what is applied.",
   "knows": "What the AI knows",
   "knows_line": "The more you teach it, the better it plans.",
   "line": "Ask about the team’s days and weeks. It looks things up in the planner and proposes changes you apply.",
+  "looked_at": "Looked at",
   "new": "New conversation",
   "no_reply": "I looked, but could not put an answer together. Try asking more narrowly.",
   "open_coach": "Teach it in the AI coach",
+  "open_day": "Open the day",
   "placeholder": "Ask anything about the plan, the team or the pool…",
   "proposal": {
     "assign": "Give “{{title}}” to {{name}}",
@@ -26,8 +44,20 @@
     "to_backlog": "Move “{{title}}” back to the backlog"
   },
   "proposed": "Proposed changes",
-  "ready": "ready",
+  "ready_label": "{{pct}} % ready",
+  "ready_line": "of what it could know about your business, work and team.",
   "send": "Send",
+  "show_all": "Show the whole answer",
+  "source": {
+    "find_tasks": "tasks",
+    "get_day": "a day",
+    "get_insights": "the figures",
+    "get_learning": "what it learned",
+    "get_people": "the team",
+    "get_pool": "the pool",
+    "get_week": "the week"
+  },
+  "starters": "Questions to start with",
   "suggest": {
     "best_at": "Who does {{type}} best, and who could use support?",
     "fill_week": "Fill next week from the pool, fairly and by skills.",
@@ -39,10 +69,20 @@
     "pool_for_me": "What should I take from the pool?"
   },
   "thinking": "Looking at the planner…",
-  "tip_1": "plan a day or a week, for you or the team",
-  "tip_2": "share out the pool by skills and free time",
-  "tip_3": "say how long work really takes",
-  "tip_4": "review how a day or a week went",
-  "tips": "Ask it to…",
-  "title": "AI assistant"
+  "title": "AI assistant",
+  "tool": {
+    "capture": "Add tasks with AI",
+    "capture_line": "From a message, a list or a voice note.",
+    "coach": "AI coach",
+    "coach_line": "Teach the AI, see what it learned, get a strategy.",
+    "plan_day": "Plan my day",
+    "plan_day_line": "Your open tasks fitted into your free time.",
+    "plan_week": "Plan my week",
+    "plan_week_line": "The pool and backlogs shared across the days.",
+    "plan_week_team": "Plan the team’s week",
+    "review": "Review a day",
+    "review_line": "What went well and what to change, on the planner’s day."
+  },
+  "tools": "AI tools",
+  "tools_line": "Every way the AI helps, in one place."
 }

@@ -14,6 +14,7 @@
     "shorter": "Plan it shorter"
   },
   "again": "Again",
+  "ai_draft": "AI draft",
   "all_set": "Everything is in. Keep clocking tasks so the lengths stay true.",
   "ask": "Ask the assistant",
   "best": {
@@ -43,7 +44,6 @@
   "col": {
     "advice": "Advice",
     "done": "Done",
-    "drift": "Against plan",
     "on_time": "On time / team",
     "planned": "Planned",
     "real": "Really took",
@@ -56,6 +56,7 @@
   "completion": "Finished",
   "done_n": "done: {{count}}",
   "draft": "Draft with AI",
+  "draft_hint": "Drafted by the AI. Read it and correct it before you save.",
   "drafted": "The AI filled in what it could. Read it through, change what is wrong, then save.",
   "fill_in": "Fill in",
   "finished": "Finished",
@@ -115,6 +116,7 @@
   "no_people_line": "Pick a longer period, or come back once the team has finished some tasks.",
   "no_recs": "Nothing to change just now.",
   "no_types": "No task types are set up yet.",
+  "not_clocked": "too few clocked",
   "now": "Now: {{text}}",
   "of": "{{count}} of {{total}}",
   "on_time": "On time",
@@ -136,6 +138,7 @@
   "problem_text": "Keep the business and the rules to {{max}} characters each.",
   "readiness": "What the AI knows",
   "readiness_line": "The more it knows, the better it plans.",
+  "ready_label": "{{pct}} % of what the AI could know",
   "rules": "House rules",
   "rules_hint": "What must always happen, in what order, and what nobody may do alone.",
   "rules_placeholder": "Rooms are cleaned before 14:00; trainees never close the till alone; the spa opens at 9…",
@@ -153,10 +156,13 @@
     "low": "Little to go by yet",
     "mid": "Getting there"
   },
+  "state_left": "Still to fill in: {{count}}",
   "strategy": "Strategy",
   "strategy_empty": "There is little to go on yet. Teach the AI and let the team work a week, then ask again.",
   "strategy_intro": "Who to train, which lengths to change, how to share the work better — each with the reason, and a fix you can make at once where there is one.",
   "strategy_line": "The AI reads the figures and what you taught it, and says what to change.",
+  "strategy_wait": "The AI is reading the figures…",
+  "strategy_wait_line": "What was planned, what it really took, and what you taught it.",
   "tab": {
     "durations": "Task lengths",
     "knowledge": "Teach the AI",

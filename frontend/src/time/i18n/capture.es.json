@@ -11,6 +11,8 @@
   "none": "No se encontró ninguna tarea en el texto. Diga qué hay que hacer, quién y cuándo.",
   "placeholder": "Qué hay que hacer, quién y cuándo…",
   "read": "Buscar las tareas",
+  "reading": "La IA está leyendo sus notas…",
+  "reading_line": "Redacta las tareas; usted las revisa antes de añadir nada.",
   "saved": "{{count}} tareas añadidas",
   "saved_one": "{{count}} tarea añadida",
   "saved_other": "{{count}} tareas añadidas",

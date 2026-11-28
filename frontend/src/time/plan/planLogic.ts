@@ -76,3 +76,18 @@ export function weekOptions(shownMonday: string, today: string): { this: { start
   const daysLeft = Math.max(0, 7 - daysBetween(shownMonday, from))
   return { this: { start: from, daysLeft }, next: { start: addDays(shownMonday, 7) }, preferred: daysLeft <= 2 ? 'next' : 'this' }
 }
+
+/** A plan at a glance (2026-11-28): its lines, the people they go to, the days they cover, what was left out. */
+export interface PlanSummary { tasks: number; people: number; days: number; unplaced: number }
+
+export function planSummary(lines: readonly Pick<Proposal, 'person'>[], unplaced: number, days = 1): PlanSummary {
+  return { tasks: lines.length, people: new Set(lines.map(l => l.person)).size, days, unplaced }
+}
+
+/** How many unplaced tasks a plan shows before "Show all". */
+export const UNPLACED_FOLD = 4
+
+/** The unplaced tasks on show: all of a short list or an opened one, else the first few. */
+export function unplacedShown<T>(items: readonly T[], open: boolean): T[] {
+  return open || items.length <= UNPLACED_FOLD ? [...items] : items.slice(0, UNPLACED_FOLD)
+}

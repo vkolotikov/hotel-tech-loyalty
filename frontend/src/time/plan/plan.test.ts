@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Board, Lane, Proposal, Task } from '../lib/types'
 import { NOBODY, cellOf, lanesOf, readQuery, step, untimedOf } from './boardLogic'
-import { byPerson, changesPerson, dayLoad, knownReasons, linesToApply, weekLinesToApply, weekOptions, weekTaskIds } from './planLogic'
+import { byPerson, changesPerson, dayLoad, knownReasons, linesToApply, planSummary, unplacedShown, weekLinesToApply, weekOptions, weekTaskIds } from './planLogic'
 import { columnsOf, heightOf, loadState, minutesAt, topOf, visibleRange } from './timeline'
 
 const task = (id: number, start: string | null, minutes = 60, extra: Partial<Task> = {}): Task => ({
@@ -110,6 +110,14 @@ describe('a plan as a person reviews it', () => {
     expect(weekOptions('2026-11-09', '2026-11-14')).toMatchObject({ this: { daysLeft: 2 }, preferred: 'next' })
     expect(weekOptions('2026-11-16', '2026-11-14')).toMatchObject({ this: { start: '2026-11-16', daysLeft: 7 }, next: { start: '2026-11-23' }, preferred: 'this' })
     expect(weekOptions('2026-11-02', '2026-11-14')).toMatchObject({ this: { daysLeft: 0 }, preferred: 'next' })
+  })
+
+  it('sums a plan up, and folds a long list of what it could not place', () => {
+    expect(planSummary([line(1, 'u1', '09:00'), line(2, 'u1', '10:00'), line(3, 'u2', '09:00')], 2)).toEqual({ tasks: 3, people: 2, days: 1, unplaced: 2 })
+    expect(planSummary([], 0, 5)).toEqual({ tasks: 0, people: 0, days: 5, unplaced: 0 })
+    expect(unplacedShown([1, 2, 3, 4], false)).toEqual([1, 2, 3, 4])
+    expect(unplacedShown([1, 2, 3, 4, 5, 6], false)).toEqual([1, 2, 3, 4])
+    expect(unplacedShown([1, 2, 3, 4, 5, 6], true)).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('shows how full each day gets: new work adds, a day’s own task moves from one person to the other', () => {

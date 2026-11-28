@@ -2,18 +2,36 @@
   "applied": "Changements appliqués : {{count}}",
   "apply": "Appliquer",
   "apply_all": "Tout appliquer ({{count}})",
+  "applying": "Application {{done}} sur {{count}}…",
+  "applying_one": "Application…",
   "ask": "Demander à l’assistant",
   "conversation": "Conversation",
+  "copied": "Copié",
+  "copy": "Copier la réponse",
+  "counter": "{{used}} sur {{max}}",
   "done": "Appliqué",
+  "enter_hint": "Entrée envoie, Maj + Entrée passe à la ligne.",
   "failed": "Non appliqué",
+  "follow": {
+    "other": "Une autre façon",
+    "plan_it": "En faire des changements à appliquer",
+    "why": "Pourquoi ces changements ?"
+  },
+  "follow_ask": {
+    "other": "Propose une autre façon de faire.",
+    "plan_it": "Transforme cela en changements que je peux appliquer.",
+    "why": "Explique brièvement pourquoi tu proposes ces changements."
+  },
   "hello": "Que planifions-nous, {{name}} ?",
   "hello_line": "Je connais les compétences, les horaires et l’historique de l’équipe, la réserve et le planning. Je propose ; vous décidez de ce qui est appliqué.",
   "knows": "Ce que l’IA sait",
   "knows_line": "Plus vous lui en apprenez, mieux elle planifie.",
   "line": "Posez vos questions sur les journées et les semaines de l’équipe. Il consulte le planificateur et propose des changements que vous appliquez.",
+  "looked_at": "Consulté",
   "new": "Nouvelle conversation",
   "no_reply": "J’ai regardé, mais je n’ai pas pu formuler de réponse. Essayez une question plus précise.",
   "open_coach": "L’instruire dans le coach IA",
+  "open_day": "Ouvrir la journée",
   "placeholder": "Posez une question sur le planning, l’équipe ou la réserve…",
   "proposal": {
     "assign": "Confier « {{title}} » à {{name}}",
@@ -26,8 +44,20 @@
     "to_backlog": "Remettre « {{title}} » dans les tâches à planifier"
   },
   "proposed": "Changements proposés",
-  "ready": "prête",
+  "ready_label": "Prête à {{pct}} %",
+  "ready_line": "de ce qu’elle pourrait savoir sur votre entreprise, le travail et l’équipe.",
   "send": "Envoyer",
+  "show_all": "Afficher toute la réponse",
+  "source": {
+    "find_tasks": "des tâches",
+    "get_day": "une journée",
+    "get_insights": "les chiffres",
+    "get_learning": "ce qu’elle a appris",
+    "get_people": "l’équipe",
+    "get_pool": "la réserve",
+    "get_week": "la semaine"
+  },
+  "starters": "Questions pour commencer",
   "suggest": {
     "best_at": "Qui fait le mieux « {{type}} », et qui aurait besoin de soutien ?",
     "fill_week": "Remplis la semaine prochaine depuis la réserve, équitablement et selon les compétences.",
@@ -39,10 +69,20 @@
     "pool_for_me": "Que devrais-je prendre dans la réserve ?"
   },
   "thinking": "Je consulte le planificateur…",
-  "tip_1": "planifier une journée ou une semaine, pour vous ou l’équipe",
-  "tip_2": "répartir la réserve selon les compétences et le temps libre",
-  "tip_3": "dire combien de temps le travail prend vraiment",
-  "tip_4": "faire le bilan d’une journée ou d’une semaine",
-  "tips": "Demandez-lui de…",
-  "title": "Assistant IA"
+  "title": "Assistant IA",
+  "tool": {
+    "capture": "Ajouter des tâches avec l’IA",
+    "capture_line": "Depuis un message, une liste ou une note vocale.",
+    "coach": "Coach IA",
+    "coach_line": "Instruire l’IA, voir ce qu’elle a appris, obtenir une stratégie.",
+    "plan_day": "Planifier ma journée",
+    "plan_day_line": "Vos tâches ouvertes placées dans votre temps libre.",
+    "plan_week": "Planifier ma semaine",
+    "plan_week_line": "La réserve et les tâches à planifier réparties sur les jours.",
+    "plan_week_team": "Planifier la semaine de l’équipe",
+    "review": "Faire le bilan d’une journée",
+    "review_line": "Ce qui a bien marché et ce qu’il faut changer, dans la journée du planificateur."
+  },
+  "tools": "Outils IA",
+  "tools_line": "Tout ce que l’IA sait faire, au même endroit."
 }

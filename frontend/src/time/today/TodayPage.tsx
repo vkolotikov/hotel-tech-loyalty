@@ -7,6 +7,7 @@ import { Button } from '../../workspace/ui/Button'
 import { useTimeActions } from '../TimeActions'
 import { useBoot } from '../TimeProvider'
 import { VoiceButton } from '../ai/VoiceButton'
+import { AskBox } from '../ai/AskBox'
 import { ReviewCard } from '../ai/ReviewCard'
 import { timeApi } from '../lib/api'
 import { addDays } from '../lib/dates'
@@ -168,6 +169,7 @@ export function TodayPage() {
               </div>
 
               <aside className="min-w-0 space-y-5">
+                <AskBox />
                 <ReviewCard ask={{ kind: 'day', date: boot.venue.today, person: boot.staff.key }} title={t('time.today.briefing', 'AI briefing')}
                   line={t('time.today.briefing_line', 'A quick read of your day and what to change.')} />
 

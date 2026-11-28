@@ -1,5 +1,8 @@
 {
   "afternoon": "Guten Tag, {{name}}",
+  "ask": "Die KI zu Ihrem Tag fragen",
+  "ask_hint": "Fragen Sie die KI zu Ihrem Tag…",
+  "ask_send": "Die KI fragen",
   "briefing": "KI-Überblick",
   "briefing_line": "Ein kurzer Blick auf Ihren Tag und was Sie ändern sollten.",
   "bucket": "{{count}} in Ihrem Backlog",

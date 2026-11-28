@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canUseSuggested, coachTab, driftTone, figuresOf, gaps, knowledgeProblem, mergeNotes, minutesValue, personDraftBody, readinessState, readinessWhere, speedPct,
+  canUseSuggested, coachTab, driftTone, durationBars, figuresOf, gaps, knowledgeProblem, mergeNotes, minutesValue, personDraftBody, readinessState, readinessWhere, speedPct,
   taskEntry, taskRows, typeEntry, typeRows, typicalWrite, weeksOf, withTaskDraft, withTypeDraft,
 } from './coachLogic'
-import { blocks, historyFor, pending, proposalText, suggestions, type ChatMessage } from '../assistant/assistantLogic'
+import {
+  applyProgress, blocks, blocksLength, cutBlocks, dayLink, followUps, historyFor, pending, proposalText, questionOf, sourcesOf, suggestions, type ChatMessage,
+} from '../assistant/assistantLogic'
 import type { AssistantProposal } from '../lib/types'
 
 describe('the AI coach', () => {
@@ -42,6 +44,13 @@ describe('the AI coach', () => {
     expect(canUseSuggested({ suggested: 45, typical: null, advice: 'few' })).toBe(false)
     expect(canUseSuggested({ suggested: null, typical: null, advice: 'ok' })).toBe(false)
     expect([speedPct(1.2), speedPct(0.8), speedPct(null)]).toEqual([20, -20, null])
+  })
+
+  it('draws planned against real, each bar against the longer of the two', () => {
+    expect(durationBars({ planned_median: 60, real_median: 90 })).toEqual({ planned: 67, real: 100 })
+    expect(durationBars({ planned_median: 90, real_median: 60 })).toEqual({ planned: 100, real: 67 })
+    expect(durationBars({ planned_median: 45, real_median: null })).toEqual({ planned: 100, real: null })
+    expect(durationBars({ planned_median: null, real_median: null })).toEqual({ planned: 0, real: null })
   })
 
   it('builds the editor’s rows from the settings and writes back only what a row says', () => {
@@ -114,6 +123,36 @@ describe('the AI assistant', () => {
     const move: AssistantProposal = { id: 'p2', kind: 'move', title: 'Fix lamp', date: null, request: { method: 'patch', path: 'planner/tasks/1/move', body: {} } }
     expect(proposalText(t, move, 'en', { h: 'h', min: 'min' })).toBe('Move “Fix lamp” back to the backlog')
     expect(pending(msg('assistant', 'x', { proposals: [p, move], outcome: { p1: 'done' } })).map(x => x.id)).toEqual(['p2'])
+  })
+
+  it('writes an answer out as blocks cut where the writing has got to', () => {
+    const all = blocks('Plan:\n- Anna: rooms\n- Boris: desk\nDone.')
+    expect(blocksLength(all)).toBe(5 + 11 + 11 + 5)
+    expect(cutBlocks(all, 0)).toEqual([])
+    expect(cutBlocks(all, 3)).toEqual([{ kind: 'p', text: 'Pla' }])
+    expect(cutBlocks(all, 5 + 4)).toEqual([{ kind: 'p', text: 'Plan:' }, { kind: 'ul', items: ['Anna'] }])
+    expect(cutBlocks(all, 5 + 11 + 2)).toEqual([{ kind: 'p', text: 'Plan:' }, { kind: 'ul', items: ['Anna: rooms', 'Bo'] }])
+    expect(cutBlocks(all, 999)).toEqual(all)
+  })
+
+  it('names what an answer looked at, offers what to ask next, and knows where a change is seen', () => {
+    expect(sourcesOf(['propose_changes', 'get_people', 'get_pool', 'get_pool', 'unknown'])).toEqual(['get_pool', 'get_people'])
+    expect(sourcesOf(undefined)).toEqual([])
+    const withChanges = msg('assistant', 'x', { proposals: [{ id: 'p', kind: 'move', title: 'T', request: { method: 'patch', path: 'planner/tasks/1/move', body: {} } }] })
+    expect(followUps(withChanges)).toEqual(['why', 'other'])
+    expect(followUps(msg('assistant', 'x'))).toEqual(['plan_it'])
+    expect(followUps(msg('user', 'x'))).toEqual([])
+    expect(dayLink({ date: '2026-11-29' })).toBe('/time/plan?date=2026-11-29')
+    expect(dayLink({ date: null })).toBeNull()
+  })
+
+  it('takes a question from the address, and says how far an apply has got', () => {
+    expect(questionOf(new URLSearchParams('q=%20who%20is%20free%3F%20'))).toBe('who is free?')
+    expect(questionOf(new URLSearchParams('q=a'))).toBeNull()
+    expect(questionOf(new URLSearchParams(''))).toBeNull()
+    expect(applyProgress(null)).toBeNull()
+    expect(applyProgress({ ids: ['a', 'b', 'c'], at: 'b' })).toEqual([1, 3])
+    expect(applyProgress({ ids: ['a', 'b'], at: null })).toEqual([0, 2])
   })
 
   it('reads a reply as paragraphs and lists, with no markup', () => {

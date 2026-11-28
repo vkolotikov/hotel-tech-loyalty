@@ -14,6 +14,7 @@
     "shorter": "Prévoir plus court"
   },
   "again": "À nouveau",
+  "ai_draft": "Ébauche IA",
   "all_set": "Tout est renseigné. Continuez à chronométrer pour que les durées restent justes.",
   "ask": "Demander à l’assistant",
   "best": {
@@ -43,7 +44,6 @@
   "col": {
     "advice": "Conseil",
     "done": "Terminées",
-    "drift": "Par rapport au prévu",
     "on_time": "À temps / équipe",
     "planned": "Prévu",
     "real": "Réel",
@@ -56,6 +56,7 @@
   "completion": "Terminées",
   "done_n": "terminées : {{count}}",
   "draft": "Ébauche par l’IA",
+  "draft_hint": "Ébauche de l’IA. Relisez et corrigez avant d’enregistrer.",
   "drafted": "L’IA a rempli ce qu’elle pouvait. Relisez, corrigez ce qui ne va pas, puis enregistrez.",
   "fill_in": "Compléter",
   "finished": "Terminées",
@@ -115,6 +116,7 @@
   "no_people_line": "Choisissez une période plus longue, ou revenez quand l’équipe aura terminé des tâches.",
   "no_recs": "Rien à changer pour l’instant.",
   "no_types": "Aucun type de tâche n’est encore configuré.",
+  "not_clocked": "trop peu chronométrées",
   "now": "Actuellement : {{text}}",
   "of": "{{count}} sur {{total}}",
   "on_time": "À temps",
@@ -136,6 +138,7 @@
   "problem_text": "L’entreprise et les règles : {{max}} caractères au plus chacune.",
   "readiness": "Ce que l’IA sait",
   "readiness_line": "Plus elle en sait, mieux elle planifie.",
+  "ready_label": "{{pct}} % de ce que l’IA pourrait savoir",
   "rules": "Règles de la maison",
   "rules_hint": "Ce qui doit toujours se faire, dans quel ordre, et ce que personne ne fait seul.",
   "rules_placeholder": "Les chambres sont faites avant 14 h ; les stagiaires ne ferment jamais la caisse seuls ; le spa ouvre à 9 h…",
@@ -153,10 +156,13 @@
     "low": "Encore peu d’éléments",
     "mid": "En bonne voie"
   },
+  "state_left": "Reste à compléter : {{count}}",
   "strategy": "Stratégie",
   "strategy_empty": "Il y a encore peu d’éléments. Instruisez l’IA, laissez l’équipe travailler une semaine, puis redemandez.",
   "strategy_intro": "Qui former, quelles durées changer, comment mieux répartir le travail — chaque fois avec la raison et, quand c’est possible, une correction immédiate.",
   "strategy_line": "L’IA lit les chiffres et ce que vous lui avez appris, et dit quoi changer.",
+  "strategy_wait": "L’IA lit les chiffres…",
+  "strategy_wait_line": "Ce qui était prévu, ce que cela a vraiment pris, et ce que vous lui avez appris.",
   "tab": {
     "durations": "Durée des tâches",
     "knowledge": "Instruire l’IA",
