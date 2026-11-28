@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\CrmSetting;
 use App\Services\Time\Knowledge;
 use App\Services\Time\PlanningMode;
+use App\Services\Time\Recognition;
 use App\Services\Time\TimeAccess;
 use App\Services\Time\TimeRefused;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,9 @@ use Illuminate\Http\Request;
  *
  * Since 2026-11-14 also what a manager teaches the AI (Knowledge: the business, house rules and goals; notes and
  * typical lengths per task type and per task), answered and saved cleaned, as objects.
+ *
+ * Since 2026-11-28 also recognition (Recognition): who sees the week's ranking (`planner_recognition`, its change
+ * audited) and how many finished tasks make the daily goal (`planner_daily_goal`).
  */
 class SettingsController extends Controller
 {
@@ -30,12 +34,14 @@ class SettingsController extends Controller
         'business_hours_profile', 'planner_work_hours_per_day', 'planner_work_days_per_week',
         'planner_groups', 'planner_channels', 'planner_employee_prefs', PlanningMode::KEY, 'employees',
         Knowledge::CONTEXT, Knowledge::TYPE_NOTES, Knowledge::TASK_NOTES,
+        Recognition::KEY, Recognition::GOAL_KEY,
     ];
 
     public const WRITABLE = [
         'business_hours_profile', 'planner_work_hours_per_day', 'planner_work_days_per_week',
         'planner_groups', 'planner_channels', 'planner_employee_prefs', PlanningMode::KEY,
         Knowledge::CONTEXT, Knowledge::TYPE_NOTES, Knowledge::TASK_NOTES,
+        Recognition::KEY, Recognition::GOAL_KEY,
     ];
 
     /** The longest list a setting may hold, as JSON text (the full admin's lists are a few kB). */
@@ -49,6 +55,9 @@ class SettingsController extends Controller
         $rows[Knowledge::CONTEXT] = $knowledge->context();
         $rows[Knowledge::TYPE_NOTES] = (object) $knowledge->typeNotes();
         $rows[Knowledge::TASK_NOTES] = (object) $knowledge->taskNotes();
+        // Recognition (2026-11-28): who sees the week's ranking, and how many finished tasks make the daily goal.
+        $rows[Recognition::KEY] = Recognition::readMode($rows[Recognition::KEY] ?? null);
+        $rows[Recognition::GOAL_KEY] = Recognition::readGoal($rows[Recognition::GOAL_KEY] ?? null);
 
         return response()->json($rows);
     }
@@ -62,6 +71,8 @@ class SettingsController extends Controller
 
         $value = match ($key) {
             PlanningMode::KEY => $request->validate(['value' => 'required|string|in:' . implode(',', PlanningMode::MODES)])['value'],
+            Recognition::KEY => $request->validate(['value' => 'required|string|in:' . implode(',', Recognition::MODES)])['value'],
+            Recognition::GOAL_KEY => (int) $request->validate(['value' => 'required|integer|min:1|max:' . Recognition::GOAL_MAX])['value'],
             'planner_work_hours_per_day' => (float) $request->validate(['value' => 'required|numeric|min:1|max:24'])['value'],
             'planner_work_days_per_week' => (int) $request->validate(['value' => 'required|integer|min:1|max:7'])['value'],
             // The only shape the server reads (WorkWindow): {start, end}, HH:MM, the end after the start.
@@ -87,8 +98,19 @@ class SettingsController extends Controller
                 $value === PlanningMode::OWN ? 'Planner: everyone plans only their own day' : 'Planner: everyone may plan for the team');
         }
 
+        // Who sees the ranking decides what colleagues learn about each other: the change is on record.
+        if ($key === Recognition::KEY && Recognition::readMode($before) !== $value) {
+            AuditLog::record('planner.recognition', null, ['mode' => $value], ['mode' => Recognition::readMode($before)], $request->user(),
+                'Planner recognition: ' . match ($value) {
+                    Recognition::RANKING => 'everyone sees the week\'s ranking',
+                    Recognition::PODIUM  => 'everyone sees the top three and their own place',
+                    Recognition::OWN     => 'everyone sees only their own points',
+                    default              => 'switched off',
+                });
+        }
+
         return response()->json(['key' => $key, 'value' => match (true) {
-            $key === PlanningMode::KEY => $value,
+            $key === PlanningMode::KEY, $key === Recognition::KEY, $key === Recognition::GOAL_KEY => $value,
             in_array($key, Knowledge::KEYS, true) => json_decode((string) $value),
             default => CrmSetting::query()->where('key', $key)->value('value'),
         }]);

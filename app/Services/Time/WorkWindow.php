@@ -116,4 +116,27 @@ final class WorkWindow
 
         return ['start' => $start, 'end' => $end, 'works' => $works, 'break_minutes' => $break, 'capacity' => $capacity];
     }
+
+    /**
+     * The minutes a person can work on a weekday, as every screen counts them (the day board, recognition): their own
+     * hours less their break where their profile sets hours, else the organisation's window less their break, at most
+     * the standard working day; 0 on a day off, and 0 for a name without an account (its hours are not known).
+     *
+     * @param  array{start: int, end: int}  $organisation
+     * @param  array{has_account: bool, profile: array<string, mixed>}  $person  a row of Team::people()
+     */
+    public static function capacityFor(array $organisation, array $person, int $weekday, int $standard): int
+    {
+        if (!$person['has_account']) {
+            return 0;
+        }
+        $profile = $person['profile'];
+        $window = self::forPerson($organisation, $profile, $weekday);
+        if (!$window['works']) {
+            return 0;
+        }
+        $ownHours = ($profile['work_start'] ?? null) !== null || ($profile['work_end'] ?? null) !== null;
+
+        return $ownHours ? $window['capacity'] : min($window['capacity'], $standard);
+    }
 }

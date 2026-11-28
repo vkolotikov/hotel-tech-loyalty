@@ -86,12 +86,9 @@ final class DayBoard
             }
             $person = $lane['person'];
             $window = WorkWindow::forPerson($orgWindow, $person['profile'], $weekday);
-            $ownHours = $person['profile']['work_start'] !== null || $person['profile']['work_end'] !== null;
-            $capacity = $window['works'] ? ($ownHours ? $window['capacity'] : min($window['capacity'], $standard)) : 0;
-            // A name without an account (an outside cleaner) has no hours the planner knows: no capacity, no load.
-            if (!$person['has_account']) {
-                $capacity = 0;
-            }
+            // One rule for a person's capacity (WorkWindow), shared with recognition: own hours less the break, the
+            // venue's window capped at the standard day, nothing on a day off or for a name without an account.
+            $capacity = WorkWindow::capacityFor($orgWindow, $person, $weekday, $standard);
             $list = $lane['tasks'];
             if (!$window['works'] && $list === [] && !$person['has_account']) {
                 continue;

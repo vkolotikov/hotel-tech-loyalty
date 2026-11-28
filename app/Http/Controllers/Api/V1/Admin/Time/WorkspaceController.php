@@ -14,6 +14,7 @@ use App\Services\Time\PlannerAi;
 use App\Services\Time\PlannerCatalogue;
 use App\Services\Time\PlannerProfiles;
 use App\Services\Time\PlanningMode;
+use App\Services\Time\Recognition;
 use App\Services\Time\TaskClock;
 use App\Services\Time\TaskView;
 use App\Services\Time\Team;
@@ -88,6 +89,8 @@ class WorkspaceController extends Controller
                 'channels'        => $catalogue->channels(),
                 // Who may put work on whose day (PlanningMode): `team` or `own`; `staff.can.plan_team` is this person's answer.
                 'planning_mode'   => PlanningMode::current(),
+                // Recognition (points, badges, the week's ranking): who sees the ranking, or `off` (2026-11-28).
+                'recognition'     => Recognition::mode(),
             ],
             'counts'       => $counts,
         ]);
@@ -273,6 +276,15 @@ class WorkspaceController extends Controller
 
         // $team has read nobody yet in this request, so it reads the saved profile.
         return response()->json(['person' => $team->byUser($user)]);
+    }
+
+    /**
+     * Recognition (2026-11-28): the asker's points, daily goal, streak and badges, and the week's ranking as far as the
+     * organisation lets them see it (Recognition). Reads only.
+     */
+    public function recognition(Request $request, Recognition $recognition): JsonResponse
+    {
+        return response()->json($recognition->for((int) $request->attributes->get('workspace_org')->id, $request->user()));
     }
 
     public function insights(Request $request, TimeInsights $insights): JsonResponse
