@@ -12,6 +12,7 @@ use App\Services\Time\Experience;
 use App\Services\Time\Knowledge;
 use App\Services\Time\PlannerAi;
 use App\Services\Time\PlannerCatalogue;
+use App\Services\Time\Buddies;
 use App\Services\Time\PlannerProfiles;
 use App\Services\Time\PlanningMode;
 use App\Services\Time\Recognition;
@@ -94,6 +95,8 @@ class WorkspaceController extends Controller
                 // finished tasks make the daily goal (2026-11-28).
                 'recognition'     => $recognition['mode'],
                 'daily_goal'      => $recognition['goal'],
+                // Whether the organisation shows characters (Buddies, 2026-11-28).
+                'buddies'         => $recognition['buddies'],
             ],
             'counts'       => $counts,
         ]);
@@ -288,6 +291,18 @@ class WorkspaceController extends Controller
     public function recognition(Request $request, Recognition $recognition): JsonResponse
     {
         return response()->json($recognition->for((int) $request->attributes->get('workspace_org')->id, $request->user()));
+    }
+
+    /**
+     * My character (Buddies, 2026-11-28): one of the kinds, or `none`. The one field of a planner profile a person
+     * writes for themselves; everyone, not only a manager.
+     */
+    public function chooseBuddy(Request $request, PlannerProfiles $profiles): JsonResponse
+    {
+        $data = $request->validate(['buddy' => 'required|string|in:' . implode(',', [...Buddies::KINDS, Buddies::NONE])]);
+        $profiles->chooseBuddy((int) $request->user()->id, $data['buddy']);
+
+        return response()->json(['buddy' => $data['buddy']]);
     }
 
     public function insights(Request $request, TimeInsights $insights): JsonResponse

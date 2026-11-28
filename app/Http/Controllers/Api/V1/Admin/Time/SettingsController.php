@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Time;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\CrmSetting;
+use App\Services\Time\Buddies;
 use App\Services\Time\Knowledge;
 use App\Services\Time\PlanningMode;
 use App\Services\Time\Recognition;
@@ -25,7 +26,8 @@ use Illuminate\Http\Request;
  * typical lengths per task type and per task), answered and saved cleaned, as objects.
  *
  * Since 2026-11-28 also recognition (Recognition): who sees the week's ranking (`planner_recognition`, its change
- * audited) and how many finished tasks make the daily goal (`planner_daily_goal`).
+ * audited) and how many finished tasks make the daily goal (`planner_daily_goal`); and whether the organisation shows
+ * characters (Buddies: `planner_buddies`, `on` or `off`).
  */
 class SettingsController extends Controller
 {
@@ -34,14 +36,14 @@ class SettingsController extends Controller
         'business_hours_profile', 'planner_work_hours_per_day', 'planner_work_days_per_week',
         'planner_groups', 'planner_channels', 'planner_employee_prefs', PlanningMode::KEY, 'employees',
         Knowledge::CONTEXT, Knowledge::TYPE_NOTES, Knowledge::TASK_NOTES,
-        Recognition::KEY, Recognition::GOAL_KEY,
+        Recognition::KEY, Recognition::GOAL_KEY, Buddies::KEY,
     ];
 
     public const WRITABLE = [
         'business_hours_profile', 'planner_work_hours_per_day', 'planner_work_days_per_week',
         'planner_groups', 'planner_channels', 'planner_employee_prefs', PlanningMode::KEY,
         Knowledge::CONTEXT, Knowledge::TYPE_NOTES, Knowledge::TASK_NOTES,
-        Recognition::KEY, Recognition::GOAL_KEY,
+        Recognition::KEY, Recognition::GOAL_KEY, Buddies::KEY,
     ];
 
     /** The longest list a setting may hold, as JSON text (the full admin's lists are a few kB). */
@@ -58,6 +60,7 @@ class SettingsController extends Controller
         // Recognition (2026-11-28): who sees the week's ranking, and how many finished tasks make the daily goal.
         $rows[Recognition::KEY] = Recognition::readMode($rows[Recognition::KEY] ?? null);
         $rows[Recognition::GOAL_KEY] = Recognition::readGoal($rows[Recognition::GOAL_KEY] ?? null);
+        $rows[Buddies::KEY] = Buddies::readWord($rows[Buddies::KEY] ?? null);
 
         return response()->json($rows);
     }
@@ -73,6 +76,7 @@ class SettingsController extends Controller
             PlanningMode::KEY => $request->validate(['value' => 'required|string|in:' . implode(',', PlanningMode::MODES)])['value'],
             Recognition::KEY => $request->validate(['value' => 'required|string|in:' . implode(',', Recognition::MODES)])['value'],
             Recognition::GOAL_KEY => (int) $request->validate(['value' => 'required|integer|min:1|max:' . Recognition::GOAL_MAX])['value'],
+            Buddies::KEY => $request->validate(['value' => 'required|string|in:' . Buddies::ON . ',' . Buddies::OFF])['value'],
             'planner_work_hours_per_day' => (float) $request->validate(['value' => 'required|numeric|min:1|max:24'])['value'],
             'planner_work_days_per_week' => (int) $request->validate(['value' => 'required|integer|min:1|max:7'])['value'],
             // The only shape the server reads (WorkWindow): {start, end}, HH:MM, the end after the start.
@@ -110,7 +114,7 @@ class SettingsController extends Controller
         }
 
         return response()->json(['key' => $key, 'value' => match (true) {
-            $key === PlanningMode::KEY, $key === Recognition::KEY, $key === Recognition::GOAL_KEY => $value,
+            $key === PlanningMode::KEY, $key === Recognition::KEY, $key === Recognition::GOAL_KEY, $key === Buddies::KEY => $value,
             in_array($key, Knowledge::KEYS, true) => json_decode((string) $value),
             default => CrmSetting::query()->where('key', $key)->value('value'),
         }]);
