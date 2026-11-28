@@ -2,18 +2,36 @@
   "applied": "Übernommene Änderungen: {{count}}",
   "apply": "Übernehmen",
   "apply_all": "Alle übernehmen ({{count}})",
+  "applying": "{{done}} von {{count}} wird übernommen…",
+  "applying_one": "Wird übernommen…",
   "ask": "Den Assistenten fragen",
   "conversation": "Gespräch",
+  "copied": "Kopiert",
+  "copy": "Antwort kopieren",
+  "counter": "{{used}} von {{max}}",
   "done": "Übernommen",
+  "enter_hint": "Enter sendet, Umschalt + Enter beginnt eine neue Zeile.",
   "failed": "Nicht übernommen",
+  "follow": {
+    "other": "Andere Lösung",
+    "plan_it": "Mach daraus Änderungen zum Übernehmen",
+    "why": "Warum diese?"
+  },
+  "follow_ask": {
+    "other": "Schlage einen anderen Weg vor.",
+    "plan_it": "Mach daraus Änderungen, die ich übernehmen kann.",
+    "why": "Erkläre kurz, warum du diese Änderungen vorschlägst."
+  },
   "hello": "Was planen wir, {{name}}?",
   "hello_line": "Ich kenne die Fähigkeiten, Zeiten und den Verlauf des Teams, den Pool und den Plan. Ich schlage vor – Sie entscheiden, was übernommen wird.",
   "knows": "Was die KI weiß",
   "knows_line": "Je mehr Sie ihr beibringen, desto besser plant sie.",
   "line": "Fragen Sie nach den Tagen und Wochen des Teams. Er schaut im Planer nach und schlägt Änderungen vor, die Sie übernehmen.",
+  "looked_at": "Angesehen",
   "new": "Neues Gespräch",
   "no_reply": "Ich habe nachgesehen, konnte aber keine Antwort zusammenstellen. Fragen Sie bitte genauer.",
   "open_coach": "Im KI-Coach beibringen",
+  "open_day": "Tag öffnen",
   "placeholder": "Fragen Sie alles zum Plan, zum Team oder zum Pool…",
   "proposal": {
     "assign": "„{{title}}“ an {{name}} geben",
@@ -26,8 +44,20 @@
     "to_backlog": "„{{title}}“ zurück in den Backlog"
   },
   "proposed": "Vorgeschlagene Änderungen",
-  "ready": "bereit",
+  "ready_label": "Zu {{pct}} % bereit",
+  "ready_line": "von dem, was sie über Ihr Unternehmen, die Arbeit und das Team wissen könnte.",
   "send": "Senden",
+  "show_all": "Ganze Antwort zeigen",
+  "source": {
+    "find_tasks": "Aufgaben",
+    "get_day": "einen Tag",
+    "get_insights": "die Zahlen",
+    "get_learning": "das Gelernte",
+    "get_people": "das Team",
+    "get_pool": "den Pool",
+    "get_week": "die Woche"
+  },
+  "starters": "Fragen zum Einstieg",
   "suggest": {
     "best_at": "Wer macht {{type}} am besten, und wer bräuchte Unterstützung?",
     "fill_week": "Fülle die nächste Woche aus dem Pool, fair und nach Fähigkeiten.",
@@ -39,10 +69,20 @@
     "pool_for_me": "Was sollte ich aus dem Pool nehmen?"
   },
   "thinking": "Ich schaue im Planer nach…",
-  "tip_1": "einen Tag oder eine Woche zu planen, für Sie oder das Team",
-  "tip_2": "den Pool nach Fähigkeiten und freier Zeit zu verteilen",
-  "tip_3": "zu sagen, wie lange die Arbeit wirklich dauert",
-  "tip_4": "auszuwerten, wie ein Tag oder eine Woche lief",
-  "tips": "Bitten Sie ihn…",
-  "title": "KI-Assistent"
+  "title": "KI-Assistent",
+  "tool": {
+    "capture": "Aufgaben mit KI hinzufügen",
+    "capture_line": "Aus einer Nachricht, einer Liste oder einer Sprachnotiz.",
+    "coach": "KI-Coach",
+    "coach_line": "KI anlernen, sehen, was sie gelernt hat, eine Strategie erhalten.",
+    "plan_day": "Meinen Tag planen",
+    "plan_day_line": "Ihre offenen Aufgaben, in Ihre freie Zeit eingepasst.",
+    "plan_week": "Meine Woche planen",
+    "plan_week_line": "Pool und Backlogs, auf die Tage verteilt.",
+    "plan_week_team": "Woche des Teams planen",
+    "review": "Einen Tag auswerten",
+    "review_line": "Was gut lief und was zu ändern ist, in der Tagesansicht des Planers."
+  },
+  "tools": "KI-Werkzeuge",
+  "tools_line": "Alles, wobei die KI hilft, an einem Ort."
 }

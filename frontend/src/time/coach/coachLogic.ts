@@ -64,6 +64,18 @@ export function driftTone(drift: number | null): 'over' | 'under' | 'ok' | 'none
   return drift >= 120 ? 'over' : drift <= 80 ? 'under' : 'ok'
 }
 
+/**
+ * The widths of a row's two bars (2026-11-28), each against the longer of the two: what was planned, and what the
+ * work really took (null while too few were clocked to say).
+ */
+export function durationBars(row: Pick<DurationRow, 'planned_median' | 'real_median'>): { planned: number; real: number | null } {
+  const planned = Math.max(0, row.planned_median ?? 0)
+  const real = row.real_median === null ? null : Math.max(0, row.real_median)
+  const longest = Math.max(planned, real ?? 0)
+  if (longest <= 0) return { planned: 0, real: real === null ? null : 0 }
+  return { planned: Math.round((planned / longest) * 100), real: real === null ? null : Math.round((real / longest) * 100) }
+}
+
 /** A row's suggested length differs from what is written down: worth a "use it" press. */
 export function canUseSuggested(row: Pick<DurationRow, 'suggested' | 'typical' | 'advice'>): boolean {
   return row.suggested !== null && row.advice !== 'few' && row.suggested !== row.typical

@@ -1,5 +1,8 @@
 {
   "afternoon": "Good afternoon, {{name}}",
+  "ask": "Ask the AI about your day",
+  "ask_hint": "Ask the AI about your day…",
+  "ask_send": "Ask the AI",
   "briefing": "AI briefing",
   "briefing_line": "A quick read of your day and what to change.",
   "bucket": "{{count}} in your bucket",

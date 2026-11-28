@@ -14,6 +14,7 @@
     "shorter": "Kürzer planen"
   },
   "again": "Erneut",
+  "ai_draft": "KI-Entwurf",
   "all_set": "Alles ist da. Stoppen Sie weiter Aufgaben, damit die Dauern stimmen.",
   "ask": "Den Assistenten fragen",
   "best": {
@@ -43,7 +44,6 @@
   "col": {
     "advice": "Rat",
     "done": "Erledigt",
-    "drift": "Zum Plan",
     "on_time": "Pünktlich / Team",
     "planned": "Geplant",
     "real": "Tatsächlich",
@@ -56,6 +56,7 @@
   "completion": "Erledigt",
   "done_n": "erledigt: {{count}}",
   "draft": "Mit KI entwerfen",
+  "draft_hint": "Von der KI entworfen. Bitte lesen und korrigieren, bevor Sie speichern.",
   "drafted": "Die KI hat ausgefüllt, was sie konnte. Lesen Sie es durch, korrigieren Sie Falsches und speichern Sie dann.",
   "fill_in": "Ausfüllen",
   "finished": "Erledigt",
@@ -115,6 +116,7 @@
   "no_people_line": "Wählen Sie einen längeren Zeitraum oder schauen Sie wieder vorbei, wenn das Team Aufgaben erledigt hat.",
   "no_recs": "Im Moment gibt es nichts zu ändern.",
   "no_types": "Es sind noch keine Aufgabentypen eingerichtet.",
+  "not_clocked": "zu wenig gestoppt",
   "now": "Bisher: {{text}}",
   "of": "{{count}} von {{total}}",
   "on_time": "Pünktlich",
@@ -136,6 +138,7 @@
   "problem_text": "Unternehmen und Regeln jeweils höchstens {{max}} Zeichen.",
   "readiness": "Was die KI weiß",
   "readiness_line": "Je mehr sie weiß, desto besser plant sie.",
+  "ready_label": "{{pct}} % von dem, was die KI wissen könnte",
   "rules": "Hausregeln",
   "rules_hint": "Was immer geschehen muss, in welcher Reihenfolge, und was niemand allein tun darf.",
   "rules_placeholder": "Zimmer werden vor 14:00 gereinigt; Auszubildende schließen die Kasse nie allein; der Spa öffnet um 9…",
@@ -153,10 +156,13 @@
     "low": "Noch wenig Grundlage",
     "mid": "Auf gutem Weg"
   },
+  "state_left": "Noch auszufüllen: {{count}}",
   "strategy": "Strategie",
   "strategy_empty": "Noch gibt es wenig Grundlage. Bringen Sie der KI etwas bei, lassen Sie das Team eine Woche arbeiten und fragen Sie dann erneut.",
   "strategy_intro": "Wen schulen, welche Dauern ändern, wie die Arbeit besser verteilen – jeweils mit Grund und, wo möglich, einer Korrektur mit einem Klick.",
   "strategy_line": "Die KI liest die Zahlen und was Sie ihr beigebracht haben, und sagt, was zu ändern ist.",
+  "strategy_wait": "Die KI liest die Zahlen…",
+  "strategy_wait_line": "Was geplant war, was es wirklich gedauert hat und was Sie ihr beigebracht haben.",
   "tab": {
     "durations": "Aufgabendauer",
     "knowledge": "KI anlernen",

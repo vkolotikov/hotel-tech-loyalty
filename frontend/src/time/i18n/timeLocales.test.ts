@@ -4,6 +4,7 @@ import path from 'node:path'
 import { KNOWN_ERRORS } from '../lib/errors'
 import { SIGNAL_CODES } from '../lib/signals'
 import { REASONS, SKIPPED, UNPLACED } from '../plan/planLogic'
+import { SOURCES } from '../assistant/assistantLogic'
 import { READINESS } from '../coach/coachLogic'
 import { timeBundles, LANGS } from './index'
 
@@ -41,6 +42,10 @@ const built = [
   // The AI assistant and coach (2026-11-14): the words their codes pick.
   ...['plan_tomorrow_team', 'fill_week', 'best_at', 'last_week', 'longer_than_planned', 'plan_my_day', 'pool_for_me', 'my_week'].map(k => `time.assistant.suggest.${k}`),
   ...READINESS.flatMap(code => [`time.coach.item.${code}`, `time.coach.item_hint.${code}`]),
+  // The assistant's and the plan dialogs' motion round (2026-11-28): sources, follow-ups, the steps of a plan.
+  ...SOURCES.map(source => `time.assistant.source.${source}`),
+  ...['why', 'other', 'plan_it'].flatMap(k => [`time.assistant.follow.${k}`, `time.assistant.follow_ask.${k}`]),
+  ...['day_read', 'day_match', 'day_time', 'week_read', 'week_match', 'week_time'].map(k => `time.plan.phase.${k}`),
   ...['low', 'mid', 'high'].map(s => `time.coach.state.${s}`),
   ...['high', 'medium', 'low'].map(s => `time.coach.impact.${s}`),
   ...['duration', 'training', 'cross_skill', 'schedule', 'recognition', 'process', 'data'].map(k => `time.coach.kind.${k}`),

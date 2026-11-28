@@ -2,18 +2,36 @@
   "applied": "Cambios aplicados: {{count}}",
   "apply": "Aplicar",
   "apply_all": "Aplicar todos ({{count}})",
+  "applying": "Aplicando {{done}} de {{count}}…",
+  "applying_one": "Aplicando…",
   "ask": "Preguntar al asistente",
   "conversation": "Conversación",
+  "copied": "Copiado",
+  "copy": "Copiar la respuesta",
+  "counter": "{{used}} de {{max}}",
   "done": "Aplicado",
+  "enter_hint": "Intro envía, Mayús + Intro añade una línea.",
   "failed": "No aplicado",
+  "follow": {
+    "other": "Otra forma",
+    "plan_it": "Convertirlo en cambios que pueda aplicar",
+    "why": "¿Por qué estos?"
+  },
+  "follow_ask": {
+    "other": "Proponga otra forma de hacerlo.",
+    "plan_it": "Conviértalo en cambios que yo pueda aplicar.",
+    "why": "Explique brevemente por qué propone estos cambios."
+  },
   "hello": "¿Qué planificamos, {{name}}?",
   "hello_line": "Conozco las habilidades, los horarios y el historial del equipo, la bolsa común y el plan. Yo propongo; usted decide qué se aplica.",
   "knows": "Lo que sabe la IA",
   "knows_line": "Cuanto más le enseñe, mejor planifica.",
   "line": "Pregunte por los días y las semanas del equipo. Consulta el planificador y propone cambios que usted aplica.",
+  "looked_at": "Consultado",
   "new": "Nueva conversación",
   "no_reply": "He mirado, pero no he podido preparar una respuesta. Pruebe a preguntar de forma más concreta.",
   "open_coach": "Enséñele en el coach de IA",
+  "open_day": "Abrir el día",
   "placeholder": "Pregunte lo que quiera sobre el plan, el equipo o la bolsa común…",
   "proposal": {
     "assign": "Asignar «{{title}}» a {{name}}",
@@ -26,8 +44,20 @@
     "to_backlog": "Devolver «{{title}}» a pendientes"
   },
   "proposed": "Cambios propuestos",
-  "ready": "lista",
+  "ready_label": "Lista al {{pct}} %",
+  "ready_line": "de lo que podría saber sobre su negocio, el trabajo y el equipo.",
   "send": "Enviar",
+  "show_all": "Mostrar toda la respuesta",
+  "source": {
+    "find_tasks": "tareas",
+    "get_day": "un día",
+    "get_insights": "las cifras",
+    "get_learning": "lo aprendido",
+    "get_people": "el equipo",
+    "get_pool": "la bolsa común",
+    "get_week": "la semana"
+  },
+  "starters": "Preguntas para empezar",
   "suggest": {
     "best_at": "¿Quién hace mejor «{{type}}» y quién necesitaría apoyo?",
     "fill_week": "Llene la próxima semana desde la bolsa común, de forma justa y según habilidades.",
@@ -39,10 +69,20 @@
     "pool_for_me": "¿Qué debería tomar de la bolsa común?"
   },
   "thinking": "Consultando el planificador…",
-  "tip_1": "planifique un día o una semana, para usted o el equipo",
-  "tip_2": "reparta la bolsa común según habilidades y tiempo libre",
-  "tip_3": "diga cuánto tarda de verdad el trabajo",
-  "tip_4": "revise cómo fue un día o una semana",
-  "tips": "Pídale que…",
-  "title": "Asistente de IA"
+  "title": "Asistente de IA",
+  "tool": {
+    "capture": "Añadir tareas con IA",
+    "capture_line": "Desde un mensaje, una lista o una nota de voz.",
+    "coach": "Coach de IA",
+    "coach_line": "Enseñe a la IA, vea lo que aprendió y obtenga una estrategia.",
+    "plan_day": "Planificar mi día",
+    "plan_day_line": "Sus tareas abiertas encajadas en su tiempo libre.",
+    "plan_week": "Planificar mi semana",
+    "plan_week_line": "La bolsa común y los pendientes repartidos entre los días.",
+    "plan_week_team": "Planificar la semana del equipo",
+    "review": "Revisar un día",
+    "review_line": "Qué fue bien y qué cambiar, en el día del planificador."
+  },
+  "tools": "Herramientas de IA",
+  "tools_line": "Todo lo que hace la IA, en un solo lugar."
 }

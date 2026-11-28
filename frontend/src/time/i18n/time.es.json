@@ -50,6 +50,7 @@
   },
   "find": {
     "actions": "Acciones",
+    "ask_ai": "Preguntar a la IA: «{{question}}»",
     "capture": "Añadir tareas con IA (texto o voz)",
     "go_to": "Ir a",
     "new_task": "Añadir una tarea",

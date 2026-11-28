@@ -15,19 +15,11 @@ import { useRefresh } from '../lib/queries'
 import type { ApplyResult, WeekPlanResult } from '../lib/types'
 import { TextArea, Toggle } from '../ui/inputs'
 import { Tabs } from '../ui/Tabs'
+import { LoadBar } from '../ui/motion'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
-import { changesPerson, dayLoad, knownReasons, weekLinesToApply, weekOptions, weekTaskIds } from './planLogic'
-
-const REASON_DEFAULTS: Record<string, string> = {
-  ai: 'AI', keeps_owner: 'stays theirs', skill: 'their skill', prefers: 'fits their knowledge', experience: 'has done this before',
-  most_free: 'has the most room', priority: 'high priority', over_capacity: 'over their capacity', from_pool: 'from the pool',
-  from_overdue: 'overdue', their_own: 'their own work', earliest_day: 'earliest day it fits', most_room: 'the day with most room',
-}
-const UNPLACED_DEFAULTS: Record<string, string> = {
-  no_room: 'No free time left on those days.', no_one: 'Nobody who may take it has room.', not_working: 'Its person is off that day.',
-  not_yours: 'Someone else\'s task.',
-}
+import { dayLoad, planSummary, weekLinesToApply, weekOptions, weekTaskIds } from './planLogic'
+import { PlanLine, PlanProgress, PlanSummaryBar, Unplaced } from './PlanParts'
 
 /**
  * Plan the week with AI (2026-11-14): mine, or the team's for whoever may plan for others. The pool, the backlogs and
@@ -83,10 +75,10 @@ export function WeekPlanDialog({ monday, team, onClose }: { monday: string; team
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" onClick={onClose}>{t('time.common.cancel', 'Cancel')}</Button>
-          <Button className="ml-auto" onClick={() => make.mutate()} loading={make.isPending}><Wand2 size={15} aria-hidden />{t('time.plan.make', 'Make the plan')}</Button>
+          <Button className="ml-auto" onClick={() => make.mutate()} loading={make.isPending}>{!make.isPending && <Wand2 size={15} aria-hidden />}{t('time.plan.make', 'Make the plan')}</Button>
         </div>
       )}>
-      {!plan ? (
+      {!plan && make.isPending ? <PlanProgress kind="week" ai={options.use_ai} /> : !plan ? (
         <div className="space-y-4">
           <p className="text-sm text-a-text-2">{team
             ? t('time.plan.week_line_team', 'The pool, everyone’s backlog and overdue work, shared across the days of the week: each task to the person whose skills, knowledge and experience fit it, before its due day, within each day’s room. Then each day gets its times.')
@@ -120,7 +112,7 @@ export function WeekPlanDialog({ monday, team, onClose }: { monday: string; team
       ) : (
         <div className="space-y-4">
           {plan.source === 'ai' && plan.summary && (
-            <div className="flex gap-2.5 rounded-2xl time-ai-soft p-3 text-sm"><Sparkles size={16} aria-hidden className="mt-0.5 shrink-0" /><p>{plan.summary}</p></div>
+            <div className="flex gap-2.5 rounded-2xl time-ai-soft p-3 text-sm animate-a-rise"><Sparkles size={16} aria-hidden className="mt-0.5 shrink-0" /><p>{plan.summary}</p></div>
           )}
           {plan.source === 'rules' && (
             <Notice tone="info">
@@ -131,54 +123,34 @@ export function WeekPlanDialog({ monday, team, onClose }: { monday: string; team
           )}
           {total === 0 && <Notice tone="info">{t('time.plan.week_nothing', 'Nothing to plan this week: the pool and backlogs are empty, and every day’s work has its time.')}</Notice>}
 
-          {plan.days.filter(d => d.proposals.length > 0).map(d => (
-            <section key={d.date} className="rounded-2xl border border-a-border">
-              <header className="space-y-2 border-b border-a-border px-3 py-2">
+          {total > 0 && (
+            <PlanSummaryBar summary={planSummary(plan.days.flatMap(d => d.proposals), plan.unplaced.length, plan.days.filter(d => d.proposals.length > 0).length)} ticked={ticked.size}
+              onAll={() => setTicked(new Set(weekTaskIds(plan.days)))} onNone={() => setTicked(new Set())} />
+          )}
+
+          {plan.days.filter(d => d.proposals.length > 0).map((d, at) => (
+            <section key={d.date} className="overflow-hidden rounded-2xl border border-a-border animate-a-rise" style={{ animationDelay: `${at * 70}ms` }}>
+              <header className="space-y-2.5 border-b border-a-border bg-a-surface-2/40 px-3 py-2.5">
                 <h3 className="text-sm font-semibold text-a-text">{dayLabel(d.date, i18n.language, 'long')}</h3>
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                   {dayLoad(d, ticked).filter(l => d.proposals.some(p => p.person === l.person)).map(l => (
-                    <span key={l.person} className={`text-xs ${l.pct > 100 ? 'font-semibold text-a-danger' : 'text-a-text-2'}`}>
-                      {l.name}: {duration(l.planned, units)} / {duration(l.capacity, units)} · {l.pct}%
-                    </span>
+                    <li key={l.person} className="min-w-0 space-y-1">
+                      <p className="flex items-baseline justify-between gap-2 text-xs">
+                        <span className="min-w-0 truncate font-medium text-a-text">{l.name}</span>
+                        <span className={`shrink-0 tabular-nums ${l.pct > 100 ? 'font-semibold text-a-danger' : 'text-a-text-2'}`}>{duration(l.planned, units)} / {duration(l.capacity, units)}</span>
+                      </p>
+                      <LoadBar pct={l.pct} />
+                    </li>
                   ))}
-                </div>
+                </ul>
               </header>
               <ul className="divide-y divide-a-border">
-                {d.proposals.map(line => (
-                  <li key={line.task_id} className="flex items-start gap-3 px-3 py-2.5">
-                    <input type="checkbox" checked={ticked.has(line.task_id)} onChange={() => toggle(line.task_id)} aria-label={line.title} className="mt-1 h-4 w-4 accent-[rgb(var(--a-accent))]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                        <span className="font-a-mono text-a-text">{line.start_time}–{line.end_time}</span>
-                        <span className="min-w-0 break-words font-medium text-a-text">{line.title}</span>
-                        <span className="text-a-text-2">· {line.employee_name}</span>
-                      </p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {changesPerson(line) && <span className="rounded-full bg-a-st-progress/12 px-2 py-0.5 text-xs text-a-st-progress">{t('time.plan.reassigned', 'new person')}</span>}
-                        {knownReasons(line.reasons).map(r => (
-                          <span key={r} className={`rounded-full px-2 py-0.5 text-xs ${r === 'ai' ? 'time-ai-soft' : r === 'over_capacity' ? 'bg-a-danger/12 text-a-danger' : 'bg-a-surface-2 text-a-text-2'}`}>
-                            {t(`time.plan.reason.${r}`, REASON_DEFAULTS[r] ?? r)}
-                          </span>
-                        ))}
-                      </div>
-                      {line.note && <p className="mt-1 text-xs time-ai-text">{line.note}</p>}
-                    </div>
-                  </li>
-                ))}
+                {d.proposals.map((line, i) => <PlanLine key={line.task_id} line={line} index={at + i} showPerson checked={ticked.has(line.task_id)} onToggle={() => toggle(line.task_id)} />)}
               </ul>
             </section>
           ))}
 
-          {plan.unplaced.length > 0 && (
-            <section className="rounded-2xl border border-dashed border-a-border p-3">
-              <h3 className="mb-2 text-sm font-semibold text-a-text">{t('time.plan.unplaced_title', 'Not planned')}</h3>
-              <ul className="space-y-1 text-sm">
-                {plan.unplaced.map(u => (
-                  <li key={`${u.task_id}-${u.date ?? ''}`} className="flex flex-wrap gap-x-2"><span className="text-a-text">{u.title}</span><span className="text-a-text-2">— {u.reason === 'no_room' ? t('time.plan.week_no_room', UNPLACED_DEFAULTS.no_room) : t(`time.plan.unplaced.${u.reason}`, UNPLACED_DEFAULTS[u.reason] ?? u.reason)}</span></li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <Unplaced items={plan.unplaced} week />
 
           {applied && applied.skipped.length > 0 && (
             <Notice tone="warning">{t('time.plan.skipped_title', 'Some lines were not applied:')} {applied.skipped.length}</Notice>

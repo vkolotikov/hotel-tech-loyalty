@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-17-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-28-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -435,6 +435,14 @@ or add the next dated one, at the end of a session.
   and carries the full admin's own planner call, sent only when the person presses Apply. A coach fix or an AI draft is
   written by the setting's, the profile's or the Team endpoint's own writer, over the rows as they are now. Spend is
   `time_week_plan`, `time_assistant`, `time_coach`, `time_draft`.
+- Look and motion (owner 2026-11-28, "modern, animated"; `docs/time-planner-workspace.md` "How the AI's screens look
+  and move"): what moves is a `time-*` class of `time/theme/time.css` (keyframes named `time-*`) or the shared `animate-a-*`;
+  the frame's rule stops every element's animation under reduced motion and time.css's own block stops the ones on
+  pseudo-elements (`tokens.test.ts` checks both); motion made in script asks `motionOk()` and its arithmetic is
+  `time/lib/motion.ts`. A figure that counts (`ui/motion.tsx` `CountUp`) keeps the final figure as the page's own text;
+  a fresh answer writes itself out only through `useReveal` over blocks read whole (`cutBlocks`), and a screen reader
+  gets it once from the status line. The plan dialogs share `plan/PlanParts.tsx`; a waiting view pictures the work and
+  never claims a step is done. A question reaches the assistant through its address (`?q=`), never a second way.
 - Days and times are the venue's wall clock (`task_date` + `start_time`, `VenueClock`); the frontend's day arithmetic is
   `time/lib/dates.ts`, never `new Date('YYYY-MM-DD')`. Figures (load, capacity, on time, accuracy, signals) are the
   server's (`DayBoard`, `TimeInsights`); the workspace only words and draws them. Decisions live in pure functions with

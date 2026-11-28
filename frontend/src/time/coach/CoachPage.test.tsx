@@ -104,6 +104,9 @@ describe('the AI coach', () => {
     expect(html).toContain('Plan it longer')
     expect(html).toContain('133 %')
     expect(html).toContain('Use 40 min')
+    // Planned against real as two bars: 30 planned is three quarters of the 40 it really took.
+    expect(html).toContain('width:75%')
+    expect(html).toContain('width:100%')
   })
 
   it('names who does each type best and who could use support', () => {
@@ -136,6 +139,11 @@ describe('the AI assistant', () => {
     expect(html).toContain('Who does Housekeeping best, and who could use support?')
     expect(html).toContain('45%')
     expect(html).toContain('Teach it in the AI coach')
+    // Beside the conversation: every other AI tool, and the readiness as a gauge.
+    expect(html).toContain('AI tools')
+    expect(html).toContain('Plan the team’s week')
+    expect(html).toContain('href="/time/plan?view=week&amp;ai=week"')
+    expect(html).toContain('aria-label="45 % ready"')
   })
 
   it('offers a staff member their own day', () => {

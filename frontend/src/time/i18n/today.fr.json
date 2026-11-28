@@ -1,5 +1,8 @@
 {
   "afternoon": "Bon après-midi, {{name}}",
+  "ask": "Interroger l’IA sur votre journée",
+  "ask_hint": "Posez une question à l’IA sur votre journée…",
+  "ask_send": "Demander à l’IA",
   "briefing": "Synthèse de l’IA",
   "briefing_line": "Un aperçu rapide de votre journée et de ce qu’il faut changer.",
   "bucket": "{{count}} dans votre liste à planifier",

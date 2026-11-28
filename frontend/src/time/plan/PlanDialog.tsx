@@ -13,19 +13,12 @@ import { dayLabel, duration } from '../lib/format'
 import { useRefresh } from '../lib/queries'
 import type { ApplyResult, PlanResult } from '../lib/types'
 import { TextArea, Toggle } from '../ui/inputs'
+import { Avatar } from '../ui/Avatar'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
-import { byPerson, changesPerson, knownReasons, linesToApply } from './planLogic'
+import { byPerson, linesToApply, planSummary } from './planLogic'
+import { PlanLine, PlanProgress, PlanSummaryBar, Unplaced } from './PlanParts'
 
-const REASON_DEFAULTS: Record<string, string> = {
-  ai: 'AI', keeps_owner: 'stays theirs', skill: 'their skill', prefers: 'fits their knowledge', experience: 'has done this before',
-  most_free: 'has the most room', priority: 'high priority', over_capacity: 'over their capacity', from_pool: 'from the pool',
-  from_overdue: 'overdue',
-}
-const UNPLACED_DEFAULTS: Record<string, string> = {
-  no_room: 'No free time left in their day.', no_one: 'Nobody who may take it has room.', not_working: 'Its person is off that day.',
-  not_yours: 'Someone else\'s task.',
-}
 const SKIPPED_DEFAULTS: Record<string, string> = {
   changed: 'changed meanwhile', done: 'already done', not_yours: 'not yours to plan', no_person: 'person not on the team',
   not_allowed: 'not their type of work', not_found: 'not found',
@@ -85,10 +78,10 @@ export function PlanDialog({ date, scope, person, onClose }: { date: string; sco
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" onClick={onClose}>{t('time.common.cancel', 'Cancel')}</Button>
-          <Button className="ml-auto" onClick={() => make.mutate()} loading={make.isPending}><Wand2 size={15} aria-hidden />{t('time.plan.make', 'Make the plan')}</Button>
+          <Button className="ml-auto" onClick={() => make.mutate()} loading={make.isPending}>{!make.isPending && <Wand2 size={15} aria-hidden />}{t('time.plan.make', 'Make the plan')}</Button>
         </div>
       )}>
-      {!plan ? (
+      {!plan && make.isPending ? <PlanProgress kind="day" ai={options.use_ai} /> : !plan ? (
         <div className="space-y-4">
           <p className="text-sm text-a-text-2">{scope === 'team'
             ? t('time.plan.line_team', 'Who does what and when: the AI matches each task to the person whose skills, knowledge and experience fit it, within their hours and capacity, and keeps high priority work early.')
@@ -114,7 +107,7 @@ export function PlanDialog({ date, scope, person, onClose }: { date: string; sco
       ) : (
         <div className="space-y-4">
           {plan.source === 'ai' && plan.summary && (
-            <div className="flex gap-2.5 rounded-2xl time-ai-soft p-3 text-sm"><Sparkles size={16} aria-hidden className="mt-0.5 shrink-0" /><p>{plan.summary}</p></div>
+            <div className="flex gap-2.5 rounded-2xl time-ai-soft p-3 text-sm animate-a-rise"><Sparkles size={16} aria-hidden className="mt-0.5 shrink-0" /><p>{plan.summary}</p></div>
           )}
           {plan.source === 'rules' && (
             <Notice tone="info">
@@ -125,47 +118,25 @@ export function PlanDialog({ date, scope, person, onClose }: { date: string; sco
           )}
           {plan.proposals.length === 0 && <Notice tone="info">{t('time.plan.nothing', 'Nothing to plan: every open task already has its time.')}</Notice>}
 
-          {groups.map(g => (
-            <section key={g.person} className="rounded-2xl border border-a-border">
-              <header className="flex items-center gap-2 border-b border-a-border px-3 py-2">
+          {plan.proposals.length > 0 && (
+            <PlanSummaryBar summary={planSummary(plan.proposals, plan.unplaced.length)} ticked={ticked.size}
+              onAll={() => setTicked(new Set(plan.proposals.map(p => p.task_id)))} onNone={() => setTicked(new Set())} />
+          )}
+
+          {groups.map((g, at) => (
+            <section key={g.person} className="overflow-hidden rounded-2xl border border-a-border animate-a-rise" style={{ animationDelay: `${at * 60}ms` }}>
+              <header className="flex items-center gap-2.5 border-b border-a-border bg-a-surface-2/40 px-3 py-2">
+                <Avatar name={g.name} size="sm" />
                 <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-a-text">{g.name}</h3>
                 <span className="text-xs text-a-text-2">{duration(g.minutes, units)}</span>
               </header>
               <ul className="divide-y divide-a-border">
-                {g.lines.map(line => (
-                  <li key={line.task_id} className="flex items-start gap-3 px-3 py-2.5">
-                    <input type="checkbox" checked={ticked.has(line.task_id)} onChange={() => toggle(line.task_id)} aria-label={line.title} className="mt-1 h-4 w-4 accent-[rgb(var(--a-accent))]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                        <span className="font-a-mono text-a-text">{line.start_time}–{line.end_time}</span>
-                        <span className="min-w-0 truncate font-medium text-a-text">{line.title}</span>
-                      </p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {changesPerson(line) && <span className="rounded-full bg-a-st-progress/12 px-2 py-0.5 text-xs text-a-st-progress">{t('time.plan.reassigned', 'new person')}</span>}
-                        {knownReasons(line.reasons).map(r => (
-                          <span key={r} className={`rounded-full px-2 py-0.5 text-xs ${r === 'ai' ? 'time-ai-soft' : r === 'over_capacity' ? 'bg-a-danger/12 text-a-danger' : 'bg-a-surface-2 text-a-text-2'}`}>
-                            {t(`time.plan.reason.${r}`, REASON_DEFAULTS[r] ?? r)}
-                          </span>
-                        ))}
-                      </div>
-                      {line.note && <p className="mt-1 text-xs time-ai-text">{line.note}</p>}
-                    </div>
-                  </li>
-                ))}
+                {g.lines.map((line, i) => <PlanLine key={line.task_id} line={line} index={at + i} checked={ticked.has(line.task_id)} onToggle={() => toggle(line.task_id)} />)}
               </ul>
             </section>
           ))}
 
-          {plan.unplaced.length > 0 && (
-            <section className="rounded-2xl border border-dashed border-a-border p-3">
-              <h3 className="mb-2 text-sm font-semibold text-a-text">{t('time.plan.unplaced_title', 'Not planned')}</h3>
-              <ul className="space-y-1 text-sm">
-                {plan.unplaced.map(u => (
-                  <li key={u.task_id} className="flex flex-wrap gap-x-2"><span className="text-a-text">{u.title}</span><span className="text-a-text-2">— {t(`time.plan.unplaced.${u.reason}`, UNPLACED_DEFAULTS[u.reason] ?? u.reason)}</span></li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <Unplaced items={plan.unplaced} />
 
           {applied && applied.skipped.length > 0 && (
             <Notice tone="warning">

@@ -50,6 +50,7 @@
   },
   "find": {
     "actions": "Aktionen",
+    "ask_ai": "Die KI fragen: „{{question}}“",
     "capture": "Aufgaben mit KI hinzufügen (Text oder Sprache)",
     "go_to": "Wechseln zu",
     "new_task": "Aufgabe hinzufügen",

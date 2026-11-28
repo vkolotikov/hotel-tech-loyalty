@@ -10,7 +10,8 @@ import { AREAS } from './lib/api'
  *  2. Only the API areas lib/api.ts lists: every `/v1/…` path here is `/v1/admin/<area>`, and every call goes through
  *     timeUrl, which names `brand_id=all`.
  *  3. Nothing from the other workspaces: they share src/workspace, never each other.
- *  4. Every rule of the stylesheet is scoped under [data-time].
+ *  4. Every rule of the stylesheet is scoped under [data-time]; its keyframes are named time-*, and what moves on a
+ *     pseudo-element stops under reduced motion (the frame's rule stops the elements).
  */
 const DIR = path.resolve(__dirname)
 
@@ -52,12 +53,24 @@ describe('time workspace sweep', () => {
     })
   }
 
-  it('scopes every rule of its stylesheet under [data-time]', () => {
-    const css = fs.readFileSync(path.join(DIR, 'theme/time.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  it('scopes every rule of its stylesheet under [data-time], names every keyframe time-*, and stops motion on pseudo-elements', () => {
+    const raw = fs.readFileSync(path.join(DIR, 'theme/time.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    // Keyframes are not rules of the page: their names are the planner's own, and their steps are left out below.
+    const keyframes = [...raw.matchAll(/@keyframes\s+([\w-]+)\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g)]
+    expect(keyframes.length).toBeGreaterThan(4)
+    for (const [, name] of keyframes) expect(name).toMatch(/^time-/)
+    // A media query wraps rules; the rules inside are scoped like any other.
+    const css = raw.replace(/@keyframes\s+[\w-]+\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '').replace(/@media[^{]+\{/g, '')
     const selectors = [...css.matchAll(/([^{}]+)\{/g)].map(m => m[1].trim()).filter(Boolean)
     expect(selectors.length).toBeGreaterThan(4)
     for (const selector of selectors) {
       for (const part of selector.split(',')) expect(part.trim(), selector).toMatch(/^\[data-time\]/)
+    }
+    // The frame stops every element's animation under reduced motion (workspace.css); a pseudo-element's is stopped here.
+    const animatedPseudo = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(m => /::(before|after)/.test(m[1]) && /animation(-name)?\s*:(?!\s*none)/.test(m[2])).map(m => m[1].trim())
+    const stopped = /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([^{}]*)\{\s*animation:\s*none;?\s*\}/.exec(raw)?.[1] ?? ''
+    for (const selector of animatedPseudo.filter(sel => !/\[data-busy/.test(sel))) {
+      for (const part of selector.split(',')) expect(stopped, `reduced motion stops ${part.trim()}`).toContain(part.trim())
     }
   })
 

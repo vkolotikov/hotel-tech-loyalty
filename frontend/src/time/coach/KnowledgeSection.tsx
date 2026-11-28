@@ -14,12 +14,16 @@ import { useRefresh } from '../lib/queries'
 import { plannerApi } from '../lib/tasks'
 import type { AiContext, CoachOverview, Drafts, TaskNote, TypeNote } from '../lib/types'
 import { Card } from '../ui/Card'
+import { Pill } from '../ui/Pill'
 import { Select, TextArea, TextInput } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
 import {
   GOALS_MAX, MINUTES_MAX, MINUTES_MIN, NOTE_MAX, TEXT_MAX, knowledgeProblem, mergeNotes, personDraftBody, taskEntry, taskRows, typeEntry, typeRows,
   withTaskDraft, withTypeDraft, type KnowledgeProblem, type TaskRow, type TypeRow,
 } from './coachLogic'
+
+/** A field the AI just drafted: its violet edge, and one flash as it lands. */
+const DRAFTED = 'time-ai-border time-flash'
 
 const BEST_DEFAULTS: Record<string, string> = { morning: 'Morning', midday: 'Midday', afternoon: 'Afternoon', evening: 'Evening', any: 'Any time' }
 
@@ -49,20 +53,29 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
   const [tasks, setTasks] = useState<TaskRow[]>(() => taskRows(boot.settings.channels, data.knowledge.tasks))
   const [touched, setTouched] = useState({ context: false, types: new Set<string>(), tasks: new Set<string>() })
   const [checked, setChecked] = useState(false)
-  const [drafted, setDrafted] = useState<string | null>(null)
+  // What the AI drafted and nobody has touched or saved since: marked, so the manager sees what to read.
+  const [drafted, setDrafted] = useState({ context: new Set<keyof AiContext>(), types: new Set<string>(), tasks: new Set<string>() })
+  const anyDrafted = drafted.context.size + drafted.types.size + drafted.tasks.size > 0
+  const without = <T,>(set: Set<T>, item: T) => { const next = new Set(set); next.delete(item); return next }
   const [people, setPeople] = useState<PeopleDraft[] | null>(null)
   const [savedPeople, setSavedPeople] = useState<Set<string>>(new Set())
   const dirty = touched.context || touched.types.size > 0 || touched.tasks.size > 0
   const problem = checked ? knowledgeProblem(context, types, tasks) : null
 
-  const editContext = (key: keyof AiContext, value: string) => { setContext(c => ({ ...c, [key]: value })); setTouched(x => ({ ...x, context: true })) }
+  const editContext = (key: keyof AiContext, value: string) => {
+    setContext(c => ({ ...c, [key]: value }))
+    setTouched(x => ({ ...x, context: true }))
+    setDrafted(d => (d.context.has(key) ? { ...d, context: without(d.context, key) } : d))
+  }
   const editType = (name: string, patch: Partial<TypeRow>) => {
     setTypes(rows => rows.map(r => (r.type === name ? { ...r, ...patch } : r)))
     setTouched(x => ({ ...x, types: new Set(x.types).add(name) }))
+    setDrafted(d => (d.types.has(name) ? { ...d, types: without(d.types, name) } : d))
   }
   const editTask = (key: string, patch: Partial<TaskRow>) => {
     setTasks(rows => rows.map(r => (r.key === key ? { ...r, ...patch } : r)))
     setTouched(x => ({ ...x, tasks: new Set(x.tasks).add(key) }))
+    setDrafted(d => (d.tasks.has(key) ? { ...d, tasks: without(d.tasks, key) } : d))
   }
 
   const save = useMutation({
@@ -83,7 +96,7 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
     onSuccess: () => {
       setTouched({ context: false, types: new Set(), tasks: new Set() })
       setChecked(false)
-      setDrafted(null)
+      setDrafted({ context: new Set(), types: new Set(), tasks: new Set() })
       refresh()
       toast(t('time.coach.saved', 'Saved. The AI plans with it from now on.'))
     },
@@ -102,14 +115,14 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
         const next = answer.context
         setContext(c => ({ about: next.about || c.about, rules: next.rules || c.rules, goals: next.goals || c.goals }))
         setTouched(x => ({ ...x, context: true }))
-        setDrafted('business')
+        setDrafted(d => ({ ...d, context: new Set((['about', 'rules', 'goals'] as const).filter(key => next[key])) }))
       } else if (answer.kind === 'types') {
         const byType = new Map(answer.types.map(d => [d.type, d]))
         const byTask = new Map(answer.tasks.map(d => [d.task_key, d]))
         setTypes(rows => rows.map(r => (byType.has(r.type) ? withTypeDraft(r, byType.get(r.type)!) : r)))
         setTasks(rows => rows.map(r => (byTask.has(r.key) ? withTaskDraft(r, byTask.get(r.key)!) : r)))
         setTouched(x => ({ ...x, types: new Set([...x.types, ...byType.keys()]), tasks: new Set([...x.tasks, ...byTask.keys()]) }))
-        setDrafted('types')
+        setDrafted(d => ({ ...d, types: new Set(byType.keys()), tasks: new Set(byTask.keys()) }))
       } else {
         setPeople(answer.people)
         setSavedPeople(new Set())
@@ -133,6 +146,7 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
     return out
   }, [tasks])
 
+  const draftHint = t('time.coach.draft_hint', 'Drafted by the AI. Read it and correct it before you save.')
   const draftButton = (kind: 'people' | 'types' | 'business') => (
     <Button size="sm" variant="secondary" onClick={() => draft.mutate(kind)} loading={draft.isPending && draft.variables === kind} disabled={!boot.ai.ready || draft.isPending}>
       <Sparkles size={14} aria-hidden />{t('time.coach.draft', 'Draft with AI')}
@@ -142,21 +156,21 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
   return (
     <div className="space-y-5 pb-20">
       {!boot.ai.ready && <Notice tone="info">{t(`time.ai_state.${boot.ai.state}`, t('time.ai_state.unknown', 'The AI cannot be asked just now.'))}</Notice>}
-      {drafted && <Notice tone="info">{t('time.coach.drafted', 'The AI filled in what it could. Read it through, change what is wrong, then save.')}</Notice>}
+      {anyDrafted && <Notice tone="info">{t('time.coach.drafted', 'The AI filled in what it could. Read it through, change what is wrong, then save.')}</Notice>}
 
       <Card title={t('time.coach.business', 'The business')} icon={Building2} tone="accent"
         description={t('time.coach.business_line', 'What the AI should know before it plans anyone’s day.')} action={draftButton('business')}>
         <div className="space-y-4">
-          <Field label={t('time.coach.about', 'About the business')} hint={t('time.coach.about_hint', 'What the venue does, its size, its busy days and hours, what guests expect.')}>
-            <TextArea rows={4} value={context.about} maxLength={TEXT_MAX} onChange={e => editContext('about', e.target.value)}
+          <Field label={t('time.coach.about', 'About the business')} hint={drafted.context.has('about') ? draftHint : t('time.coach.about_hint', 'What the venue does, its size, its busy days and hours, what guests expect.')}>
+            <TextArea rows={4} value={context.about} maxLength={TEXT_MAX} className={drafted.context.has('about') ? DRAFTED : ''} onChange={e => editContext('about', e.target.value)}
               placeholder={t('time.coach.about_placeholder', 'A 40-room boutique hotel by the sea; check-out by 11, check-in from 15; weekends are full…')} />
           </Field>
-          <Field label={t('time.coach.rules', 'House rules')} hint={t('time.coach.rules_hint', 'What must always happen, in what order, and what nobody may do alone.')}>
-            <TextArea rows={4} value={context.rules} maxLength={TEXT_MAX} onChange={e => editContext('rules', e.target.value)}
+          <Field label={t('time.coach.rules', 'House rules')} hint={drafted.context.has('rules') ? draftHint : t('time.coach.rules_hint', 'What must always happen, in what order, and what nobody may do alone.')}>
+            <TextArea rows={4} value={context.rules} maxLength={TEXT_MAX} className={drafted.context.has('rules') ? DRAFTED : ''} onChange={e => editContext('rules', e.target.value)}
               placeholder={t('time.coach.rules_placeholder', 'Rooms are cleaned before 14:00; trainees never close the till alone; the spa opens at 9…')} />
           </Field>
-          <Field label={t('time.coach.goals', 'Goals')} hint={t('time.coach.goals_hint', 'What the plans should aim for this season.')}>
-            <TextArea rows={2} value={context.goals} maxLength={GOALS_MAX} onChange={e => editContext('goals', e.target.value)}
+          <Field label={t('time.coach.goals', 'Goals')} hint={drafted.context.has('goals') ? draftHint : t('time.coach.goals_hint', 'What the plans should aim for this season.')}>
+            <TextArea rows={2} value={context.goals} maxLength={GOALS_MAX} className={drafted.context.has('goals') ? DRAFTED : ''} onChange={e => editContext('goals', e.target.value)}
               placeholder={t('time.coach.goals_placeholder', 'Fewer late check-ins; train two more people on the front desk…')} />
           </Field>
         </div>
@@ -169,7 +183,8 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
         ) : (
           <div className="space-y-4">
             {types.map(row => (
-              <div key={row.type} className="rounded-2xl border border-a-border">
+              <div key={row.type} className={`rounded-2xl border ${drafted.types.has(row.type) ? DRAFTED : 'border-a-border'}`}>
+                {drafted.types.has(row.type) && <p className="px-3 pt-2.5"><Pill tone="ai"><Sparkles size={11} aria-hidden />{t('time.coach.ai_draft', 'AI draft')}</Pill></p>}
                 <div className="grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_7rem_9rem]">
                   <Field label={row.type}>
                     <TextArea rows={2} value={row.notes} maxLength={NOTE_MAX} onChange={e => editType(row.type, { notes: e.target.value })}
@@ -187,7 +202,7 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
                 </div>
                 {(tasksByType.get(row.type) ?? []).length > 0 && (
                   <ul className="divide-y divide-a-border border-t border-a-border bg-a-surface-2/50">
-                    {(tasksByType.get(row.type) ?? []).map(task => <TaskLine key={task.key} row={task} onChange={patch => editTask(task.key, patch)} />)}
+                    {(tasksByType.get(row.type) ?? []).map(task => <TaskLine key={task.key} row={task} drafted={drafted.tasks.has(task.key)} onChange={patch => editTask(task.key, patch)} />)}
                   </ul>
                 )}
               </div>
@@ -195,7 +210,7 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
             {(tasksByType.get('') ?? []).length > 0 && (
               <div className="rounded-2xl border border-a-border">
                 <p className="flex items-center gap-2 px-3 pt-3 text-sm font-semibold text-a-text"><ListChecks size={15} aria-hidden />{t('time.coach.other_tasks', 'Tasks of no type')}</p>
-                <ul className="divide-y divide-a-border">{(tasksByType.get('') ?? []).map(task => <TaskLine key={task.key} row={task} onChange={patch => editTask(task.key, patch)} />)}</ul>
+                <ul className="divide-y divide-a-border">{(tasksByType.get('') ?? []).map(task => <TaskLine key={task.key} row={task} drafted={drafted.tasks.has(task.key)} onChange={patch => editTask(task.key, patch)} />)}</ul>
               </div>
             )}
           </div>
@@ -254,15 +269,16 @@ export function KnowledgeSection({ data }: { data: CoachOverview }) {
   )
 }
 
-function TaskLine({ row, onChange }: { row: TaskRow; onChange: (patch: Partial<TaskRow>) => void }) {
+function TaskLine({ row, drafted, onChange }: { row: TaskRow; drafted: boolean; onChange: (patch: Partial<TaskRow>) => void }) {
   const { t } = useTranslation()
   return (
     <li className="grid gap-2 px-3 py-2.5 sm:grid-cols-[10rem_minmax(0,1fr)_7rem] sm:items-center">
       <p className="flex min-w-0 items-center gap-2 text-sm text-a-text">
         <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />
         <span className="min-w-0 truncate">{row.label}</span>
+        {drafted && <Sparkles size={12} role="img" aria-label={t('time.coach.ai_draft', 'AI draft')} className="shrink-0 time-ai-text" />}
       </p>
-      <TextInput value={row.notes} maxLength={NOTE_MAX} onChange={e => onChange({ notes: e.target.value })} aria-label={t('time.coach.task_note', 'Note on {{name}}', { name: row.label })}
+      <TextInput value={row.notes} maxLength={NOTE_MAX} className={drafted ? DRAFTED : ''} onChange={e => onChange({ notes: e.target.value })} aria-label={t('time.coach.task_note', 'Note on {{name}}', { name: row.label })}
         placeholder={t('time.coach.task_placeholder', 'A note for the AI (optional)')} />
       <TextInput type="number" inputMode="numeric" min={MINUTES_MIN} max={MINUTES_MAX} step={5} value={row.minutes} onChange={e => onChange({ minutes: e.target.value })}
         aria-label={t('time.coach.task_minutes', 'Typical minutes for {{name}}', { name: row.label })} placeholder={t('time.common.min', 'min')} />

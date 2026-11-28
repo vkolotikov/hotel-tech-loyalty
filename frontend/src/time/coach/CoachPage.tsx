@@ -12,10 +12,12 @@ import { useBoot } from '../TimeProvider'
 import { timeApi } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { duration } from '../lib/format'
+import { staggerDelay } from '../lib/motion'
 import { useRefresh } from '../lib/queries'
 import { plannerApi } from '../lib/tasks'
 import type { CoachOverview, Strategy, StrategyFix, TaskNote, TypeNote } from '../lib/types'
 import { Card } from '../ui/Card'
+import { CountUp, Orb, Ring, ShimmerLines } from '../ui/motion'
 import { Pill } from '../ui/Pill'
 import { Page } from '../ui/Page'
 import { QueryState } from '../ui/QueryState'
@@ -111,11 +113,12 @@ function Overview({ data, weeks, manager, onTeach }: { data: CoachOverview; week
   const { t } = useTranslation()
   // A staff member's tiles are their own figures (the server sends only their row); a manager's are the team's.
   const totals = figuresOf(data, manager)
-  const pct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : t('time.coach.pct', '{{pct}} %', { pct: v }))
+  // Each figure counts up to its value when the page opens (the text itself is always the final figure).
+  const pct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : <CountUp value={v} format={n => t('time.coach.pct', '{{pct}} %', { pct: n })} />)
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile icon={ListChecks} tone="accent" label={t('time.coach.finished', 'Finished')} value={totals.done}
+        <StatTile icon={ListChecks} tone="accent" label={t('time.coach.finished', 'Finished')} value={<CountUp value={totals.done} />}
           hint={t('time.coach.finished_hint', 'of {{count}} tasks in the last {{weeks}} weeks', { count: totals.tasks, weeks })} />
         <StatTile icon={CalendarCheck} tone="success" label={t('time.coach.on_time', 'On time')} value={pct(totals.on_time_pct)}
           hint={t('time.coach.late_open', '{{count}} still open after their day', { count: totals.late_open })} />
@@ -140,10 +143,14 @@ function ReadinessCard({ data, manager, onTeach }: { data: CoachOverview; manage
   return (
     <Card title={t('time.coach.readiness', 'What the AI knows')} description={t('time.coach.readiness_line', 'The more it knows, the better it plans.')} icon={GraduationCap} tone="ai">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="flex items-baseline gap-2"><span className="font-a-display text-4xl text-a-text">{score}%</span>
-            <span className="text-sm text-a-text-2">{t(`time.coach.state.${state}`, state === 'high' ? 'Well taught' : state === 'mid' ? 'Getting there' : 'Little to go by yet')}</span></p>
-          <span aria-hidden className="block h-2 overflow-hidden rounded-full bg-a-surface-2"><span className="block h-full time-ai-fill" style={{ width: `${score}%` }} /></span>
+        <div className="flex items-center gap-4">
+          <Ring value={score} size={104} stroke={10} label={t('time.coach.ready_label', '{{pct}} % of what the AI could know', { pct: score })}>
+            <span className="font-a-display text-2xl text-a-text"><CountUp value={score} format={n => `${n}%`} /></span>
+          </Ring>
+          <div className="min-w-0 space-y-1">
+            <p className="font-a-display text-xl text-a-text">{t(`time.coach.state.${state}`, state === 'high' ? 'Well taught' : state === 'mid' ? 'Getting there' : 'Little to go by yet')}</p>
+            {open.length > 0 && <p className="text-sm text-a-text-2">{t('time.coach.state_left', 'Still to fill in: {{count}}', { count: open.length })}</p>}
+          </div>
         </div>
         <ul className="space-y-2.5">
           {items.map(item => {
@@ -152,7 +159,7 @@ function ReadinessCard({ data, manager, onTeach }: { data: CoachOverview; manage
             const done = item.pct >= 100
             const count = itemCount(t, item)
             return (
-              <li key={item.code} className="flex items-start gap-2.5">
+              <li key={item.code} className="flex items-start gap-2.5 animate-a-rise" style={{ animationDelay: `${staggerDelay(items.indexOf(item), 40)}ms` }}>
                 {done
                   ? <CheckCircle2 size={17} aria-hidden className="mt-0.5 shrink-0 text-a-st-confirmed" />
                   : <Circle size={17} aria-hidden className="mt-0.5 shrink-0 text-a-text-2" />}
@@ -228,7 +235,23 @@ function StrategyCard({ data, weeks }: { data: CoachOverview; weeks: number }) {
       description={t('time.coach.strategy_line', 'The AI reads the figures and what you taught it, and says what to change.')}
       action={strategy && <Button size="sm" variant="secondary" onClick={() => make.mutate()} loading={make.isPending} disabled={!boot.ai.ready}><Wand2 size={14} aria-hidden />{t('time.coach.again', 'Again')}</Button>}>
       {!boot.ai.ready && <Notice tone="info">{t(`time.ai_state.${boot.ai.state}`, t('time.ai_state.unknown', 'The AI cannot be asked just now.'))}</Notice>}
-      {!strategy ? (
+      {make.isPending && !strategy ? (
+        <div role="status" className="space-y-4 animate-a-fade">
+          <div className="flex items-center gap-3">
+            <Orb size="md" busy />
+            <div>
+              <p className="text-sm font-semibold text-a-text">{t('time.coach.strategy_wait', 'The AI is reading the figures…')}</p>
+              <p className="text-xs text-a-text-2">{t('time.coach.strategy_wait_line', 'What was planned, what it really took, and what you taught it.')}</p>
+            </div>
+          </div>
+          {[0, 1, 2].map(i => (
+            <div key={i} aria-hidden className="space-y-2.5 rounded-2xl border border-a-border p-3">
+              <span className="block h-4 w-28 rounded-full time-shimmer" />
+              <ShimmerLines widths={['w-2/3', 'w-full']} />
+            </div>
+          ))}
+        </div>
+      ) : !strategy ? (
         <div className="flex flex-col items-start gap-3">
           <p className="text-sm text-a-text-2">{enough
             ? t('time.coach.strategy_intro', 'Who to train, which lengths to change, how to share the work better — each with the reason, and a fix you can make at once where there is one.')
@@ -237,11 +260,11 @@ function StrategyCard({ data, weeks }: { data: CoachOverview; weeks: number }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {strategy.summary && <p className="rounded-2xl time-ai-soft p-3 text-sm">{strategy.summary}</p>}
+          {strategy.summary && <p className="rounded-2xl time-ai-soft p-3 text-sm animate-a-rise">{strategy.summary}</p>}
           {strategy.recommendations.length === 0 && <p className="text-sm text-a-text-2">{t('time.coach.no_recs', 'Nothing to change just now.')}</p>}
           <ol className="space-y-3">
             {strategy.recommendations.map((r, i) => (
-              <li key={i} className="rounded-2xl border border-a-border p-3">
+              <li key={i} className="rounded-2xl border border-a-border p-3 animate-a-rise" style={{ animationDelay: `${staggerDelay(i + 1, 70)}ms` }}>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Pill tone={r.impact === 'high' ? 'danger' : r.impact === 'medium' ? 'pending' : 'neutral'}>{t(`time.coach.impact.${r.impact}`, r.impact)}</Pill>
                   <Pill tone="ai">{t(`time.coach.kind.${r.kind}`, KIND_DEFAULTS[r.kind] ?? r.kind)}</Pill>
@@ -249,7 +272,7 @@ function StrategyCard({ data, weeks }: { data: CoachOverview; weeks: number }) {
                 <p className="mt-2 text-sm font-semibold text-a-text">{r.title}</p>
                 {r.detail && <p className="mt-1 text-sm text-a-text-2">{r.detail}</p>}
                 {r.fix && (fixed.has(i)
-                  ? <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-a-st-confirmed"><CheckCircle2 size={14} aria-hidden />{fixText(t, r.fix, units)}</p>
+                  ? <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-a-st-confirmed"><CheckCircle2 size={14} aria-hidden className="time-pop" />{fixText(t, r.fix, units)}</p>
                   : <Button size="sm" className="mt-2" onClick={() => fix.mutate({ index: i, fix: r.fix! })} loading={fix.isPending && fix.variables?.index === i} disabled={fix.isPending}>
                       <CheckCircle2 size={14} aria-hidden />{fixText(t, r.fix, units)}
                     </Button>)}

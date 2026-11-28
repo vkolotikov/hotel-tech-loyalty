@@ -1,6 +1,6 @@
 import { useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarClock, Mic, Moon, PanelLeft, Plus, Search, Sparkles, Sun, User, type LucideIcon } from 'lucide-react'
+import { Bot, CalendarClock, Mic, Moon, PanelLeft, Plus, Search, Sparkles, Sun, User, type LucideIcon } from 'lucide-react'
 import type { WorkspaceNavItem } from '../../workspace/WorkspaceShell'
 import { FindFrame, type FindGroup } from '../../workspace/find/FindFrame'
 import { fold, type FindItem, type FindTarget } from '../../workspace/find/findCore'
@@ -51,9 +51,13 @@ function FindPanel({ onClose, onRun, nav, dark, slim, fallbackFocus }: Parameter
       go: { to: `/time/plan?person=${encodeURIComponent(p.key)}` }, icon: User,
     }))
     : []
+  // A question typed here can go straight to the assistant (2026-11-28): always the last action, so the first match stays first.
+  const ask: Hit[] = typed.length >= 3
+    ? [{ id: 'ask-ai', kind: 'action', label: t('time.find.ask_ai', 'Ask the AI: “{{question}}”', { question: typed }), go: { to: `/time/assistant?q=${encodeURIComponent(typed)}` }, icon: Bot }]
+    : []
   const groups: FindGroup<Hit>[] = [
     { title: t('time.find.people', 'People'), items: team },
-    { title: t('time.find.actions', 'Actions'), items: actions.slice(0, typed ? 8 : 14) },
+    { title: t('time.find.actions', 'Actions'), items: [...actions.slice(0, typed ? 7 : 14), ...ask] },
   ].filter(group => group.items.length > 0)
 
   return (

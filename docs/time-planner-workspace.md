@@ -212,6 +212,39 @@ and add tasks to employees by day". Four pieces, all behind the same gates as th
   read afresh after the types are saved, never over a note the new name already has (`settingsLogic.typeRenames`,
   `renamedNotes`). Tasks, templates and preferences keep the old name as before.
 
+## How the AI's screens look and move (2026-11-28)
+
+The owner: "review one more time our AI planner functionality, easy to use and modern … maybe add some modern,
+animated features". Nothing on the server changed; the screens did.
+
+- **The assistant** (`assistant/AssistantPage.tsx`, `Answer.tsx`, `useReveal.ts`): starter cards under the AI's orb; while
+  it works the orb turns and the lines to come shimmer; a fresh answer writes itself out (a press shows it whole) —
+  read as blocks first and cut after (`cutBlocks`), so a half-written line never shows markup — and a screen reader
+  gets the whole answer once from the page's status line. Under an answer: what it looked at (the server's `used`,
+  worded by `sourcesOf`), its changes as cards (applied one after another with "Applying 1 of 2…", each then with
+  "Open the day"), a copy button, and follow-ups under the latest answer (`followUps`). The box grows with the text;
+  the conversation stays at its end unless the person scrolled up; an answer that arrives after "New conversation" is
+  dropped. A question in the address (`/time/assistant?q=…`) is asked at once and taken out of the address — Find's
+  "Ask the AI: …" (always its last action) and My day's ask box (`ai/AskBox.tsx`) hand questions over that way. Beside
+  the conversation: the readiness as a gauge, and **AI tools** — the day's and the week's plan, capture, review, the
+  coach — so every AI function is one press from one place.
+- **The plan dialogs** (`plan/PlanParts.tsx`, shared by the day's and the week's): while a plan is made, the orb and the
+  three things a plan involves, each lit in its turn (a picture of the work, not a measure of it); then a summary
+  (tasks, people, days, not planned, All / None), people with their load as bars (the week), lines that come in one by
+  one, and a "not planned" list that folds after four.
+- **The coach**: the readiness as a ring that fills, figures that count up, a skeleton while the strategy is written,
+  Task lengths as two bars per row (planned in grey, real in the drift's colour, each against the longer of the two —
+  `durationBars`), and in Teach the AI every field the AI drafted marked (violet edge, "AI draft") until it is edited
+  or saved.
+- **The review card and "Add with AI"** wait the same way (orb, shimmering lines) and bring their results in one by one.
+- **The rules of the motion**: the classes are `time-*` in `theme/time.css` (keyframes named `time-*`); the frame's rule
+  (`workspace.css`) stops every element's animation under `prefers-reduced-motion`, and the stylesheet's own block stops
+  the ones on pseudo-elements (the orb's halo), which that rule cannot reach — `time/tokens.test.ts` checks both. Motion
+  made in script asks `motionOk()` first (`lib/motion.ts`, with its arithmetic: `countAt`, `revealChars`,
+  `revealDuration`, `barWidth`, `staggerDelay`). A counting figure (`ui/motion.tsx` `CountUp`) keeps the final figure as
+  the page's own text and writes the count into React's own text node, so tests, screen readers and a device without
+  motion get the figure itself. Checked in a browser with reduced motion: nothing turns, an answer is whole at once.
+
 ## The areas
 
 | Area | Address | What it does |
@@ -220,7 +253,7 @@ and add tasks to employees by day". Four pieces, all behind the same gates as th
 | Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI"; in the week view "Plan the team's week with AI", "Plan my week with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
-| AI assistant | `/time/assistant` | ask about days, weeks, the pool and the team; proposed changes applied one by one or all at once; what the AI knows (readiness); in the phone's top bar too |
+| AI assistant | `/time/assistant` (`?q=` asks at once) | ask about days, weeks, the pool and the team; an answer writes itself out, with what it looked at; proposed changes applied one by one or all at once, each with a way to its day; follow-ups; what the AI knows (a gauge) and every other AI tool; in the phone's top bar too |
 | AI coach | `/time/coach` (`?tab=overview|durations|people|knowledge`, `?weeks=4|8|12|26`) | readiness, the period's figures, the AI strategy with one-press fixes, task lengths planned against real, people by type, Teach the AI (a manager's) |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
 | Settings | `/time/settings` (`?tab=day|planning|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), task types, tasks, templates (shared with the full admin) |
@@ -234,7 +267,8 @@ title (focused; a task picked fills an empty one, never one the person typed; En
 & next" adds the task and keeps the panel open for the next one of the same day, person and type.
 
 Find (⌘K / Ctrl K): add a task, add with AI, plan my day, plan the week (`/time/plan?view=week&ai=week`: the team's
-week for whoever may plan for others, else mine), a person's day, the areas. Keys: N new task, A add with AI,
+week for whoever may plan for others, else mine), a person's day, the areas, and — for anything typed, three letters
+or more — "Ask the AI: …", which opens the assistant with the question asked. Keys: N new task, A add with AI,
 P Planner, B Backlog, ? shortcuts.
 
 ## Rules the code keeps (and the tests that keep them)
@@ -252,6 +286,10 @@ P Planner, B Backlog, ? shortcuts.
   and the planning mode (`WeekPlanTest`); the assistant's tools, checked proposals and refusals, the coach's strategy
   fixes and drafts (`AssistantCoachTest`); frontend `coach/coach.test.ts`, `coach/CoachPage.test.tsx`,
   `plan/plan.test.ts` (week lines, day load, which week).
+- **The look and motion** (2026-11-28): `lib/motion.test.ts` (counts, reveals, bars, staggers), `assistant/Answer.test.tsx`
+  (an answer's sources, changes, progress and follow-ups; the plan dialogs' parts; the gauge, the counting figure and the
+  load bar), `coach/coach.test.ts` (`cutBlocks`, `sourcesOf`, `followUps`, `questionOf`, `applyProgress`,
+  `durationBars`), `plan/plan.test.ts` (`planSummary`, `unplacedShown`), and the stylesheet's rules in `tokens.test.ts`.
 - **The planning mode** on the full admin's planner endpoints and the workspace's, a manager's choice, `team` by default
   (`PlanningModeTest`, `SettingsTest`, `GateAndBootstrapTest`; frontend `time/lib/rights.test.ts`,
   `settings/SettingsPage.test.tsx`).

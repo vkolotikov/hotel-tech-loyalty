@@ -14,7 +14,8 @@ import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { Pill } from '../ui/Pill'
 import { useToast } from '../ui/Toast'
-import { canUseSuggested, driftTone, speedPct, typicalWrite } from './coachLogic'
+import { staggerDelay } from '../lib/motion'
+import { canUseSuggested, driftTone, durationBars, speedPct, typicalWrite } from './coachLogic'
 
 const ADVICE_DEFAULTS: Record<DurationRow['advice'], string> = {
   few: 'Too few to say', longer: 'Plan it longer', shorter: 'Plan it shorter', set_typical: 'Write the length down', ok: 'About right',
@@ -70,38 +71,52 @@ function DurationCard({ title, icon, rows, kind, manager }: { title: string; ico
     <Card title={title} icon={icon} padded={false}>
       {/* relative: the header's screen-reader-only label is positioned, and must scroll with the table, not widen the page. */}
       <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[46rem] text-sm">
+        <table className="w-full min-w-[52rem] text-sm">
           <thead>
             <tr className="border-b border-a-border text-left text-xs text-a-text-2">
               <th scope="col" className="px-4 py-2 font-medium">{kind === 'type' ? t('time.coach.col.type', 'Type') : t('time.coach.col.task', 'Task')}</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.done', 'Done')}</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.planned', 'Planned')}</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.real', 'Really took')}</th>
-              <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.drift', 'Against plan')}</th>
+              <th scope="col" className="w-2/5 px-3 py-2 font-medium">
+                <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-a-text-2/50" />{t('time.coach.col.planned', 'Planned')}</span>
+                  <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-a-st-confirmed" />{t('time.coach.col.real', 'Really took')}</span>
+                </span>
+              </th>
               <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.suggested', 'Suggested')}</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">{t('time.coach.col.typical', 'Written down')}</th>
               <th scope="col" className="px-4 py-2 font-medium"><span className="sr-only">{t('time.coach.col.advice', 'Advice')}</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-a-border">
-            {rows.map(row => {
+            {rows.map((row, at) => {
               const tone = driftTone(row.drift_pct)
+              const bars = durationBars(row)
+              const fill = tone === 'over' ? 'bg-a-danger' : tone === 'under' ? 'bg-a-st-progress' : 'bg-a-st-confirmed'
+              const wait = { animationDelay: `${staggerDelay(at, 35)}ms` }
               return (
                 <tr key={row.key}>
-                  <th scope="row" className="max-w-[16rem] px-4 py-2.5 text-left font-medium text-a-text"><span className="line-clamp-2 break-words">{row.name}</span></th>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-a-text">{row.samples}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-a-text">{duration(row.planned_median, units)}</td>
+                  <th scope="row" className="max-w-[14rem] px-4 py-2.5 text-left font-medium text-a-text"><span className="line-clamp-2 break-words">{row.name}</span></th>
                   <td className="px-3 py-2.5 text-right tabular-nums text-a-text">
-                    {duration(row.real_median, units)}
+                    {row.samples}
                     <span className="block text-xs text-a-text-2">{t('time.coach.clocked_n', 'clocked: {{count}}', { count: row.clocked })}</span>
                   </td>
-                  <td className={`px-3 py-2.5 text-right tabular-nums ${tone === 'over' ? 'font-semibold text-a-danger' : tone === 'under' ? 'font-semibold text-a-st-progress' : 'text-a-text-2'}`}>
-                    {row.drift_pct === null ? '—' : (
-                      <span className="inline-flex items-center gap-1">
-                        {tone === 'over' && <TrendingUp size={13} aria-hidden />}{tone === 'under' && <TrendingDown size={13} aria-hidden />}
-                        {pctText(t, row.drift_pct)}
-                      </span>
-                    )}
+                  <td className="px-3 py-2.5">
+                    {/* Two bars against the longer of the two: what was planned, and what the work really took. */}
+                    <div className="min-w-[16rem] space-y-1.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span aria-hidden className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-a-surface-2"><span className="block h-full rounded-full bg-a-text-2/50 time-grow" style={{ width: `${bars.planned}%`, ...wait }} /></span>
+                        <span className="w-20 shrink-0 text-right tabular-nums text-a-text-2">{duration(row.planned_median, units)}</span>
+                        <span aria-hidden className="w-14 shrink-0" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span aria-hidden className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-a-surface-2">{bars.real !== null && <span className={`block h-full rounded-full time-grow ${fill}`} style={{ width: `${bars.real}%`, ...wait }} />}</span>
+                        <span className="w-20 shrink-0 text-right tabular-nums text-a-text">{row.real_median === null ? t('time.coach.not_clocked', 'too few clocked') : duration(row.real_median, units)}</span>
+                        <span className={`inline-flex w-14 shrink-0 items-center justify-end gap-0.5 tabular-nums ${tone === 'over' ? 'font-semibold text-a-danger' : tone === 'under' ? 'font-semibold text-a-st-progress' : 'text-a-text-2'}`}>
+                          {tone === 'over' && <TrendingUp size={12} aria-hidden />}{tone === 'under' && <TrendingDown size={12} aria-hidden />}
+                          {row.drift_pct === null ? '' : pctText(t, row.drift_pct)}
+                        </span>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-a-text">{duration(row.suggested, units)}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-a-text-2">{duration(row.typical, units)}</td>
@@ -170,17 +185,17 @@ export function PeopleSection({ data, manager }: { data: CoachOverview; manager:
       )}
       {!manager && <Notice tone="info">{t('time.coach.only_yours', 'These are your own figures; how you compare is between you and your manager.')}</Notice>}
       <div className="grid items-start gap-5 lg:grid-cols-2">
-        {people.map(p => <PersonCard key={p.person} person={p} />)}
+        {people.map((p, i) => <PersonCard key={p.person} person={p} index={i} />)}
       </div>
     </div>
   )
 }
 
-function PersonCard({ person }: { person: LearnedPerson }) {
+function PersonCard({ person, index }: { person: LearnedPerson; index: number }) {
   const { t } = useTranslation()
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
   return (
-    <section className="min-w-0 rounded-2xl border border-a-border bg-a-surface shadow-a-sm">
+    <section className="min-w-0 rounded-2xl border border-a-border bg-a-surface shadow-a-sm animate-a-rise" style={{ animationDelay: `${staggerDelay(index, 60)}ms` }}>
       <header className="flex items-center gap-3 border-b border-a-border px-4 py-3">
         <Avatar name={person.name} />
         <div className="min-w-0 flex-1">

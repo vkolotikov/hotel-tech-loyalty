@@ -10,6 +10,8 @@ import { errorText } from '../lib/errors'
 import { usePeople, useRefresh } from '../lib/queries'
 import { assignmentOf, plannerApi } from '../lib/tasks'
 import type { Review, ReviewAction } from '../lib/types'
+import { staggerDelay } from '../lib/motion'
+import { Orb, ShimmerLines } from '../ui/motion'
 import { useToast } from '../ui/Toast'
 
 type Ask = { kind: 'day'; date: string; person?: string | null } | { kind: 'period'; from: string; to: string; person?: string | null }
@@ -49,7 +51,7 @@ export function ReviewCard({ ask, title, line }: { ask: Ask; title?: string; lin
   return (
     <section className="rounded-2xl border bg-a-surface p-4 shadow-a-sm time-ai-border">
       <div className="flex flex-wrap items-center gap-3">
-        <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl time-ai-soft"><Sparkles size={17} /></span>
+        {run.isPending ? <Orb size="sm" busy /> : <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl time-ai-soft"><Sparkles size={17} /></span>}
         {/* At least 12rem for the words: in a narrow column the button wraps to its own line instead. */}
         <div className="min-w-0 flex-1 basis-48">
           <h2 className="text-sm font-semibold text-a-text">{title ?? t('time.review.title', 'AI review')}</h2>
@@ -60,25 +62,31 @@ export function ReviewCard({ ask, title, line }: { ask: Ask; title?: string; lin
         </Button>
       </div>
       {!boot.ai.ready && <div className="mt-3"><Notice tone="info">{t(`time.ai_state.${boot.ai.state}`, t('time.ai_state.unknown', 'The AI cannot be asked just now.'))}</Notice></div>}
-      {review && (
+      {run.isPending && (
+        <div role="status" className="mt-4 space-y-2 animate-a-fade">
+          <p className="text-xs text-a-text-2">{t('time.review.reading', 'The AI is reading the tasks, the times and the load…')}</p>
+          <ShimmerLines />
+        </div>
+      )}
+      {review && !run.isPending && (
         <div className="mt-4 space-y-3">
-          <p className="text-sm leading-relaxed text-a-text">{review.summary}</p>
+          <p className="text-sm leading-relaxed text-a-text animate-a-rise">{review.summary}</p>
           {review.highlights.length > 0 && (
             <ul className="space-y-1">
-              {review.highlights.map((h, i) => <li key={i} className="flex gap-2 text-sm text-a-text-2"><span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full time-ai-fill" />{h}</li>)}
+              {review.highlights.map((h, i) => <li key={i} className="flex gap-2 text-sm text-a-text-2 animate-a-rise" style={{ animationDelay: `${staggerDelay(i + 1, 60)}ms` }}><span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full time-ai-fill" />{h}</li>)}
             </ul>
           )}
           {review.suggestions.length > 0 && (
             <ul className="space-y-2">
               {review.suggestions.map((s, i) => (
-                <li key={i} className="flex flex-wrap items-start gap-3 rounded-xl bg-a-surface-2 p-3">
+                <li key={i} className="flex flex-wrap items-start gap-3 rounded-xl bg-a-surface-2 p-3 animate-a-rise" style={{ animationDelay: `${staggerDelay(review.highlights.length + i + 1, 60)}ms` }}>
                   <Lightbulb size={16} aria-hidden className="mt-0.5 shrink-0 time-ai-text" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-a-text">{s.title}</p>
                     {s.detail && <p className="text-xs text-a-text-2">{s.detail}</p>}
                   </div>
                   {s.action && (done.has(i)
-                    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-a-st-confirmed"><Check size={14} aria-hidden />{t('time.review.done', 'Done')}</span>
+                    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-a-st-confirmed"><Check size={14} aria-hidden className="time-pop" />{t('time.review.done', 'Done')}</span>
                     : <Button size="sm" variant="secondary" loading={act.isPending && act.variables?.index === i} onClick={() => act.mutate({ action: s.action!, index: i })}>{t('time.review.apply', 'Apply')}</Button>)}
                 </li>
               ))}

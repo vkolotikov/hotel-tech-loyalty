@@ -12,6 +12,8 @@
   "none": "Aucune tâche trouvée dans le texte. Dites ce qu’il faut faire, par qui et quand.",
   "placeholder": "Quoi faire, par qui et quand…",
   "read": "Trouver les tâches",
+  "reading": "L’IA lit vos notes…",
+  "reading_line": "Elle rédige les tâches ; vous les vérifiez avant tout ajout.",
   "saved": "{{count}} tâches ajoutées",
   "saved_many": "{{count}} de tâches ajoutées",
   "saved_one": "{{count}} tâche ajoutée",

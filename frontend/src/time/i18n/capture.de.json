@@ -11,6 +11,8 @@
   "none": "Im Text wurde keine Aufgabe gefunden. Sagen Sie, was zu tun ist, von wem und wann.",
   "placeholder": "Was ist zu tun, von wem und wann…",
   "read": "Aufgaben finden",
+  "reading": "Die KI liest Ihre Notizen…",
+  "reading_line": "Sie schreibt die Aufgaben; Sie prüfen sie, bevor etwas hinzugefügt wird.",
   "saved": "{{count}} Aufgaben hinzugefügt",
   "saved_one": "{{count}} Aufgabe hinzugefügt",
   "saved_other": "{{count}} Aufgaben hinzugefügt",

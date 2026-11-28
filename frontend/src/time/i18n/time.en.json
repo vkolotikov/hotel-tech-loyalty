@@ -50,6 +50,7 @@
   },
   "find": {
     "actions": "Actions",
+    "ask_ai": "Ask the AI: “{{question}}”",
     "capture": "Add tasks with AI (text or voice)",
     "go_to": "Go to",
     "new_task": "Add a task",
