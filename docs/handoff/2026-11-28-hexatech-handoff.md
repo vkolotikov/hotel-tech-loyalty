@@ -69,6 +69,14 @@ answers arrived at once, figures were plain text, and the AI's functions were sp
   `AssistantPage-CuT_-U61.js` ("Looked at", "AI tools"); `index-BrZwK6Dt.css` holds `time-orb` and the ten keyframes;
   `/time`, `/time/assistant`, `/time/coach`, `/time/plan`, `/time/register` 200; `api/v1/admin/time/assistant` 401
   without a login; `hexa-academy` 200, its kit 64,577 bytes.
+- CI on a41f0deb: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/46146185463 — **green**.
+- **Follow-up the same hour** (13:04 UTC), found on the released screens at 1440 px: in Task lengths the suggested
+  length, "Written down" and the "Use …" buttons broke onto two lines (the new bars took two fifths of the table). The
+  bars take a third and figures and buttons never wrap; checked at 1440 and 1280 in English and German (no wrapped
+  button, rows one height) and at 390 (the table scrolls inside its card). Production **c1244823** on a41f0deb: source
+  patch **e6ff512a** (2bcb6191..0782469a: `coach/CoachSections.tsx` and this handoff), artifact source equal to the
+  branch tip, `tsc -b`, lint, Vitest 501 files / 7,385 tests, build, the built pages rendered. Live by content (13:08
+  UTC): `index-kQF8dwSG.js` → `TimeApp-_pCvoYW_.js` → `CoachPage-DROhttim.js` (`min-w-[56rem]`, the bars' `w-1/3`).
 - **Next source-patch baseline**: `git merge-base origin/main HEAD` (the branch contains main since the merge).
 
 ## What the owner does by hand
