@@ -71,5 +71,14 @@
   "pushLimit": "El push abre la aplicación del miembro. Aquí no hay pruebas push ni destinos personalizados.",
   "cost": "El proveedor factura las partes del SMS. Aquí no hay estimación de precio.",
   "email": "Correo",
-  "push": "Push"
+  "push": "Push",
+  "platformEmail": "Servicio de correo de la plataforma",
+  "appRequired": "Requiere la aplicación de socios",
+  "ownTwilio": "Cuenta Twilio de su organización",
+  "deliverySetup": "Requisitos de envío",
+  "emailRequirements": "El envío de correo está integrado. HexaTech debe configurar el proveedor de correo y el procesamiento de envíos. Su organización utiliza este servicio compartido; una lista de campañas no confirma la entrega.",
+  "customSenderHold": "Dominio de envío / SMTP propio · En espera",
+  "customSenderDetail": "La conexión autónoma de dominios y SMTP aún no está disponible. Puede configurar el nombre del remitente y la dirección de respuesta; la dirección de envío pertenece a la plataforma.",
+  "smsRequirements": "Conecte la cuenta Twilio de su organización y un número de remitente o Messaging Service en Integraciones. Twilio factura a su cuenta. Solo reciben campañas los socios aptos que hayan consentido los SMS.",
+  "pushRequirements": "El push requiere la aplicación de socios, las credenciales push de Apple/Google de la plataforma y dispositivos registrados con permiso de notificaciones. El push del navegador y los diseños de aplicación personalizados no están disponibles aquí."
 }

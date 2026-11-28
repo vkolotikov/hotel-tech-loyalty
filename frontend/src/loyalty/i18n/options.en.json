@@ -156,7 +156,8 @@
     "tier_progress_visits": "Members move up by how often they come: one visit a day counts, whatever they spend. They see “3 more visits to Gold”.",
     "tier_progress_spend": "Members move up by what they spend at their visits. They see “€120 more to Gold”.",
     "earn_rate": "Members get {{points}} for every {{money}} they spend.",
-    "earn_rate_none": "Spending earns nothing yet: switch on Points on bookings or Earn at the desk."
+    "earn_rate_none": "Spending earns nothing yet: switch on Points on bookings or Earn at the desk.",
+    "earn_rate_off": "Spending does not earn points. Visits and bonuses can still reward members."
   },
   "setup": {
     "error": {
@@ -252,7 +253,15 @@
     "title": "Set up your programme",
     "to_configure": "Back to Configure",
     "to_members": "Go to Members",
-    "to_options": "Go to Ways to earn"
+    "to_options": "Go to Ways to earn",
+    "programme_rule": "Programme rule",
+    "programme_rule_line": "Configure this programme rule in the next step.",
+    "suggested_rewards": "Suggested rewards for {{preset}}",
+    "suggested_rewards_line": "Choose one as the stamp-card reward to add it when you apply. Your existing rewards stay available.",
+    "saved_rewards": "Your saved rewards",
+    "template_reward_added": "Your earning rules are saved. The selected reward is ready for the stamp card.",
+    "current_catalogue": "Current catalogue",
+    "reward_unavailable": "Unavailable"
   },
   "group": {
     "earn": "Earn points",
@@ -313,5 +322,24 @@
     "bonus": "Welcome, birthday and referral gifts",
     "rule": "How members move up and when points expire",
     "more": "Other ways your programme offers"
+  },
+  "preview": {
+    "title": "Your programme at a glance",
+    "template": "Industry template",
+    "current": "Your current programme",
+    "currentLine": "Your saved membership levels, rewards and earning rules.",
+    "catalogue": "Membership & rewards",
+    "kept": "Your existing levels and rewards stay in place.",
+    "starting": "Suggested levels and reward ideas. You can edit them later.",
+    "levels": "{{n}} membership levels",
+    "rewards": "{{n}} rewards",
+    "rewardExamples": "Reward examples:",
+    "noRewards": "Add your first reward in Rewards & benefits.",
+    "journey": "The member journey",
+    "join": "Join",
+    "earn": "Earn points",
+    "use": "Use rewards",
+    "off": "Not enabled: {{ways}}.",
+    "templateLine": "Suggested earning rules. Choose what to use in the next step."
   }
 }

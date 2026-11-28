@@ -75,6 +75,16 @@ class BookingPointsServiceTest extends TestCase
         $this->assertSame(0, PointsTransaction::count());
     }
 
+    public function test_completed_bookings_inherit_the_same_changed_purchase_rate_while_desk_earning_is_off(): void
+    {
+        HotelSetting::withoutGlobalScopes()->where('organization_id', $this->orgId)->where('key', 'points_per_currency')->update(['value' => '3']);
+        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->orgId, 'key' => 'desk_earn_enabled', 'value' => 'false', 'type' => 'boolean', 'group' => 'loyalty']);
+        HotelSetting::flushCacheFor($this->orgId);
+        $tx = app(BookingPointsService::class)->awardForServiceBooking($this->booking());
+        $this->assertNotNull($tx);
+        $this->assertSame(243, $tx->points); // 54 × shared 3 × the existing tier rate 1.5.
+    }
+
     public function test_no_points_without_loyalty(): void
     {
         LoyaltyTier::where('organization_id', $this->orgId)->update(['is_active' => false]);

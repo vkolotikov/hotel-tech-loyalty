@@ -73,12 +73,12 @@ class PostsTest extends TestCase
             ->json('post.id');
         $this->assertNotSame($post->id, $copy);
 
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-ready"))->assertOk()->assertJsonPath('post.status', 'ready_to_publish');
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['published_url' => 'https://instagram.com/p/abc'])
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-ready"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertOk()->assertJsonPath('post.status', 'ready_to_publish');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['published_url' => 'https://instagram.com/p/abc', 'updated_at' => $post->fresh()->updated_at->toISOString()])
             ->assertOk()
             ->assertJsonPath('post.status', 'published')
             ->assertJsonPath('post.published_url', 'https://instagram.com/p/abc');
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['published_url' => 'not a link'])->assertStatus(422);
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['published_url' => 'not a link', 'updated_at' => $post->fresh()->updated_at->toISOString()])->assertStatus(422);
 
         $this->asStaffMember()->deleteJson($this->api("posts/{$copy}"))->assertOk();
         $this->assertNull(ContentPlannerPost::find($copy));

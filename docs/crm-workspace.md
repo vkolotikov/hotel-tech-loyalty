@@ -1,5 +1,35 @@
 # HexaTech CRM — runbook
 
+## Sales lists
+
+Leads, Deals and Contacts share searches by name, company, email and phone. In Deals, select a summary card to inspect its records. Export downloads the current filters and order across all pages. On a phone, use the labeled selector above the list to change follow-up period or fulfilment stage. People and Companies retain their individual searches when switching tabs. See the [sales workflow audit](crm-sales-audit-2026-11-27.md) for the changes and verification.
+
+## Lead list
+
+The Leads table shows the date each lead entered the CRM in the venue’s time zone. Select a column heading to order the filtered list, then select it again to reverse the order. On phones, the date appears on the card and the Sort menu controls the order.
+
+## Team dashboard
+
+Open **Team dashboard** from Today or Reports. Switch between the current calendar week (Monday onwards) and month in the venue’s time zone. **Overview** shows total leads and recorded value across all statuses, the current open pipeline, and wins in the selected period. The value breakdown shows the original currencies, conversion date and number of records with usable amounts. Won value uses the amounts currently recorded on deals with a dated win in the period.
+
+The activity chart shows daily arrivals and first wins. Select a day or open the daily table for exact figures. Changes compare the elapsed part of the venue’s week or month with the same part of the previous one. The country chart groups the recorded contact country by lead, with period and all-time views. Missing and unrecognised countries have their own count.
+
+Follow-up signals open the corresponding due lists. The email and urgent signals open the filtered priority queue. Counts use the same lead, currency and follow-up rules as the CRM lead list. Priorities and statistics respect the selected brand and staff access.
+
+**Customers** shows up to four customers ranked by the recorded value of won deals in the reporting currency. It opens on **All time**, including older won deals without a dated win. Choose **This week** or **This month** for first recorded wins during the dashboard period. Explicitly linked companies collect their deals across contacts. Other customers appear under their individual contact records. A coverage note shows how many won deals have usable prices. Select a customer to open their record.
+
+The three counters open distinct lead lists. **Leads needing action** uses ranked incoming questions, due work, delivery deadlines and new leads. The **Priority leads** list reserves room for the oldest customer still waiting at least seven days. An open new lead with no recorded contact stays on the list until someone reaches out or schedules its next step. **Waiting 7+ days for us** measures full days since the latest customer email on each unanswered thread. **No customer reply for 7+ days** identifies open leads whose latest sent email is at least seven days old. A newer recorded call, text or attributable WhatsApp exchange, outstanding incoming email, future scheduled task, or email opt-out clears that suggestion. The waiting lists span calendar periods. Select a row to open its message or lead.
+
+**Day plan** combines dated CRM tasks for the selected brand with the organisation’s Time Planner assignments when that workspace is enabled. Each employee appears once. Expand a person to see their tasks and update a status. Use the date picker and **Add a task** to plan ahead. **Open full planner** opens that day for the whole team. Organisations using CRM alone add tasks through the usual CRM task form. Assignment controls follow the existing planner permissions.
+
+The day-plan figures show leads today and this week, with the change in lead count against the same local time yesterday and last week. Deals won follows the selected reporting period. The priority list shows up to three distinct leads from the sales queue. Team progress counts completed assignments for the displayed day. Names show recorded work and status, including unassigned work and people with an empty plan.
+
+**TV view** follows the venue’s current day and refreshes every minute. A fresh TV link opens Customers. It rotates every 30 seconds through Customers, the day plan in groups of four employees, Priority actions and Overview. Pause it to keep a view on screen. Interacting with a chart control or switching views manually pauses rotation. Reduced-motion settings turn off animations and automatic rotation. Open an action to go directly to its opportunity or message.
+
+Leads received uses the lead creation date. Deals won counts each lead on its first recorded win. Older won records with no recorded date are listed under **How wins are counted**. Unanswered email threads is a current backlog across dates. The smaller figure counts the threads still waiting whose latest customer email came in during the selected period. A staff reply resolves its own thread. FDS Cards uses verified Zoho correspondence alongside direction-tagged CRM emails. Other brands use their logged correspondence.
+
+The queue weighs waiting time, due follow-ups, first contact, delivery dates, account importance, known company and order size, and the relative value of open leads in the same currency. A background job on the AI queue reviews up to eight outstanding actions per batch using scoped customer messages, lead facts and reviewed or sourced business information. It can raise a buying decision or customer issue and lower a promotional email or acknowledgement. Its reason appears on the action. A CRM-based ranking is available immediately and while AI is unavailable. Billing uses the existing organisation allowance under `crm_team_priorities`.
+
 HexaTech CRM (`/crm`) is the website's AI chat and the CRM in one staff workspace, beside the full admin: the chat
 widget with its AI assistant, the live inbox and visitors, leads, the pipeline, contacts and tasks. The owner
 (2026-11-07): "We make separate portals for loyalty, booking and content planner. Now I want to make a separate portal
@@ -42,13 +72,19 @@ The workspace's own reads live under `/api/v1/admin/crm/`, behind the admin chai
 | `GET start` | the six setup steps, each done by the data (`CrmSetupProgress`) | staff |
 | `GET bot-gaps` | the assistant's answers rated wrong and not yet taught (`BotGaps`) | staff (AccessMap product `chat`) |
 | `POST conversations/{id}/draft` (`instruction?`) | an AI reply for a person to edit and send (`ReplyDrafter`); `feature:chatbot`, 20 a minute in its own bucket (`crm-draft`) | staff |
+| `GET activity` (`type?`, `page`) | round 5: the team's recent CRM activity, who did what to which lead or contact (`Crm\CrmActivityFeed`; a line on a lead follows the lead's brand scope) | staff |
+| `GET reports/{funnel,forecast,lost-reasons,sources,owners,companies}` | round 5: the sales reports (`App\Services\Crm\SalesReports`, which the full admin's `admin/reporting/*` and `analytics/inquiry-funnel` now call too); a company's reservation revenue only for an organisation that may reach bookings | the Analytics right (`can_view_analytics`; a manager always) |
+| `GET/POST intake-tokens`, `DELETE intake-tokens/{id}` | round 5: lead-intake API tokens (`Crm\IntakeTokens`): the single ability `crm:lead-intake`, accepted by Sanctum only on `POST integrations/leads` (`CrmIntakeTokensServiceProvider`); the plain token answered once | manager |
+| `GET/PUT mail-settings` | round 5: the sender name and reply-to template emails use (`Mail\SenderSettings`, the settings `mail_from_name` / `mail_reply_to`) | read staff; change an owner (`SettingRegistry::ownerOnly`, the full admin's rule) |
+| `GET ai-usage` | round 5: this month's AI spend by venue day and by feature against the plan's allowance (`AiUsageService::monthByVenueDay()`) | manager |
 
 Everything else the workspace shows is the **full admin's own chat and CRM endpoints**, under their own rules
 (`AccessMap`: `admin/chat-inbox*`, `admin/visitors`, `admin/engagement`, `admin/chatbot*`, `admin/knowledge`,
 `admin/popup-rules`, `admin/widget-config`, `admin/inquiries*`, `admin/deals`, `admin/pipelines`, `admin/guests`,
 `admin/tasks`…). An organisation on the `crm` module reaches the `crm` and `chat` products for that reason
 (`AccessMap::MODULE_PRODUCTS`). The frontend may call only the areas listed in `frontend/src/crm/lib/api.ts` (`AREAS`),
-always with `brand_id=all` (the CRM is the organisation's); `crm/tokens.test.ts` refuses any other path.
+always with a `brand_id`: the brand chosen in the header's switcher, or `all` (`crm/lib/brand.ts`, since 2026-11-09);
+`crm/tokens.test.ts` refuses any other path.
 
 ### Today's definitions (the full admin's own)
 
@@ -69,27 +105,31 @@ processed document), `reply` (a person answered a chat), `pipeline` (a pipeline 
 
 | Area | Address | What it does (the full admin's endpoints it uses) |
 |---|---|---|
-| Today | `/crm` | `crm/today`: chats waiting, follow-ups, your tasks, new leads, the open pipeline, the week |
+| Today | `/crm` (`?need=chats|followups|tasks`) | `crm/today`, `crm/pulse`, `crm/activity`: the venue's clock (the pulse strip), "Needs you now" in three tabs (chats waiting, follow-ups, your tasks; five rows each, Show all), the team's activity, the figures that are not zero, new leads, the week's chat |
 | Get started | `/crm/start` | `crm/start`: the six setup steps |
-| Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`) | `chat-inbox*`, `engagement/*`: list with the server's counts, the thread (polled), take over / hand back, resolve / archive / reopen, assign, capture as lead, contact, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI** |
-| Visitors | `/crm/visitors` (`?v=<visitor>`) | `visitors*`: on the site now, everyone, away, leads; a visitor's pages and chats; start a chat; delete |
-| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?new=1`, `?due=…`, `?guest=<contact>`), `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches, Show more and a row menu; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; CSV; A lead from a message (every staff member, `RequireAiCapture`). A lead's page: overview with a stage bar, next step, timeline (type filter, call length, voice note), tasks, contact, AI brief and proposal, details, stay, custom fields, files, its chat; Send an email from a template; edit the customer; won / lost; delete with what goes |
+| Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`, `?dtab=`) | `chat-inbox*`, `engagement/*`: a full-height list, thread and details; statuses as icons with counts, Priority and the intents (`engagement/feed`, `filter-counts`, with a range), Nobody assigned (`unassigned=1`); the thread (polled), take over / hand back, resolve (E) / archive / reopen, assign, capture as lead, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI**; details in tabs (Contact, Lead, AI, Website), folded away on request; J / K move through the list |
+| Visitors | `/crm/visitors` (`?v=<visitor>`, `?vtab=`) | `visitors*`, `engagement/feed`: on the site now, everyone, away, leads, hot leads, has contact, missed; a dense list with a live dot; a visitor in a panel (Overview, Chats, Pages); start a chat; delete |
+| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?due=…`; the old `?new=1&guest=` still opens the form), a lead in its panel `?lead=<id>&rtab=` on any page, `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches and a row menu, each opening the lead's panel; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; Excel or CSV (`inquiries/export`); A lead from a message (every staff member, `RequireAiCapture`). A lead (round 5: one frame in the panel and on its page): stage, priority and age; Move to, Won, Lost, Send email, email / call / WhatsApp / SMS, AI brief, Proposal; tabs Overview (stage bar, value / owner / priority / next step edited in place, AI brief, contact, details, stay, custom fields), Deal (a won lead's step and payment), Activity (timeline, type filter, call length, voice note), Tasks, Emails (the mail history), Files, Chat; edit, add a task, open the contact, delete with what goes |
 | Pipeline | `/crm/pipeline` | redirects: to `/crm/leads?view=board` (keeping `?p=`), `?tab=won` to `/crm/deals` |
-| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`), `inquiries`, `inquiries/{id}/won`, `crm-ai/capture-lead`: figures that open their step, search, payment and owner filters, step pills with counts (the step's own `payment_pending` figure), the step and its progress, Next step, payment with Paid in full, columns, CSV; Add a deal by hand or From a message (the lead form in its deal mode: the lead, then the server's own `/won`) |
-| Contacts | `/crm/contacts`, `/crm/contacts/:id` (`?tab=companies|duplicates`) | `guests*`, `corporate-accounts`: people with filters, saved views, bulk changes, CSV; a contact edited in place with tags, leads and timeline; companies; duplicates and merge |
-| Tasks | `/crm/tasks` | `tasks*`: figures; mine / everyone; type; All open (by day), Overdue, Today, Upcoming, Done (by the day done) on the venue's days; add, edit, complete, reopen, delete |
-| AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`) | `chatbot-config/*`, `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps` |
-| Chat widget | `/crm/widget` (`?tab=look|behaviour|install`) | `widget-config*`: the look with a live preview, behaviour, the embed code |
-| Insights | `/crm/insights` (`?days=7|30|90`) | `chatbot/analytics`, `inquiries/*`, `pipelines`, `deals/analytics`: the website chat and the pipeline |
-| Settings | `/crm/settings` (`?tab=canned|pipelines|forms|fields|account`) | `chat-inbox-canned`, `pipelines`, `pipeline-stages`, `inquiry-lost-reasons*`, `lead-forms`, `custom-fields`; Team and Plan & products |
+| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`), `inquiries`, `inquiries/{id}/won`, `crm-ai/capture-lead`: figures that open their step (none that is zero), search, payment and owner filters, step pills with counts (the step's own `payment_pending` figure), the step as one compact menu over a slim bar, Next step, payment with Paid in full, columns, Excel or CSV; a deal opens the lead's panel on its Deal tab; Add a deal by hand or From a message (the lead form in its deal mode: the lead, then the server's own `/won`) |
+| Contacts | `/crm/contacts` (`?tab=companies|duplicates`), a contact `?contact=<id>` / a company `?company=<id>` in its panel on any page, `/crm/contacts/:id` | `guests*`, `corporate-accounts`, `custom-fields`: people with filters (company `co`, created dates on the venue's days, has email / phone, type, nationality, VIP, owner and the round 2 ones), saved views, bulk changes, Excel or CSV (`guests/export`); a contact (tabs Overview edited in place, Leads, Activity, Emails, Fields; tags in place; New lead over the contact `?create=lead&guest=`; merge a look-alike; delete); a company (Overview with the full admin's fields, the hotel-only rate fields for hotels; People, Leads, Fields); the organisation's custom fields on contacts and companies; duplicates and merge |
+| Tasks | `/crm/tasks` | `tasks*`: mine / everyone; type; All open (by day), Overdue, Today, Upcoming, Done (by the day done) on the venue's days, opening where the work is when no tab is named (`openingTab`); a task opens in its form; add (`?create=task`), edit (with the organisation's task custom fields), complete, reopen, delete |
+| AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`, `?part=`) | `chatbot-config/*` (with the model: `model`, `probe-model`; a model outside the plan is marked and cannot be picked), `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps`; long forms in parts (a left list on a wide screen, tabs on a phone) with one save bar |
+| Chat widget | `/crm/widget` (`?tab=look|behaviour|install`, `?part=`) | `widget-config*`: the look in six parts with the preview kept in view, behaviour in four, the embed code |
+| Insights | `/crm/insights` (`?tab=chat|pipeline|deals|reports`, `?days=7|30|90`, `?months=3|6|12`) | `chatbot/analytics` (with intent, weekday and length), `inquiries/*`, `pipelines`, `deals/analytics` (revenue and new deals by day, steps, payments, cycle time, stuck deals, best customers), `crm/reports/*` (funnel, forecast, lost reasons, sources, owners, companies; the tab only with the Analytics right) |
+| Settings | `/crm/settings` (`?tab=canned|pipelines|forms|fields|templates|account`, `?template=<id>|new`) | `chat-inbox-canned`, `pipelines`, `pipeline-stages`, `inquiry-lost-reasons*`, `lead-forms`, `custom-fields` (and `presets`, `apply-preset`), `email-templates*` (the editor: blocks or HTML, merge tags at the cursor, the server's preview; changes a manager's, `staff.can.manage_templates`); Team and Plan & products |
+| Integrations | `/crm/integrations` (`?tab=leads|email|ai|channels`) | `crm/intake-tokens`, `crm/mail-settings`, `crm/ai-usage`, `integrations/messenger*`: lead-intake tokens and the guide; the sender name and reply-to; AI usage against the allowance; Messenger pages (connect, check, reconnect, test, disconnect). Staff see Email only (`staff.can.manage_integrations`) |
 
-Left out on purpose (the full admin keeps them for a full customer): the AI model choice, chatbot fine-tuning
-(Training: no code reads the model it makes), the voice agent, AI capture of a member, a company or a contact
-(`crm-ai/capture-member`, `-corporate`, `-guest`), a contact's room reservations, `.xlsx` exports (CSV is offered),
-bulk tagging (no endpoint), the full admin's field-layout manager and custom-field presets, the Leads property filter
-and the hotel-only rate / room type / MICE fields (Deals still shows a room type or an event a lead has), the stage
-groups (they read hotel status names), Focus mode, the Planner's team buckets (`planner/*`; Leads has its own Team
-view), and an email-template editor (a CRM-only organisation is pointed to the full admin).
+Left out on purpose (round 5 re-checked each against the full admin): chatbot fine-tuning (Training: no code reads the
+model it makes), the voice agent (the widget's realtime session has no plan gate, allowance check or spend record yet —
+an owner's decision first), the staff AI copilot (`crm-ai/chat`, behind `feature:admin_ai`, which no CRM package has —
+a pricing decision), AI capture of a member, a company or a contact (`crm-ai/capture-member`, `-corporate`, `-guest`),
+a contact's room reservations, bulk tagging (no endpoint), the field-layout manager (the CRM reads only the list and deal
+columns, which it already switches; ordering exists in neither admin), the Leads property filter and the hotel-only
+rate / room type / MICE fields on leads (Deals still shows a room type or an event a lead has), the stage groups (they
+read hotel status names), Focus mode, the Planner's team buckets (`planner/*`; Leads has its own Team view), WhatsApp
+as an inbox channel (no webhook or sending path exists), and the full admin's reviews, brands editor and global search
+(product `admin`).
 
 ## New in HexaTech CRM (beyond the full admin)
 
@@ -121,6 +161,44 @@ view), and an email-template editor (a CRM-only organisation is pointed to the f
   phone; every page was checked at 1440, 390 and 360 px, Dark and Light.
 - **Decisions in pure functions with tests** (`*Logic.ts`, `listLogic.ts`, `board.ts`, `dealLogic.ts`, `taskLogic.ts`,
   `insightsMath.ts`), because the frontend tests render to a string.
+
+## Round 5: open, don't leave (2026-11-12)
+
+The owner: "improve design, layout, interactions, user journey … implement all features which we have in our main
+platform … minimize copy, more icons, nice flow, opening tabs, slides or popups … modern and effective".
+
+- **Records in panels.** A lead, a contact or a company opens over the page it was chosen on, from any list, the board,
+  Today, the inbox or Find (`?lead=`, `?contact=`, `?company=`, its tab `?rtab=`; rules `crm/lib/records.ts`, hook
+  `useRecords`, host `RecordHost`). Back closes it; `[` and `]` step through the list the page registered
+  (`useRecordList`). The panel and the record's own page draw one frame (`ui/RecordPanel`: header, actions, tabs).
+- **New, on every page.** The header's New menu and the key N open a lead, a deal, a task, a contact, a company or a
+  lead from a message in a panel over the page (`?create=lead|deal|capture|deal_capture|contact|company|task`, with
+  `&guest=<id>` for a contact's lead; `CreateHost`, `shell/QuickCreate`); what was made opens in its panel.
+- **Less copy, more icons.** A page's header is one row (its icon, the title, an (i) holding its sentence); a card's
+  description is an (i) (`hint` keeps a short fact); figures are compact (`StatTile`, none that is zero first); a
+  page's sections are one strip of icon tabs (`SectionNav`); icon-only actions are `IconButton` with a tooltip; long
+  set-up forms are parts with a left list or tabs (`settings/formKit.tsx`). Visible words per page roughly halved (the
+  tour's counts: Today 506 → 193, Deals 211 → 100, a lead 361 → 123, the widget's behaviour 688 → 45).
+- **Alerts on every page** (`crm/alerts`): a chat starting to wait or a new hot lead gives a toast with Open, "(n)"
+  before the tab's title and a dot on the favicon, and a desktop alert when switched on in the inbox's header. It reads
+  `chat-inbox/stats` (and `engagement/kpis`) every 15 s while the tab is visible; nothing on first load.
+- **Find** searches contacts, leads, companies and website chats.
+- **From the main platform** (see the areas above): the email-template editor, custom-field presets and the AI model
+  choice; the organisation's custom fields on contacts, companies and tasks; the full admin's contact filters and
+  company fields; Excel exports; the Engagement hub's priority and intents in the inbox and Visitors; Deals analytics;
+  the chat by intent, weekday and length; the sales reports; the team's activity; lead-intake tokens, the sender name
+  and reply-to, AI usage and Messenger on the new Integrations page.
+- **Shared with the full admin (changed for both):** the sales reports are one service (`Crm\SalesReports`; portable
+  SQL, `SUM(CASE …)` instead of `FILTER`; `reporting/company-ltv` answers a fixed set of fields, empty sums last); a
+  template's preview without a member renders with the member's tags empty (was a 404); a template sent from a lead or
+  a contact carries the venue's name and reply-to (`MailIdentityService`; before, the platform's noreply address); a
+  switch to a model outside the plan is refused (403 `model_not_allowed`; a model already saved stays savable);
+  `guests` filters on the venue's days, "has email / phone" ignore empty values, `guest_type` is a facet, the company
+  filter is portable; saving a contact or a company keeps the stored values of fields switched off
+  (`CustomFieldService::keepUnlisted()`); AccessMap `admin/integrations` became `admin/integrations/messenger`
+  (product `chat`, a manager's) — Messenger's routes were the only ones under it.
+- **Fixed along the way:** the leads CSV was always empty (it called the JSON list); "Not assigned" on the board and
+  the Team view sent an owner named `_nobody` (now `unassigned=1`).
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -208,6 +286,31 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
   `SendTemplateTest`). The CRM also refuses a template with member tags for a contact who is no member and names them.
 - **Leads without a value or AI score sort last** in either direction, on PostgreSQL and SQLite (`LeadsAndDealsTest`).
 
+Round 4 (2026-11-09; the owner, with a screenshot of the full admin's New task drawer: "improve design, logic and make
+it easier to use, more structurized well organized… grids types and tasks… an option to select from which organization
+we working and see data"; answered: one form for the CRM and the main app, and the brands inside the organisation):
+
+- **One task form, in four steps**, for HexaTech CRM (`crm/tasks/TaskForm.tsx`) and the full admin's drawer
+  (`components/TaskDrawer.tsx`), on one set of rules (`src/lib/taskForm.ts`, icons `src/lib/taskTypeIcons.ts`): What (the
+  type grid in four groups — get in touch, meet, close the sale, other —; the title the type suggests, with the lead's
+  name in the CRM; priority), When (quick days or the calendar, then a start time by part of the day or any other time,
+  then how long, then how often — each on once the one before is set), Who and the lead, Notes; a summary in the footer.
+  The CRM's times are the venue's clock, the full admin's the person's, as before (`TaskFormTest`-style render tests:
+  `crm/tasks/TaskForm.test.tsx`, `components/TaskDrawer.test.tsx`; the rules: `lib/taskForm.test.ts`).
+- **Priority, length and repeat are saved**: `tasks.priority`, `tasks.duration_minutes` (migration
+  `2026_11_09_140000`) and `recurring_rule` {freq}, accepted by `TaskController` (a repeat needs a day). The full
+  admin's drawer had sent all three inside `custom_data`, which keeps only an organisation's own custom fields
+  (`CustomFieldService::validate`), so none was ever stored, and "Repeat" was never built. **Completing a repeating task
+  adds the next one** on the venue's clock, one step on and ahead of now, once (`TaskController::nextOccurrence`,
+  `TaskPlanTest`). Task rows in both show the end time, high priority and the repeat.
+- **The full admin's drawer words exist in all five languages** (most had been English everywhere); the locale sweep
+  (`i18n/localeCompleteness.test.ts`) now checks `taskDrawer.*` and `tasks.types.*`.
+- **A brand switcher** in the CRM's header, where the organisation's name stood, shown with more than one brand: All
+  brands, or one. The bootstrap lists the brands a person may work in (`App\Services\Crm\CrmBrands`, mirroring
+  `BrandMiddleware`: a staff member assigned to brands sees only those and is not offered All brands) and the brand the
+  request was scoped to (`brand_id`); the choice is kept per device and sent as `brand_id` on every call; a choice that
+  is not the person's falls back to what the server allows (`BrandSwitchTest`, `crm/lib/brand.test.ts`).
+
 Round 3 (2026-11-08, the owner: "Do as you suggest"), each with a test:
 
 - **Bulk won closes each lead as `/won` does** (`InquiryController::closeAsWon`): the won stage, "Confirmed", the
@@ -243,6 +346,11 @@ Still open:
 
 ## Known limits
 
+- Round 5: alerts pause while the tab is hidden (they catch up when it is shown again); the hot-lead figure counts
+  every visitor marked as a lead. `deals/analytics` still counts UTC days, and its cycle time is PostgreSQL SQL.
+  Changing the sender name or reply-to is an owner's (the full admin's `SettingRegistry::ownerOnly`). The full
+  admin's own API tokens still carry every ability (`*`); Messenger's `list-pages` hands page tokens to the browser
+  (the full admin's design). A company has no page of its own (its panel only).
 - After a widget key rotation the website's own snippet must be replaced (that is the point). Landing pages on our
   domain read the key per request (browsers may hold a page for `landing.cache_ttl`); every chat request looks the key
   up in the database and is refused at once.
@@ -250,5 +358,187 @@ Still open:
   widget's is; the SQLite test stands in for it, `scripts/test-pg.sh` runs the real one.
 - Chatbot analytics (`ChatbotAnalyticsController`) is PostgreSQL SQL too (production's database); its test
   (`ChatbotAnalyticsTest`) runs under `scripts/test-pg.sh` only.
-- Multi-brand organisations: the CRM works on all brands at once (`brand_id=all`); the chatbot's behaviour and the
-  widget's look are the default brand's, as in the full admin without a brand chosen.
+- Multi-brand organisations: in "All brands" the chatbot's behaviour and the widget's look are the default brand's, as
+  in the full admin without a brand chosen; choose the brand in the switcher to set up another brand's assistant and
+  widget. A record added while one brand is chosen is that brand's (the models' `BelongsToBrand`).
+
+## Lead-form automatic replies (16 November 2026)
+
+Optional, off by default and enabled per form through the manager-only full-admin API. See
+[lead-form automatic replies](lead-form-auto-replies.md) for configuration, expiry, explicit catch-up and delivery
+states. The CRM workspace and full-admin form editor keep their existing UI. Consent, tenant/brand-owned templates,
+durable deduplication, shared hourly budgets and permanent marketing opt-out are enforced by the server.
+
+## WhatsApp history and AI Discovery
+
+**Lead reply badges.** FDS Cards lead email is captured from the connected Zoho mailbox in the background.
+WhatsApp receives messages through the connected business number. The lead list, pipeline and record show
+**Needs reply** when the latest message in a matched conversation came from the customer. **Awaiting customer**
+means the team's message is the latest in every matched thread for that channel. Select a badge in the lead header
+to open the channel. Email history marks the latest message of each thread. Opening a draft leaves the badge in place.
+
+The scheduler runs `crm:sync-lead-correspondence` every minute and checks up to 12 due contacts per run. A full pass
+depends on the number of contacts and provider availability. Each contact's Zoho cursor resumes older pages in the
+background. The CRM keeps reply metadata and hashed contact identifiers. Message content stays in the existing channel
+history. Zoho's Sent folder or a successful delivery recorded by Zoho confirms outgoing email, including a reply moved to a project folder. A shared contact
+needs an exclusive, logged project subject to put an email badge on an opportunity. WhatsApp matching uses the reviewed
+contact and business number. Staff can review uncertain matches in Contacts DB.
+
+**FDS Cards WhatsApp.** In **Integrations → Channels**, the WhatsApp card reads the Contacts DB connection and reports
+the captured message count and most recent event. Open **Contacts DB → Integrations** to complete Meta Embedded Signup
+for the business number. The lead and contact **WhatsApp** tabs read incoming messages, business-app echoes and imported
+history from Contacts DB. Open original media in WhatsApp. The CRM uses the existing FDS Cards server bridge, and
+Contacts DB requires an active linked contact and the same international number in both systems. Captured history
+becomes visible as soon as the saved number identifies one contact and the CRM feed has the updated record.
+If the WhatsApp tab shows **Link this CRM contact** or **Sync the WhatsApp number**, open Contacts DB, use
+**Fetch contacts** on the FDS Cards CRM card and review the relevant change. Existing verified links and explicit
+exclusions take precedence. Conversations with a shared or reassigned number stay available for review.
+
+Use **Review matches** in **Integrations → Channels** to open the Contacts DB queue directly. Search by the full
+number or its last four digits. Only conversations containing captured messages count toward the review total.
+
+**AI Discovery.** Open a lead or contact and select **AI Discovery**. Enter the company or its official website and press
+**Research with AI**. Discovery queues a public-company search, then returns field-level sources, possible follow-up
+services and questions to confirm. Staff choose which suggestions to use and save their edits to the shared contact
+profile. **Proposal** reads the saved business profile together with the lead request. **Export profile** downloads
+`customer_business_profile.v1` JSON for the customer portal handoff. The export contains saved business facts and
+their sources. Proposal planning notes stay in the CRM.
+
+The matching lead and contact routes share `BusinessProfile` and `guest_business_profiles`. Profile versions protect
+concurrent edits. CRM discovery uses the `ai` worker queue and records its searches and model usage under `crm_discovery`.
+Only the public company name, website and CRM language are sent for discovery.
+
+## Lead AI assistant and our business
+
+Open a lead's **AI tools → AI assistant**. It offers an AI brief, a sales strategy, a marketing strategy, a proposal email
+a response email and a follow-up. The lead's **AI brief** and **Proposal** buttons open the corresponding tools.
+Add a focus before generating when a particular question or scope matters.
+The brief also refreshes the lead's intent, win estimate, going-cold risk and suggested next action.
+
+Save a reviewed sales or marketing strategy with **Save strategy for drafts**. Both saved plans can inform later
+proposal and response drafts. A new AI strategy leaves the reviewed plan in place until staff edit and save it.
+Review the subject, message and verification notes before using an email draft. **Open in Activity** fills the
+lead's activity form, and **Open in email** starts a compose window in the user's email client. Open the original
+email from **Emails** to reply in its thread.
+
+In **Settings → Our business**, managers can add the brand's offers, unique selling proposition, audiences, markets,
+proof, terms, voice and guidance. A brand with Content Planner uses its existing profile, active audience and
+voice information, and saved text snippets. The CRM values take precedence field by field. Clear a CRM value to
+use the Planner's value again. The brand record supplies its name, website and description where both profiles have a blank.
+The brand picker in setup opens each available brand separately. From **All brands**,
+setup opens the default available brand or the brand of the lead that linked to it. A lead always uses its own brand.
+
+The assistant takes recent lead activities, linked chat, the reviewed customer profile, and the current business
+profile. FDS leads also use matched email and WhatsApp history when available. The result shows its coverage.
+Generation sends a bounded context to OpenAI Responses, with storage disabled and without web tools. Jobs run
+on the `ai` queue, using the organisation's AI allowance under `crm_sales_assistant`. The assistant stores the
+latest generated result for each mode and the staff-reviewed strategies on the lead. It drafts emails for staff
+review.
+
+### Customer email drafts
+
+Response email opens first in AI tools. A new draft uses the latest matched correspondence, current company knowledge and any saved strategy. A strategy is optional. The email appears above up to three actionable AI recommendations. Expand Sources used for the titles of active knowledge answers, builder entries and document passages supplied to the writer. Reviewed customer profile fields count saved Discovery fields. The ordinary contact details and the customer's messages also reach the writer. Chatbot conversation text supplies history only. A manager's saved knowledge answer or indexed company document can supply policy.
+
+The assistant warns when newer matched correspondence has arrived since an email draft. The warning also covers earlier saved drafts from before per-channel timestamps were recorded. Checking for changes reads local correspondence metadata and never generates another email. Open the synced email link in Activity to read the originals. Logged activities keep their own timeline rows.
+
+When a customer mentions supplied artwork, a missing file in CRM calls for checking the original mailbox. The writer resolves contradictions between its own recommendations and the email before returning it. On a complex enquiry the existing reviewer sees those recommendations. An open operational detail can stay in the staff notes. A substantive unsupported promise or price still needs correction or a hold. Optional suggestions alone use no rewrite. Generating a fresh email with unsaved edits asks whether to replace them.
+
+Verified inbound email with explicit field labels can fill blank Product, Quantity, Deadline and Type of enquiry fields. The first three need an active matching field definition. Product choices must match configured options, quantities must be whole numbers and dates must be unambiguous ISO calendar dates. Conflicting entries stay blank. This happens on matched background email capture or when staff log an incoming email. Draft generation only reads the lead.
+
+Under **AI assistant**, choose **Response email** to answer the buyer, **Proposal email** to make an offer or **Follow-up** to check whether to contact them again. The full admin’s **Draft proposal** uses the same writer. Emails use GPT-6.2 Sol with high reasoning at priority service. Sales and marketing strategies use GPT-6.2 Astra. Staff can draft an email immediately from the lead.
+
+The writer reads the current customer message, relevant email and WhatsApp history, reviewed account facts and active brand knowledge. The CRM removes duplicate email copies and separates quoted earlier correspondence from the current message. An earlier team answer quoted back by the customer can establish what was discussed. Labelled credentials and token-bearing links are masked before the provider request.
+
+For ordinary enquiries, retrieval ranks exact model references and searches active brand answers and indexed documents. For multi-part enquiries it searches individual topics locally, in one pass over the selected brand’s library to count term frequencies and a second to rank passages. Reseller searches can include public prices when the buyer explicitly asks about retail pricing. Retrieved source titles remain available under **Sources used**. The database retains matching identifiers and search scores for diagnosis.
+
+**Focus** and **Comment for AI** accept opportunity-specific guidance. An authorised sales manager can supply prices, materials, facilities, production dates or delivery estimates. The writer can use those facts immediately. A binding agreement or policy takes precedence over a conflicting instruction. Guidance stays with the relevant draft and its revisions. Changing global company policy is a separate edit in **Settings → Our business**.
+
+A normal reply or proposal takes one model request. The writer answers confirmed points, offers relevant alternatives for the buyer to approve and keeps outstanding checks in up to three optional staff notes. An urgent reply leads with deadline feasibility and groups the practical options and next decision. Typical lengths are 35–90 words for replies, about 100–150 for multi-part replies, 70–150 for proposals and 40–100 for follow-ups. The customer’s language and style guide the default. The email ends before the signature.
+
+The server checks explicit prices, commercial percentages and current quote terms. A concrete problem can receive one targeted correction. If that correction fails, the server removes the affected wording and returns the safe remainder. If it has no useful text left, it returns a short confirmation that the seller will check the details. Initial provider failures appear as technical errors and leave a previous draft available. Application logs record the failed stage, category and HTTP status without correspondence or provider response bodies.
+
+Staff can edit the subject and body or enter a comment and choose **Revise this draft**. **Generate a fresh draft** starts again with the current lead and comment. Both actions reread current project data and brand knowledge. Only the customer-facing subject and body move into the composer. Sending remains a separate staff action.
+For a response, the latest matched incoming email normally supplies the subject and request. Later corrections
+in WhatsApp or chat can change the answer. Without a matched incoming email, the writer uses the newest incoming
+WhatsApp text, visitor chat or recorded inbound activity, then the lead request. The writer looks for the customer's
+greeting, vocabulary and level of detail in their own messages. With little evidence, it uses a neutral business tone.
+
+**Sources used** shows the material available to that draft and flags limited or unavailable history. The FDS
+integration checks up to 100 captured email headers and selects up to 12 bodies, prioritising the incoming message,
+its thread and earlier customer wording. WhatsApp supplies up to 75 recent matched messages. Removed messages and
+media without text or a caption are skipped. Other brands can use their own logged emails and linked chat.
+Earlier logged email is restricted to the same contact and brand. When a contact has several opportunities, a unique
+subject logged on this opportunity can link a captured email thread. Contact-only WhatsApp and unassigned visitor
+chats are excluded from the current request. The lead’s own activities and linked conversations remain available.
+
+**Follow-up** considers the customer's decision date, who owes the next action, previous outreach and task outcomes.
+The result can recommend waiting, completing an internal action or stopping contact. A held result has no email body.
+A lost opportunity or a recorded marketing refusal stops a sales follow-up. An address on the applicable suppression
+list stops all three email modes. Staff can review the intent, open questions and next step alongside a draft.
+
+A manager can open **Approved quote for this opportunity** and record a reference, scope, quantity, unit price,
+fixed charges, currency, tax treatment and validity date. The server computes the subtotal and total using decimal
+arithmetic. The validity date is inclusive in the organisation's time zone. Changing the quote or reaching its expiry
+holds an existing draft for regeneration. An expired quote supplies its reference and scope for review.
+The lead's recorded commercial fields, intake reference, custom fields, task outcomes, file metadata and linked reservations in workspaces with booking access can also inform
+a reply. This workflow reads existing CRM records. A file listing identifies received materials. Its contents and any
+live amounts in an external invoicing or order system require separate verification.
+
+After editing an email, a manager can select **Save reviewed wording**. The CRM keeps the original and reviewed text
+for the most recently reviewed email of each type on this lead and uses it as a writing example in future drafts
+for the same contact and opportunity. Update approved terms in the quote or **Settings → Our business** when a
+correction changes a fact. Copying, opening an email or composing an activity leaves delivery with the staff member.
+
+### Lead navigation and FDS Cards pricing
+
+**Open value** on Leads, Today and Insights shows one total. FDS Cards and its organisation's all-brand view report in euros. Other brands use the venue
+currency. Expand **Currency breakdown** to see the original amounts and the European Central Bank reference date.
+The approximation sign marks a converted total. A missing rate excludes only the affected amounts. A recent cached
+rate can be used for up to seven days after publication.
+
+**Missing currency** opens the affected open leads for the selected brand. Open a lead, choose **Set currency**, select the
+currency recorded in its quote and save. The dashboard then includes the amount when a rate is available. Older FDS
+leads with an amount and no currency stay out of the estimate until their currency is confirmed.
+
+Both the lead panel and full page have five sections. **Overview** includes activity and the deal once won. **Messages**
+opens email history and offers WhatsApp or website chat when available. **Tasks** and **Files** open directly.
+**AI tools** includes the assistant and customer research. The arrow beside **Send email** lists the contact's available
+channels. **Stage** includes moving the lead and marking it won or lost. The **…** menu includes editing, adding a
+task and drafting a proposal. Links to individual views continue to open the corresponding section.
+
+In the FDS Cards brand, open **AI assistant → Knowledge** and search for **FDS builder prices**. The same answers
+supply visitor chat, CRM replies and proposals. Hourly at minute 17, `crm:sync-fds-builder-prices` reads the public
+metal and digital builder, the plastic card builder, school lunch cards and engraved pens. Only the configured FDS
+organization and brand receive these rows. A complete refresh updates existing source entries, preserves staff
+deactivations and removes withdrawn offers. Prices older than 48 hours drop out of AI retrieval until the next
+successful refresh. The business setup wizard leaves these changing prices in the live knowledge library.
+
+Business card tables give the net total for a listed quantity, service and currency. Packaging is separate and
+digital plans are recurring per profile. Use the product builder for an unlisted quantity or an approved quote for
+bespoke specifications. Each answer links to its own builder.
+
+### Business profile setup
+
+**Settings → Our business** guides a manager through **Sources**, **Company**, **Market**, **Sales**, and **Review**.
+Use **Enter manually** or select sources for **Capture with AI**. Existing active chatbot answers and indexed documents
+can supply suggestions on their own or alongside a website, public search or uploaded PDF, Word, Excel, PowerPoint,
+CSV, Markdown and text files. Website capture follows the site's sitemap and links on successive pages. It reads up
+to 24 public pages, respects robots rules and lists the pages it read. An unreadable or very thin site can use indexed
+results from its own domain. GPT-6.2 Astra runs with high reasoning for both extraction and research.
+
+The review shows the proposed value and the page or file it came from. **Fill empty fields** respects existing CRM and
+Content Planner values. Use individual suggestions or edit any field before **Save profile**. Staff can read the
+saved profile. The assistant uses the current reviewed profile for strategies and email drafts. Captured fields are
+reviewed snapshots and keep their references until edited. Active chatbot answers and relevant document passages are
+retrieved afresh for each draft, including when the business profile is empty.
+
+**Sales → Shared conversation goal** writes the same goal used in **AI assistant → Behaviour**. **Email writing
+instructions** guide proposals and email responses. Under **Review → Company facts for the public chatbot**, select
+individual fields that visitors may receive. Selected facts follow the current profile and Content Planner values.
+Internal style instructions stay in the CRM. **AI assistant → Knowledge** links to the same wizard and offers a
+brand picker. A new draft's **Sources used** lists the number of answers and documents supplied.
+
+The manager-only `sales-profile/capture` endpoint starts work on the `ai` queue for the selected brand. Public research
+receives only the public business identity. Document extraction uses a tool-free request. Uploaded input is encrypted
+until claimed and is cleared on claim, failure, or expiry. The app keeps the findings and their references. Metered use
+appears under `crm_sales_capture`. Reported update conflicts retain the existing profile until the manager reloads it.

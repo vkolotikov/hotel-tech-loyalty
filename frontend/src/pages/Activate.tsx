@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { Lock, Eye, EyeOff, Check, AlertCircle, ArrowRight } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
+import { landingPath } from '../workspace/lib/landing'
 
 const BRAND_LOGO_URL =
   (import.meta.env.VITE_BRAND_LOGO_URL as string | undefined) ||
@@ -10,7 +11,6 @@ const BRAND_LOGO_URL =
 
 export function Activate() {
   const [params] = useSearchParams()
-  const navigate = useNavigate()
   const { setAuth } = useAuthStore()
 
   // Invite emails carry both `email` and `code` (the 6-digit
@@ -63,7 +63,8 @@ export function Activate() {
       // will load /v1/auth/me on first navigation and surface the staff
       // info from there.
       setAuth(data.token, data.user)
-      setTimeout(() => navigate('/', { replace: true }), 800)
+      // Binding a new identity remounts App/BrowserRouter at AuthSessionBoundary. Do not retain its old navigate closure.
+      setTimeout(() => window.location.replace(landingPath(data.user, '/')), 800)
     } catch (err: any) {
       const msg = err?.response?.data?.error
         || err?.response?.data?.message

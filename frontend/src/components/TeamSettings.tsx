@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useDataInk } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
@@ -36,6 +38,7 @@ interface StaffRow {
   phone: string | null
   avatar_url: string | null
   role: Role
+  loyalty_scan_only?: boolean
   department: string | null
   is_active: boolean
   last_login_at: string | null
@@ -225,6 +228,7 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
   resendPending?: boolean
 }) {
   const ink = useDataInk()
+  const { t } = useTranslation()
   const meta = ROLE_META[staff.role] ?? ROLE_META.staff
   const Icon = meta.icon
   const isPending = !staff.last_login_at
@@ -261,6 +265,7 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
           {inviteExpiry === 'expired' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm bg-red-500/15 text-red-400 uppercase tracking-wide">Code expired</span>}
         </div>
         <div className="text-[11px] text-gray-500 mt-0.5 truncate">{staff.email}</div>
+        {staff.loyalty_scan_only && <span className="text-xs text-blue-300">{t('account.team.partner', 'Scan-only partner')}</span>}
       </div>
       <div className="flex flex-col items-end gap-0.5 text-right">
         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: ink(meta.color) }}>{meta.label}</span>
@@ -278,10 +283,10 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
             <span className="hidden sm:inline">{resendPending ? 'Sending…' : 'Resend'}</span>
           </button>
         )}
-        <button onClick={onEdit} title="Edit"
+        {staff.loyalty_scan_only ? <Link to="/loyalty/partners" className="p-1.5 text-blue-300" title={t('account.team.manage_partner', 'Manage partner access')} aria-label={t('account.team.manage_partner', 'Manage partner access')}><Shield size={16} /></Link> : <button onClick={onEdit} title="Edit"
           className="p-1.5 rounded-sm text-gray-500 hover:bg-dark-surface2 hover:text-white">
           <Edit2 size={13} />
-        </button>
+        </button>}
         {!staff.is_me && (staff.is_active ? (
           <button onClick={onDeactivate} title="Deactivate"
             className="p-1.5 rounded-sm text-gray-500 hover:bg-red-500/15 hover:text-red-400">

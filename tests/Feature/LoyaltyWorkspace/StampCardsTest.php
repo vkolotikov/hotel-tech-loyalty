@@ -160,9 +160,11 @@ class StampCardsTest extends TestCase
 
     public function test_a_reward_that_is_gone_gives_the_points_instead_and_is_audited(): void
     {
-        $coffee = Reward::create(['name' => 'Coffee', 'points_cost' => 300, 'stock' => 0, 'is_active' => true]);
+        $coffee = Reward::create(['name' => 'Coffee', 'points_cost' => 300, 'stock' => 1, 'is_active' => true]);
         $this->setOptions(['stamps_enabled' => true, 'stamps_per_card' => 2, 'stamp_reward_kind' => 'reward', 'stamp_reward_id' => $coffee->id, 'stamp_reward_points' => 75]);
         $this->stamps->stamp($this->grace, $this->visit('2026-10-04', 1));
+        // The reward was obtainable when chosen, then ran out while this card was in progress.
+        $coffee->update(['stock' => 0]);
 
         $full = $this->stamps->stamp($this->grace, $this->visit('2026-10-05', 2));
 

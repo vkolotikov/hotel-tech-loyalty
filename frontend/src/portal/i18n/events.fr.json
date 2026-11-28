@@ -21,6 +21,7 @@
   "when": "{{day}} · {{time}}",
   "from_to": "Du {{from}} au {{to}}",
   "why": {
+    "membership_not_started": "Votre adhésion commence après cet événement",
     "event_full": "Complet",
     "tier_not_allowed": "Pour d’autres niveaux d’adhésion",
     "membership_expired": "Votre adhésion se termine avant cet événement",
@@ -31,6 +32,7 @@
     "closed": "Inscriptions closes"
   },
   "error": {
+    "membership_not_started": "Votre adhésion commence après cet événement. Veuillez contacter l’équipe.",
     "event_full": "Désolé, la dernière place vient d’être prise.",
     "tier_not_allowed": "Cet événement est réservé à d’autres niveaux d’adhésion.",
     "membership_expired": "Votre adhésion se termine avant cet événement. Demandez à l’équipe de la renouveler.",

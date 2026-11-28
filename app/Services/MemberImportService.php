@@ -74,6 +74,7 @@ class MemberImportService
         // HexaTech Loyalty release 8: the membership's end date, YYYY-MM-DD (MembershipValidity writes it). Only names
         // that say "membership" or "valid": a bare "expiry" could be a points column.
         'valid_until'       => ['validuntil', 'validto', 'membershipvaliduntil', 'membershipend', 'membershipenddate', 'membershipexpiry', 'membershipexpires', 'membershipexpirydate'],
+        'valid_from'        => ['validfrom', 'membershipvalidfrom', 'membershipstart', 'membershipstartdate'],
     ];
 
     /** Delimiters we sniff for, in preference order. */
@@ -371,6 +372,17 @@ class MemberImportService
                 continue;
             }
 
+            if ($parsed['valid_from'] !== null && !\App\Services\Loyalty\Members\MembershipValidity::isDay($parsed['valid_from'])) {
+                $results[] = $this->row($line, $parsed['email'], 'error', 'The membership start date is not a day written YYYY-MM-DD');
+                $errCount++;
+                continue;
+            }
+            if ($parsed['valid_from'] !== null && $parsed['valid_until'] !== null && $parsed['valid_from'] > $parsed['valid_until']) {
+                $results[] = $this->row($line, $parsed['email'], 'error', 'The membership start date is after its end date');
+                $errCount++;
+                continue;
+            }
+
             if ($okCount >= $capRemaining) {
                 $results[] = $this->row($line, $parsed['email'], 'skip',
                     'Over your plan member limit' . ($planLimit ? " ({$planLimit})" : ''));
@@ -527,7 +539,7 @@ class MemberImportService
                         'joined_at'         => $p['joined_at'] ?? now(),
                     ]);
                     // HexaTech Loyalty release 8: the membership's end date, through its one writer.
-                    \App\Services\Loyalty\Members\MembershipValidity::onCreate($member, $p['valid_until'] ?? null);
+                    \App\Services\Loyalty\Members\MembershipValidity::onCreate($member, $p['valid_until'] ?? null, $p['valid_from'] ?? null);
 
                     return $member;
                 });
@@ -705,6 +717,7 @@ class MemberImportService
             'marketing_consent' => $this->toBool($row['marketing_consent'] ?? null),
             'external_id'       => trim((string) ($row['external_id'] ?? '')) ?: null,
             'valid_until'       => trim((string) ($row['valid_until'] ?? '')) ?: null,
+            'valid_from'        => trim((string) ($row['valid_from'] ?? '')) ?: null,
         ];
     }
 

@@ -36,6 +36,9 @@ export interface CatalogueReward {
   id: number
   name: string
   points_cost: number
+  is_redeemable?: boolean
+  /** Wizard-only reference to a trusted suggestion; never sent as a catalogue id. */
+  template_index?: number
 }
 
 /** The other parts of the programme, as their own pages count them. */
@@ -57,6 +60,7 @@ export interface Preset {
   tier_names: string[]
   reward_count: number
   sample_rewards: string[]
+  stamp_rewards?: { index: number; name: string; points_cost: number }[]
   welcome_bonus: number
   /** The venue's industry's own preset. */
   recommended: boolean
@@ -103,6 +107,8 @@ export interface SetupOutcome {
   completed_at: string
   /** A retry with the same key: the first apply's outcome, nothing written. */
   replayed: boolean
+  stamp_reward_id?: number
+  stamp_reward_created?: boolean
 }
 
 export interface SetupAnswer extends OptionsAnswer {
@@ -111,6 +117,7 @@ export interface SetupAnswer extends OptionsAnswer {
 
 export interface SetupBody {
   preset?: string
+  stamp_reward_template_index?: number
   options: Options
   idempotency_key: string
 }

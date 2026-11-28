@@ -1,0 +1,99 @@
+[data-crm] .crm-day { display: grid; gap: clamp(14px,1.5vw,26px); container-type: inline-size; }
+[data-crm] .crm-day-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--team-rule); border-radius: 14px; background: rgb(var(--a-surface)); overflow: hidden; }
+[data-crm] .crm-day-metric { display: grid; align-content: start; gap: 5px; padding: clamp(12px,1.35vw,25px); }
+[data-crm] .crm-day-metric + div { border-inline-start: 1px solid var(--team-rule); }
+[data-crm] .crm-day-metric > span, [data-crm] .crm-day-metric small, [data-crm] .crm-day-metric b { display: flex; align-items: center; gap: 6px; }
+[data-crm] .crm-day-metric > span { font-weight: 600; color: var(--team-muted); font-size: .88rem; }
+[data-crm] .crm-day-metric svg { flex: none; }
+[data-crm] .crm-day-metric strong { font: 400 clamp(2rem,3.2vw,3.7rem)/1.05 'A Display',Georgia,serif; font-variant-numeric: tabular-nums; }
+[data-crm] .crm-day-metric small { flex-wrap: wrap; gap: 2px 5px; color: var(--team-muted); font-size: .8rem; }
+[data-crm] .crm-day-metric b { gap: 1px; color: rgb(var(--a-text)); }
+[data-crm] .crm-day-metric [data-change="1"] { color: rgb(var(--a-st-confirmed)); }
+[data-crm] .crm-day-metric [data-change="-1"] { color: rgb(var(--a-st-pending)); }
+[data-crm] .crm-day-columns { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); align-items: start; gap: clamp(12px,1.5vw,24px); }
+[data-crm] .crm-day-roster, [data-crm] .crm-day-priorities > section { min-width: 0; border: 1px solid var(--team-rule); background: rgb(var(--a-surface)); border-radius: 14px; }
+[data-crm] .crm-day-roster > header, [data-crm] .crm-day-roster-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 14px clamp(14px,1.35vw,22px); }
+[data-crm] .crm-day-sectionname { display: flex; gap: 8px; align-items: center; }
+[data-crm] .crm-day-sectionname > svg { color: rgb(var(--a-accent-text)); flex: none; }
+[data-crm] .crm-day-date, [data-crm] .crm-day-datebar { color: var(--team-muted); font-size: .86rem; }
+[data-crm] .crm-day-datebar, [data-crm] .crm-day-pager { display: flex; align-items: center; gap: 3px; }
+[data-crm] .crm-day-datebar button, [data-crm] .crm-day-pager button { display: inline-grid; place-items: center; min-width: 30px; min-height: 30px; border-radius: 6px; }
+[data-crm] .crm-day-datebar input, [data-crm] .crm-day-assignments select, [data-crm] .crm-day-form :is(input,select) { min-width: 0; padding: 6px 8px; border: 1px solid var(--team-rule); border-radius: 7px; color: rgb(var(--a-text)); background: rgb(var(--a-canvas)); }
+[data-crm] .crm-day-progress { background: rgb(var(--a-accent) / .06); padding: 11px clamp(14px,1.35vw,22px); border-block: 1px solid var(--team-rule); }
+[data-crm] .crm-day-progress > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 7px; font-size: .82rem; color: var(--team-muted); }
+[data-crm] .crm-day-progress strong { color: rgb(var(--a-text)); }
+[data-crm] .crm-day progress { display: block; appearance: none; width: 100%; height: 5px; border: 0; background: rgb(var(--a-border)); border-radius: 3px; overflow: hidden; accent-color: rgb(var(--a-st-confirmed)); }
+[data-crm] .crm-day progress::-webkit-progress-bar { background: rgb(var(--a-border)); }
+[data-crm] .crm-day progress::-webkit-progress-value { background: rgb(var(--a-st-confirmed)); border-radius: 3px; transition: width .4s; }
+[data-crm] .crm-day progress::-moz-progress-bar { background: rgb(var(--a-st-confirmed)); }
+[data-crm] .crm-day ul { list-style: none; padding: 0; margin: 0; }
+[data-crm] .crm-day-people > li + li, [data-crm] .crm-day-assignments li, [data-crm] .crm-day-priorities li + li { border-top: 1px solid var(--team-rule); }
+[data-crm] .crm-day-person { display: flex; align-items: center; gap: clamp(8px,1.1vw,17px); padding: 14px clamp(14px,1.35vw,22px); }
+[data-crm] .crm-day-avatar { display: grid; place-items: center; flex: none; width: 38px; aspect-ratio: 1; border-radius: 50%; background: rgb(var(--a-surface-2)); color: var(--team-muted); font-weight: 700; font-size: .86rem; }
+[data-crm] [data-status=in_progress] .crm-day-avatar, [data-crm] [data-status=done] .crm-day-avatar { background: rgb(var(--a-st-confirmed) / .12); color: rgb(var(--a-st-confirmed)); }
+[data-crm] .crm-day-person-content { flex: 1; min-width: 0; }
+[data-crm] .crm-day-nameline, [data-crm] .crm-day-focus, [data-crm] .crm-day-state { display: flex; align-items: center; gap: 7px; }
+[data-crm] .crm-day-nameline { flex-wrap: wrap; gap: 2px 10px; }
+[data-crm] .crm-day-nameline strong, [data-crm] .crm-day-focus span, [data-crm] .crm-day-priorities li strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-crm] .crm-day-state { gap: 4px; font-size: .73rem; font-weight: 600; color: var(--team-muted); }
+[data-crm] [data-status=in_progress] .crm-day-state, [data-crm] .crm-day-rank-icon[data-status=in_progress] { color: rgb(var(--a-st-confirmed)); }
+[data-crm] [data-status=blocked] .crm-day-state, [data-crm] .crm-day-rank-icon[data-status=blocked] { color: rgb(var(--a-st-pending)); }
+[data-crm] .crm-day-focus { margin-top: 4px; font-size: .9rem; color: var(--team-muted); }
+[data-crm] .crm-day-focus time { flex: none; font-variant-numeric: tabular-nums; font-size: .85em; }
+[data-crm] .crm-day-person-count { flex: none; width: 40px; text-align: end; font-size: .78rem; color: var(--team-muted); font-variant-numeric: tabular-nums; }
+[data-crm] .crm-day-person-count progress { height: 3px; margin-top: 4px; }
+[data-crm] .crm-day-people summary { list-style: none; cursor: pointer; }
+[data-crm] .crm-day-people summary::-webkit-details-marker { display: none; }
+[data-crm] .crm-day-people summary:hover, [data-crm] .crm-day-priorities li a:hover { background: rgb(var(--a-surface-2)); }
+[data-crm] .crm-day-people details[open] .crm-day-disclose { transform: rotate(180deg); }
+[data-crm] .crm-day-assignments li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px; background: rgb(var(--a-canvas)); padding: 9px clamp(14px,1.35vw,22px); }
+[data-crm] .crm-day-assignments li > div:first-child { min-width: 9rem; flex: 1; overflow-wrap: anywhere; }
+[data-crm] .crm-day-assignments strong, [data-crm] .crm-day-assignments small, [data-crm] .crm-day-priorities li strong, [data-crm] .crm-day-priorities li small { display: block; }
+[data-crm] .crm-day-pager { justify-content: end; padding: 4px 12px; font-variant-numeric: tabular-nums; color: var(--team-muted); border-top: 1px solid var(--team-rule); }
+[data-crm] .crm-day-roster-tools { border-top: 1px solid var(--team-rule); }
+[data-crm] .crm-day-add, [data-crm] .crm-day-roster-tools a, [data-crm] .crm-day-form footer > span { display: inline-flex; align-items: center; gap: 6px; font-size: .87rem; font-weight: 600; }
+[data-crm] .crm-day-add { background: rgb(var(--a-accent-text)); color: rgb(var(--a-canvas)); padding: 9px 14px; border-radius: 8px; }
+[data-crm] .crm-team .crm-day-add:enabled:hover { background: rgb(var(--a-accent-text)); filter: brightness(.9); }
+[data-crm] .crm-day-roster-tools a { color: rgb(var(--a-accent-text)); }
+[data-crm] .crm-day-priorities { display: grid; gap: clamp(10px,1.1vw,16px); }
+[data-crm] .crm-day-priorities header { padding: 12px clamp(12px,1.25vw,21px); border-bottom: 1px solid var(--team-rule); }
+[data-crm] .crm-day-priorities li, [data-crm] .crm-day-priorities li a { display: flex; align-items: center; gap: 10px; }
+[data-crm] .crm-day-priorities li { margin: 0 clamp(12px,1.25vw,21px); padding: 7px 0; }
+[data-crm] .crm-day-priorities li a { width: 100%; color: inherit; border-radius: 5px; }
+[data-crm] .crm-day-priorities li div { flex: 1; min-width: 0; }
+[data-crm] .crm-day-priorities small, [data-crm] .crm-day-assignments small { color: var(--team-muted); font-size: .78rem; }
+[data-crm] .crm-day-rank-icon, [data-crm] .crm-day-priorities li a > svg { flex: none; color: var(--team-muted); }
+[data-crm] .crm-day-lead-dot { flex: none; width: 8px; height: 8px; margin-inline: 4px; border-radius: 50%; background: rgb(var(--a-accent-text)); }
+[data-crm] .crm-day-lead-dot[data-level=urgent] { background: rgb(var(--a-st-pending)); }
+[data-crm] .crm-day-empty { padding: 15px; color: var(--team-muted); display: flex; align-items: center; gap: 6px; }
+[data-crm] .crm-day-form { display: grid; gap: 14px; }
+[data-crm] .crm-day-form label { display: grid; flex: 1; min-width: 0; gap: 4px; font-size: .88rem; color: var(--team-muted); }
+[data-crm] .crm-day-form > div, [data-crm] .crm-day-form footer { display: flex; align-items: center; gap: 12px; }
+[data-crm] .crm-day-form footer { justify-content: space-between; border-top: 1px solid var(--team-rule); padding-top: 14px; }
+[data-crm] .crm-day-form [role=alert], [data-crm] .crm-day-assignments [role=alert] { color: rgb(var(--a-st-pending)); }
+@media (min-width: 1000px) {
+  [data-crm] .crm-team-tv .crm-day strong:not(.crm-day-metric strong), [data-crm] .crm-team-tv .crm-day-focus { font-size: clamp(1rem,1.13vw,1.6rem); }
+  [data-crm] .crm-team-tv .crm-day-person { min-height: clamp(57px,8vh,105px); }
+  [data-crm] .crm-team-tv .crm-day-metric > span, [data-crm] .crm-team-tv .crm-day small, [data-crm] .crm-team-tv .crm-day-state, [data-crm] .crm-team-tv .crm-day-person-count { font-size: clamp(.84rem,.96vw,1.25rem); }
+}
+@media (min-width: 900px) and (max-height: 800px) {
+  [data-crm] .crm-team-tv .crm-team[data-view=plan] { padding-block: 10px; }
+  [data-crm] .crm-team-tv .crm-day { gap: 10px; }
+  [data-crm] .crm-team-tv .crm-day-metric, [data-crm] .crm-team-tv .crm-day-roster > header, [data-crm] .crm-team-tv .crm-day-priorities header { padding-block: 8px; }
+  [data-crm] .crm-team-tv .crm-day-priorities li { padding-block: 4px; }
+}
+@container (max-width: 760px) {
+  [data-crm] .crm-day-columns { grid-template-columns: minmax(0,1fr); }
+  [data-crm] .crm-day-priorities { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  [data-crm] .crm-day-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  [data-crm] .crm-day-metric:nth-child(odd) { border-inline-start: 0; }
+  [data-crm] .crm-day-metric:nth-child(n+3) { border-top: 1px solid var(--team-rule); }
+}
+@container (max-width: 460px) {
+  [data-crm] .crm-day-priorities { grid-template-columns: minmax(0,1fr); }
+  [data-crm] .crm-day-person { padding: 10px; gap: 7px; }
+  [data-crm] .crm-day-avatar { width: 29px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-crm] .crm-day progress::-webkit-progress-value { transition: none; }
+}

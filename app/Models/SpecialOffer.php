@@ -20,7 +20,7 @@ class SpecialOffer extends Model
 
     protected $fillable = [
         'organization_id', 'brand_id', 'title', 'description', 'type', 'value', 'code', 'applies_to',
-        'tier_ids', 'start_date', 'end_date',
+        'tier_ids', 'audience', 'start_date', 'end_date',
         'usage_limit', 'times_used', 'per_member_limit', 'image_url', 'terms_conditions',
         'is_active', 'is_featured', 'ai_generated', 'created_by',
     ];
@@ -38,6 +38,36 @@ class SpecialOffer extends Model
     public function memberOffers()
     {
         return $this->hasMany(MemberOffer::class, 'offer_id');
+    }
+
+    /** Unrestricted promotions stay independent of the package; level privileges require its current term. */
+    public function allowsMembership(LoyaltyMember $member): bool
+    {
+        if (!$this->allowsRecipient($member)) return false;
+        $ids = array_map('intval', (array) $this->tier_ids);
+        return $ids === [] || (in_array((int) $member->tier_id, $ids, true)
+            && \App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($member));
+    }
+
+    public function allowsRecipient(LoyaltyMember $member): bool
+    {
+        if ((int) $member->getAttribute('organization_id') !== (int) $this->getAttribute('organization_id')) return false;
+        return $this->getAttribute('audience') !== 'members' || \Illuminate\Support\Facades\DB::table('special_offer_recipients')
+            ->where('organization_id', $this->getAttribute('organization_id'))->where('offer_id', $this->id)->where('member_id', $member->id)->exists();
+    }
+
+    /** @return list<int> */
+    public function recipientIds(): array
+    {
+        return $this->getAttribute('audience') === 'members' ? \Illuminate\Support\Facades\DB::table('special_offer_recipients')
+            ->where('organization_id', $this->getAttribute('organization_id'))->where('offer_id', $this->id)->orderBy('member_id')->pluck('member_id')->map(fn ($id) => (int) $id)->all() : [];
+    }
+
+    /** Delivery may precede the start date, but stops on the venue's expiry day. */
+    public function canDeliver(): bool
+    {
+        return (bool) $this->is_active && $this->getAttribute('end_date') !== null
+            && $this->getAttribute('end_date')->toDateString() >= \App\Services\Appointments\VenueClock::today((int) $this->getAttribute('organization_id'));
     }
 
     public function createdBy()

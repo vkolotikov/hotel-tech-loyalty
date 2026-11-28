@@ -41,5 +41,37 @@
     "more_areas": "Autres rubriques",
     "plan": "Offre et produits",
     "team": "Équipe"
+  },
+  "pulse": {
+    "label": "En ce moment sur place",
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir",
+    "night": "Bonne nuit",
+    "hello_name": "{{greeting}}, {{name}}",
+    "place_time": "{{place}} · heure locale",
+    "zone_time": "Heure locale ({{zone}})",
+    "feels_like": "Ressenti {{temp}}",
+    "high_low": "Max {{max}} Min {{min}}",
+    "next_hours": "Les prochaines heures",
+    "now": "Maint.",
+    "sun": "Lever du soleil {{rise}}, coucher {{set}}",
+    "weather": {
+      "clear": "Ciel dégagé",
+      "mainly_clear": "Plutôt dégagé",
+      "partly_cloudy": "Partiellement nuageux",
+      "overcast": "Couvert",
+      "fog": "Brouillard",
+      "drizzle": "Bruine",
+      "freezing_drizzle": "Bruine verglaçante",
+      "rain": "Pluie",
+      "freezing_rain": "Pluie verglaçante",
+      "snow": "Neige",
+      "showers": "Averses",
+      "snow_showers": "Averses de neige",
+      "thunderstorm": "Orage",
+      "thunder_hail": "Orage avec grêle",
+      "unknown": "Météo"
+    }
   }
 }

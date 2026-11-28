@@ -10,6 +10,7 @@ import { DesignDialog } from '../../redesign/DesignUI'
 import { WALLET_KEY, appApi } from '../api'
 import { MISSING_WORDS } from '../words'
 import { useCardWords } from './words'
+import { WalletRequirements } from './WalletRequirements'
 
 export function WalletConnections() {
   const boot = useBoot(), say = useCardWords(), { t } = useTranslation()
@@ -22,13 +23,12 @@ export function WalletConnections() {
   if (query.isError) return <OverviewRecovery forbidden={denied} title={say('walletUnavailable')} busy={query.isFetching} onRetry={() => { void query.refetch() }} />
   if (!query.data) return <OverviewSkeleton rows={2} />
   const wallet = query.data.wallet
-  return <><div className="l-ca-wallets">{(['apple', 'google'] as const).map(provider => {
+  return <><WalletRequirements /><div className="l-ca-wallets">{(['apple', 'google'] as const).map(provider => {
     const ready = wallet[`${provider}_ready`] && wallet.is_active, missing = wallet[`${provider}_missing`]
     return <section key={provider} className="l-ov-panel l-ca-panel" data-provider={provider} aria-label={say(provider)}>
       <div className="l-ca-wallet-heading"><h2>{say(provider)}</h2><span className="l-ca-status" data-ready={ready}>{say(ready ? 'ready' : !wallet.is_active ? 'off' : 'needsSetup')}</span></div>
       <p>{say('walletLine', { provider: say(provider) })}</p>
       <div className="l-ca-actions">{ready ? <><OverviewButton primary onClick={() => setTest(provider)}>{say('testDevice')}</OverviewButton><Link className="l-ov-button" to={`/loyalty/app?tab=wallet&provider=${provider}`}>{say('connectionSettings')}</Link></> : <><Link className="l-ov-button l-ov-primary" to={`/loyalty/app?tab=wallet&provider=${provider}`}>{say('setupConnection')}</Link><OverviewButton disabled>{say('testDevice')}</OverviewButton></>}</div>
-      <Link className="l-ov-link" to={`/loyalty/app?tab=wallet&provider=${provider}`}>{say('advancedSettings')} →</Link>
       <small>{say(ready ? 'testGuidance' : 'connectFirst')}</small>
       {!ready && missing.length > 0 && <details><summary>{say('whatMissing')}</summary><ul>{missing.map(code => <li key={code}>{code in MISSING_WORDS ? t(`loyalty.app.missing.${code}`, MISSING_WORDS[code]) : say('additionalRequirement')}</li>)}</ul></details>}
     </section>

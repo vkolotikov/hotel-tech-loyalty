@@ -41,6 +41,7 @@ class GenerationController extends Controller
             'platforms.*'     => [Rule::in(ContentRules::PLATFORMS)],
             'fill_empty_only' => 'nullable|boolean',
             'instructions'    => 'nullable|string|max:2000',
+            'campaign_id' => ['nullable', 'integer', ContentRules::owned('content_planner_campaigns')],
         ]);
         if (ContentRules::days($data['from'], $data['to']) > ContentRules::MAX_RANGE_DAYS) {
             throw ValidationException::withMessages(['to' => 'The range can be at most ' . ContentRules::MAX_RANGE_DAYS . ' days.']);
@@ -69,7 +70,7 @@ class GenerationController extends Controller
         ContentGenerationRun::queued($brandId, $userId, $from, $data['to'], $owner);
         try {
             GenerateContentCalendar::dispatch((int) $org->id, $brandId, (int) $profile->id, $from, $data['to'],
-                $data['platforms'] ?? null, $request->boolean('fill_empty_only', true), $data['instructions'] ?? null, $owner, $userId);
+                $data['platforms'] ?? null, $request->boolean('fill_empty_only', true), $data['instructions'] ?? null, $owner, $userId, isset($data['campaign_id']) ? (int) $data['campaign_id'] : null);
         } catch (\Throwable $e) {
             // The queue refused the job (it never started): free the brand and say so.
             report($e);
@@ -89,6 +90,12 @@ class GenerationController extends Controller
         $profile = ContentContext::profile();
 
         return response()->json($profile ? ContentGenerationRun::describe((int) $profile->brand_id) : ['status' => 'idle']);
+    }
+
+    public function cancel(Request $request): JsonResponse
+    {
+        ContentGenerationRun::cancel(ContentContext::orgId(), ContentContext::brandId(), $request->user());
+        return $this->status();
     }
 
     /** @param array<string, mixed> $run */

@@ -36,14 +36,25 @@ const member = (more: Partial<PortalMember> = {}): PortalMember => ({
   ...more,
 })
 
-function render(m: PortalMember) {
+function render(m: PortalMember, loyalty = true) {
   const client = new QueryClient()
   client.setQueryData(['portal-card'], { qr_svg: null, qr_image: null })
-  return renderToStaticMarkup(<QueryClientProvider client={client}><MemberCard member={m} loyalty currency="EUR" /></QueryClientProvider>)
+  return renderToStaticMarkup(<QueryClientProvider client={client}><MemberCard member={m} loyalty={loyalty} currency="EUR" /></QueryClientProvider>)
 }
+
+it('shows an ongoing manual membership start at a venue with points off', () => {
+  const html = render(member({ membership_mode: 'assigned', membership: { valid_from: '2026-11-01', valid_until: null, state: 'active' } }), false)
+  expect(html).toContain('Member from')
+  expect(html).toContain('Nov')
+})
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the membership on the portal card (release 8 §3)', () => {
+  it('shows when a scheduled membership begins instead of implying it is active now', () => {
+    const html = render(member({ membership: { valid_from: '2027-01-01', valid_until: '2027-12-31', state: 'scheduled' } }))
+    expect(text(html)).toContain('Membership starts 1 Jan 2027')
+    expect(html).toContain('data-membership="scheduled"')
+  })
   it('says until when the membership holds, that it is ending or ended (with renew), and nothing without an end date', () => {
     expect(text(render(member({ membership: { valid_until: '2027-10-03', state: 'active' } })))).toContain('Member until 3 Oct 2027')
     const ending = render(member({ membership: { valid_until: '2026-10-20', state: 'expiring' } }))
@@ -113,7 +124,7 @@ describe('the tier on the dark card', () => {
 
     const html = render(member({ tier: { id: 3, name: 'Platinum', color_hex: '#4B0082' } }))
     const pill = html.match(/<span data-tier=""[^>]*>/)![0]
-    expect(pill).toContain('text-p-text')
+    expect(pill).toContain('p-tier-badge')
     expect(pill).not.toMatch(/(^|[^-])color:/)
   })
 })
@@ -127,15 +138,11 @@ describe('the level’s benefits on the card', () => {
     { id: 8, name: 'Late check-out', category: 'something_new', display: null },
   ]
 
-  it('shows the first four as chips with the rest counted, and leads to the Benefits tab', () => {
+  it('keeps the summary compact and makes the real card available through Enlarge', () => {
     const html = render(member({ benefits }))
-    const words = text(html)
-    expect(words).toContain('Your Silver benefits')
-    expect(words).toContain('Free hair mask')
-    expect(words).toContain('Welcome drink')
-    expect(words).not.toContain('Late check-out')
-    expect(words).toContain('+1')
-    expect(html).toContain('href="/portal/rewards?tab=benefits"')
+    expect(html).toContain('Enlarge')
+    expect(html).toContain('Points balance')
+    expect(html).not.toContain('data-benefits')
   })
 
   it('shows nothing without benefits, or where the venue runs no programme', () => {

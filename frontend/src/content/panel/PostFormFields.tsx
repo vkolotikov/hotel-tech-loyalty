@@ -1,3 +1,5 @@
+import { CampaignSelect } from '../campaigns/CampaignSelect'
+import type { Campaign } from '../campaigns/types'
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Hash, Layers, LayoutTemplate, Link2, Target } from 'lucide-react'
@@ -19,7 +21,7 @@ import { spacedWord, type InsertMode } from './toolbarMath'
 
 const BOX = 'w-full rounded-lg border bg-a-surface px-3 py-2 text-sm text-a-text disabled:bg-a-surface-2 disabled:text-a-text-2'
 /** The fields under "Targeting & language": a refused save naming one opens the section. */
-const TARGETING: (keyof PostForm)[] = ['platform', 'pillar_id', 'audience_id', 'language', 'topic']
+const TARGETING: (keyof PostForm)[] = ['platform', 'pillar_id', 'campaign_id', 'audience_id', 'language', 'topic']
 
 /** A labelled field; a field a refused save named says so under it. */
 function FieldBox({ label, hint, invalid, caps = false, children }: { label: string; hint?: string; invalid: boolean; caps?: boolean; children: ReactNode }) {
@@ -40,7 +42,9 @@ function FieldBox({ label, hint, invalid, caps = false, children }: { label: str
  * status and who posts it, the text, the call to action with its destination, then the folding sections. A published
  * post keeps its day: the day is the record of when it went out.
  */
-export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [], team = [], link = null, afterStatus = null, versions = null }: {
+export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [], team = [], link = null, afterStatus = null, versions = null, details = true, campaigns = [] }: {
+  campaigns?: Campaign[]
+  details?: boolean
   form: PostForm
   onChange: (form: PostForm) => void
   platforms: Platform[]
@@ -73,7 +77,6 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
   if (form.language !== '' && !languages.includes(form.language)) languages.push(form.language)
   const pillarKnown = form.pillar_id === '' || pillars.some(p => String(p.id) === form.pillar_id)
   const audienceKnown = form.audience_id === '' || audiences.some(a => String(a.id) === form.audience_id)
-  const suggested = suggestedTimes(form.platform, industry)
   const groups = snippets.filter(s => s.kind === 'hashtags')
   const texts = snippets.filter(s => s.kind === 'text')
   const textRef = useRef<HTMLTextAreaElement>(null)
@@ -117,40 +120,30 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+            <FieldBox label={t('content.panel.fields.platform', 'Platform')} invalid={invalid.includes('platform')}>
+              <select value={form.platform} onChange={(e) => set('platform', e.target.value as Platform)} aria-invalid={bad('platform')} className={box('platform')}>
+                {platforms.map(p => <option key={p} value={p}>{t(`content.platform.${p}`, p)}</option>)}
+              </select>
+            </FieldBox>          <div className="relative">
+            <FieldBox label={t('content.panel.fields.topic', 'Topic')} invalid={invalid.includes('topic')}>
+              <input value={form.topic} maxLength={255} onChange={(e) => set('topic', e.target.value)} aria-invalid={bad('topic')} className={box('topic')} />
+            </FieldBox>
+            <div className="absolute right-0 top-0">
+              <PopMenu label={t('content.panel.template', 'Template')} onPick={pickTemplate}
+                items={templates.map(tpl => ({ id: String(tpl.id), label: tpl.name, sub: [tpl.platform ? t(`content.platform.${tpl.platform}`, tpl.platform) : '', tpl.pillar_name ?? ''].filter(Boolean).join(' · ') || undefined }))}
+                className="inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-a-accent-text hover:bg-a-surface-2">
+                <LayoutTemplate size={12} aria-hidden />{t('content.panel.template', 'Template')}
+              </PopMenu>
+            </div>
+          </div></div>
+      <CampaignSelect value={form.campaign_id ?? ''} onChange={value => set('campaign_id', value)} campaigns={campaigns} invalid={invalid.includes('campaign_id')} />
       <FieldBox label={t('content.panel.hook_label', 'Post hook')} caps invalid={invalid.includes('hook')}>
         <textarea value={form.hook} rows={hookRows(form.hook)} maxLength={500} onChange={(e) => set('hook', e.target.value)} aria-invalid={bad('hook')}
           placeholder={t('content.panel.hook_placeholder', 'Write the first line people see')}
           className={`block w-full resize-none rounded-lg border bg-transparent py-1 c-hook font-a-display text-[26px] leading-tight text-a-text field-sizing-content placeholder:text-a-text-2 ${invalid.includes('hook') ? 'border-a-danger px-2' : 'border-transparent px-0 focus:px-2'}`} />
       </FieldBox>
-      <div className="grid grid-cols-2 gap-3">
-        <FieldBox label={t('content.panel.fields.date', 'Date')} invalid={invalid.includes('scheduled_date')}
-          hint={published ? t('content.panel.fields.published_date', 'A published post keeps the date it went out.') : undefined}>
-          <input type="date" value={form.scheduled_date} disabled={published} onChange={(e) => set('scheduled_date', e.target.value)}
-            aria-invalid={bad('scheduled_date')} className={box('scheduled_date')} />
-        </FieldBox>
-        <div className="min-w-0">
-          <FieldBox label={t('content.panel.fields.time', 'Time')} invalid={invalid.includes('scheduled_time')}>
-            <input type="time" value={form.scheduled_time} onChange={(e) => set('scheduled_time', e.target.value)} aria-invalid={bad('scheduled_time')} className={box('scheduled_time')} />
-          </FieldBox>
-          {suggested.length > 0 && (
-            <div role="group" aria-label={t('content.panel.fields.time_suggested', 'Suggested times')} className="mt-1.5 flex flex-wrap gap-1">
-              {suggested.map(time => (
-                <button key={time} type="button" aria-pressed={form.scheduled_time === time} onClick={() => set('scheduled_time', time)}
-                  className={`rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums ${form.scheduled_time === time ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>{time}</button>
-              ))}
-            </div>
-          )}
-        </div>
-        <FieldBox label={t('content.panel.fields.status', 'Status')} invalid={invalid.includes('status')}>
-          <select value={form.status} onChange={(e) => set('status', e.target.value as PostStatus)} aria-invalid={bad('status')} className={box('status')}>
-            {statuses.map(s => <option key={s} value={s}>{t(`content.status.${s}`, s)}</option>)}
-          </select>
-        </FieldBox>
-        <FieldBox label={t('content.panel.fields.poster', 'Who posts it')} invalid={invalid.includes('poster_id')}>
-          <PosterSelect value={form.poster_id} onChange={(value) => set('poster_id', value)} choices={team} invalid={bad('poster_id')} className={box('poster_id')} />
-        </FieldBox>
-      </div>
-      {afterStatus}
+      {details && <PostDetailsFields form={form} onChange={onChange} statuses={statuses} published={published} invalid={invalid} industry={industry} team={team} afterStatus={afterStatus} />}
       <div className="min-w-0">
         <label htmlFor={textId} className="mb-1 block text-xs font-medium text-a-text-2">{t('content.panel.post_text', 'Post text')}</label>
         <TextToolbar onInsert={(text, mode) => insertInto('main_copy', textRef.current, text, mode)}
@@ -194,11 +187,7 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
         <FoldSection id="targeting" icon={Target} title={t('content.panel.fold_targeting', 'Targeting & language')}
           alert={TARGETING.some(k => invalid.includes(k))}>
           <div className="grid grid-cols-2 gap-3">
-            <FieldBox label={t('content.panel.fields.platform', 'Platform')} invalid={invalid.includes('platform')}>
-              <select value={form.platform} onChange={(e) => set('platform', e.target.value as Platform)} aria-invalid={bad('platform')} className={box('platform')}>
-                {platforms.map(p => <option key={p} value={p}>{t(`content.platform.${p}`, p)}</option>)}
-              </select>
-            </FieldBox>
+
             <FieldBox label={t('content.panel.fields.pillar', 'Pillar')} invalid={invalid.includes('pillar_id')}>
               <select value={form.pillar_id} onChange={(e) => set('pillar_id', e.target.value)} aria-invalid={bad('pillar_id')} className={box('pillar_id')}>
                 <option value="">{t('content.panel.fields.none', 'None')}</option>
@@ -220,18 +209,7 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
               </select>
             </FieldBox>
           </div>
-          <div className="relative">
-            <FieldBox label={t('content.panel.fields.topic', 'Topic')} invalid={invalid.includes('topic')}>
-              <input value={form.topic} maxLength={255} onChange={(e) => set('topic', e.target.value)} aria-invalid={bad('topic')} className={box('topic')} />
-            </FieldBox>
-            <div className="absolute right-0 top-0">
-              <PopMenu label={t('content.panel.template', 'Template')} onPick={pickTemplate}
-                items={templates.map(tpl => ({ id: String(tpl.id), label: tpl.name, sub: [tpl.platform ? t(`content.platform.${tpl.platform}`, tpl.platform) : '', tpl.pillar_name ?? ''].filter(Boolean).join(' · ') || undefined }))}
-                className="inline-flex min-h-6 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-a-accent-text hover:bg-a-surface-2">
-                <LayoutTemplate size={12} aria-hidden />{t('content.panel.template', 'Template')}
-              </PopMenu>
-            </div>
-          </div>
+
         </FoldSection>
         <FoldSection id="links" icon={Hash} title={t('content.panel.fold_links', 'Link & hashtags')} alert={invalid.includes('hashtags') || tooMany !== null} reveal={tagsAdded}>
           <FieldBox label={t('content.panel.fields.hashtags', 'Hashtags')} invalid={invalid.includes('hashtags')}
@@ -250,4 +228,47 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
       </div>
     </div>
   )
+}
+
+/** Shared compact publishing controls used by the panel and full composer. */
+export function PostDetailsFields({ form, onChange, statuses, published, invalid, industry, team, afterStatus }: {
+  form: PostForm; onChange: (form: PostForm) => void; statuses: PostStatus[]; published: boolean;
+  invalid: (keyof PostForm)[]; industry: string | null; team: Person[]; afterStatus?: ReactNode
+}) {
+  const { t } = useTranslation()
+  const set = <K extends keyof PostForm>(key: K, value: PostForm[K]) => onChange({ ...form, [key]: value })
+  const box = (key: keyof PostForm) => `${BOX} ${invalid.includes(key) ? 'border-a-danger' : 'border-a-border'}`
+  const bad = (key: keyof PostForm) => invalid.includes(key) || undefined
+  const suggested = suggestedTimes(form.platform, industry)
+  return <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <FieldBox label={t('content.panel.fields.date', 'Date')} invalid={invalid.includes('scheduled_date')}
+          hint={published ? t('content.panel.fields.published_date', 'A published post keeps the date it went out.') : undefined}>
+          <input type="date" value={form.scheduled_date} disabled={published} onChange={(e) => set('scheduled_date', e.target.value)}
+            aria-invalid={bad('scheduled_date')} className={box('scheduled_date')} />
+        </FieldBox>
+        <div className="min-w-0">
+          <FieldBox label={t('content.panel.fields.time', 'Time')} invalid={invalid.includes('scheduled_time')}>
+            <input type="time" value={form.scheduled_time} onChange={(e) => set('scheduled_time', e.target.value)} aria-invalid={bad('scheduled_time')} className={box('scheduled_time')} />
+          </FieldBox>
+          {suggested.length > 0 && (
+            <div role="group" aria-label={t('content.panel.fields.time_suggested', 'Suggested times')} className="mt-1.5 flex flex-wrap gap-1">
+              {suggested.map(time => (
+                <button key={time} type="button" aria-pressed={form.scheduled_time === time} onClick={() => set('scheduled_time', time)}
+                  className={`rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums ${form.scheduled_time === time ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>{time}</button>
+              ))}
+            </div>
+          )}
+        </div>
+        <FieldBox label={t('content.panel.fields.status', 'Status')} invalid={invalid.includes('status')}>
+          <select value={form.status} onChange={(e) => set('status', e.target.value as PostStatus)} aria-invalid={bad('status')} className={box('status')}>
+            {statuses.map(s => <option key={s} value={s}>{t(`content.status.${s}`, s)}</option>)}
+          </select>
+        </FieldBox>
+        <FieldBox label={t('content.panel.fields.poster', 'Who posts it')} invalid={invalid.includes('poster_id')}>
+          <PosterSelect value={form.poster_id} onChange={(value) => set('poster_id', value)} choices={team} invalid={bad('poster_id')} className={box('poster_id')} />
+        </FieldBox>
+      </div>
+      {afterStatus}
+    </div>
 }

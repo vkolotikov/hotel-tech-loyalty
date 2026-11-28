@@ -65,6 +65,7 @@ final class ProgrammeAdvice
         $checkinPoints = (int) ($o['checkin_points'] ?? 0);
         $desk = ($o['desk_earn_enabled'] ?? false) === true;
         $stamps = ($o['stamps_enabled'] ?? false) === true;
+        $spendPoints = ($o['spend_points_enabled'] ?? true) === true;
         $bookingPoints = $bookings && ($o['points_on_bookings'] ?? false) === true;
         $progress = (string) ($o['tier_progress_by'] ?? 'points');
         $months = (int) ($o['points_expiry_months'] ?? 0);
@@ -75,10 +76,11 @@ final class ProgrammeAdvice
         $default = fn (string $option) => ProgrammeOptions::OPTIONS[$option][1];
 
         // Members can earn points regularly: on bookings (where there are any), at the desk, by checking in, by stamps.
-        if (!$bookingPoints && !$desk && !($checkin && $checkinPoints > 0) && !$stamps) {
+        if (!($spendPoints && ($bookingPoints || $desk)) && !($checkin && $checkinPoints > 0) && !$stamps) {
+            $enableSpending = $spendPoints ? [] : ['spend_points_enabled' => true];
             $warn[] = $bookings
-                ? $say('nothing_earns', 'points_on_spend', ['points_on_bookings' => true])
-                : $say('nothing_earns', 'desk_earn', ['desk_earn_enabled' => true]);
+                ? $say('nothing_earns', $spendPoints ? 'points_on_spend' : 'earn_rate', $enableSpending + ['points_on_bookings' => true])
+                : $say('nothing_earns', $spendPoints ? 'desk_earn' : 'earn_rate', $enableSpending + ['desk_earn_enabled' => true]);
         }
         // A tier by visits needs something that records a visit; by spend, something that records a spend.
         if ($progress === 'visits' && !$bookings && !$checkin && !$desk && !$venue['visit_events']) {

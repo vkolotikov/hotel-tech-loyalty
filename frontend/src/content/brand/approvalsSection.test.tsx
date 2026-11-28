@@ -36,8 +36,8 @@ describe('Brand → Approvals (spec 2026-10-16 §6.1)', () => {
     expect(html).toContain('>On<')
   })
 
-  it('sits on the Brand page after Key dates', () => {
-    const html = renderBrand(brandWith(), true)
+  it('shares the Dates & approvals section with Key dates', () => {
+    const html = renderBrand(brandWith(), true, undefined, 'dates')
     expect(html.indexOf('id="content-approvals"')).toBeGreaterThan(html.indexOf('id="content-keydates"'))
   })
 })

@@ -129,7 +129,7 @@ class MessengerAiResponder
 
         $knowledgeContext = '';
         try {
-            $knowledgeContext = $this->knowledge->getKnowledgeContext($body, $orgId);
+            $knowledgeContext = $this->knowledge->getKnowledgeContext($body, $orgId, $brandId);
         } catch (\Throwable $e) {
             Log::warning('messenger.ai.knowledge_lookup_failed', [
                 'org_id' => $orgId,

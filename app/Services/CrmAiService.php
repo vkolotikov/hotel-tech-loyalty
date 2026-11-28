@@ -137,7 +137,9 @@ class CrmAiService
                     'num_adults'       => ['type' => 'integer', 'description' => 'Number of adults'],
                     'num_children'     => ['type' => 'integer', 'description' => 'Number of children'],
                     'room_type'        => ['type' => 'string', 'description' => 'Requested room type'],
-                    'total_value'      => ['type' => 'number', 'description' => 'Estimated value'],
+                    'amount_evidence'  => ['type' => 'string', 'description' => 'Copy the exact monetary figure including the currency from the original text, e.g. EUR 220.00. Use only a single applicable order total or budget.'],
+                    'currency'         => ['type' => 'string', 'description' => 'ISO currency explicitly stated with the total, for example EUR for €. Omit the value and currency if ambiguous.'],
+                    'total_value'      => ['type' => 'number', 'description' => 'Explicit whole enquiry price or stated total budget, never a unit price, order quantity or one of several alternatives'],
                     'source'           => ['type' => 'string', 'description' => 'Lead source channel (Email, WhatsApp, Phone, Website, etc.)'],
                     'special_requests' => ['type' => 'string', 'description' => 'Any special requests'],
                     'notes'            => ['type' => 'string', 'description' => 'Summary of the inquiry'],
@@ -155,6 +157,19 @@ class CrmAiService
         foreach ($res['content'] ?? [] as $block) {
             if (($block['type'] ?? '') === 'tool_use' && $block['name'] === 'save_extracted_inquiry') {
                 $data = $block['input'];
+                $explicit = \App\Services\Crm\LeadMessageValue::total($text);
+                if ($explicit) {
+                    $data = array_merge($data, $explicit);
+                } else {
+                    $excerpt = $data['amount_evidence'] ?? '';
+                    $verified = is_string($excerpt) && $excerpt !== '' && !str_contains($excerpt, "\n") && str_contains($text, $excerpt)
+                        ? \App\Services\Crm\LeadMessageValue::total('Total: '.$excerpt) : null;
+                    unset($data['currency'], $data['total_value']);
+                    if ($verified) {
+                        $data = array_merge($data, $verified);
+                    }
+                }
+                unset($data['amount_evidence']);
                 // Backwards-compat: accept old field names if Claude returns them
                 if (isset($data['guest_name']) && empty($data['customer_name'])) {
                     $data['customer_name'] = $data['guest_name'];

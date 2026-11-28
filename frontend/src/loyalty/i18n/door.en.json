@@ -58,6 +58,8 @@
     "choose_again": "Choose again"
   },
   "reason": {
+    "not_started_plain": "This membership has not started yet.",
+    "not_started": "Membership starts on {{date}}.",
     "member_erased": "This member was deleted.",
     "member_off": "This membership is switched off.",
     "expired": "Membership expired on {{date}}.",

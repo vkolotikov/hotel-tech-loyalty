@@ -45,6 +45,69 @@ trait SetsUpCrmWorkspace
         app()->forgetScopedInstances();
     }
 
+    protected function setUpLeadAssistantTables(): void
+    {
+        foreach ([
+            'inquiries' => [
+                'notes' => fn ($table) => $table->text('notes')->nullable(),
+                'ai_brief' => fn ($table) => $table->text('ai_brief')->nullable(),
+                'ai_brief_at' => fn ($table) => $table->timestamp('ai_brief_at')->nullable(),
+                'ai_intent' => fn ($table) => $table->string('ai_intent')->nullable(),
+                'ai_win_probability' => fn ($table) => $table->unsignedInteger('ai_win_probability')->nullable(),
+                'ai_going_cold_risk' => fn ($table) => $table->string('ai_going_cold_risk')->nullable(),
+                'ai_suggested_action' => fn ($table) => $table->text('ai_suggested_action')->nullable(),
+            ],
+            'visitors' => ['guest_id' => fn ($table) => $table->unsignedBigInteger('guest_id')->nullable()],
+        ] as $table => $columns) {
+            foreach ($columns as $column => $definition) {
+                if (! Schema::hasColumn($table, $column)) {
+                    Schema::table($table, $definition);
+                }
+            }
+        }
+        if (! Schema::hasTable('activities')) {
+            Schema::create('activities', function ($table) {
+                $table->id();
+                $table->foreignId('organization_id');
+                $table->foreignId('brand_id')->nullable();
+                $table->foreignId('inquiry_id')->nullable();
+                $table->foreignId('guest_id')->nullable();
+                $table->string('type');
+                $table->string('direction')->nullable();
+                $table->string('subject')->nullable();
+                $table->text('body')->nullable();
+                $table->timestamp('occurred_at');
+            });
+        }
+        if (! Schema::hasTable('guest_business_profiles')) {
+            (require database_path('migrations/2026_11_22_100000_create_guest_business_profiles.php'))->up();
+        }
+        if (! Schema::hasTable('crm_lead_assistant')) {
+            (require database_path('migrations/2026_11_22_150000_add_crm_sales_assistant.php'))->up();
+        }
+        if (! Schema::hasTable('reservations')) {
+            Schema::create('reservations', function (Blueprint $table) {
+                $table->id();
+                foreach (['organization_id', 'brand_id', 'guest_id', 'inquiry_id', 'property_id'] as $id) {
+                    $table->unsignedBigInteger($id)->nullable();
+                }
+                $table->date('check_in');
+                $table->date('check_out');
+                $table->string('room_type')->nullable();
+                $table->string('status')->nullable();
+                $table->string('payment_status')->nullable();
+            });
+        }
+        if (! Schema::hasColumn('crm_lead_assistant', 'approved_quote')) {
+            (require database_path('migrations/2026_11_25_160000_add_reviewed_email_records.php'))->up();
+        }
+        foreach (['inquiry_attachments' => '2026_05_18_120000_create_inquiry_attachments_table', 'email_suppressions' => '2026_08_14_090000_create_email_suppressions_table'] as $table => $migration) {
+            if (! Schema::hasTable($table)) {
+                (require database_path('migrations/'.$migration.'.php'))->up();
+            }
+        }
+    }
+
     /** On the admin host, as an absolute address. */
     protected function crmApi(string $path): string
     {
@@ -331,6 +394,9 @@ trait SetsUpCrmWorkspace
                 $t->string('status', 32)->nullable();
                 $t->string('source', 64)->nullable();
                 $t->decimal('total_value', 12, 2)->nullable();
+                $t->decimal('rate_offered', 12, 2)->nullable();
+                $t->decimal('paid_amount', 12, 2)->nullable();
+                $t->string('currency', 3)->nullable();
                 $t->unsignedBigInteger('assigned_to')->nullable();
                 $t->string('next_task_type', 32)->nullable();
                 $t->date('next_task_due')->nullable();

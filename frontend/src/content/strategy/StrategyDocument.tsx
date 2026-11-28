@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { addDays, formatDate } from '../../workspace/lib/wallClock'
 import { optionText, RHYTHM_DAYS } from '../lib/options'
@@ -9,9 +9,11 @@ import { safeOutput, strings } from './strategyMath'
 /** A Monday: the rhythm's days are named from it in the reader's language. */
 const A_MONDAY = '2026-10-12'
 
-function Block({ title, children }: { title: string; children: ReactNode }) {
+const StrategySection = createContext('all')
+function Block({ title, id, children }: { title: string; id: string; children: ReactNode }) {
+  const selected = useContext(StrategySection)
   return (
-    <section className="space-y-3 rounded-xl border border-a-border bg-a-surface p-4">
+    <section hidden={selected !== 'all' && selected !== id} className="space-y-3 rounded-xl border border-a-border bg-a-surface p-4">
       <h2 className="font-a-display text-lg font-normal text-a-text">{title}</h2>
       {children}
     </section>
@@ -43,7 +45,8 @@ function Text({ label, value }: { label?: string; value: unknown }) {
  * in the words it wrote them (the brand's language); the headings are the
  * portal's. Any part an older strategy lacks is left out.
  */
-export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
+export function StrategyDocument({ output: raw, pillars, platforms, locale, section = 'all' }: {
+  section?: string
   output: StrategyOutput
   /** The strategy's pillars as saved, for a strategy whose text lists none. */
   pillars: StrategyPillar[]
@@ -66,16 +69,16 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
   ]
 
   return (
-    <div className="space-y-4">
+    <StrategySection.Provider value={section}><div className="space-y-4">
       {(output.brand_summary || strings(output.assumptions).length > 0) && (
-        <Block title={w('summary', 'Brand summary')}>
+        <Block id="summary" title={w('summary', 'Brand summary')}>
           <Text value={output.brand_summary} />
           <Lines label={w('assumptions', 'What the AI assumed')} items={strings(output.assumptions)} />
         </Block>
       )}
 
       {positioning && (
-        <Block title={w('positioning', 'Positioning')}>
+        <Block id="positioning" title={w('positioning', 'Positioning')}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Text label={w('old_way', 'The old way')} value={positioning.old_way} />
             <Text label={w('new_way', 'The new way')} value={positioning.new_way} />
@@ -86,7 +89,7 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {(output.audience_map ?? []).length > 0 && (
-        <Block title={w('audiences', 'Audience map')}>
+        <Block id="audiences" title={w('audiences', 'Audience map')}>
           <div className="grid gap-3 md:grid-cols-2">
             {(output.audience_map ?? []).map((a, i) => (
               <div key={i} className="space-y-2 rounded-lg border border-a-border p-3">
@@ -103,7 +106,7 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {(written.length > 0 || pillars.length > 0) && (
-        <Block title={w('pillars', 'Pillars')}>
+        <Block id="pillars" title={w('pillars', 'Pillars')}>
           <div className="grid gap-3 md:grid-cols-2">
             {written.length > 0
               ? written.map((p, i) => (
@@ -133,7 +136,7 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {mix.length > 0 && (
-        <Block title={w('mix', 'Content mix')}>
+        <Block id="mix" title={w('mix', 'Content mix')}>
           <ul className="space-y-2">
             {mix.map(([category, pct]) => (
               <li key={category} className="space-y-1">
@@ -151,7 +154,7 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {Object.keys(rhythm).length > 0 && (
-        <Block title={w('rhythm', 'Weekly rhythm')}>
+        <Block id="rhythm" title={w('rhythm', 'Weekly rhythm')}>
           <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
             {RHYTHM_DAYS.map((day, i) => {
               const plan = rhythm[day]
@@ -168,7 +171,7 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {playbooks.length > 0 && (
-        <Block title={w('platforms', 'Platform playbooks')}>
+        <Block id="platforms" title={w('platforms', 'Platform playbooks')}>
           <div className="grid gap-3 md:grid-cols-2">
             {playbooks.map(([platform, book]) => (
               <div key={platform} className="space-y-2 rounded-lg border border-a-border p-3">
@@ -191,15 +194,15 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {(output.engagement_strategy || output.conversion_strategy) && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={section === 'all' ? 'grid gap-4 md:grid-cols-2' : ''}>
           {output.engagement_strategy && (
-            <Block title={w('engagement', 'Engagement')}>
+            <Block id="engagement" title={w('engagement', 'Engagement')}>
               <Lines label={w('goals', 'Goals')} items={strings(output.engagement_strategy.primary_goals)} />
               <Lines items={(output.engagement_strategy.mechanics ?? []).map(m => [m?.goal, m?.tactic].filter(Boolean).join(': ')).filter(Boolean)} />
             </Block>
           )}
           {output.conversion_strategy && (
-            <Block title={w('conversion', 'Conversion')}>
+            <Block id="conversion" title={w('conversion', 'Conversion')}>
               <Text label={w('approach', 'Approach')} value={output.conversion_strategy.approach} />
               <Lines label={w('soft_ctas', 'Soft calls to action')} items={strings(output.conversion_strategy.soft_cta_examples)} />
             </Block>
@@ -207,10 +210,10 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
         </div>
       )}
 
-      {output.visual_direction && <Block title={w('visual', 'Visual direction')}><Text value={output.visual_direction} /></Block>}
+      {output.visual_direction && <Block id="visual" title={w('visual', 'Visual direction')}><Text value={output.visual_direction} /></Block>}
 
       {(strings(output.monthly_themes).length > 0 || (output.campaign_ideas ?? []).length > 0) && (
-        <Block title={w('themes', 'Themes and campaigns')}>
+        <Block id="themes" title={w('themes', 'Themes and campaigns')}>
           <Lines label={w('monthly', 'Monthly themes')} items={strings(output.monthly_themes)} />
           <Lines label={w('campaigns', 'Campaign ideas')}
             items={(output.campaign_ideas ?? []).map(c => [c?.name, c?.goal, c?.description].filter(Boolean).join(' — ')).filter(Boolean)} />
@@ -218,7 +221,7 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {(output.example_posts ?? []).length > 0 && (
-        <Block title={w('examples', 'Example posts')}>
+        <Block id="examples" title={w('examples', 'Example posts')}>
           <ul className="space-y-2">
             {(output.example_posts ?? []).map((p, i) => (
               <li key={i} className="rounded-lg border border-a-border p-3 text-sm">
@@ -232,12 +235,12 @@ export function StrategyDocument({ output: raw, pillars, platforms, locale }: {
       )}
 
       {lists.some(([, , items]) => items.length > 0) && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={section === 'all' ? 'grid gap-4 md:grid-cols-2' : ''}>
           {lists.filter(([, , items]) => items.length > 0).map(([key, english, items]) => (
-            <Block key={key} title={w(key, english)}><Lines items={items} /></Block>
+            <Block key={key} id={key} title={w(key, english)}><Lines items={items} /></Block>
           ))}
         </div>
       )}
-    </div>
+    </div></StrategySection.Provider>
   )
 }

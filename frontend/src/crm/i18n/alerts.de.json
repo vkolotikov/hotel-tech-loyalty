@@ -1,0 +1,13 @@
+{
+  "hot": "{{count}} neue heiße Leads",
+  "hot_one": "Ein neuer heißer Lead",
+  "toggle_blocked": "Desktop-Hinweise sind in den Einstellungen dieses Browsers blockiert",
+  "toggle_off": "Desktop-Hinweise einschalten",
+  "toggle_on": "Desktop-Hinweise sind an",
+  "toggle_unsupported": "Dieser Browser kann keine Desktop-Hinweise zeigen",
+  "turned_off": "Desktop-Hinweise sind aus",
+  "turned_on": "Desktop-Hinweise sind an",
+  "waiting": "{{count}} weitere Chats warten auf eine Antwort",
+  "waiting_one": "Ein Chat wartet auf eine Antwort",
+  "open": "Öffnen"
+}

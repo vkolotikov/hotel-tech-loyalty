@@ -39,6 +39,7 @@ export function readFilters(params: URLSearchParams, statuses: readonly PostStat
     status: (statuses as readonly string[]).includes(status) ? (status as PostStatus) : '',
     platform: (platforms as readonly string[]).includes(platform) ? (platform as Platform) : '',
     pillar_id: whole(params.get('pillar')),
+    ...(params.has('campaign') ? { campaign_id: whole(params.get('campaign')) } : {}),
     from: from as PostFilters['from'],
     to: to as PostFilters['to'],
     unscheduled,
@@ -52,6 +53,7 @@ export function writeFilters(filters: PostFilters): URLSearchParams {
   if (filters.q !== '') out.set('q', filters.q)
   if (filters.status !== '') out.set('status', filters.status)
   if (filters.platform !== '') out.set('platform', filters.platform)
+  if (filters.campaign_id != null) out.set('campaign', String(filters.campaign_id))
   if (filters.pillar_id !== null) out.set('pillar', String(filters.pillar_id))
   if (filters.unscheduled) out.set('unscheduled', '1')
   if (!filters.unscheduled && filters.from !== '') out.set('from', filters.from)
@@ -65,4 +67,4 @@ export const withFilter = (filters: PostFilters, change: Partial<PostFilters>): 
 
 /** Whether anything filters the list (the page does not). */
 export const isFiltered = (f: PostFilters): boolean =>
-  f.q.trim() !== '' || f.status !== '' || f.platform !== '' || f.pillar_id !== null || f.from !== '' || f.to !== '' || f.unscheduled
+  f.campaign_id != null || f.q.trim() !== '' || f.status !== '' || f.platform !== '' || f.pillar_id !== null || f.from !== '' || f.to !== '' || f.unscheduled

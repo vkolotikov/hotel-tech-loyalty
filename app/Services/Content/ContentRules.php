@@ -51,6 +51,8 @@ final class ContentRules
     {
         return [
             'platform'         => ['sometimes', Rule::in(self::PLATFORMS)],
+            'media_ids'        => ['sometimes', 'array', 'max:10'],
+            'media_ids.*'      => ['integer', 'distinct', self::owned('content_media')],
             'scheduled_date'   => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'scheduled_time'   => ['sometimes', 'nullable', 'date_format:H:i'],
             'status'           => ['sometimes', Rule::in(self::STATUSES)],

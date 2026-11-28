@@ -33,10 +33,11 @@ class NfcController extends Controller
             'card_type' => 'nullable|string|max:50',
         ]);
 
-        $member = LoyaltyMember::findOrFail($validated['member_id']);
         $user = $request->user();
 
-        $card = DB::transaction(function () use ($cards, $member, $validated, $user) {
+        $card = DB::transaction(function () use ($cards, $validated, $user) {
+            // Numbered-card assignment takes these locks in the same order: member, then card.
+            $member = LoyaltyMember::query()->lockForUpdate()->findOrFail($validated['member_id']);
             try {
                 $result = $cards->link($member, $validated['uid'], $user, $validated['card_type'] ?? 'NTAG215', 'admin', audited: false);
             } catch (LoyaltyRefused $refused) {
@@ -60,7 +61,7 @@ class NfcController extends Controller
 
     public function deactivate(Request $request, int $cardId): JsonResponse
     {
-        $card = NfcCard::findOrFail($cardId);
+        $card = NfcCard::query()->whereNotNull('member_id')->findOrFail($cardId);
         $card->update(['is_active' => false]);
         AuditLog::record('nfc_deactivated', $card->member, ['uid' => $card->uid], [], $request->user());
 

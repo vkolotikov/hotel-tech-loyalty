@@ -46,7 +46,9 @@
     "person_line": "Des moyens de joindre votre équipe depuis le chat.",
     "privacy_line": "Avant une discussion, après, et dans votre boîte de réception.",
     "hours_card_line": "Quand votre équipe répond, et ce que dit le chat le reste du temps.",
-    "same_weekdays": "Appliquer les horaires du lundi du mardi au vendredi"
+    "same_weekdays": "Appliquer les horaires du lundi du mardi au vendredi",
+    "parts": "Parties du comportement",
+    "same_weekdays_short": "Lundi pour tous les jours ouvrés"
   },
   "discard": "Annuler les changements",
   "fix_first": "Corrigez les champs signalés pour enregistrer.",
@@ -97,7 +99,8 @@
     "builders": "Créateur de site",
     "rotate_confirm_title": "Remplacer la clé du widget ?",
     "rotate_confirm_warn": "Le chat disparaît aussitôt de votre site.",
-    "rotate_confirm_line": "Le code de votre site cesse de fonctionner dès que la clé est remplacée. Le chat réapparaît une fois le nouveau code collé. Ne le faites que si la clé a été détournée."
+    "rotate_confirm_line": "Le code de votre site cesse de fonctionner dès que la clé est remplacée. Le chat réapparaît une fois le nouveau code collé. Ne le faites que si la clé a été détournée.",
+    "code_short": "À coller une fois, juste avant </body>."
   },
   "line": "Le chat de votre site : son apparence, son accueil des visiteurs et comment l’installer.",
   "look": {
@@ -166,7 +169,9 @@
     "box_title": "La zone de message",
     "box_line": "Plus d’options : le texte à l’intérieur et l’aide en dessous.",
     "suggestions_line": "Des boutons qu’un visiteur touche au lieu d’écrire.",
-    "avatar_line": "La photo de l’assistant et la ligne sous le chat."
+    "avatar_line": "La photo de l’assistant et la ligne sous le chat.",
+    "avatar_short": "PNG ou JPG carré, 2 Mo au plus",
+    "parts": "Parties de l’apparence"
   },
   "preview": {
     "branding": "Proposé par votre entreprise",
@@ -224,5 +229,18 @@
   "state_on": "Affiché sur votre site",
   "state_off": "Désactivé",
   "get_code": "Obtenir le code",
-  "unsaved_line": "votre site les affiche après l’enregistrement"
+  "unsaved_line": "votre site les affiche après l’enregistrement",
+  "part": {
+    "contact": "Coordonnées",
+    "hours": "Horaires",
+    "launcher": "Bouton",
+    "person": "Parler à une personne",
+    "picture": "Image",
+    "privacy": "Consentement et avis",
+    "questions": "Questions",
+    "site": "Sur le site",
+    "style": "Style",
+    "words": "Textes"
+  },
+  "read_only_short": "Lecture seule : un manager fait les modifications ici."
 }

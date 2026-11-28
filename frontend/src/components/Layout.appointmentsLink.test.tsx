@@ -100,7 +100,7 @@ const ON = { appointments: { landing: false, has_services: true } }
 
 describe('the full admin menu', () => {
   // Owner, 2026-10-11: the way in lives in the left panel only, and it leads the Bookings group.
-  it('lists HexaTech Appointments first in Bookings, above Reservations and Services, for a venue that can book', () => {
+  it('lists HexaTech Appointments in the Workspaces launcher, above Reservations and Services, for a venue that can book', () => {
     const html = sidebar(ON)
     expect(html).toContain('href="/appointments"')
     expect(html).toContain('HexaTech Appointments')

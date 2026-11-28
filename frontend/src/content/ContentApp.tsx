@@ -1,3 +1,8 @@
+import { CampaignsPage } from './campaigns/CampaignsPage'
+import { WritePage } from './write/WritePage'
+import { MediaPage } from './media/MediaLibrary'
+import { SettingsPage } from './settings/SettingsPage'
+import { GuidePage } from './guide/GuidePage'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { registerWorkspaceLocales } from '../workspace/i18n'
@@ -35,6 +40,11 @@ export function ContentApp() {
         <ContentShell>
           <Routes>
             <Route index element={<PlanPage />} />
+            <Route path="write/:id" element={<WritePage />} />
+            <Route path="campaigns" element={<CampaignsPage />} />
+            <Route path="media" element={<MediaPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="guide" element={<GuidePage />} />
             <Route path="ideas" element={<IdeasPage />} />
             <Route path="posts" element={<PostsPage />} />
             <Route path="posts/:id" element={<PostLink />} />

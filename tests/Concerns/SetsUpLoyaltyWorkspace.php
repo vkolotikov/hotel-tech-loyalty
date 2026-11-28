@@ -471,7 +471,7 @@ trait SetsUpLoyaltyWorkspace
                 $t->bigIncrements('id');
                 $t->unsignedBigInteger('organization_id')->nullable();
                 $t->unsignedBigInteger('member_id');
-                $t->string('uid', 50);
+                $t->string('uid', 50)->unique();
                 $t->string('card_type', 50)->default('NTAG215');
                 $t->timestamp('issued_at')->nullable();
                 $t->unsignedBigInteger('issued_by')->nullable();
@@ -482,6 +482,10 @@ trait SetsUpLoyaltyWorkspace
                 $t->text('notes')->nullable();
                 $t->timestamps();
             });
+        }
+
+        if (!Schema::hasTable('loyalty_card_batches')) {
+            (require database_path('migrations/2026_11_20_120000_add_numbered_loyalty_card_batches.php'))->up();
         }
 
         // The ledger, expiry buckets, tier history, domain events, the audit log and hotel_settings, as the points

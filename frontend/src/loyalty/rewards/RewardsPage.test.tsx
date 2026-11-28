@@ -67,9 +67,9 @@ const referrals: ReferralsPage = {
   referrals: [{ id: 1, referrer: { id: 30, name: 'Grace Hopper' }, referee: { id: 31, name: 'Alan Turing' }, state: 'rewarded', points: { referrer: 200, referee: 100 }, at: '2026-10-01T10:00:00+00:00' }],
 }
 
-const render = (search: string, c: Can) => {
+const render = (search: string, c: Can, rewardCatalogue = catalogue) => {
   const client = new QueryClient()
-  client.setQueryData(CATALOGUE_KEY, catalogue)
+  client.setQueryData(CATALOGUE_KEY, rewardCatalogue)
   client.setQueryData(redemptionsKey('pending', 1), redemptions)
   client.setQueryData(OFFERS_KEY, offers)
   client.setQueryData(referralsKey(1), referrals)
@@ -91,9 +91,10 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(html).toContain('role="tablist"')
     expect(html).toMatch(/id="rewards-tab-redemptions" aria-selected="true"/)
     const offer = render('?tab=offers', can())
-    expect(text(offer)).toContain('Offer settings')
-    expect(offer).toContain('href="/loyalty/rewards?tab=redemptions"')
-    expect(offer).toContain('href="/loyalty/rewards?tab=referrals"')
+    expect(offer).toContain('data-offer-view="read"')
+    expect(offer).not.toContain('l-rb-offer-editor')
+    expect(offer).not.toContain('href="/loyalty/rewards?tab=redemptions"')
+    expect(offer).not.toContain('href="/loyalty/rewards?tab=referrals"')
     expect(text(render('', can()))).toContain('Points rewards')
   })
 
@@ -128,6 +129,34 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(manager).toContain('href="/loyalty/rewards?reward=4"')
   })
 
+  it('keeps claim conditions and terms visible in the reward details section', () => {
+    const saved = { ...catalogue, rewards: [{ ...catalogue.rewards[0], description: 'Breakfast in the garden.', terms: 'Show your code.\nAvailable until 11:00.' }] }
+    const html = render('?selected=4', can(), saved)
+    const panel = html.slice(html.indexOf('id="management-detail"'))
+    expect(text(panel)).toContain('Key conditions Availability 0 remaining Member limit No limit Valid until')
+    expect(text(panel)).toContain('How to claim')
+    expect(panel).not.toContain('<details')
+    expect(text(panel)).toContain('Reward details Terms &amp; conditions Show your code.')
+    expect(panel).toContain('Show your code.\nAvailable until 11:00.')
+    expect(text(panel)).toContain('Member description Breakfast in the garden.')
+    expect(text(panel)).toContain('Category: Dining')
+    expect(text(panel)).toContain('Redeemed: 10')
+    expect(text(panel)).not.toContain('loyalty.launchpolish.deleteReward')
+  })
+
+  it('keeps all optional reward fields together in the editor with terms first', () => {
+    const html = render('?reward=4', can({ manage_rewards: true }))
+    const form = html.slice(html.indexOf('<form'), html.indexOf('</form>'))
+    expect(form.match(/<details\b/g)).toHaveLength(1)
+    const advanced = form.slice(form.indexOf('<details'))
+    expect(text(advanced)).toContain('Terms &amp; conditions')
+    expect(advanced.indexOf('Terms &amp; conditions')).toBeLessThan(advanced.indexOf('Availability &amp; limits'))
+    for (const label of ['Availability', 'Claims per member', 'Valid until', 'Offered until', 'Member description', 'Replace picture', 'Category']) expect(text(advanced)).toContain(label)
+    expect(advanced).toContain('type="datetime-local"')
+    expect(form).toContain('value="1500"')
+    expect(form).toContain('value="percent_discount"')
+  })
+
   it('offers Mark fulfilled and Cancel on a pending redemption, to whoever may redeem, and links the member', () => {
     const html = render('?tab=redemptions', can({ redeem: true }))
     const words = text(html)
@@ -145,13 +174,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
   })
 
   it('preserves offer values, unknown types, dates, eligibility, caps and permissions', () => {
-    const html = render('?tab=offers', can({ manage_rewards: true })), words = text(html)
+    const html = render('?tab=offers&edit=1', can({ manage_rewards: true })), words = text(html)
     for (const value of ['15% off', 'AUTUMN', 'Featured', 'Live', 'flash_sale', 'Scheduled', 'Gold', 'Used: 3', '+ Create offer']) expect(words).toContain(value)
     expect(html).toContain('value="2026-10-01"')
     expect(html).toContain('value="2026-10-31"')
     expect(html).toContain('value="100"')
     expect(text(render('?tab=offers', can()))).not.toContain('Create offer')
-    expect(render('?tab=offers', can())).toContain('<fieldset class="l-rb-fields" disabled="">')
+    expect(render('?tab=offers&edit=1', can())).not.toContain('l-rb-offer-editor')
+    expect(render('?tab=offers&edit=1', can())).toContain('data-offer-view="read"')
   })
 
   it('shows the referral numbers and list, read only, with pages', () => {
@@ -164,6 +194,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(words).toContain('Rewarded')
     expect(words).toContain('Page 1 of 3')
     expect(html).toContain('href="/loyalty/members/31"')
+  })
+
+  it('pins the edited offer even when a background refresh puts it outside the current filters', () => {
+    const selected = offers.offers[0]
+    const html = render(`?tab=offers&q=no_match&selected=${selected.id}&edit=1`, can({ manage_rewards: true }))
+    expect(html).toContain('l-editor-dialog l-editor-wide')
+    expect(html).toContain(`value="${selected.title}"`)
+    expect(html).toContain('data-offer-view="read"') // The pinned editor keeps its catalogue behind the modal.
   })
 
   it('shows a reward\'s and an offer\'s picture lazily, named by the reward or the offer', () => {

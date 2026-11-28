@@ -8,7 +8,10 @@ import type { Bootstrap, SetupProgress, Today } from '../lib/types'
 import { StartPage } from '../start/StartPage'
 import { nextStep, progressShare } from '../start/startLogic'
 import { TodayPage } from './TodayPage'
-import { firstName, greetingOf, hasMore, longDay, needsNow, scheduleOf, taskTarget, venueClock } from './todayLogic'
+import {
+  activityTarget, chatRows, figuresOf, firstName, followUpRows, greetingOf, hasMore, needCounts, needTabOf, nextActivityPage, taskRows, venueClock,
+} from './todayLogic'
+import { activityIcon, activityLabel } from './todayWords'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -65,12 +68,12 @@ const today: Today = {
   week: { conversations: 40, ai_resolved: 18, leads_from_chat: 6 },
 }
 
-function render(element: ReactElement, seed: (qc: QueryClient) => void, value: Bootstrap = boot()) {
+function render(element: ReactElement, seed: (qc: QueryClient) => void, value: Bootstrap = boot(), at = '/crm') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   seed(qc)
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/crm']}>
+      <MemoryRouter initialEntries={[at]}>
         <CrmContext.Provider value={{ data: value, isLoading: false, isError: false, error: null, refetch: () => {} }}>{element}</CrmContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -89,67 +92,134 @@ describe('Today’s decisions', () => {
     expect(firstName(null)).toBe('')
   })
 
-  it('reads the venue’s clock in its zone, and writes a day without turning it into an instant', () => {
+  it('reads the venue’s clock in its zone', () => {
     expect(venueClock(new Date('2026-11-07T22:30:00Z'), ZONE)).toEqual({ date: '2026-11-08', time: '00:30', hour: 0 })
     expect(venueClock(new Date('2026-11-07T09:05:00Z'), 'Nowhere/Else').time).toMatch(/^\d{2}:\d{2}$/)
-    expect(longDay('2026-11-07', 'en-GB')).toBe('Saturday 7 November')
-    expect(longDay('nonsense', 'en-GB')).toBe('')
   })
 
-  it('puts waiting chats first (longest waiting first), then overdue follow-ups, then overdue tasks', () => {
-    expect(needsNow(today).map(i => i.key)).toEqual(['chat-13', 'chat-12', 'lead-41', 'task-7'])
+  it('shows only the figures that are not nought, never a row of zeros', () => {
+    expect(figuresOf(today)).toEqual(['open_chats', 'new_leads', 'pipeline'])
+    const quiet = { ...today, chats: { ...today.chats, open: 0 }, leads: { ...today.leads, new: 0 }, pipeline: { open_count: 0, open_value: 0 } }
+    expect(figuresOf(quiet)).toEqual([])
+    expect(figuresOf({ ...quiet, pipeline: { open_count: 2, open_value: 0 } })).toEqual(['pipeline'])
   })
 
-  it('schedules today’s tasks by the venue’s clock, then what is due during the day', () => {
-    const { timed, allDay } = scheduleOf(today, ZONE)
-    expect(timed.map(i => [i.key, i.kind === 'task' ? i.time : null])).toEqual([['task-8', '14:30']])
+  it('counts each tab as the server did and opens the first with work, unless the address names one', () => {
+    const counts = needCounts(today)
+    expect(counts).toEqual({ chats: 3, follow_ups: 2, tasks: 3 })
+    expect(needTabOf(null, counts)).toBe('chats')
+    expect(needTabOf(null, { ...counts, chats: 0 })).toBe('follow_ups')
+    expect(needTabOf(null, { chats: 0, follow_ups: 0, tasks: 1 })).toBe('tasks')
+    expect(needTabOf(null, { chats: 0, follow_ups: 0, tasks: 0 })).toBe('chats')
+    expect(needTabOf('tasks', counts)).toBe('tasks')
+    expect(needTabOf('nonsense', { ...counts, chats: 0 })).toBe('follow_ups')
+  })
+
+  it('orders each tab: the chat waiting longest, overdue follow-ups oldest first, then today’s', () => {
+    expect(chatRows(today).map(c => c.id)).toEqual([13, 12])
+    expect(followUpRows(today).map(f => f.id)).toEqual([41, 42])
+    const later = { ...today, leads: { ...today.leads, follow_ups: [today.leads.follow_ups[1], { ...today.leads.follow_ups[0], id: 40, due: '2026-11-05' }, today.leads.follow_ups[0]] } }
+    expect(followUpRows(later).map(f => f.id)).toEqual([41, 40, 42])
+  })
+
+  it('orders your tasks: overdue first, then today’s by the venue’s clock, then those without a time', () => {
     // 22:00 UTC is midnight in Riga: a task set for the day, without a time.
-    expect(allDay.map(i => i.key)).toEqual(['task-9', 'lead-42'])
+    expect(taskRows(today, ZONE).map(r => [r.task.id, r.time])).toEqual([[7, '10:00'], [8, '14:30'], [9, null]])
   })
 
-  it('opens a task’s lead when it has one, and says when the server holds more than its list', () => {
-    expect(taskTarget({ inquiry_id: 41 })).toBe('/crm/leads/41')
-    expect(taskTarget({ inquiry_id: null })).toBe('/crm/tasks')
+  it('opens a line of the team’s activity on its lead, else its contact, else its chat', () => {
+    expect(activityTarget({ lead: { id: 4, name: 'Bo', company: null, status: 'New' }, contact: { id: 9, name: 'Bo' }, conversation_id: 3 })).toEqual({ kind: 'lead', id: 4 })
+    expect(activityTarget({ lead: null, contact: { id: 9, name: 'Bo' }, conversation_id: 3 })).toEqual({ kind: 'contact', id: 9 })
+    expect(activityTarget({ lead: null, contact: null, conversation_id: 3 })).toEqual({ kind: 'chat', id: 3 })
+    expect(activityTarget({ lead: null, contact: null, conversation_id: null })).toBeNull()
+    expect(nextActivityPage({ meta: { current_page: 1, last_page: 3, total: 20 } })).toBe(2)
+    expect(nextActivityPage({ meta: { current_page: 3, last_page: 3, total: 20 } })).toBeUndefined()
+    expect(nextActivityPage(undefined)).toBeUndefined()
+    const t = ((_: string, fallback: string) => fallback) as never
+    expect(activityLabel(t, 'task_completed')).toBe('Task done')
+    expect(activityLabel(t, 'whatever')).toBe('Update')
+    expect(activityIcon('call')).not.toBe(activityIcon('system'))
+  })
+
+  it('says when the server holds more than the rows shown', () => {
     expect(hasMore(3, 2)).toBe(true)
     expect(hasMore(2, 2)).toBe(false)
   })
-
 })
 
 describe('Today, rendered', () => {
-  it('greets, shows the figures, what needs you now, the schedule, the new leads and the week', () => {
+  it('greets, shows the figures, the tabs with their counts, the chats waiting first, the new leads and the week', () => {
     const html = render(<TodayPage />, qc => qc.setQueryData(['crm', 'today'], today))
     expect(html).toMatch(/Good (morning|afternoon|evening), Anna/)
-    expect(html).toContain('Saturday 7 November')
-    expect(html).toContain('Waiting for a reply')
-    expect(html).toContain('5 open chats · 1 with nobody')
+    expect(html).toContain('Open chats')
+    expect(html).toContain('1 with nobody')
     expect(html).toContain('Needs you now')
+    expect(html).toMatch(/role="tab" id="crm-need-chats" aria-selected="true"/)
+    expect(html).toContain('Chats waiting')
+    expect(html).toContain('Follow-ups')
+    expect(html).toContain('Your tasks')
     expect(html.indexOf('jan@example.test')).toBeLessThan(html.indexOf('Marta Ozola'))
-    expect(html.indexOf('Marta Ozola')).toBeLessThan(html.indexOf('Call about the offer'))
     expect(html).toContain('href="/crm/inbox?c=12"')
-    expect(html).toContain('All 3 waiting chats')
-    expect(html).toContain('Today’s schedule')
-    expect(html).toContain('14:30')
-    expect(html).toContain('During the day')
-    expect(html).toContain('href="/crm/leads/50"')
+    expect(html).toContain('Show all 3')
+    expect(html).toContain('href="/crm?lead=50"')
     expect(html).toContain('45 %')
-    expect(html).toContain('Mark “Bo Berg · Berg AB” done')
-    expect(html).toContain('Mark “Call the florist” done')
-    expect(html).toContain('Mark “Show the hall” done')
+    expect(html).toContain('Team activity')
     expect(html).not.toContain('Finish setting up')
+  })
+
+  it('opens the tab the address names: follow-ups in their lead’s panel, Done as an icon with its name', () => {
+    const html = render(<TodayPage />, qc => qc.setQueryData(['crm', 'today'], today), boot(), '/crm?need=follow_ups')
+    expect(html).toMatch(/id="crm-need-follow_ups" aria-selected="true"/)
+    expect(html).toContain('href="/crm?need=follow_ups&amp;lead=41"')
+    expect(html).toContain('aria-label="Mark “Bo Berg · Berg AB” done"')
+    expect(html).toContain('title="Mark “Bo Berg · Berg AB” done"')
+    expect(html.indexOf('Bo Berg')).toBeLessThan(html.indexOf('Ilze'))
+  })
+
+  it('lists your tasks as buttons that open the task, overdue first', () => {
+    const html = render(<TodayPage />, qc => qc.setQueryData(['crm', 'today'], today), boot(), '/crm?need=tasks')
+    expect(html).toContain('data-task-open="7"')
+    expect(html).toContain('aria-label="Open the task “Call the florist”"')
+    expect(html.indexOf('Call the florist')).toBeLessThan(html.indexOf('Show the hall'))
+    expect(html).toContain('14:30')
+    expect(html).toContain('Mark “Show the hall” done')
   })
 
   it('shows the setup banner only while setup is incomplete', () => {
     const html = render(<TodayPage />, qc => qc.setQueryData(['crm', 'today'], today), boot({ done: 2, total: 6, complete: false }))
     expect(html).toContain('Finish setting up HexaTech CRM')
+    expect(html).toContain('2/6')
     expect(html).toContain('href="/crm/start"')
   })
 
-  it('says all is clear when nothing waits', () => {
-    const quiet: Today = { ...today, chats: { ...today.chats, waiting: 0, list: [] }, leads: { ...today.leads, overdue: 0, follow_ups: [] }, tasks: { due_today: 0, overdue: 0, list: [] } }
+  it('says all is clear when nothing waits, with no row of zeros', () => {
+    const quiet: Today = {
+      ...today,
+      chats: { waiting: 0, open: 0, unassigned: 0, list: [] },
+      leads: { ...today.leads, new: 0, new_list: [], overdue: 0, due_today: 0, follow_ups: [] },
+      tasks: { due_today: 0, overdue: 0, list: [] },
+      pipeline: { open_count: 0, open_value: 0 },
+    }
     const html = render(<TodayPage />, qc => qc.setQueryData(['crm', 'today'], quiet))
-    expect(html).toContain('All clear')
-    expect(html).toContain('Nothing scheduled for today')
+    expect(html).toContain('Nobody is waiting')
+    expect(html).not.toContain('The day at a glance')
+    expect(html).toContain('No new leads today')
+  })
+
+  it('shows the team’s activity: who, what, about which lead, opening it', () => {
+    const page = {
+      data: [{ id: 1, type: 'call', direction: null, subject: 'Called about the plan', excerpt: null, duration_minutes: 5, occurred_at: '2026-11-07T08:00:00+00:00',
+        by: { id: 3, name: 'Anna Berzina' }, lead: { id: 41, name: 'Bo Berg', company: null, status: 'New' }, contact: { id: 9, name: 'Bo Berg' }, conversation_id: null }],
+      meta: { current_page: 1, last_page: 2, total: 9 },
+    }
+    const html = render(<TodayPage />, qc => {
+      qc.setQueryData(['crm', 'today'], today)
+      qc.setQueryData(['crm', 'activity'], { pages: [page], pageParams: [1] })
+    })
+    expect(html).toContain('Anna Berzina')
+    expect(html).toContain('Bo Berg — Called about the plan')
+    expect(html).toContain('href="/crm?lead=41"')
+    expect(html).toContain('Show more')
   })
 })
 

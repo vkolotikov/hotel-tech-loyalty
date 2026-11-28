@@ -4,9 +4,16 @@ namespace App\Http\Controllers\Api\V1\Admin\Content;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContentPlannerPostComment;
+use App\Models\ContentPlannerPost;
+use App\Models\ContentMedia;
 use App\Services\Content\ContentAccess;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentTimeline;
+use App\Services\Content\ContentTeam;
+use App\Services\Content\ContentMediaLibrary;
+use App\Services\Content\ContentNotifications;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,12 +26,33 @@ class CommentController extends Controller
     public function store(Request $request, int $id): JsonResponse
     {
         $post = PostController::find($id);
-        $comment = ContentPlannerPostComment::create([
-            'post_id'  => $post->id,
-            'brand_id' => $post->brand_id,
-            'user_id'  => $request->user()->id,
-            'body'     => self::body($request),
-        ]);
+        $body = self::body($request);
+        $data = $request->validate(['media_id' => 'nullable|integer', 'mentioned_user_ids' => 'sometimes|array|max:50', 'mentioned_user_ids.*' => 'integer|distinct']);
+        $comment = DB::transaction(function () use ($post, $request, $body, $data) {
+            // Serialize attachment validation with detach/delete. Comments never touch the post revision.
+            $locked = ContentPlannerPost::whereKey($post->id)->lockForUpdate()->first()
+                ?? throw new ContentRefused('not_found', 'This post no longer exists.', 404);
+            $media = null;
+            if (isset($data['media_id'])) {
+                $media = ContentMedia::whereKey($data['media_id'])->first();
+                if (!$media || !in_array((int) $media->id, ContentMediaLibrary::ids($locked), true)) {
+                    throw ValidationException::withMessages(['media_id' => 'Choose an asset currently attached to this post.']);
+                }
+            }
+            $ids = array_map('intval', $data['mentioned_user_ids'] ?? []);
+            $team = ContentTeam::of((int) $locked->brand_id)->whereIn('id', $ids);
+            if ($team->count() !== count($ids)) {
+                throw ValidationException::withMessages(['mentioned_user_ids' => 'Choose active people from this brand’s team.']);
+            }
+            $comment = ContentPlannerPostComment::create([
+                'post_id' => $locked->id, 'brand_id' => $locked->brand_id, 'user_id' => $request->user()->id, 'body' => $body,
+                'media_id' => $media?->id,
+                'media_context' => $media ? ['id' => (int) $media->id, 'name' => $media->name, 'mime' => $media->mime, 'url' => $media->url] : null,
+                'mentions' => $team->map(fn ($member) => ['id' => $member['id'], 'name' => $member['name']])->values()->all(),
+            ]);
+            ContentNotifications::mentions($locked, $comment);
+            return $comment;
+        });
 
         return response()->json([
             'comment'        => ContentTimeline::comment($comment->load('user:id,name'), $request->user()),
@@ -35,6 +63,7 @@ class CommentController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $comment = self::find($id);
+        $request->validate(['media_id' => 'missing', 'mentioned_user_ids' => 'missing']);
         if (!self::mine($comment, $request)) {
             throw new ContentRefused('not_yours', 'You can only change your own comments.', 403);
         }

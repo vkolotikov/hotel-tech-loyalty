@@ -5,6 +5,7 @@ export interface TeamMember {
   name: string | null
   email: string | null
   role: string
+  loyalty_scan_only?: boolean
   is_active: boolean
   last_login_at: string | null
   invite_expires_at: string | null

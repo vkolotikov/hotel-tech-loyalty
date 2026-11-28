@@ -3,9 +3,15 @@
 namespace App\Services;
 
 use App\Exceptions\AiHelperRefused;
+use App\Models\Brand;
 use App\Models\KnowledgeDocument;
 use App\Models\KnowledgeItem;
 use App\Models\Organization;
+use App\Scopes\BrandScope;
+use App\Services\Crm\SalesProfile;
+use App\Services\Crm\SalesQuestionSearch;
+use App\Services\Integrations\FdsBuilderKnowledge;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -80,39 +86,65 @@ class KnowledgeService
 
     /**
      * Search knowledge items relevant to a query. Fetches a superset by
-     * ILIKE/JSON match, then scores in-memory by how many tokens the item's
+     * case-insensitive text and keyword matches, then scores by how many tokens the item's
      * question/answer/keywords hit (weighted: question > keywords > answer),
      * boosted by the admin-set priority. Returns the top $limit items.
      */
-    public function searchRelevantItems(string $query, int $orgId, int $limit = 5): Collection
+    public function searchRelevantItems(string $query, int $orgId, int $limit = 5, ?int $brandId = null): Collection
     {
-        $words = $this->tokeniseQuery($query);
+        $brand = $this->resolveBrand($orgId, $brandId);
 
+        return $this->rankedItems($this->items($orgId, $brand), $this->words($query), $limit, $brand);
+    }
+
+    private function resolveBrand(int $orgId, ?int $id): ?Brand
+    {
+        $id ??= Brand::currentOrDefaultIdForOrg($orgId);
+        return $id === null ? null : Brand::query()->where('organization_id', $orgId)->findOrFail($id);
+    }
+
+    /** @return Builder<KnowledgeItem> */
+    private function items(int $orgId, ?Brand $brand): Builder
+    {
+        return KnowledgeItem::withoutGlobalScope(BrandScope::class)->where('organization_id', $orgId)
+            ->where(fn ($q) => $q->where('brand_id', $brand?->id)->when($brand?->is_default, fn ($q) => $q->orWhereNull('brand_id')))
+            ->when(FdsBuilderKnowledge::owns($brand), fn ($q) => $q->where(fn ($q) => $q->whereNull('source_key')
+                ->orWhere('source_key', 'not like', FdsBuilderKnowledge::PREFIX.'%')
+                ->orWhere('source_checked_at', '>=', now()->subHours(FdsBuilderKnowledge::FRESH_HOURS))))
+            ->active();
+    }
+
+    private function words(string $query): array
+    {
+        return array_slice($this->tokeniseQuery(mb_substr($query, 0, 8000)), 0, 60);
+    }
+
+    /** @param Builder<KnowledgeItem> $base */
+    private function rankedItems(Builder $base, array $words, int $limit, ?Brand $brand = null): Collection
+    {
         if (empty($words)) {
-            return KnowledgeItem::where('organization_id', $orgId)
-                ->active()
-                ->orderByDesc('priority')
-                ->orderByDesc('use_count')
-                ->limit($limit)
-                ->get();
+            return $base->orderByDesc('priority')->orderByDesc('use_count')->orderBy('id')->limit($limit)->get();
         }
 
         // Pull a broader candidate set so the scoring step has material to work
         // with — a single matching token shouldn't exclude an item that would
         // have scored high on others.
-        $candidates = KnowledgeItem::where('organization_id', $orgId)
-            ->active()
+        $matches = $base
             ->where(function ($q) use ($words) {
                 foreach ($words as $word) {
-                    $q->orWhere('question', 'ILIKE', "%{$word}%")
-                      ->orWhere('answer', 'ILIKE', "%{$word}%")
+                    $q->orWhereLike('question', "%{$word}%")
+                      ->orWhereLike('answer', "%{$word}%")
                       ->orWhereJsonContains('keywords', $word);
                 }
-            })
-            ->orderByDesc('priority')
-            ->orderByDesc('use_count')
-            ->limit(max(25, $limit * 5))
-            ->get();
+            });
+        $candidates = (clone $matches)->orderByDesc('priority')->orderByDesc('use_count')
+            ->limit(max(25, $limit * 5))->get();
+        if (FdsBuilderKnowledge::owns($brand)) {
+            // Existing FAQs can have years of use counts. Let fresh catalog matches compete on relevance from day one.
+            $catalog = (clone $matches)->where('source_key', 'like', FdsBuilderKnowledge::PREFIX.'%')
+                ->orderBy('id')->limit(64)->get();
+            $candidates = $candidates->concat($catalog)->unique('id')->values();
+        }
 
         if ($candidates->isEmpty()) {
             return $candidates;
@@ -144,65 +176,196 @@ class KnowledgeService
             ->values();
     }
 
-    /**
-     * Build knowledge context string for injection into AI prompt.
-     */
-    public function getKnowledgeContext(string $query, int $orgId): string
+    /** @return Builder<KnowledgeDocument> */
+    private function documents(int $orgId, ?Brand $brand): Builder
     {
-        $items = $this->searchRelevantItems($query, $orgId);
-        $words = $this->tokeniseQuery($query);
+        return KnowledgeDocument::withoutGlobalScope(BrandScope::class)->where('organization_id', $orgId)
+            ->where(fn ($q) => $q->where('brand_id', $brand?->id)->when($brand?->is_default, fn ($q) => $q->orWhereNull('brand_id')))
+            ->completed()->whereNotNull('extracted_text');
+    }
 
-        $hasItems = !$items->isEmpty();
-        if ($hasItems) {
-            KnowledgeItem::whereIn('id', $items->pluck('id'))->increment('use_count');
-        }
+    public function inventory(Brand $brand): array
+    {
+        return ['answers' => $this->items((int) $brand->organization_id, $brand)->count(),
+            'documents' => $this->documents((int) $brand->organization_id, $brand)->count()];
+    }
 
-        $context = '';
-        if ($hasItems) {
-            $context .= "Below are the most relevant FAQ entries for this query, ranked by relevance. Treat these as authoritative.\n\n";
-            foreach ($items as $item) {
-                $context .= "Q: {$item->question}\nA: {$item->answer}\n\n";
+    public function captureSources(Brand $brand): array
+    {
+        $sources = [];
+        $remaining = 80000;
+        // Prices stay in the live source. A profile captured today must not turn them into permanent company facts.
+        $base = $this->items((int) $brand->organization_id, $brand)
+            ->when(FdsBuilderKnowledge::owns($brand), fn ($q) => $q->where(fn ($q) => $q->whereNull('source_key')
+                ->orWhere('source_key', 'not like', FdsBuilderKnowledge::PREFIX.'%')));
+        $items = $this->rankedItems($base, [], 80);
+        foreach ($items as $item) {
+            $text = mb_substr((string) $item->answer, 0, min(4500, $remaining));
+            if ($text !== '') {
+                $sources['answer-'.$item->id] = ['type' => 'knowledge_answer', 'title' => $item->question, 'text' => $text];
+                $remaining -= mb_strlen($text);
             }
         }
+        foreach ($this->documents((int) $brand->organization_id, $brand)->latest('updated_at')->limit(8)->cursor() as $doc) {
+            $text = (string) $doc->extracted_text;
+            $length = mb_strlen($text);
+            if ($length > 10000) {
+                $text = mb_substr($text, 0, 4000)."\n…\n".mb_substr($text, intdiv($length, 2) - 1500, 3000)."\n…\n".mb_substr($text, -3000);
+            }
+            $sources['document-'.$doc->id] = ['type' => 'knowledge_document', 'title' => $doc->file_name, 'text' => $text];
+        }
+        return $sources;
+    }
 
-        // Document excerpts — score by overlap instead of first-hit-wins so the
-        // most relevant doc surfaces, and truncate to a reasonable slice.
-        $docs = KnowledgeDocument::where('organization_id', $orgId)
-            ->completed()
-            ->whereNotNull('extracted_text')
-            ->get();
+    private function identifierHit(string $text, string $id): bool
+    {
+        return (bool) preg_match('/(?<![\pL\d-])'.preg_quote($id, '/').'(?![\pL\d-])/iu', $text);
+    }
 
-        if ($docs->isNotEmpty() && !empty($words)) {
-            $docScored = [];
-            foreach ($docs as $doc) {
-                $text = (string) $doc->extracted_text;
-                if ($text === '') continue;
-                $lower = mb_strtolower($text, 'UTF-8');
-                $hits = 0;
-                foreach ($words as $w) {
-                    if (mb_strpos($lower, $w) !== false) $hits++;
+    public function forSalesQuestions(Brand $brand, array $plan): array
+    {
+        $orgId = (int) $brand->organization_id;
+        $terms = collect($plan['questions'])->map(fn ($q) => implode(' ', [$q['need'], $q['search'], $q['alternate'], $q['price_subject'] ?? '']))->implode(' ');
+
+        return (new SalesQuestionSearch)->retrieve($plan, $this->salesItems($brand, $terms),
+            $this->documents($orgId, $brand), $this->tokeniseQuery(...));
+    }
+
+    /**
+     * Pen engraving, packaging and shipping have their own builder tariff.
+     * @return Builder<KnowledgeItem>
+     */
+    private function salesItems(Brand $brand, string $terms): Builder
+    {
+        $items = $this->items((int) $brand->organization_id, $brand);
+        if (FdsBuilderKnowledge::owns($brand) && preg_match('/(?:\bcards?\b|kaart|visiit|cartes?\b|tarjet|karte|карт)/iu', $terms)
+            && ! preg_match('/\b(?:pens?|parker|jotter|sonnet|stylo\pL*|kugelschreiber\pL*|bol[ií]grafo\pL*|ручк\pL*|pastapliiats\pL*)\b/iu', $terms)) {
+            $items->where(fn ($q) => $q->whereNull('source_key')->orWhereNotLike('source_key', FdsBuilderKnowledge::PREFIX.'pens.%'));
+        }
+
+        return $items;
+    }
+
+    /** Match exact model references first, then rank relevant brand answers and document passages. */
+    public function forSales(string $query, Brand $brand): array
+    {
+        $query = mb_strtolower(mb_substr($query, 0, 8000));
+        preg_match_all('/(?<![\pL\d-])(?=[\pL\d.-]{1,40}(?![\pL\d.-]))(?=[\pL\d.-]*\d)\pL[\pL\d]*(?:[-.][\pL\d]+)*(?![\pL\d-])/u', $query, $matches);
+        $ids = array_slice(array_unique($matches[0]), 0, 12);
+        $words = $this->words($query);
+        foreach ([
+            ['pricing', 'price', 'tarif', 'precio', 'prix', 'preis', 'цена'],
+            ['shipping', 'delivery', 'livraison', 'entrega', 'versand', 'доставка'],
+            ['sample', 'échantillon', 'muestra', 'muster', 'образец'],
+            ['invoice', 'facture', 'factura', 'rechnung', 'счёт'],
+        ] as $terms) {
+            if (array_intersect($words, $terms)) {
+                $words = array_values(array_unique([...$words, ...$terms]));
+            }
+        }
+        $base = $this->salesItems($brand, $query);
+        $matched = $words ? $this->rankedItems(clone $base, $words, 12, $brand) : collect();
+        $exact = collect();
+        if ($ids) {
+            $candidates = (clone $base)->where(function ($q) use ($ids) {
+                foreach ($ids as $id) {
+                    $q->orWhereLike('question', "%{$id}%")->orWhereLike('answer', "%{$id}%")->orWhereJsonContains('keywords', $id);
                 }
-                if ($hits > 0) {
-                    // Locate the first hit to extract a nearby excerpt instead
-                    // of always using the opening of the document.
-                    $firstPos = null;
-                    foreach ($words as $w) {
-                        $p = mb_strpos($lower, $w);
-                        if ($p !== false && ($firstPos === null || $p < $firstPos)) $firstPos = $p;
+            })->orderByDesc('priority')->orderBy('id')->cursor();
+            foreach ($candidates as $item) {
+                $content = $item->question.' '.$item->answer.' '.implode(' ', $item->keywords ?? []);
+                if (array_any($ids, fn ($id) => $this->identifierHit($content, $id))) {
+                    $exact->push($item);
+                    if ($exact->count() >= 12) {
+                        break;
                     }
-                    $start = max(0, ($firstPos ?? 0) - 120);
-                    $excerpt = mb_substr($text, $start, 900);
-                    $docScored[] = ['doc' => $doc, 'hits' => $hits, 'excerpt' => trim($excerpt)];
                 }
             }
+        }
+        $items = $exact->concat($matched)->unique('id');
+        if ($items->isEmpty() && ! $ids) {
+            $items = $this->rankedItems($base, [], 4);
+        }
+        $answers = [];
+        $remaining = 22000;
+        foreach ($items->take(12) as $item) {
+            $question = mb_substr((string) $item->question, 0, 500);
+            $answer = mb_substr((string) $item->answer, 0, 4500);
+            $length = mb_strlen($question) + mb_strlen($answer);
+            if ($remaining < 1) {
+                break;
+            }
+            if ($length > $remaining) {
+                continue;
+            }
+            $answers[] = ['id' => 'faq-'.$item->id, 'kind' => str_starts_with((string) $item->source_key, FdsBuilderKnowledge::PREFIX)
+                ? 'public_catalog' : 'active_brand_answer', 'question' => $question, 'answer' => $answer];
+            $remaining -= $length;
+        }
 
-            usort($docScored, fn($a, $b) => $b['hits'] <=> $a['hits']);
-            foreach (array_slice($docScored, 0, 2) as $d) {
-                $context .= "From document \"{$d['doc']->file_name}\":\n{$d['excerpt']}\n\n";
+        return ['answers' => $answers, 'documents' => $this->excerpts(array_unique([...$ids, ...$words]), (int) $brand->organization_id, $brand, $ids)];
+    }
+
+    public function getKnowledgeContext(string $query, int $orgId, ?int $brandId = null, bool $countUse = true): string
+    {
+        $brand = $this->resolveBrand($orgId, $brandId);
+        $base = $this->items($orgId, $brand);
+        $words = $this->words($query);
+        $items = $this->rankedItems(clone $base, $words, 5, $brand);
+        if ($countUse && $items->isNotEmpty()) {
+            $base->whereKey($items->pluck('id')->all())->increment('use_count');
+        }
+
+        $parts = [];
+        if ($brand && ($facts = app(SalesProfile::class)->publicFacts($brand))) {
+            $parts[] = "Reviewed company facts for customers:\n".json_encode($facts, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        }
+        foreach ($items as $item) {
+            $parts[] = "Q: {$item->question}\nA: {$item->answer}";
+        }
+        foreach ($this->excerpts($words, $orgId, $brand) as $doc) {
+            $parts[] = "From document \"{$doc['title']}\":\n{$doc['excerpt']}";
+        }
+
+        return implode("\n\n", $parts);
+    }
+
+    private function excerpts(array $words, int $orgId, ?Brand $brand, array $ids = []): array
+    {
+        if (! $words) {
+            return [];
+        }
+        $docs = $this->documents($orgId, $brand)->select(['id', 'file_name', 'extracted_text'])
+            ->where(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->orWhereLike('extracted_text', "%{$word}%");
+                }
+            })->orderBy('id')->cursor();
+        $best = [];
+        foreach ($docs as $doc) {
+            $text = (string) $doc->extracted_text;
+            $chunks = mb_str_split($text, 1100);
+            $score = 0;
+            $excerpt = '';
+            foreach ($chunks as $index => $chunk) {
+                $passage = $chunk.mb_substr($chunks[$index + 1] ?? '', 0, 300);
+                $lower = mb_strtolower($passage);
+                $hits = count(array_filter(array_diff($words, $ids), fn ($word) => str_contains($lower, $word)))
+                    + 20 * count(array_filter($ids, fn ($id) => $this->identifierHit($lower, $id)));
+                if ($hits > $score) {
+                    $score = $hits;
+                    $excerpt = $passage;
+                }
+            }
+            if ($score > 0) {
+                $best[] = ['score' => $score, 'id' => 'doc-'.$doc->id, 'kind' => 'brand_document',
+                    'title' => $doc->file_name, 'excerpt' => trim($excerpt)];
+                usort($best, fn ($a, $b) => $b['score'] <=> $a['score']);
+                $best = array_slice($best, 0, 4);
             }
         }
 
-        return trim($context);
+        return array_map(fn ($row) => array_diff_key($row, ['score' => true]), $best);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use App\Models\Reward;
 use App\Models\User;
+use App\Support\AdvisoryLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -29,6 +30,7 @@ final class ProgrammeOptions
      */
     public const OPTIONS = [
         // Points on spend
+        'spend_points_enabled'        => ['bool', true, 'Points for Spending On'],
         'points_on_bookings'          => ['bool', true, 'Points on Bookings'],
         'points_per_currency'         => ['decimal', 1.0, 'Points per Currency Unit'],
         'points_expiry_months'        => ['int', 24, 'Points Expiry (months, 0 = never)'],
@@ -57,6 +59,7 @@ final class ProgrammeOptions
         'tier_progress_by'            => ['enum:points|visits|spend', 'points', 'Tier Progress By'],
         // The wizard
         'programme_setup_completed_at' => ['time', null, 'Programme Setup Completed'],
+        'programme_setup_template' => ['string', null, 'Programme Setup Template'],
     ];
 
     /** Bounds a value must stay within, by option (inclusive). @var array<string, array{0: float|int, 1: float|int}> */
@@ -79,15 +82,16 @@ final class ProgrammeOptions
      * and the options the card sets. The workspace draws its cards from this list; it keeps no copy. A card with
      * neither is always on (release 8's "How members move up": a choice, never off).
      *
-     * The earn rate is a card of its own, always on (owner 2026-10-26, "better logic"): `points_per_currency` is what
+     * The earn rate is a card of its own (owner 2026-10-26, "better logic"): `points_per_currency` is what
      * LoyaltyService::pointsForSpend() reads for a completed booking AND a purchase at the desk, while
      * `points_on_bookings` switches only the bookings — so the rate no longer hides behind the bookings' switch, and a
-     * venue that takes no bookings still sets what its desk purchases earn.
+     * venue that takes no bookings still sets what its desk purchases earn. Since 2026-11-17 the owner may switch
+     * spending points off independently, retaining the rate and every visit/bonus option.
      *
      * @var array<string, array{switch?: string, zero_off?: string, fields: list<string>}>
      */
     public const WAYS = [
-        'earn_rate'       => ['fields' => ['points_per_currency']],
+        'earn_rate'       => ['switch' => 'spend_points_enabled', 'fields' => ['points_per_currency']],
         'points_on_spend' => ['switch' => 'points_on_bookings', 'fields' => []],
         'points_expiry'   => ['zero_off' => 'points_expiry_months', 'fields' => ['points_expiry_months']],
         'welcome_bonus'   => ['zero_off' => 'welcome_bonus_points', 'fields' => ['welcome_bonus_points']],
@@ -107,7 +111,7 @@ final class ProgrammeOptions
     ];
 
     /** Written only by the setup wizard's apply and skip (markSetUp()), never by a change. */
-    public const WIZARD_ONLY = ['programme_setup_completed_at'];
+    public const WIZARD_ONLY = ['programme_setup_completed_at', 'programme_setup_template'];
 
     /**
      * The cards, as the workspace reads them.
@@ -235,6 +239,12 @@ final class ProgrammeOptions
      */
     public static function save(int $orgId, array $changes, ?User $by): array
     {
+        return AdvisoryLock::transaction("loyalty-setup:{$orgId}", fn () => self::saveLocked($orgId, $changes, $by));
+    }
+
+    /** @param array<string, mixed> $changes @return array<string, mixed> */
+    private static function saveLocked(int $orgId, array $changes, ?User $by): array
+    {
         $clean = self::validate($orgId, $changes);
         if ($clean === []) {
             return self::for($orgId);
@@ -328,6 +338,12 @@ final class ProgrammeOptions
         self::write($orgId, ['programme_setup_completed_at' => $at]);
 
         return $at;
+    }
+
+    /** Wizard metadata only; choosing a template never changes the organisation's other products. */
+    public static function rememberTemplate(int $orgId, ?string $template): void
+    {
+        self::write($orgId, ['programme_setup_template' => $template]);
     }
 
     /**
@@ -471,9 +487,8 @@ final class ProgrammeOptions
                     return null;
                 }
                 // One of this organisation's rewards that members can still be given (the picker lists the active ones).
-                $own = is_numeric($value) && Reward::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey((int) $value)
-                    ->where('is_active', true)->exists();
-                if ($own) {
+                $reward = is_numeric($value) ? Reward::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey((int) $value)->first() : null;
+                if ($reward?->isRedeemable()) {
                     return (int) $value;
                 }
                 $problem = 'Choose one of your rewards.';

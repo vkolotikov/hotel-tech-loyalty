@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { answerFixture } from '../options/fixture'
-import { baseExample, earningUrl, earnLocation, filteredWays } from './model'
+import { baseExample, ruleExample, earningUrl, earnLocation, filteredWays } from './model'
 import { EARN_WORDS } from './words'
 import en from '../i18n/earn.en.json'
 
 describe('Ways to earn navigation and illustrative amounts', () => {
   const answer = answerFixture()
+  it('never illustrates spending points while the shared earning switch is off', () => {
+    const data = answerFixture(); data.options.spend_points_enabled = false; data.options.desk_earn_enabled = true
+    expect(ruleExample('points_on_spend', data, '50')).toBe(0)
+    expect(ruleExample('desk_earn', data, '50')).toBe(0)
+  })
   it('defaults to earning and preserves direct method links and group boundaries', () => {
     expect(earnLocation('', answer.ways).tab).toBe('earn')
     expect(earnLocation('?way=referrals', answer.ways)).toMatchObject({ tab: 'bonus', way: 'referrals', selected: 'referrals' })
@@ -34,5 +39,14 @@ describe('Ways to earn navigation and illustrative amounts', () => {
   })
   it('registers every dynamic English phrase exactly; the locale suite checks all five translations', () => {
     expect(en).toEqual(EARN_WORDS)
+  })
+  it('shows no booking or desk award while its own trigger is off or unavailable', () => {
+    const data = answerFixture(); data.options.points_per_currency = 2.5
+    expect(ruleExample('points_on_spend', data, '50')).toBe(125)
+    expect(ruleExample('desk_earn', data, '50')).toBe(0)
+    data.not_used = ['points_on_spend']
+    expect(ruleExample('points_on_spend', data, '50')).toBe(0)
+    data.options.desk_earn_enabled = true
+    expect(ruleExample('desk_earn', data, '50')).toBe(125)
   })
 })

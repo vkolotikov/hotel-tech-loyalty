@@ -56,7 +56,7 @@
   "advancedLine": "Review rounding and the modifiers used by your program.",
   "calculation": "The final award is rounded down to whole points after the applicable level, outlet, benefit and promotion multipliers. Overlapping boosts use the highest matching boost.",
   "desk": "Purchases entered by staff",
-  "deskLine": "Staff-entered purchases use their own rules.",
+  "deskLine": "Desk purchases use the shared purchase rate and a separate switch.",
   "deskLink": "View desk purchase settings →",
   "memberExample": "MEMBER EXAMPLE",
   "seeEarn": "See what members earn",

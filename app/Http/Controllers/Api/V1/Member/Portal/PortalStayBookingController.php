@@ -73,7 +73,7 @@ class PortalStayBookingController extends Controller
             }
         }
 
-        return response()->json($cat + ['pricing' => ['automatic' => $automatic], 'payment' => PortalBootstrap::paymentMode($currency)]);
+        return response()->json($cat + ['promotions_enabled' => \App\Services\Booking\StayPromotions::enabled(), 'pricing' => ['automatic' => $automatic], 'payment' => PortalBootstrap::paymentMode($currency)]);
     }
 
     public function availability(Request $request, AvailabilityService $availability): JsonResponse
@@ -187,6 +187,7 @@ class PortalStayBookingController extends Controller
             'extras.*.id' => ['bail', 'required_with:extras', $scalar('id')],
             'extras.*.quantity' => ['bail', 'nullable', $scalar('quantity'), 'integer', 'min:1', 'max:10'],
             'coupon' => 'nullable|array', 'coupon.member_offer_id' => 'nullable|integer', 'coupon.redemption_id' => 'nullable|integer',
+            'promo_code' => 'nullable|string|max:32',
         ];
     }
 
@@ -215,6 +216,8 @@ class PortalStayBookingController extends Controller
                 : $this->quotes->quote($request->user(), $member, $data);
 
             return response()->json($this->quotes->payload($quote));
+        } catch (\App\Services\Booking\PromotionException $e) {
+            return response()->json(['error' => $e->errorCode, 'message' => $e->getMessage()], 422);
         } catch (StayQuoteException $e) {
             return $this->refuse($e);
         } catch (CouponException $e) {
@@ -356,6 +359,7 @@ class PortalStayBookingController extends Controller
             $changes[self::HOLD_EXTENSIONS_KEY] = $extensions + 1;
             $expires = $expires->greaterThan(now()->addMinutes(15)) ? $expires : now()->addMinutes(15);
         }
+        $expires = $hold->paymentExpiry($expires);
         $hold->forceFill(['payload_json' => array_merge($p, $changes), 'expires_at' => $expires])->save();
 
         return response()->json([

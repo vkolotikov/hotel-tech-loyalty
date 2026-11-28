@@ -41,5 +41,37 @@
     "more_areas": "Weitere Bereiche",
     "plan": "Tarif & Produkte",
     "team": "Team"
+  },
+  "pulse": {
+    "label": "Jetzt vor Ort",
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend",
+    "night": "Gute Nacht",
+    "hello_name": "{{greeting}}, {{name}}",
+    "place_time": "{{place}} · Ortszeit",
+    "zone_time": "Ortszeit ({{zone}})",
+    "feels_like": "Gefühlt {{temp}}",
+    "high_low": "H {{max}} T {{min}}",
+    "next_hours": "Die nächsten Stunden",
+    "now": "Jetzt",
+    "sun": "Sonnenaufgang {{rise}}, Sonnenuntergang {{set}}",
+    "weather": {
+      "clear": "Klarer Himmel",
+      "mainly_clear": "Überwiegend klar",
+      "partly_cloudy": "Teilweise bewölkt",
+      "overcast": "Bedeckt",
+      "fog": "Nebel",
+      "drizzle": "Nieselregen",
+      "freezing_drizzle": "Gefrierender Nieselregen",
+      "rain": "Regen",
+      "freezing_rain": "Gefrierender Regen",
+      "snow": "Schnee",
+      "showers": "Regenschauer",
+      "snow_showers": "Schneeschauer",
+      "thunderstorm": "Gewitter",
+      "thunder_hail": "Gewitter mit Hagel",
+      "unknown": "Wetter"
+    }
   }
 }

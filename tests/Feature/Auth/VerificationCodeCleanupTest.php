@@ -112,7 +112,7 @@ class VerificationCodeCleanupTest extends TestCase
             ->assertJson(['error' => 'Please wait before requesting another code.']);
     }
 
-    public function test_resend_supersedes_the_previous_unverified_code(): void
+    public function test_resend_keeps_the_unexpired_code_and_its_original_expiry(): void
     {
         Mail::fake();
 
@@ -126,11 +126,15 @@ class VerificationCodeCleanupTest extends TestCase
 
         $this->postJson(self::ENDPOINT, ['email' => 'owner@example.com', 'name' => 'Owner'])->assertOk();
 
-        // Exactly one live code at a time — a stale second row would let an
-        // older code keep working after the user asked for a fresh one.
+        // Queue retries and mailbox delivery can reorder the two emails.
+        // Both must carry the same still-valid proof, without extending it.
         $rows = EmailVerificationCode::where('email', 'owner@example.com')->get();
         $this->assertCount(1, $rows);
-        $this->assertNotSame($first->id, $rows->first()->id);
+        $this->assertSame($first->id, $rows->first()->id);
+        $this->assertSame($first->code, $rows->first()->code);
+        $this->assertTrue($first->expires_at->equalTo($rows->first()->expires_at));
+        $this->postJson(self::ENDPOINT, ['email' => 'owner@example.com'])->assertStatus(429);
+        $this->postJson('/api/v1/auth/verify-code', ['email' => 'owner@example.com', 'code' => $first->code])->assertOk();
     }
 
     public function test_email_is_normalised_before_storage(): void

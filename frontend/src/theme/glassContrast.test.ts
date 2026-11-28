@@ -9,6 +9,7 @@ import {
   type StatusToken,
 } from './glassTokens'
 import { BRAND_COLOURS } from './__fixtures__/brandColours'
+import { NAV_ACCENT } from './navAccents'
 
 /**
  * Glass text must read at 4.5:1 or better on the surfaces it sits on, over
@@ -89,7 +90,8 @@ describe('Glass sidebar: the active item', () => {
   // shade, inline) on a 16 % wash of that accent over the 7 % sidebar. In Glass
   // the text takes GLASS_NAV_ACCENT_TEXT through --nav-active-text.
   const layout = readFileSync(new URL('../components/Layout.tsx', import.meta.url), 'utf8')
-  const accents = [...layout.matchAll(/accent:\s*'(#[0-9a-fA-F]{6})'/g)].map(m => m[1].toLowerCase())
+  // The group accents live in theme/navAccents.ts since 2026-11-09; Layout draws every group and tile in one of them.
+  const accents = Object.values(NAV_ACCENT).map(a => a.toLowerCase())
 
   it('has a Glass text shade for every group accent, and Layout uses it only through the variable', () => {
     expect(accents.length).toBeGreaterThan(5)

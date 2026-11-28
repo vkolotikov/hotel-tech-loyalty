@@ -124,6 +124,18 @@ final class StayCombination
         return $adultsLeft === 0 && $childrenLeft === 0 ? $out : null;
     }
 
+    /** Keep accepted room-only discounts separate from the first room's full-price extras. */
+    public static function stayShares(array $roomTotals, float $extrasTotal, array $discounts): array
+    {
+        $out = [];
+        foreach (array_values($roomTotals) as $i => $room) {
+            $discount = min((float) $room, max(0.0, (float) ($discounts[$i] ?? 0)));
+            $list = round((float) $room + ($i === 0 ? $extrasTotal : 0), 2);
+            $out[] = ['list' => $list, 'discount' => $discount, 'total' => round($list - $discount, 2)];
+        }
+        return $out;
+    }
+
     /**
      * The one price shared between the rows. Each room's list price is its own
      * accommodation (the extras belong to the first room, as the engine bills

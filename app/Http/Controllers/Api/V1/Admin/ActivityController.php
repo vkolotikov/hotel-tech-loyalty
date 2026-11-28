@@ -32,6 +32,9 @@ class ActivityController extends Controller
     {
         $query = $inquiry->activities()
             ->with('creator:id,name,email');
+        if ($id = $request->integer('activity_id')) {
+            $query->whereKey($id);
+        }
 
         if ($filter = $request->string('type')->toString()) {
             $query->where('type', $filter);
@@ -75,6 +78,10 @@ class ActivityController extends Controller
             'created_by'        => $request->user()->id,
             'occurred_at'       => $data['occurred_at'] ?? now(),
         ]);
+
+        if ($data['type'] === 'email' && in_array($data['direction'] ?? null, ['inbound', 'outbound'], true)) {
+            \App\Services\Crm\LeadMessageValue::fromLoggedEmail($inquiry, (string) ($data['body'] ?? ''), $data['direction'] === 'inbound');
+        }
 
         // The legacy inquiries.last_contacted_at column is still surfaced on
         // the list view ("Touches: N"); keep it warm so the existing UI shows

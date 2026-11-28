@@ -46,8 +46,10 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Plan | `GET plan?from&to` (≤ 62 days) | everyone |
 | Posts | `GET posts`, `GET find`, `POST posts`, `GET/PUT/DELETE posts/{id}`, `POST posts/{id}/move`, `/duplicate`, `/mark-ready`, `/mark-published` | everyone |
 | AI on a post | `POST posts/{id}/write`, `/rewrite`, `/quality`, `/visual-brief`, `/image`, `POST slots/fill` | everyone |
+| Queued AI | `POST work`, `GET work/{id}`, `GET work?post_id=`, `DELETE work/{id}` | read/start: everyone; cancel: requester or manager |
 | Generate | `POST generate` (202 while the queued run writes) | managers |
 | How the Generate run stands | `GET generate` | everyone |
+| Cancel Generate | `DELETE generate` | requester or manager |
 | Strategy | `GET strategies`, `GET strategies/{id}` (everyone); `POST strategies`, `/activate`, `/archive` (managers) | |
 | Brand | `GET brand` (everyone); `PUT brand/profile`, `PUT brand/voice`, audiences and channels `POST/PUT/DELETE`, `POST brand/quick-setup`, `POST brand/setup`, `POST brand/refresh-knowledge` (managers) | |
 | Goals | `GET goals` (this week per platform, the streak) | everyone |
@@ -70,13 +72,28 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - **Brands never mix.** Every list and read stays inside the pinned brand, and every id a request names must belong
   to this organisation and that brand (`PostRulesTest`, `BrandTest`).
 - **Stale saves are refused.** A save or move must send back the `updated_at` it read; a newer one answers 409
-  `changed_elsewhere` with the post as it is now. Versions compare to the second (`PostRulesTest`).
+  `changed_elsewhere` with the post as it is now. `updated_at` stays the ISO revision token with six fractional
+  digits; meaningful writes advance at least one microsecond even if the clock stands still or moves backwards.
+  Group/series bookkeeping, quality checks and comments keep their existing no-version semantics (`ReliableWritesTest`).
+  Mark ready and Mark published also require the complete `updated_at` actually viewed by the caller (missing:
+  422 validation; changed: 409 `changed_elsewhere` with the current post). They compare under the same post lock
+  before status, publication metadata or approval history changes. An assigned staff poster still has the existing
+  permission to publish an Approved/Ready post, with that revision. Clients must not fetch a new unseen revision
+  immediately before marking it.
+- **AI results commit against the post they read.** Provider calls hold no post transaction. Write, Rewrite, Quality,
+  Brief, Image and queued version/repeat results lock and compare the captured revision before committing; a newer
+  edit, publication, platform change or deletion wins. Words, brief and approval history commit together. Images and
+  briefs invalidate staff approval just as words do. Old and new image failures expose only safe local errors.
+- **Published is one transition.** Create, Save and Mark published stamp `published_at`; repeated marking keeps it,
+  and leaving Published clears publication metadata. The launch migration repairs legacy Published rows without a
+  timestamp from their saved planning day/time in the venue zone (midnight without a time), otherwise their saved
+  `updated_at` (or `created_at` when unavailable), leaving every known timestamp unchanged (`ReliableWritesTest`).
 - **A published post keeps its date.**
 - **Reads write nothing.** Reading the brand never saves its readiness; a change does (`BrandTest`).
 - **Brand edits happen in place.** Audiences, channels and the voice keep their ids. Removing an audience that posts
   use needs `?confirm=1` (`BrandTest`).
 - **AI spend counts.** Every planner text call and image lands in `ai_usage_logs` as feature `content`; images are
-  priced per picture (`AiUsageService::IMAGE_PRICING`). At 100 % of the monthly cap every AI action answers 403
+  priced from current token usage or a conservative estimate (`AiUsageService::imageCost`). At 100 % of the monthly cap every AI action answers 403
   before calling the provider (`AiLedgerTest`, `AiGateTest`).
 - **One generation at a time per brand.** It is a cache lock of 300 s; a strategy counts as running for 15 minutes
   at most (`GenerateTest`, `StrategyTest`).
@@ -89,8 +106,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   server shares (database or redis — not `file` on several servers).
 - **AI failures are said in our words.** An `ai_failed` answer never carries the provider's text; it is in the log
   (`report()`).
-- **Spend needs a price.** An overridden `CONTENT_PLANNER_AI_MODEL` must be in `AiUsageService::MODEL_PRICING`, or its
-  spend is logged at 0.
+- **Spend needs a price.** Content refuses an unsupported/unpriced text or image model locally with
+  `ai_model_unpriced` before any paid call, including missing-image-brief prerequisites and repair/fallback attempts.
 - **A time needs a day.** A post with no day stores no time, however it was saved (`PostsTest`).
 - **Search words are literal.** `%`, `_` and `\` in Find and Posts search match themselves (`PostsTest`).
 - **A channel's usual time** (`post_time`, `HH:MM`) is what Generate and Fill give a post the AI left without a time;
@@ -115,7 +132,9 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   Approve refuses a post changed since the manager read it (`changed_elsewhere`). Write with AI or a new image that
   puts a staff member's post into review records the step too, and a manager taking a post from review to Approved,
   Ready or Published by any way records `approved`. Every step is a row in `content_planner_post_events`
-  (`ApprovalRuleTest`, `ApprovalActionsTest`). "Written by" shows only for posts a person wrote here
+  (`ApprovalRuleTest`, `ApprovalActionsTest`). Events capture the post's exact revision in internal `post_updated_at`
+  for "Sent back"; event `created_at` remains the wall clock for the bell. Legacy events fall back to `created_at`.
+  "Written by" shows only for posts a person wrote here
   (`generated_by` `manual`): calendar posts and repeat copies show none (`PostReviewTest`).
 - **Comments** are plain text of 1–2,000 characters and do not touch their post (no stale saves, "sent back" stays);
   a post's timeline is its comments and approval steps, the newest 200, oldest first; a removed member's comments and
@@ -164,7 +183,153 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   (`public/landing/content-public.css`) and the brand colour in one nonce'd block; no scripts, no session, cached five
   minutes (`BioPageTest`, `BioEditorTest`).
 
+## Launch: asynchronous work and fresh allowance (2026-11-13)
+
+- `POST work` takes `{action, request_key, post_id?, instructions?, type?, guidance?, template_id?, date?, platform?}`;
+  actions are `write`, `rewrite`, `quality`, `brief`, `image`, `fill`. It answers 202
+  `{work:{id,action,status,post_id,started_at,finished_at,error,result,can_cancel}}`. The id endpoints use that same envelope;
+  `GET work?post_id=` returns the latest work for that post, or `{work:null}`. Successful Fill also sets `post_id`.
+  Results carry `{post_id?,variation?,quality?}`; read the current post separately. Rewrite's variation is
+  `{id,type,copy}`. States are `queued`, `running`, `succeeded`, `failed`, `cancelled`; errors are local codes only.
+  Input, request key, captured revision, requester and ownership token are never in the DTO.
+  `can_cancel` is the current viewer's server-decided capability: true only for queued/running work requested by them
+  or managed by them. Another staff member can read the work but cannot cancel it; terminal work always says false.
+- A request key identifies one request per requester/tenant/brand; identical retries return it. Different input with
+  the same key answers `request_key_used`. One active work per post; overlapping provider attempts for one organisation
+  answer `ai_busy`. Neither refusal silently retries a paid request. A new deliberate attempt needs a new request key.
+- `RunContentWork` uses the existing `ai` queue, one attempt, 110 s timeout, a 100 s shared transport deadline, and
+  120 s ownership. Queue wait expires after 1,800 s. Polling expires abandoned work; failures release post ownership.
+  Cancellation is idempotent and takes the same work row lock as each result transaction, including Fill creation.
+  Already committed changes stay; after cancellation commits, later provider results cannot write. A stale post
+  captured at enqueue fails before a provider call, and changes during a call keep Task 2's atomic revision guard.
+- Every Content text/image provider attempt (including JSON repair and image fallback) takes a shared organisation
+  allowance lease for 120 s, reads the current plan cap and uncached whole-organisation ledger, and records spend before
+  releasing it. It holds no database row lock across the provider. The lease is shared across brands/workers via
+  `cache.shared` (database/Redis in production). Calendar budget exhaustion keeps earlier drafts and reports
+  `ai_budget_used_up` on the unfinished window. Version, promotion and summary paths keep their existing budget reasons.
+- Every queued action rechecks the current requester, active seat, brand restriction, organisation subscription and
+  Content workspace/module. Manager actions recheck the manager role. `ContentExecution` restores worker context and
+  rechecks access before each provider attempt and result commit. Removed access ends with a safe local refusal.
+- Calendar execution clips its start to the venue's current day and checks today again at each insert. Its existing
+  run owner gates every provider attempt and insert; `DELETE generate` serializes cancellation with inserts and state
+  changes and releases that owner's brand lease. Earlier drafts remain on the plan. Cancelled state stays cancelled
+  even when the old worker returns, fails or another generation starts.
+- Legacy action routes retain their responses and share a 45 s provider deadline, below Cloud's 60 s web limit.
+  Queued image work can use up to 90 s for an image attempt within its 100 s total deadline; a preceding brief,
+  repair, fallback or download uses the same remaining time. Provider SDK/HTTP automatic retries are disabled.
+  Image fallback only follows an explicit OpenAI HTTP 400/403/404 access refusal, never an ambiguous timeout.
+- Migration `2026_11_13_110000_create_content_work.php` is additive. The queue connections keep `retry_after=660` and
+  require no new worker. Tests: `AsyncWorkTest`, `SharedAllowanceProcessTest` (independent PostgreSQL workers and the
+  database cache), existing Content/calendar suites and `QueueRetryAfterTest`.
+
+## Launch: current image providers and usage prices (2026-11-13)
+
+- Default `CONTENT_PLANNER_IMAGE_MODEL=gpt-image-2.6-sunburst`; current alternative `gpt-image-2.6-flare`.
+  `CONTENT_PLANNER_IMAGE_FALLBACK_MODEL` stays empty unless explicitly configured. Legacy primary overrides
+  `gpt-image-1`, `gpt-image-1.5`, `gpt-image-1.5-2025-12-16`, `chatgpt-image-latest`, `dall-e-2`, `dall-e-3`
+  map to Sunburst; `gpt-image-1-mini` maps to Flare. All those legacy fallback values map to Flare.
+  Canonicalized duplicates are never attempted twice. Existing saved media and model history are unchanged.
+- Direct Images API requests explicitly ask for one PNG (`output_format=png`), high quality and a fixed size:
+  square 1024x1024, portrait 1024x1536, landscape 1536x1024. The SDK returns base64 without `response_format`.
+  Fallback requires a definite model-access/organisation-verification error with HTTP400/403/404.
+  Moderation, invalid parameters/prompts, quota, server errors and ambiguous transport failures never start it.
+  Both attempts retain the existing fresh allowance, cancellation and deadline checks.
+- Both current image models cost USD5 per million text-input tokens, USD8 per million image-input tokens,
+  USD30 per million output tokens. Complete positive usage and its breakdown are used directly. If incomplete,
+  malformed or zero, retain valid counts; missing text adds the UTF-8 prompt byte count (minimum1) to known image
+  input. Total input is at least the UTF-8 prompt byte count (minimum1), known category
+  sum and reported input; output is at least1756 for square or1372 for portrait/landscape. Unclassified input costs
+  USD8 per million. This deliberately overestimates missing data. Positive ledger costs round up to whole cents.
+  `ImageUsageTransport` normalizes only optional usage fields before the installed SDK's typed parser, so bad usage
+  cannot discard a returned image; missing/invalid counts use a negative sentinel that activates the estimator.
+  An absent optional total is derived only from validated complete component counts for the SDK's required integer;
+  an explicitly malformed or contradictory total still activates the conservative estimator. The installed SDK to
+  ledger regression proves tiny complete usage stays an exact one-cent debit, with one provider transport call.
+  The generation diagnostic keeps parsed usage plus the accounted breakdown and exact USD calculation; its existing
+  decimal column rounds for display. Ledger and diagnostic share `imageCost`. No historical rows are rewritten.
+- Content text keeps `claude-sonnet-5`. Shared new-usage prices: Sonnet5 USD2/10, Fable5 USD10/50,
+  Opus4.6/4.7 (including4.7[1m]) USD5/25 input/output per million. Haiku5.5 is USD0.10/0.50 through100000
+  input tokens and USD0.50/2.50 above100000. Other mapped rates remain unchanged. Text diagnostics use the same
+  `costUsd` calculation as the ledger. Unknown-model best-effort accounting remains available to other products.
+- Safe API contract: legacy Write/Image/Fill refusal is HTTP502 `{error:ai_model_unpriced,message:<fixed sentence>}`;
+  queued work ends `failed` with `work.error=ai_model_unpriced`, including Fill's calendar-result mapping.
+  Calendar `failed_windows[].reason`, promotion page `error`, website `summary_note` and post group `kept_reason`
+  retain the same code. Strategy/repeat retain their fixed safe failures (they have no error-code field).
+  No provider/configuration detail is in these errors.
+  The frontend should translate this code and suggest asking an administrator to check AI configuration, without
+  automatically retrying. Provider credentials/access and paid output quality still need operational verification.
+- Official sources checked13November2026: [lifecycle](https://developers.openai.com/api/docs/deprecations),
+  [Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.6-sunburst),
+  [Flare](https://developers.openai.com/api/docs/models/gpt-image-2.6-flare),
+  [image options/calculator](https://developers.openai.com/api/docs/guides/image-generation),
+  [Claude prices](https://platform.claude.com/docs/en/about-claude/pricing).
+  `CurrentProviderTest` uses the actual installed SDK HTTP serializer/parser with local PSR responses;
+  `ImageFallbackTest`, `AsyncWorkTest` and AI ledger tests cover refusal, fallback and fresh allowance.
+
+## Launch: planning settings and purchased locations (2026-11-13)
+
+- `GET settings` answers `{timezone, timezone_named, timezones, locations_limit, locations_used}`. The zone list is
+  `BookingRules::zones()`; `locations_limit` is an integer or null (unlimited), `locations_used` counts every existing
+  organisation Property across brands, including inactive locations. Staff may read; managers `PUT settings`
+  with `{timezone}` and receive the same shape. Save requires a supported named IANA zone; UTC, abbreviations and
+  offsets are refused. Reading saves nothing and never guesses a zone from a location.
+- **Explain before Save:** this changes the shared account setting `hotel_timezone` through `BookingRules::write`,
+  used by Content planning/reminders/morning email, appointment and member-portal clocks, and other dashboards.
+  Existing post/appointment/event wall-clock digits are not converted or moved. It is not a per-brand or
+  per-location setting. Choosing or editing a location never changes it.
+  A retained clean settings form adopts refreshed account authority, including changes saved from another brand.
+  Actual unsaved choices remain retained through refetch/navigation and keep their existing session/brand identity.
+- Content's `GET pulse` uses exactly bootstrap/reminders' saved planning zone, including UTC when none is named.
+  It adds `timezone_named` (false on UTC), keeps `timezone_source: venue`, and its `now`/`today` use that zone.
+  Location and weather data remain available; forecasts are requested in the planning zone too. The UI can offer
+  managers zone setup when `timezone_named` is false. Other workspace/full-admin pulse fallback behavior is unchanged.
+- `GET locations` answers `{locations:[...]}` for this organisation and current brand only, including inactive rows.
+  `POST locations` (201) and `PUT locations/{id}` (200) answer `{location}`; both require a manager. A location is
+  `{id,name,address,city,country,timezone,email,phone,website,is_active}` only. The body allows those fields except id;
+  unknown keys (including PMS, booking, code or ownership fields) answer validation errors and are never persisted.
+  The usual query `brand_id` chooses the brand; body ownership overrides are refused. There is no delete endpoint.
+- Name is required at create (255 characters maximum); address max 2,000, city/country max 100, email max 255,
+  phone max 20, website max 250 with http/https. Optional address/contact fields may be null. A location's zone may be
+  UTC or a supported named zone; new locations default to UTC and active. Updates may deactivate/reactivate an
+  existing row, including at the quota. Deactivation preserves history and still consumes the purchased location.
+- Property creates in Content and the full admin take the same organisation row lock before checking the existing
+  `PlanLimitGuard` property cap and inserting. The shared guard now counts across brands. Content refuses the next
+  create with `402 {error:plan_limit,message,limit,limit_key:max_properties}`; full-admin refusal keeps its existing
+  response. Full-admin images use a fast quota precheck, upload outside the lock, then the authoritative locked
+  recheck/insert. A new upload that loses the race or fails to insert is retired outside the transaction; cleanup
+  failure is logged without replacing the original response/error. Existing or user-supplied images are untouched.
+  Existing PMS/booking fields are neither exposed nor accepted by Content. Only active locations owned by
+  the profile's organisation/brand join AI context, including jobs running under another ambient brand.
+- Coverage: `PlanningSettingsTest`, `LocationsTest`, `LocationsQuotaProcessTest` (independent PostgreSQL processes
+  exercise both property writers at the last location), `PropertyImageQuotaTest` (fake storage and real autocommit
+  depth0 upload/cleanup), existing Content/calendar, dashboard, access/module and clock scopes.
+
 ## The portal (`/content`, `frontend/src/content/`)
+
+### Launch draft ownership (2026-11-13)
+
+- `PostEditorProvider` in `panel/PostPanel.tsx` owns the one live editor above Content's routes. Panel and full
+  writing views consume `usePostEditor()`; they must not create a second form or Save implementation. Its
+  `editing`, `setEditing`, `save`, `saving`, `dirty`, `post`, `adopt`, `actions` and read/conflict state are shared.
+- Create changes the target identity with `panel.identify(id, owner, seq)` without changing its opening. Save/Create
+  acknowledge the submitted snapshot, preserving typing and intentional undo after the click. Pending undo counts
+  as dirty even when it equals the old loaded base. A retained opening reconnects to an unfinished acknowledgement
+  after browser Back; account, brand and opening checks prevent another editor receiving it. `panel.capture()`
+  captures an ownership check for asynchronous work started outside the editor, such as Fill.
+  Duplicate caches its saved copy independently. If the originating opening gained unsaved edits while the response
+  waited, it stays on that original with the typing intact; a clean opening still follows the copy in panel/full view.
+- Brand sections, summary, bio, website address and list forms use `drafts/useRetainedState`: tab memory scoped by
+  session, brand and editor key. Internal navigation, Find and section changes retain these drafts; full-admin and
+  sign-out guard all retained drafts of the current session, and unload uses the browser's confirmation. Clearing a
+  draft invalidates its generation ticket so an old completion cannot close a newly opened form. No draft is stored
+  on disk or handed to another account/brand. List creation fields remain disabled while pending, including after
+  navigation/remount. Editable bio saves match submitted row keys to returned button IDs before the next Save.
+- The shared `modalScope` traps visible focus only in the topmost dialog, makes covered branches inert, and supports
+  nested dialogs and dock/overlay resizing. The desktop panel remains nonmodal. Workspace navigation has an optional
+  `onNavigate(to)` guard; absent it, sibling behavior is unchanged. `stickyRail` is unchanged.
+- Delayed-response browser regression: `node frontend/scripts/content-draft-regression/run.mjs`. It uses production
+  React components with an isolated local API fixture and blocks external hosts; its ignored receipts/screenshots
+  are behavioral evidence. The final application frame still needs the integrated browser checks.
 
 - **Where it lives.** A lazily loaded app on the shared workspace core (`src/workspace/`), beside Appointments: own chunk, own shell, no full-admin copilot.
 - **Look.** Kept on the device under `content:look` and `content:brand-paint`.
@@ -378,11 +543,13 @@ No migration, no new route; Appointments is unchanged (the shared shell's new op
   just added). Footer: Create post, Save draft for a draft, else Save.
 - **`logo_url`:** `GET bootstrap` gives each brand's `logo_url` (null without one) for the breadcrumb's chip.
 
-## What this release does not do
+## Publishing and notifications
 
-No email notices other than the opt-in morning email, no mentions or attachments (approvals, comments, reminders and the bell live in the app), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
-model allowlist for Content. The old AI Content Planner is gone: its `/v1/admin/content-planner/*` routes answer 404
-and its screens are removed; a browser tab left open across the deploy must be reloaded.
+Staff publish manually: copy the prepared caption, obtain its assets, open the saved channel and explicitly record
+publication. The launch includes campaigns, media, explicit mentions and optional review/mention email; each person's
+review-email consent starts off and remains separate from morning-email consent. Content uses the server's configured
+AI models and price guard. The retired AI Content Planner's `/v1/admin/content-planner/*` routes answer 404 and its
+screens are removed. Reload Content/admin tabs left open across a deployment before saving.
 
 ## Deploying
 
@@ -401,7 +568,8 @@ and its screens are removed; a browser tab left open across the deploy must be r
   generate` says how it stands (the dialog and the Plan read it every 4 s while it runs), the brand's lock and the
   run's state live in the shared cache and belong to the run, a run waits at most 30 minutes in the queue and runs at
   most 11 minutes (540 s of AI time) before it reads as failed, and the posts are the manager's who pressed Generate.
-  Fill with AI (about 12 s), Write with AI and pictures still run inside their request.
+  Legacy Fill, Write and picture endpoints remain bounded synchronous requests; the launch `work` endpoints run
+  these actions on the same `ai` worker (see the asynchronous work contract above).
 - Verify release 3 by content on the live site: the `ContentApp` chunk carries "Best around", "Hashtags and snippets"
   and "Repeats every week until"; `/api/v1/admin/content/goals` answers 401 when signed out (404 before release 3).
 - Release 4a (server, Plan 4A-1): three additive migrations (`content_planner_profiles.holiday_country` and
@@ -470,3 +638,191 @@ to a real brand, and stay the owner's:
   article.
 - Release 2 (and every release): open `/content` as a manager and as a staff member; generate one week on a real brand;
   check Settings → AI Usage for the `content` line; reload admin tabs left open across the deploy.
+
+## Content launch composer and media (2026-11-13)
+
+### Guide, feedback and personal notifications (launch Task 7)
+
+Help & resources opens `/content/guide`: task search and group filters cover setup, the account planning zone,
+first week, approvals, media, versions/repeats, website/tracked links, manual publishing, AI failures/cancellation
+and exports. Manager setup actions respect the bootstrap role; no profile, no channels and no scanned pages have
+useful next steps. Guide reads never start AI or a scan. Upload guidance uses the media API's `max_upload_bytes`.
+Posts and Plan supply authenticated export controls (CSV includes filtered undated rows; ICS scheduled only).
+
+`POST posts/{id}/comments` accepts plain `body` plus optional `media_id` (or null) and `mentioned_user_ids`
+(distinct, at most 50 active users from this brand's team). Typed @names are ordinary text. The post is locked
+while attachment membership and ownership are checked; a foreign or unattached asset answers validation errors.
+Comment responses and timeline comments add `media: {id,name,mime,url}|null` and `mentions: [{id,name}]`.
+The media context is a server-captured immutable snapshot, so detaching or archiving does not erase old feedback.
+`PUT comments/{id}` changes `body` only; supplied `media_id` or `mentioned_user_ids` are refused, even null.
+Comments still never touch the post revision. Text, asset and mention drafts (and pending submissions) use the
+existing session/brand/post-scoped tab registry across full editor, panel and internal navigation. A rejected
+selection retains the words, refreshes choices and offers correction. Pending fields remain disabled.
+
+`PUT me/collaboration-email {on:boolean}` changes only the caller's personal consent, default false for existing
+and new users. Bootstrap adds `staff.collaboration_email`; the switch is in Content settings. Morning email
+remains separate. No save/upload/preview email is sent unless an actual semantic approval event or explicit
+mention occurs. `ContentApproval::record()` supplies the approval events, including Create/Save into review and
+staff changes after approval. Recipients follow the inbox: own-brand active managers for `sent_for_approval` and
+`changed_after_approval`; the post's `created_by` for `approved` and `sent_back`; explicitly selected people for
+mentions. The actor is excluded. `poster_id` is not an approval-email recipient rule. A mention on an already
+followed comment appears once in the bell as `mention`, not as a duplicate comment and mention.
+
+`content_notifications` keeps one recipient/source-type/source-id identity. Only recipients opted in when the
+event is made get `SendContentNotification` queued after commit. Delivery rechecks active staff, organization,
+subscription/module/workspace, brand access, consent, and reviewer role for a review request. Deleted posts or
+source comments/events send nothing. Recipient locale, `MailIdentityService` sender/reply-to and shared
+suppression rules apply. The job atomically claims `email_attempted_at` before transport, with one attempt:
+duplicate jobs cannot deliver twice, and an ambiguous transport failure is not retried. This is at-most-once
+attempt semantics; a failed transport may leave an undelivered message. No provider runs under a database lock.
+
+Migration `2026_11_13_130000_content_collaboration.php` preserves timestamp(6) wall-clock precision on comment
+created/updated/edited times, approval event `created_at`, read `seen_at`, and notification creation/attempt times.
+Their models use `Y-m-d H:i:s.u`; inbox SQL cutoffs explicitly format all six digits rather than letting the
+connection grammar truncate a Carbon binding. The existing `read_at` / `POST inbox/seen {at}` API is unchanged:
+earlier same-second news stays seen, later news stays unread after a delayed acknowledgement. Approval events'
+logical `post_updated_at` remains separate. The rollback keeps precision, consent and historical context.
+
+Checks: `CollaborationTest` on SQLite and migrated PostgreSQL, existing Content/mail/access suites, five-locale
+array-transport render/suppression tests, and browser regression with `CONTENT_COLLABORATION_CHECKS=1` alongside
+`CONTENT_FIX_CHECKS=1 CONTENT_LAUNCH_CHECKS=1`. The original 71 checks remain, with retained feedback cases added.
+
+`/content/write/new` and `/content/write/:id` use the one `PostEditorProvider` already mounted by `ContentShell`.
+The full page and dock share the same opening, baseline, draft, safe Save, conflict and retained-request state.
+Create replaces the new route with its saved ID without reopening it. Later typing is rebased by the shared controller.
+Explicit entry into Published says **Save and mark published** and records a manual publication; copying or previewing
+never publishes. The final caption includes the opted-in destination, with platform limits used only as warnings.
+
+Media API, behind the existing Content tenant/brand access middleware:
+
+- `GET admin/content/media?brand_id=...&q=...`: `{media, max_upload_bytes}`. The capability is calculated in the web
+  request from the 20 MiB application bound and current PHP upload/request bounds (64 KiB multipart allowance).
+- `POST admin/content/media?brand_id=...`: multipart `file`; verified JPEG/PNG/WebP, MP4/WebM or PDF. Uses the existing
+  `MediaService` and configured media disk; the filename in storage is generated, not the original filename.
+- `PUT admin/content/media/:id?brand_id=...`: manager-only `{archived: boolean}`. Archive/restore never deletes bytes.
+- Media DTO: `id,name,mime,size,url,archived,usage_count`. Post detail adds ordered `media`; create/update accept ordered
+  `media_ids` (distinct, maximum 10, same organization and brand). New selections must be unarchived. Existing archived
+  references can remain/reorder, and duplicate/version/repeat copy references, including archived history.
+- Attachment changes and reordering advance the post revision and reset staff approval under the post write lock.
+  Identical lists are no-ops. A stale or invalid save changes neither post fields nor attachments. Attachment changes
+  cannot piggyback a staff Ready/Published transition using old approval.
+
+The media library provides upload, search, usage, archive/restore and honest **Open asset** links. The composer supports
+ordered attachment/detachment and falls back to the saved AI image when it has no library assets. Do not add destructive
+file deletion while posts or history can refer to an asset. The next comments increment can accept optional `media_id`
+only after checking attachment membership under the same locked post boundary; keep historical media metadata available
+for the timeline even when an attachment is later removed or archived. Commenting itself must not change post revision.
+
+Write, Rewrite, Quality, Brief, Image and Fill use the queued `/work` API. `useContentWork` retains the original
+`request_key` and submitted input before transport; uncertain starts reconnect with that same request. Terminal retry
+is an intentional new key, cancellation uses the returned `can_cancel`, and rewrite text requires explicit application.
+Per-post work is recovered through the latest-work endpoint; retained Fill results have an explicit opening action.
+Template AI writing joins the same retained work slot. Draft and attempt retention remains tab memory, scoped by session
+and brand; no draft/provider data is written to browser storage.
+
+Brand's URL `section` selects twelve groups: Overview, Website, Identity, Audiences, Voice, Positioning, Channels,
+Locations, Links, Dates & approvals, Reusable content, Rhythm. All thirteen original areas remain; Dates & approvals
+combines two and Reusable content combines snippets/templates. Strategy exposes only sections present in its saved
+output. Section switches and browser Back retain form drafts. Media and Content settings use the existing phone menu
+overflow so the icon bar remains within the viewport.
+
+Content settings distinguish an unset UTC planning clock from weather city. A manager explicitly selects a supported
+account zone; save explains shared Content/reminder/appointment/portal/dashboard consequences and invalidates all query
+caches. Stored wall-clock digits are not converted. Brand Locations use the existing settings/location API and purchased
+allowance; changing a location never chooses the planning zone. Plan reserves pulse, hints, filter, goals and calendar
+space while queries load. `PulseCard.clockLabel` is optional and leaves sibling workspace defaults intact.
+
+Browser regression command: `CONTENT_LAUNCH_CHECKS=1 node frontend/scripts/content-draft-regression/run.mjs` (set the
+environment variable using the host shell). This preserves all original 41 draft/focus assertions and adds full-page,
+queued-work, explicit rewrite, retry/cancel and retained list-opening checks. Real-app screenshots, runtime media-byte
+checks and cold-load CLS are separate acceptance evidence, not substitutes for this deterministic delayed-response host.
+
+### Stable Plan loading (16 November 2026 follow-up)
+
+Content's desktop rail follows the viewport, independently of a dense calendar's document height. Navigation alone
+scrolls on short screens, so Settings, Help and the person remain reachable and their menus can extend outside the
+rail. The shared frame's optional `navScroll` observer is enabled by Content only: a scrolling slim nav uses native
+hover titles; when it fits, the existing custom tips remain. Sibling workspaces keep their previous defaults.
+
+Plan figures have their own full-width row, so translated numbers cannot move New post into another header row.
+They use a compact definition grid (two columns on phones, four otherwise), with each complete localized label above
+its value or loading dash. Counts cannot add a line to a label. Below 640px, Key dates has its own filter-control row
+before the backlog total arrives, so a larger Unscheduled count cannot push it onto a new row during loading.
+Platform filters occupy a reserved full-width chip row above a separate Status/Unscheduled/Key dates row.
+Status/Unscheduled stay anchored left while Key dates stays right, so the backlog count cannot move their starting
+positions. Narrow strips scroll horizontally with a visible scrollbar, touch and wheel support; keyboard
+focus brings each whole chip into view. The strip's positioned container also contains the platform marks' hidden
+accessible names, preventing those absolute spans from creating document overflow.
+
+Run `node frontend/scripts/content-layout-regression/run.mjs` for the isolated actual-component loading fixture.
+It delays bootstrap and then Plan/brand/goals/pulse, waits for the real self-hosted fonts, and checks the sanitized
+five-platform/14-slot dense week in all five locales, both themes and 390/1024/1440px layouts. It also checks footer
+menu hit testing, native Tab/touch/wheel access, page scrolling and 600px full/slim rails. This does not replace the
+existing combined 110-check draft regression or the release executor's actual authenticated live measurements.
+
+
+### Campaigns and schedule exports (launch Task 8)
+
+`/content/campaigns` reuses `content_planner_campaigns`; no new migration. Managers create/edit/archive;
+all authorized brand staff read, assign and filter campaigns. `GET campaigns` returns `{campaigns}`;
+`POST campaigns` and `PUT campaigns/{id}` return `{campaign}`. The DTO is
+`id,name,goal,brief,start_date,end_date,status`; `brief` maps the existing `notes` column. Name is required on
+create (255 characters); goal is nullable (5,000), brief nullable (10,000); dates are nullable calendar dates
+with end >= start when both exist. Status is draft/active/paused/completed/archived. Dates inform the brief,
+not a scheduling constraint. Archiving retains posts, associations and links; archived campaigns remain readable
+and assignable. Editing does not bulk-retag old links. Assignment/clearing uses existing safe post Save and retag
+rules, preserving link codes and explicit destination UTM parameters; duplicate/version/repeat keep association.
+
+Campaign selection is part of the one shared post form, normalization/diff/rebase and retained Create/Save state.
+Posts keeps `?campaign=<id>` in its URL and sends `campaign_id`. Generate accepts optional `campaign_id`, carries
+it through its queued job, includes its own-brand/profile goal/dates/brief in the AI context, and saves it on
+new posts. Post writing includes that same campaign context. The AI does not choose arbitrary campaign IDs.
+
+`GET exports/csv` and `GET exports/ics` use the same validated filters as Posts: q, status, platform, pillar_id,
+campaign_id, from, to, unscheduled. Additive `platforms[]` and `exclude_archived=1` preserve Plan's multi-platform
+selection and archived exclusion. Export ignores pagination. Plan exports the visible calendar date range,
+not its separate undated tray. All endpoints keep Content's tenant/brand/workspace/AccessMap chain. Downloads
+use the authenticated API Blob pattern; no credential query parameter, public feed or token.
+
+The actual exportable selection is limited to 5,000 posts: 422 `export_too_many` asks to refine filters;
+422 `export_empty` means no rows. ICS excludes undated posts before counting. Scalar IDs freeze membership;
+50-row scalar queries reapply authorization/filters while spooling to a temporary disk file before headers.
+New matching posts cannot exceed the cap, and removed/no-longer-matching rows are omitted. No thousands of
+Eloquent graphs are loaded. Disk preparation failure is safe 503 `export_failed`; temporary files close after
+streaming. Files have private/no-store cache headers and fixed content-schedule.csv/.ics names.
+
+CSV is UTF-8 with a BOM for Excel's normal-open encoding detection, every cell double-quoted, embedded quotes
+doubled, CRLF rows; multiline copy remains intact. Programmatic importers may strip the initial three BOM bytes.
+Columns: id, platform, status, scheduled_date, scheduled_time, campaign_id, language, topic, hook, main_copy,
+cta, hashtags (stored JSON). Date/time are saved wall-clock digits, empty when absent. Formula prefixes
+including leading whitespace/control characters and full-width variants receive a tab inside the quoted cell.
+This is an OWASP human-spreadsheet mitigation: programmatic imports can retain that tab, and safety is not
+promised through arbitrary spreadsheet save/re-import cycles.
+
+ICS follows RFC5545: stable `content-{org}-{brand}-{post}@hexa-tech` UID, UTC DTSTAMP, escaped TEXT/newlines,
+CRLF and folding at 75 UTF-8 octets (continuation space counts). An untimed dated post uses DTSTART;VALUE=DATE,
+with no invented time or duration. Timed posts convert only for export through the saved VenueClock zone and
+emit UTC DTSTART, no undefined TZID. Repeated DST wall times choose their first occurrence; nonexistent times
+use the pre-gap offset (RFC5545 section3.3.5). No stored planning digits change. Summary uses topic/hook/platform;
+description includes hook, copy, CTA, platform and status. No guest, staff contact, credential or private provider
+fields are exported. Tests read actual bytes on SQLite/PostgreSQL and browser downloads, including Unicode,
+injection, winter/summer/DST, date-only/undated, brand boundaries and exact5,000/5,001 limits.
+
+### Verified launch — 16 November 2026
+
+Production code release `00e4de78e4e472b55340c5eaef7cb9ac38685537` includes the launch audit repairs and accepted
+features, plus the final loading correction. Live `index-_xYuyRgF.js` loads `ContentApp-OmO6Ta2S.js`; Cloud rebuilds
+assets, so verify the implementation markers rather than expecting the local build hash. The final artifact passed
+491 frontend files /7273 tests, forced TypeScript, lint regression (1381 inherited diagnostics),260 canonical and290
+large-count layout checks, and110 editor/browser regressions. All60 local layout cases have CLS0; six real cold
+1440/1024/390 loads have worst CLS0.004077 and no API/browser errors or overflow. The footer menu stays reachable
+inside the900px viewport and its popup is not clipped.
+
+Live upload capability is20971520bytes (20MiB). The checked account still uses unnamedUTC: a manager must explicitly
+choose its planning zone; no zone was inferred or saved by the audit. Collaboration emails remain off by default.
+Publishing remains manual. No paid provider/output-quality call, real external email, production upload/post write
+or live worker-console health check was performed; use the detailed report's limits when describing readiness.
+
+Final implementation, per-gate evidence, acceptance coverage and all23 decisions (including the superseded desktop
+movement deferral) are in [the launch report](audits/2026-11-16-content-launch.md). Current production handoff:
+[16 November](handoff/2026-11-16-hexatech-handoff.md). Reload existing Content/admin tabs after deployment.

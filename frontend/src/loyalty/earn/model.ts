@@ -32,3 +32,8 @@ export function baseExample(amount: string, rate: string): number | null {
   if (a === null || r === null || a < 0 || r <= 0 || !Number.isSafeInteger(Math.floor(a * r))) return null
   return Math.floor(a * r)
 }
+export function ruleExample(key: string, answer: OptionsAnswer, amount: string): number | null {
+  if (answer.options.spend_points_enabled === false && ['earn_rate', 'points_on_spend', 'desk_earn'].includes(key)) return 0
+  const way = answer.ways.find(w => w.key === key)
+  return way && (!isOn(way, answer.options) || (answer.not_used ?? []).includes(key)) ? 0 : baseExample(amount, String(answer.options.points_per_currency))
+}

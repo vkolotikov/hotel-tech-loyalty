@@ -721,7 +721,7 @@ class PortalStayCombinationTest extends MemberEndpointTestCase
     {
         $body = $this->methodBody(app_path('Services/BookingEngineService.php'), 'confirmMemberCombo');
 
-        $order = ['StayCombination::roomLockKeys(', 'AdvisoryLock::within($roomLock)', 'lockForUpdate()', 'assertComboRoomStillFree(', '$hooks->beforeReservation(', 'createReservation(', 'BookingMirror::create(', '$hooks->afterMirror('];
+        $order = ['StayCombination::roomLockKeys(', 'AdvisoryLock::within($roomLock)', 'lockForUpdate()', 'assertComboRoomStillFree(', '$hooks->beforeReservation(', 'createReservation(', '$this->saveCheckoutMirror(', '$hooks->afterMirror('];
         $at = array_map(fn (string $needle) => strpos($body, $needle), $order);
         foreach ($at as $i => $pos) {
             $this->assertNotFalse($pos, "{$order[$i]} not found in confirmMemberCombo()");
@@ -730,6 +730,8 @@ class PortalStayCombinationTest extends MemberEndpointTestCase
         sort($sorted);
         $this->assertSame($sorted, $at, 'room locks, the hold row, the re-checks, the payment (in the hook), the PMS, the rows — in that order');
         $this->assertSame(1, substr_count($body, 'lockForUpdate('), 'only the hold row is locked; no booking row');
+        $writer = $this->methodBody(app_path('Services/BookingEngineService.php'), 'saveCheckoutMirror');
+        $this->assertSame(0, substr_count($writer, 'lockForUpdate('), 'the imported-row writer takes no booking-row lock under pi:');
 
         // The lead room carries the payment; the other rooms none (release 5).
         $this->assertStringContainsString("'stripe_payment_intent_id' => \$i === 0 ? \$paymentIntentId : null", $body);

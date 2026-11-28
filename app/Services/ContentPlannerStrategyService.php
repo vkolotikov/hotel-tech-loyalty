@@ -52,6 +52,7 @@ class ContentPlannerStrategyService
         // its pillars must roll back if any later insert fails, otherwise a
         // mid-sequence error leaves the profile with no active strategy at all.
         return DB::transaction(function () use ($profile, $data, $into) {
+            \App\Services\Content\ContentExecution::check(true);
             ContentPlannerStrategy::where('planner_profile_id', $profile->id)
                 ->where('status', 'active')
                 ->update(['status' => 'superseded']);

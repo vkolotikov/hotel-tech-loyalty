@@ -39,13 +39,18 @@ class Brand extends Model
         // Per-brand PMS credentials. When set, override the org-level
         // hotel_settings entries inside SmoobuClient. Phase 3.
         'pms_smoobu_api_key',
+        'pms_smoobu_api_secret',
         'pms_smoobu_channel_id',
     ];
 
     protected $casts = [
+        'pms_smoobu_api_secret' => 'encrypted',
         'is_default' => 'boolean',
         'sort_order' => 'integer',
+        'crm_sales_profile' => 'array',
     ];
+
+    protected $hidden = ['pms_smoobu_api_secret', 'crm_sales_profile'];
 
     protected static function booted(): void
     {

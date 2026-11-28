@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Navigate } from 'react-router-dom'
 import { failureOf, loyaltyApi, onWorkspaceOff, type LoyaltyApi } from './lib/api'
 import { APP_NAME } from './lib/links'
 import type { Bootstrap } from './lib/types'
@@ -59,6 +60,7 @@ export function LoyaltyProvider({ children }: { children: ReactNode }) {
     return () => { document.title = previous }
   }, [])
 
+  if (failureOf(query.error).code === 'scan_only') return <Navigate to="/loyalty/partner" replace />
   return (
     <LoyaltyContext.Provider value={{
       data: query.data, isLoading: query.isLoading, isError: query.isError, error: query.error,

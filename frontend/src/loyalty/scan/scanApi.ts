@@ -57,6 +57,7 @@ export interface Verdict {
   reason: string
   /** The membership's end date (`Y-m-d`), or null: no end. */
   valid_until: string | null
+  valid_from?: string | null
   /** Days left when the end is 14 days away or nearer, else null. */
   expires_in_days: number | null
   tier: TierBadge | null

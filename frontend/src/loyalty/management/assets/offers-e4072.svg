@@ -1,0 +1,24 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="216" height="150" viewBox="0 0 216 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Editable artwork / Spa offer ticket">
+<path id="Vector" d="M21 122C60 95 132 37 198 22M25 135C72 105 142 48 210 34" stroke="#BBAAFF" stroke-opacity="0.22"/>
+<g id="Group">
+<path id="Vector_2" d="M33.336 66.6252L173.211 36.8938L177.993 59.3912C166.255 61.8862 169.79 78.5147 181.528 76.0197L186.31 98.5171L46.4345 128.249L41.6525 105.751C53.3903 103.256 49.8558 86.6277 38.118 89.1226L33.336 66.6252Z" fill="#101A2C" stroke="#575987"/>
+<path id="Vector_3" d="M19.8735 56.1963L159.749 26.465L164.531 48.9624C152.793 51.4573 156.327 68.0858 168.065 65.5909L172.847 88.0883L32.972 117.82L28.19 95.3222C39.9278 92.8273 36.3933 76.1988 24.6555 78.6937L19.8735 56.1963Z" fill="url(#paint0_linear_0_339)" stroke="url(#paint1_linear_0_339)"/>
+<path id="Vector_4" d="M108.738 41.3969L109.162 43.3894M120.174 95.195L119.75 93.2025M110.221 48.3707L111.068 52.3557M112.127 57.337L112.974 61.3221M114.033 66.3034L114.88 70.2884M115.938 75.2698L116.785 79.2548M117.844 84.2361L118.691 88.2212" stroke="#F1DEFC" stroke-opacity="0.55"/>
+<path id="Vector_5" d="M57.9879 91.2444C57.6517 91.2506 57.3131 91.2522 56.9721 91.2491C47.7766 76.8462 57.6432 65.5479 79.5169 57.8315C86.6824 77.3805 75.826 90.9115 57.9879 91.2444ZM56.9721 91.2491L72.7927 69.4842M57.9879 91.2444L58.7205 89.8551M57.9879 91.2444L55.0772 96.7636" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke="#FAEEFF"/>
+<path id="Vector_6" d="M129.733 58.4035L147.34 54.6611M131.396 66.2286L146.069 63.11M133.06 74.0538L144.797 71.5589" stroke-linecap="round" stroke="#F1DFFF"/>
+</g>
+<path id="Vector_7" d="M194 29V35M194 35V41M194 35H188M194 35H200M29 99V103M29 103V107M29 103H25M29 103H33" stroke-linecap="round" stroke="#BBAAFF" stroke-opacity="0.75"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_339" x1="20.02" y1="52.0758" x2="195.236" y2="106.843" gradientUnits="userSpaceOnUse">
+<stop stop-color="#574675"/>
+<stop offset="0.54" stop-color="#BBAAFF"/>
+<stop offset="1" stop-color="#574675"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_339" x1="9.84643" y1="37.8808" x2="210.361" y2="125.097" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E9F4FD"/>
+<stop offset="1" stop-color="#574675"/>
+</linearGradient>
+</defs>
+</svg>

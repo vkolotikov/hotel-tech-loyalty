@@ -2,6 +2,7 @@ import { api, resolveImage } from '../../lib/api'
 import type {
   Bootstrap, BenefitRequest, HistoryPage, MemberDetail, MemberFilters, MemberRow, MembersPage, PointsAfter, RequestTab, RequestsPage,
 } from './types'
+import type { Pulse } from '../../lib/venuePulse'
 
 /**
  * Every call HexaTech Loyalty makes, in one place, typed. All of them live
@@ -97,6 +98,8 @@ export function newPressKey(): string {
 
 export const loyaltyApi = {
   bootstrap: (): Promise<Bootstrap> => api.get(loyaltyUrl('bootstrap')).then(r => r.data),
+  /** The venue's clock, place and weather (VenuePulse), for the Overview's card. */
+  pulse: (): Promise<Pulse> => watched(api.get(loyaltyUrl('pulse'))),
 
   members: (filters: MemberFilters): Promise<MembersPage> => watched(api.get(loyaltyUrl('members'), { params: membersParams(filters) })),
   find: (q: string): Promise<{ members: MemberRow[] }> => watched(api.get(loyaltyUrl('find'), { params: { q } })),

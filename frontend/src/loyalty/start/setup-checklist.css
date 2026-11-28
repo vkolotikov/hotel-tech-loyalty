@@ -1,0 +1,10 @@
+[data-loyalty] .l-setup-checklist { display:grid; gap:16px; }
+[data-loyalty] .l-setup-checklist header { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+[data-loyalty] .l-setup-checklist h2 { display:flex; align-items:center; gap:8px; font-size:18px; }
+[data-loyalty] .l-setup-checklist header p { color:var(--l-ov-secondary); margin-top:6px; font-size:13px; }
+[data-loyalty] .l-setup-checklist ol { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px 20px; list-style:none; padding:0; }
+[data-loyalty] .l-setup-checklist li a { display:flex; align-items:center; gap:10px; min-height:44px; font-size:13px; border-radius:8px; }
+[data-loyalty] .l-setup-checklist li svg { flex-shrink:0; color:var(--l-ov-cyan); }
+[data-loyalty] .l-setup-checklist li[data-done] { color:var(--l-ov-secondary); }
+[data-loyalty] .l-setup-checklist li[data-done] svg { color:var(--l-ov-green); }
+@media(max-width:767px) { [data-loyalty] .l-setup-checklist header > .l-ov-button { width:100%; } }

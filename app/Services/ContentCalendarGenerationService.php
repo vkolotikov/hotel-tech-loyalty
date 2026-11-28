@@ -51,9 +51,12 @@ class ContentCalendarGenerationService
      */
     public function generate(ContentPlannerProfile $profile, string $startDate, string $endDate, array $opts = [], ?CalendarGenerationBudget $budget = null): array
     {
-        $budget ??= new CalendarGenerationBudget;
-        $start = Carbon::parse($startDate)->startOfDay();
+        $budget ??= \App\Services\Content\ContentExecution::budget();
+        $today = \App\Services\Appointments\VenueClock::today((int)$profile->organization_id);
+        $start = Carbon::parse(max($startDate, $today))->startOfDay();
         $end = Carbon::parse($endDate)->startOfDay();
+
+        if ($today > $endDate) throw new \App\Services\Content\ContentRefused('range_in_past', 'This range is already over.', 422);
 
         if ($end->lt($start)) {
             throw new InvalidArgumentException('end_date must be on or after start_date.');
@@ -95,7 +98,10 @@ class ContentCalendarGenerationService
         $audiences = $profile->audiences()->active()->get();
         $strategy = $profile->strategies()->active()->recent()->first();
 
-        $context = $this->contextBuilder->build($profile);
+        $campaignId = isset($opts['campaign_id']) ? (int) $opts['campaign_id'] : null;
+        $campaignContext = $this->contextBuilder->campaign($profile, $campaignId);
+        if ($campaignId && $campaignContext === '') throw new \App\Services\Content\ContentRefused('not_found', 'This campaign no longer exists.', 404);
+        $context = $this->contextBuilder->build($profile)."\n\n".$campaignContext;
         $digest = $this->contextBuilder->recentPostsDigest($profile);
 
         // Existing (non-archived) posts across the whole range → occupied slots + per-window listing.
@@ -165,10 +171,14 @@ class ContentCalendarGenerationService
             );
 
             try {
+                \App\Services\Content\ContentExecution::check();
                 $result = $this->ai->generateJson($profile, 'calendar', $prompt, 16000, $budget);
                 if (!is_array($result['items'] ?? null) || !array_is_list($result['items'])) {
                     throw new CalendarGenerationException('invalid_ai_response', 'The AI service returned an invalid calendar. Please retry.');
                 }
+            } catch (\App\Services\Content\ContentRefused $e) {
+                $failedWindows = $this->unfinishedWindows($cursor, $end, $e->errorCode);
+                break;
             } catch (CalendarGenerationException $e) {
                 Log::error(sprintf(
                     'Content calendar chunk failed (%s to %s): %s',
@@ -222,6 +232,10 @@ class ContentCalendarGenerationService
                 }
 
                 $slotKey = $date->toDateString() . '|' . $platform;
+                if ($date->toDateString() < \App\Services\Appointments\VenueClock::today((int)$profile->organization_id)) {
+                    $skipped[] = ['date'=>$date->toDateString(), 'platform'=>$platform, 'reason'=>'date_in_past'];
+                    continue;
+                }
                 if ($fillEmptyOnly && isset($occupied[$slotKey])) {
                     $skipped[] = [
                         'date' => $date->toDateString(),
@@ -255,6 +269,7 @@ class ContentCalendarGenerationService
                         'brand_id' => $profile->brand_id,
                         'planner_profile_id' => $profile->id,
                         'strategy_id' => $strategy?->id,
+                        'campaign_id' => $campaignId,
                         'pillar_id' => $this->matchByName($pillars, $this->str($item['pillar'] ?? null)),
                         'audience_id' => $this->matchByName($audiences, $this->str($item['audience'] ?? null)),
                         'platform' => mb_substr($platform, 0, 50),
@@ -280,7 +295,11 @@ class ContentCalendarGenerationService
                     $visualIdea = $this->str($item['visual_idea'] ?? null);
                     // A failed visual write must not leave a saved post that
                     // the response incorrectly reports as skipped/not created.
-                    $post = DB::transaction(function () use ($attributes, $visualIdea) {
+                    $insert = fn () => DB::transaction(function () use ($attributes, $visualIdea) {
+                        \App\Services\Content\ContentExecution::check(true);
+                        if ($attributes['scheduled_date'] < \App\Services\Appointments\VenueClock::today((int)$attributes['organization_id'])) {
+                            throw new \App\Services\Content\ContentRefused('range_in_past', 'This day is already over.', 422);
+                        }
                         $post = ContentPlannerPost::create($attributes);
                         if ($visualIdea !== null) {
                             ContentPlannerVisualBrief::updateOrCreate(
@@ -291,6 +310,10 @@ class ContentCalendarGenerationService
 
                         return $post;
                     });
+                    $post = isset($opts['commit']) ? ($opts['commit'])($insert) : $insert();
+                } catch (\App\Services\Content\ContentRefused $e) {
+                    $failedWindows = $this->unfinishedWindows($cursor, $end, $e->errorCode);
+                    break 2;
                 } catch (QueryException $e) {
                     // Storage failures are server errors, not invalid AI items
                     // or provider outages. Earlier committed drafts remain.

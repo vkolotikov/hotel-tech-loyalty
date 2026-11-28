@@ -171,6 +171,9 @@ class ContentSiteScan
         $profile = ContentPlannerProfile::withoutGlobalScopes()->findOrFail($site->planner_profile_id);
         try {
             $answer = $this->summarizer->summarize($profile, $pages);
+            ContentExecution::check();
+        } catch (ContentRefused $e) {
+            return [[], in_array($e->errorCode, ['ai_budget_used_up', 'ai_model_unpriced'], true) ? $e->errorCode : 'ai_failed'];
         } catch (\Throwable $e) {
             report($e);
 

@@ -1,3 +1,7 @@
+import { useSearchParams } from 'react-router-dom'
+import { SectionNav } from '../ui/SectionNav'
+import { BRAND_SECTIONS, BRAND_SECTION_NAMES, sectionOf } from '../ui/sectionState'
+import { LocationsSection } from './sections/Locations'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../workspace/ui/Button'
@@ -30,6 +34,8 @@ import { useBrand } from './useBrand'
  */
 export function BrandPage() {
   const { t, i18n } = useTranslation()
+  const [params] = useSearchParams()
+  const selected = sectionOf(params.get('section'), BRAND_SECTIONS)
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const { query, brand, adopt } = useBrand()
@@ -50,28 +56,30 @@ export function BrandPage() {
       {brand && guided && <GuidedSetup brand={brand} onExit={() => setGuided(false)} />}
       {brand && !guided && (
         <>
-          {canEdit && !brand.profile?.setup_completed_at && (
+          <SectionNav selected={selected} items={BRAND_SECTIONS.map((key, i) => ({ key, label: t(`content.launch.section_${key}`, BRAND_SECTION_NAMES[i]) }))} />
+          {(selected === 'overview' || !brand.profile) && selected !== 'locations' && canEdit && !brand.profile?.setup_completed_at && (
             <SetupChoice started={brand.profile !== null} onQuick={() => setQuick(true)} onGuided={() => setGuided(true)} />
           )}
-          {brand.readiness && (
+          {selected === 'overview' && brand.readiness && (
             <Readiness readiness={brand.readiness} canRefresh={canEdit && brand.profile !== null} lastSync={brand.profile?.last_knowledge_sync_at ?? null} locale={locale} onRefreshed={adopt} />
           )}
+          {selected === 'locations' && <LocationsSection />}
           {brand.profile && (
             <>
               {/* Spec 2026-10-20 §5: the website and its company summary, right after Readiness. */}
-              <WebsiteSection canEdit={canEdit} />
-              <BrandDnaSection brand={brand} canEdit={canEdit} />
-              <AudiencesSection brand={brand} canEdit={canEdit} />
-              <VoiceSection brand={brand} canEdit={canEdit} />
-              <PositioningSection brand={brand} canEdit={canEdit} />
-              <ChannelsSection brand={brand} canEdit={canEdit} />
+              {selected === 'website' && <WebsiteSection canEdit={canEdit} />}
+              {selected === 'identity' && <BrandDnaSection brand={brand} canEdit={canEdit} />}
+              {selected === 'audiences' && <AudiencesSection brand={brand} canEdit={canEdit} />}
+              {selected === 'voice' && <VoiceSection brand={brand} canEdit={canEdit} />}
+              {selected === 'positioning' && <PositioningSection brand={brand} canEdit={canEdit} />}
+              {selected === 'channels' && <ChannelsSection brand={brand} canEdit={canEdit} />}
               {/* Spec 2026-10-19 §6.4: the brand's link-in-bio page, after Channels. */}
-              <LinkInBioSection canEdit={canEdit} />
-              <KeyDatesSection brand={brand} canEdit={canEdit} />
-              <ApprovalsSection brand={brand} canEdit={canEdit} />
-              <SnippetsSection brand={brand} canEdit={canEdit} />
-              <TemplatesSection brand={brand} canEdit={canEdit} />
-              <RhythmSection brand={brand} canEdit={canEdit} />
+              {selected === 'links' && <LinkInBioSection canEdit={canEdit} />}
+              {selected === 'dates' && <KeyDatesSection brand={brand} canEdit={canEdit} />}
+              {selected === 'dates' && <ApprovalsSection brand={brand} canEdit={canEdit} />}
+              {selected === 'reusable' && <SnippetsSection brand={brand} canEdit={canEdit} />}
+              {selected === 'reusable' && <TemplatesSection brand={brand} canEdit={canEdit} />}
+              {selected === 'rhythm' && <RhythmSection brand={brand} canEdit={canEdit} />}
             </>
           )}
         </>

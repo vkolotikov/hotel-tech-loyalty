@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowRightLeft, Users, CreditCard, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
@@ -43,7 +43,7 @@ export interface WorkspaceNavItem {
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, variant, railLabel, footer, phoneMenu, crumbs, children }: {
+export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, onNavigate, variant, railLabel, footer, phoneMenu, crumbs, stickyRail = false, navScroll = false, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
@@ -65,6 +65,8 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
   header: ReactNode
   /** Asked before "Full admin" and Sign out leave the workspace; false stays (unsaved work). */
   onLeave?: () => boolean
+  /** Optional workspace-specific guard; absent preserves existing navigation. */
+  onNavigate?: (to: string) => boolean
   /** Dialogs drawn over the whole frame (Find, the list of shortcuts). */
   overlays?: ReactNode
   /** Release 7a (spec 2026-10-21 §4), passed by Content only: the side buttons as cards, under a label. */
@@ -76,18 +78,40 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
   phoneMenu?: ReactNode
   /** The top bar's start, before the header (Content's breadcrumb). */
   crumbs?: ReactNode
+  /**
+   * HexaTech CRM round 5 (2026-11-12), passed by the CRM only: the side panel stays in view and, when it is taller than
+   * the screen, scrolls by itself (the slim rail only stays: its tooltips are drawn outside it). Without it the panel
+   * is part of the page, as before.
+   */
+  stickyRail?: boolean
+  /** Content's viewport rail scrolls navigation alone. Measure overflow so its slim icons get native hover labels
+   * while clipped; a nav that fits can keep the existing CSS tips. Other workspaces keep their current behavior. */
+  navScroll?: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation()
   // <html data-shell="<workspace>"> keeps the full admin's Branding mood typography out, from the first paint.
   useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])
   const slim = look.rail === 'slim'
+  const navBox = useRef<HTMLElement>(null)
+  const [navOverflows, setNavOverflows] = useState(false)
+  useLayoutEffect(() => {
+    const el = navBox.current
+    if (!navScroll || !el) return
+    const measure = () => setNavOverflows(el.scrollHeight > el.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    for (const child of el.children) observer.observe(child)
+    return () => observer.disconnect()
+  }, [navScroll, nav.length, slim])
   // Areas that live in the phone menu rather than the phone's top bar.
   const offBar = nav.filter(n => n.phone === false)
   const cards = variant === 'cards'
   // Neither exit unloads a page the browser could ask about (Sign out even revokes the session first): the app is asked.
   const signOut = () => { leave(onLeave, () => { void logoutAndRedirect('/login') }) }
   const toFullAdmin = (e: MouseEvent) => { leave(onLeave, () => {}, e) }
+  const toArea = (to: string, event: MouseEvent) => { if (onNavigate && !onNavigate(to)) event.preventDefault() }
   const language = (className: string) => <LanguageSelect className={className} />
   const scope = { [`data-${workspace}`]: '' } as Record<string, string>
 
@@ -95,7 +119,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
     <div data-workspace="" {...scope} data-theme={look.resolved} data-accent-edge={accent.edge ? '' : undefined}
       style={accentStyle(accent, card) as CSSProperties} className="min-h-screen flex bg-a-canvas text-a-text">
       <aside data-rail="" data-rail-size={look.rail} data-rail-variant={cards ? 'cards' : undefined} aria-label={t('workspace.shell.menu', 'Menu')}
-        className={`hidden lg:flex ${slim ? 'w-[76px]' : cards ? 'w-60' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out`}>
+        className={`hidden lg:flex ${slim ? 'w-[76px]' : cards ? 'w-60' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out ${stickyRail ? `lg:sticky lg:top-0 lg:h-screen ${slim ? '' : 'lg:overflow-y-auto [scrollbar-width:thin]'}` : ''}`}>
         <div className={`flex min-h-11 items-center gap-3 ${slim ? 'justify-center' : 'px-2'}`}>
           <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-a-accent font-a-display text-lg font-semibold text-a-accent-ink">{initial}</span>
           <div className={slim ? 'sr-only' : 'min-w-0'}>
@@ -104,7 +128,8 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
           </div>
         </div>
         {cards && railLabel && !slim && <p className="-mb-4 px-2 font-a-mono text-xs uppercase tracking-[0.14em] text-a-side-text-2">{railLabel}</p>}
-        <nav className={cards ? 'space-y-2' : 'space-y-1'}>
+        <nav ref={navBox} data-nav-scroll={navScroll ? '' : undefined} data-nav-overflow={navScroll && navOverflows ? '' : undefined}
+          className={cards ? 'space-y-2' : 'space-y-1'}>
           {nav.map(({ to, end, icon: Icon, label, count, section }, index) => (
             <Fragment key={to}>
             {section && section !== nav[index - 1]?.section && (
@@ -112,7 +137,8 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                 ? <div aria-hidden data-nav-section="" className="mx-3 !mt-3 border-t border-a-side-2" />
                 : <p data-nav-section="" className="!mt-4 px-3 pb-0.5 font-a-mono text-[12px] uppercase tracking-[0.12em] text-a-side-text-2">{section}</p>
             )}
-            <NavLink to={to} end={end} data-tip={slim ? label : undefined}
+            <NavLink to={to} end={end} onClick={event => toArea(to, event)} data-tip={slim ? label : undefined}
+              title={navScroll && slim && navOverflows ? label : undefined}
               className={({ isActive }) => cards
                 // The owner's mockup: each area a card; the current one filled with the brand (spec 2026-10-21 §4.1).
                 ? `relative flex min-h-11 items-center gap-3 rounded-[10px] border px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'border-transparent bg-linear-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a-sm' : 'border-a-side-2 bg-a-side-2 text-a-side-text-2 hover:text-a-side-text'}`
@@ -186,7 +212,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
         <header className="h-14 shrink-0 flex items-center gap-3 px-4 lg:px-6 bg-a-canvas border-b border-a-border">
           <nav className="flex lg:hidden items-center gap-1" aria-label={t('workspace.shell.menu', 'Menu')}>
             {nav.filter(n => n.phone !== false).map(({ to, end, icon: Icon, label }) => (
-              <NavLink key={to} to={to} end={end} aria-label={label}
+              <NavLink key={to} to={to} end={end} onClick={event => toArea(to, event)} aria-label={label}
                 className={({ isActive }) => `rounded-lg p-2 ${isActive ? 'bg-a-surface-2 text-a-text' : 'text-a-text-2'}`}>
                 <Icon size={18} aria-hidden />
               </NavLink>
@@ -205,7 +231,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                 <nav data-phone-areas="" aria-label={t('workspace.shell.more_areas', 'More areas')} className="space-y-1 border-b border-a-border pb-1">
                   {offBar.map(({ to, end, icon: Icon, label }) => (
                     // The menu stays open across a move inside the workspace unless it closes itself.
-                    <NavLink key={to} to={to} end={end} onClick={e => e.currentTarget.closest('details')?.removeAttribute('open')}
+                    <NavLink key={to} to={to} end={end} onClick={e => { toArea(to, e); if (!e.defaultPrevented) e.currentTarget.closest('details')?.removeAttribute('open') }}
                       className={({ isActive }) => `flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2 ${isActive ? 'bg-a-surface-2 font-medium' : ''}`}>
                       <Icon size={16} aria-hidden /> {label}
                     </NavLink>

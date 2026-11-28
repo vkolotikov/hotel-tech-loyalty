@@ -9,10 +9,11 @@ import type { Bootstrap } from '../lib/types'
 import { ToastProvider } from '../ui/Toast'
 import { FeedbackDialog } from './FeedbackDialog'
 import { InboxPage } from './InboxPage'
-import { CHANNELS, INTENTS } from './inboxLogic'
+import { CHANNELS, DETAILS_TABS, INTENTS, feedConversations } from './inboxLogic'
+import type { FeedPage, FeedRow } from './feedLogic'
 import { inboxKeys } from './inboxQueries'
 import type { Conversation, ConversationDetail, InboxStats, Page } from './types'
-import { ACTION_DEFAULTS, ACTION_DONE_DEFAULTS, DICTATION_ERROR_DEFAULTS, FIELD_ERROR_DEFAULTS, UPLOAD_ERROR_DEFAULTS } from './words'
+import { ACTION_DEFAULTS, ACTION_DONE_DEFAULTS, DICTATION_ERROR_DEFAULTS, FIELD_ERROR_DEFAULTS, RANGE_DEFAULTS, UPLOAD_ERROR_DEFAULTS } from './words'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -59,12 +60,18 @@ const detail: ConversationDetail = {
   visitor_typing: true,
 }
 
-function render(at: string, data: { list?: Page<Conversation>; status?: string; features?: Bootstrap['features'] } = {}) {
+function render(at: string, data: { list?: Page<Conversation>; status?: string; features?: Bootstrap['features']; feed?: { path: string; key?: string; data: FeedPage }; detail?: ConversationDetail } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const status = data.status ?? 'all'
   client.setQueryData(inboxKeys.stats, stats)
-  client.setQueryData([...inboxKeys.lists, status, '', true, 1], data.list ?? { data: [row({}), row({ id: 13, visitor_name: 'Jānis', status: 'active', unread_count: 0, ai_enabled: false })], current_page: 1, last_page: 1, total: 2 })
-  client.setQueryData(inboxKeys.detail(12), detail)
+  const list = data.list ?? { data: [row({}), row({ id: 13, visitor_name: 'Jānis', status: 'active', unread_count: 0, ai_enabled: false })], current_page: 1, last_page: 1, total: 2 }
+  client.setQueryData([...inboxKeys.lists, `chat-inbox?${status === 'all' ? '' : `status=${status}&`}group_by_visitor=1`, ''], { rows: list.data, page: list.current_page, last: list.last_page, total: list.total })
+  if (data.feed) {
+    client.setQueryData([...inboxKeys.lists, data.feed.path, data.feed.key ?? 'all:0'], {
+      rows: feedConversations(data.feed.data.data, { status: null, unassigned: false }), page: 1, last: 1, total: data.feed.data.meta.total,
+    })
+  }
+  client.setQueryData(inboxKeys.detail(12), data.detail ?? detail)
   const value = { data: { ...boot, features: data.features ?? boot.features }, isLoading: false, isError: false, error: null, refetch: () => {} }
   return renderToString(
     <QueryClientProvider client={client}>
@@ -78,25 +85,26 @@ function render(at: string, data: { list?: Page<Conversation>; status?: string; 
 }
 
 describe('InboxPage', () => {
-  it('lists the conversations with the filters and their counts, the most urgent first', () => {
+  it('lists the conversations with the statuses as icons and their counts, the most urgent first', () => {
     const html = render('/crm/inbox')
     expect(html).toContain('Inbox')
     expect(html).toContain('Marta Ozola')
     expect(html).toContain('Jānis')
     expect(html.indexOf('Marta Ozola')).toBeLessThan(html.indexOf('Jānis'))
     expect(html).toContain('Do you have a room on Friday?')
-    for (const label of ['All', 'Active', 'Waiting', 'Resolved', 'Archived']) expect(html).toContain(label)
-    expect(html).toMatch(/aria-pressed="true"[^>]*>All/)
+    for (const label of ['All', 'Active', 'Waiting', 'Resolved', 'Archived']) expect(html).toContain(`title="${label}"`)
+    expect(html).toMatch(/aria-pressed="true" title="All"/)
     expect(html).toContain('1 open with nobody assigned')
+    expect(html).toContain('2 unread messages')
     expect(html).toContain('Pick a conversation')
   })
 
   it('preselects ?status=waiting', () => {
     const html = render('/crm/inbox?status=waiting', { status: 'waiting' })
-    expect(html).toMatch(/aria-pressed="true"[^>]*>Waiting/)
+    expect(html).toMatch(/aria-pressed="true" title="Waiting"/)
   })
 
-  it('opens ?c=12 with its bubbles, the typing visitor, the reply box with the AI draft, and the details', () => {
+  it('opens ?c=12 with its bubbles, the typing visitor, the reply box with the AI draft, and the details in tabs', () => {
     const html = render('/crm/inbox?c=12')
     expect(html).toContain('crm-bubble-visitor')
     expect(html).toContain('crm-bubble-ai')
@@ -107,21 +115,33 @@ describe('InboxPage', () => {
     expect(html).toContain('Draft a reply with AI')
     expect(html).toContain('Your reply')
     expect(html).toContain('A good answer')
-    expect(html).toContain('Translate')
+    expect(html).toContain('aria-label="Translate"')
     expect(html).toContain('Wants to book')
-    expect(html).toContain('Capture as lead')
-    expect(html).toContain('Sum up the chat with AI')
+    expect(html).toContain('Resolve (E)')
+    expect(html).toContain('Nobody assigned')
+    expect(html).toContain('Hide the details')
     expect(html).toContain('Back to the conversations')
     expect(html).not.toContain('Pick a conversation')
   })
 
-  it('leaves out the AI draft, the AI button and translation on a plan without them', () => {
-    const html = render('/crm/inbox?c=12', { features: { chatbot: false, engagement: false, ai_capture: true } })
+  it('opens the Lead and AI tabs from ?dtab=, the lead in its panel', () => {
+    expect(render('/crm/inbox?c=12&dtab=lead')).toContain('Capture as lead')
+    expect(render('/crm/inbox?c=12&dtab=ai')).toContain('Sum up the chat with AI')
+    const linked = render('/crm/inbox?c=12&dtab=lead', { detail: { ...detail, conversation: { ...detail.conversation, inquiry_id: 30, lead_captured: true } } })
+    expect(linked).toContain('href="/crm/inbox?c=12&amp;dtab=lead&amp;lead=30"')
+    expect(linked).toContain('Open the lead')
+  })
+
+  it('leaves out the AI draft, the AI button, translation, the AI tab and the feed on a plan without them', () => {
+    const html = render('/crm/inbox?c=12&dtab=ai', { features: { chatbot: false, engagement: false, ai_capture: true } })
     expect(html).not.toContain('Draft a reply with AI')
     expect(html).not.toContain('Take over')
     expect(html).not.toContain('Sum up the chat with AI')
-    expect(html).not.toContain('>Translate<')
+    expect(html).not.toContain('aria-label="Translate"')
+    expect(html).not.toContain('Priority first')
     expect(html).toContain('Your reply')
+    // An intent was read, so the AI tab still shows what they want; without the hub nothing else.
+    expect(html).toContain('What they want')
   })
 
   it('says when no conversation is there', () => {
@@ -129,19 +149,51 @@ describe('InboxPage', () => {
   })
 })
 
-describe('the inbox, round 2', () => {
-  it('keeps the list’s controls in one toolbar, with the active filter as a chip', () => {
-    const html = render('/crm/inbox?status=waiting', { status: 'waiting' })
+describe('the inbox, round 5', () => {
+  it('keeps the controls in one header: search, statuses, priority, filters, nobody assigned, one row per visitor, sound, alerts', () => {
+    const html = render('/crm/inbox')
     expect(html).toContain('Search by name or email')
+    expect(html).toContain('Priority first')
+    expect(html).toContain('aria-label="Filters"')
     expect(html).toContain('One row per visitor')
-    expect(html).toContain('Status: Waiting')
-    expect(html).toContain('Remove the filter: Status: Waiting')
+    expect(html).toContain('Sound when a visitor writes')
+    // Rendered on a server there is no browser to ask: the switch says so and cannot be pressed.
+    expect(html).toContain('This browser cannot show desktop alerts')
   })
 
-  it('groups the thread’s actions and titles the details: Contact, Lead, Assignment, What they want, On the website', () => {
+  const feedRow = (over: Partial<FeedRow>): FeedRow => ({
+    id: 3, display_name: 'Marta Ozola', email: 'marta@example.com', phone: null, is_lead: true, is_online: true, country: 'LV', city: 'Riga',
+    visitor_ip: null, current_page: null, current_page_title: null, visit_count: 2, page_views_count: 7, messages_count: 3, last_seen_at: null,
+    guest_id: null, guest: null, is_hot_lead: true, priority_score: 1250,
+    conversation: { id: 12, status: 'waiting', last_message_preview: 'Do you have a room on Friday?', last_message_sender: 'visitor', last_message_at: null, lead_captured: false, ai_enabled: false, assigned_to: null, unread_admin_count: 1, intent_tag: 'complaint' },
+    ...over,
+  })
+
+  it('lists the feed in its priority order with the hot-lead and intent icons, the filter as a removable chip', () => {
+    const html = render('/crm/inbox?sort=priority', {
+      feed: { path: 'engagement/feed?filter=priority&sort=priority&range=all', data: { data: [feedRow({}), feedRow({ id: 4, display_name: 'Ilze', is_hot_lead: false, conversation: null })], meta: { current_page: 1, last_page: 1, per_page: 50, total: 2 } } },
+    })
+    expect(html).toContain('Marta Ozola')
+    expect(html).not.toContain('Ilze')
+    expect(html).toContain('Hot lead')
+    expect(html).toContain('Complaint')
+    expect(html).toContain('Remove the filter: Priority first')
+    expect(html).toMatch(/aria-pressed="true" title="Priority first"/)
+  })
+
+  it('asks the feed for an intent, newest first, in the window', () => {
+    const html = render('/crm/inbox?intent=complaint&range=week', {
+      feed: { path: 'engagement/feed?filter=complaint&sort=recent&range=week', data: { data: [feedRow({})], meta: { current_page: 1, last_page: 1, per_page: 50, total: 1 } } },
+    })
+    expect(html).toContain('Marta Ozola')
+    expect(html).toContain('Remove the filter: Complaint')
+    expect(html).toContain(`Remove the filter: ${RANGE_DEFAULTS.week}`)
+  })
+
+  it('titles the details’ tabs: Contact, Lead, AI, Website', () => {
     const html = render('/crm/inbox?c=12')
     expect(html).toContain('What to do with this chat')
-    for (const title of ['Contact', 'Lead', 'Assignment', 'What they want', 'On the website']) expect(html).toContain(`>${title}</h3>`)
+    for (const tab of ['Contact', 'Lead', 'AI', 'Website']) expect(html).toMatch(new RegExp(`role="tab"[^>]*title="${tab}"`))
     expect(html).toContain('Reply tools')
     expect(html).toContain('crm-ai-soft')
   })
@@ -178,6 +230,7 @@ describe('the inbox words', () => {
     ...Object.keys(ACTION_DEFAULTS).map(k => `action.${k}`), ...Object.keys(ACTION_DONE_DEFAULTS).map(k => `action_done.${k}`),
     ...Object.keys(UPLOAD_ERROR_DEFAULTS).map(k => `upload_error.${k}`), ...Object.keys(DICTATION_ERROR_DEFAULTS).map(k => `dictation_error.${k}`),
     ...Object.keys(FIELD_ERROR_DEFAULTS).map(k => `field_error.${k}`),
+    ...Object.keys(RANGE_DEFAULTS).map(k => `range.${k}`), ...DETAILS_TABS.map(k => `dtab.${k}`),
   ]
   for (const lang of ['en', 'de', 'fr', 'es', 'ru']) {
     it(`has every word the inbox builds at run time in ${lang}`, () => {

@@ -73,7 +73,7 @@ final class StayQuoteService
     }
 
     /**
-     * @param array{unit_id: string, check_in: string, check_out: string, adults?: int, children?: int, extras?: array, coupon?: ?array} $data
+     * @param array{unit_id: string, check_in: string, check_out: string, adults?: int, children?: int, extras?: array, coupon?: ?array, promo_code?: ?string} $data
      * @return array{hold: BookingHold, engine: array, lines: array, pricing: PricingResult}
      *
      * @throws StayQuoteException  the stay cannot be sold as asked
@@ -135,9 +135,10 @@ final class StayQuoteService
             throw new StayQuoteException('room_unavailable', 'That room is not available for these dates.', 409);
         }
 
+        $engine = app(StayPromotions::class)->applyToQuote($engine, $data['promo_code'] ?? null);
         $hold = BookingHold::withoutGlobalScopes()->where('organization_id', $orgId)->where('hold_token', $engine['hold_token'])->firstOrFail();
         try {
-            $pricing = $this->price($priced, (float) $engine['gross_total'], $selection);
+            $pricing = $this->stayPrice($priced, $engine, $selection);
         } catch (\Throwable $e) {
             // The engine has already written its hold; a quote that ends in
             // a refusal leaves none behind.
@@ -150,6 +151,8 @@ final class StayQuoteService
             'member_id'          => (int) $member->id,
             'user_id'            => (int) $user->id,
             'list_total'         => $pricing->list,
+            'pricing_scope'      => StayPromotions::enabled() ? 'accommodation' : 'legacy_total',
+            'stay_discount_allocations' => StayPromotions::enabled() ? $this->allocations($engine, $pricing) : null,
             'discount'           => $pricing->discount,
             'discount_source'    => $pricing->applied['source'] ?? null,
             'discount_source_id' => $pricing->applied['source_id'] ?? null,
@@ -176,7 +179,7 @@ final class StayQuoteService
      * sleeps in which room (StayCombination::party()) and the rooms' names
      * together, which the engine's confirm and the confirmation mail read.
      *
-     * @param array{unit_ids: list<string>, check_in: string, check_out: string, adults?: int, children?: int, extras?: array, coupon?: ?array} $data
+     * @param array{unit_ids: list<string>, check_in: string, check_out: string, adults?: int, children?: int, extras?: array, coupon?: ?array, promo_code?: ?string} $data
      * @return array{hold: BookingHold, engine: array, lines: array, pricing: PricingResult}
      *
      * @throws StayQuoteException
@@ -189,7 +192,7 @@ final class StayQuoteService
         $children = (int) ($data['children'] ?? 0);
         $nights = $this->assertStayAllowed($data['check_in'], $data['check_out']);
 
-        $unitIds = array_values(array_map('strval', $data['unit_ids'] ?? []));
+        $unitIds = array_values(array_map('strval', $data['unit_ids']));
         if (count($unitIds) < StayCombination::MIN_ROOMS || count($unitIds) > StayCombination::MAX_ROOMS) {
             throw new StayQuoteException('invalid_stay', 'Choose two or three rooms.', 422);
         }
@@ -246,9 +249,10 @@ final class StayQuoteService
             throw new StayQuoteException('room_unavailable', 'One of these rooms is not available for these dates.', 409);
         }
 
+        $engine = app(StayPromotions::class)->applyToQuote($engine, $data['promo_code'] ?? null);
         $hold = BookingHold::withoutGlobalScopes()->where('organization_id', $orgId)->where('hold_token', $engine['hold_token'])->firstOrFail();
         try {
-            $pricing = $this->price($priced, (float) $engine['gross_total'], $selection);
+            $pricing = $this->stayPrice($priced, $engine, $selection);
         } catch (\Throwable $e) {
             $hold->delete();
             throw $e;
@@ -275,6 +279,8 @@ final class StayQuoteService
             'member_id'          => (int) $member->id,
             'user_id'            => (int) $user->id,
             'list_total'         => $pricing->list,
+            'pricing_scope'      => StayPromotions::enabled() ? 'accommodation' : 'legacy_total',
+            'stay_discount_allocations' => StayPromotions::enabled() ? $this->allocations($engine, $pricing) : null,
             'discount'           => $pricing->discount,
             'discount_source'    => $pricing->applied['source'] ?? null,
             'discount_source_id' => $pricing->applied['source_id'] ?? null,
@@ -334,9 +340,43 @@ final class StayQuoteService
      */
     public function reprice(User $user, array $payload): PricingResult
     {
+        // A campaign's accepted price survives admin edits and midnight until the hold expires.
+        if (($payload['discount_source'] ?? null) === 'booking_promotion' && !empty($payload['promotion'])) {
+            return new PricingResult((float) $payload['list_total'], (float) $payload['discount'], (float) $payload['gross_total'],
+                ['source' => 'booking_promotion', 'source_id' => $payload['promotion']['id'], 'label' => $payload['discount_label']], null, $payload['currency']);
+        }
+        if (($payload['pricing_scope'] ?? null) === 'accommodation') {
+            return $this->stayPrice($this->pricedMember($user), $payload, CouponSelection::fromArray($payload['coupon'] ?? null), false);
+        }
         $list = (float) ($payload['list_total'] ?? $payload['gross_total'] ?? 0);
 
         return $this->price($this->pricedMember($user), $list, CouponSelection::fromArray($payload['coupon'] ?? null));
+    }
+
+    private function stayPrice(?LoyaltyMember $member, array $quote, ?CouponSelection $selection, bool $campaign = true): PricingResult
+    {
+        // Roll out per venue. Existing venues and pre-release holds retain their agreed pricing rules.
+        if (($quote['pricing_scope'] ?? null) !== 'accommodation' && !StayPromotions::enabled() && empty($quote['promotion'])) {
+            return $this->price($member, (float) $quote['gross_total'], $selection);
+        }
+        $room = (float) $quote['room_total'];
+        $extras = (float) $quote['extras_total'];
+        $p = $this->price($member, $room, $selection);
+        if ($campaign && isset($quote['promotion']) && $quote['promotion']['discount'] >= $p->discount) {
+            $promo = $quote['promotion'];
+            $coupon = $p->coupon;
+            if ($coupon && $coupon['status'] === 'applied') $coupon['status'] = 'outbid';
+            return new PricingResult(round($room + $extras, 2), (float) $promo['discount'], round($room - $promo['discount'] + $extras, 2),
+                ['source' => 'booking_promotion', 'source_id' => $promo['id'], 'label' => $promo['code']], $coupon, $quote['currency']);
+        }
+        return new PricingResult(round($room + $extras, 2), $p->discount, round($p->total + $extras, 2), $p->applied, $p->coupon, $p->currency);
+    }
+
+    private function allocations(array $engine, PricingResult $price): array
+    {
+        if (($price->applied['source'] ?? null) === 'booking_promotion') return $engine['promotion']['room_discounts'];
+        $rooms = $engine['rooms'] ?? [['room_total' => $engine['room_total']]];
+        return array_column(StayCombination::shares(array_column($rooms, 'room_total'), 0, (float) $engine['room_total'] - $price->discount), 'discount');
     }
 
     /** @param array{hold: BookingHold, engine: array, lines: array, pricing: PricingResult} $quote */

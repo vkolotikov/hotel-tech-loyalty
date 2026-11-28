@@ -36,6 +36,7 @@ export const ERRORS: Record<string, Record<string, string>> = {
     unknown: 'That did not work. Nothing was changed; please try again.',
   },
   people: {
+    membership_not_started: 'This member’s membership starts after the event.',
     sign_up_closed: 'This event does not take sign-ups now.',
     event_full: 'The event is full.',
     tier_not_allowed: 'This event is for other tiers.',

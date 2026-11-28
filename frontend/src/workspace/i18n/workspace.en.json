@@ -41,5 +41,37 @@
     "more_areas": "More areas",
     "plan": "Plan & products",
     "team": "Team"
+  },
+  "pulse": {
+    "label": "Now at the venue",
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "night": "Good night",
+    "hello_name": "{{greeting}}, {{name}}",
+    "place_time": "{{place}} · venue time",
+    "zone_time": "Venue time ({{zone}})",
+    "feels_like": "Feels like {{temp}}",
+    "high_low": "H {{max}} L {{min}}",
+    "next_hours": "The next hours",
+    "now": "Now",
+    "sun": "Sunrise {{rise}}, sunset {{set}}",
+    "weather": {
+      "clear": "Clear sky",
+      "mainly_clear": "Mainly clear",
+      "partly_cloudy": "Partly cloudy",
+      "overcast": "Overcast",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "freezing_drizzle": "Freezing drizzle",
+      "rain": "Rain",
+      "freezing_rain": "Freezing rain",
+      "snow": "Snow",
+      "showers": "Rain showers",
+      "snow_showers": "Snow showers",
+      "thunderstorm": "Thunderstorm",
+      "thunder_hail": "Thunderstorm with hail",
+      "unknown": "Weather"
+    }
   }
 }

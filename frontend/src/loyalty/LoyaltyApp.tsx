@@ -9,6 +9,7 @@ import { LoyaltyProvider } from './LoyaltyProvider'
 import { OverviewShell } from './overview/OverviewShell'
 import { OverviewSkeleton } from './overview/OverviewUI'
 import { ChunkErrorBoundary } from '../components/ChunkErrorBoundary'
+import { legacyDestination } from './management/navigation'
 
 // Phones opening Home should not download the campaign editors, charts or scanner decoder.
 const CampaignCache = lazy(() => import('./campaigns/design/CampaignUI').then(m => ({ default: m.CampaignCache })))
@@ -26,14 +27,17 @@ const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ d
 const MemberPage = lazy(() => import('./member/MemberPage').then(m => ({ default: m.MemberPage })))
 const DuplicatesPage = lazy(() => import('./membership/DuplicatesPage').then(m => ({ default: m.DuplicatesPage })))
 const ImportPage = lazy(() => import('./membership/ImportPage').then(m => ({ default: m.ImportPage })))
+const PhysicalCardsPage = lazy(() => import('./physical-cards/PhysicalCardsPage').then(m => ({ default: m.PhysicalCardsPage })))
 const MembersPage = lazy(() => import('./members/MembersPage').then(m => ({ default: m.MembersPage })))
-const EarnPage = lazy(() => import('./earn/EarnPage').then(m => ({ default: m.EarnPage })))
+const EarnPage = lazy(() => import('./management/EarningPage').then(m => ({ default: m.EarningPage })))
 const SetupWizard = lazy(() => import('./options/SetupWizard').then(m => ({ default: m.SetupWizard })))
 const ProgramPage = lazy(() => import('./program/ProgramPage').then(m => ({ default: m.ProgramPage })))
 const RequestsPage = lazy(() => import('./requests/RequestsPage').then(m => ({ default: m.RequestsPage })))
 const RewardsPage = lazy(() => import('./rewards/RewardsPage').then(m => ({ default: m.RewardsPage })))
 const DoorPage = lazy(() => import('./scan/DoorPage').then(m => ({ default: m.DoorPage })))
 const ScanPage = lazy(() => import('./scan/ScanPage').then(m => ({ default: m.ScanPage })))
+const PartnersPage = lazy(() => import('./partners/PartnersPage').then(m => ({ default: m.PartnersPage })))
+const PartnerScanPage = lazy(() => import('./partners/PartnerScanPage').then(m => ({ default: m.PartnerScanPage })))
 
 function PageLoad({ children }: { children: ReactNode }) {
   return <ChunkErrorBoundary><Suspense fallback={<OverviewSkeleton />}>{children}</Suspense></ChunkErrorBoundary>
@@ -53,6 +57,10 @@ export function LoyaltyApp() {
   const location = useLocation()
   if (!token) return <Navigate to={loginPath(location)} replace />
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
+  if (user?.loyalty_scan_only && location.pathname !== '/loyalty/partner') return <Navigate to="/loyalty/partner" replace />
+  const destination = legacyDestination(location.pathname, location.search, location.hash)
+  if (destination) return <Navigate to={destination} replace />
+  if (location.pathname.replace(/\/$/, '') === '/loyalty/partner') return <PageLoad><PartnerScanPage /></PageLoad>
 
   if (location.pathname.replace(/\/$/, '') === '/loyalty/overview') {
     return <LoyaltyProvider><OverviewShell><PageLoad><OverviewPage /></PageLoad></OverviewShell></LoyaltyProvider>
@@ -74,16 +82,19 @@ export function LoyaltyApp() {
           <Route path="more" element={<MorePage />} />
           <Route path="members/duplicates" element={<DuplicatesPage />} />
           <Route path="members/import" element={<ImportPage />} />
+          <Route path="members/cards" element={<PhysicalCardsPage />} />
           <Route path="members/:id" element={<MemberPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="program" element={<ProgramPage />} />
           <Route path="options" element={<EarnPage />} />
           <Route path="options/setup" element={<SetupWizard />} />
+          <Route path="program/setup" element={<SetupWizard />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="partners" element={<PartnersPage />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="events" element={<EventsPage />} />
-          <Route path="events/new" element={<EventEditorPage />} />
-          <Route path="events/:id/edit" element={<EventEditorPage />} />
+          <Route path="events/new" element={<><EventsPage /><EventEditorPage /></>} />
+          <Route path="events/:id/edit" element={<><EventsPage /><EventEditorPage /></>} />
           <Route path="events/:id" element={<EventPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignPage />} />

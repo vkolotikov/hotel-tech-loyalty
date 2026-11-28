@@ -13,6 +13,9 @@ use App\Services\Appointments\VenueClock;
 use App\Services\Crm\CrmAccess;
 use App\Services\Crm\CrmSetupProgress;
 use App\Services\Crm\CrmToday;
+use App\Services\Crm\TeamCustomers;
+use App\Services\Crm\TeamDashboard;
+use App\Services\Crm\TeamDayPlan;
 use App\Services\Portal\PortalBootstrap;
 use App\Support\OrgAccent;
 use Carbon\CarbonImmutable;
@@ -40,6 +43,10 @@ class WorkspaceController extends Controller
         $widget = ChatWidgetConfig::query()->orderBy('id')->first(['id', 'widget_key', 'is_active']);
         $progress = $setup->for($orgId);
         $platform = method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin();
+        $brands = \App\Services\Crm\CrmBrands::for($user);
+
+        $selectedBrand = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        $newLeadBrand = $selectedBrand ?? collect($brands['brands'])->firstWhere('is_default', true)['id'] ?? null;
 
         return response()->json([
             'name'         => self::NAME,
@@ -49,6 +56,10 @@ class WorkspaceController extends Controller
                 'timezone' => VenueClock::zone($orgId),
                 'today'    => VenueClock::today($orgId),
                 'currency' => PortalBootstrap::currency($org),
+                'lead_currencies' => \App\Services\Crm\EmailPriceCheck::currencyCodes(),
+                'lead_currency' => $orgId === \App\Services\Integrations\CrmMail::ORGANIZATION
+                    && (int) $newLeadBrand === \App\Services\Integrations\CrmMail::BRAND
+                    ? 'EUR' : PortalBootstrap::currency($org),
             ],
             // What the plan holds: the chatbot's setup and the knowledge base answer 402 `feature_locked` without
             // `chatbot`, the live visitor feed without `engagement`. The AI capture of a lead from pasted text
@@ -58,6 +69,8 @@ class WorkspaceController extends Controller
                 'chatbot'    => $platform || $org->hasFeature('chatbot'),
                 'engagement' => $platform || $org->hasFeature('engagement'),
                 'ai_capture' => \App\Http\Middleware\RequireAiCapture::allows($org, $user),
+                'whatsapp_brand_id' => app(\App\Services\Integrations\CrmMail::class)->available($user)
+                    ? \App\Services\Integrations\CrmMail::BRAND : null,
             ],
             // The month's AI allowance (the widget's assistant and the inbox's drafts spend it).
             'ai'           => ['status' => $budget['status'], 'percent' => $budget['percent']],
@@ -68,6 +81,11 @@ class WorkspaceController extends Controller
                 'can'  => CrmAccess::forBootstrap($user),
             ],
             'widget'       => $widget ? ['key' => (string) $widget->widget_key, 'active' => (bool) $widget->is_active] : null,
+            // The brands this person may work in (CrmBrands, owner 2026-11-09), whether "All brands" is theirs, and the
+            // brand this request was scoped to (BrandMiddleware; null = all brands): the switcher shows it.
+            'brands'       => $brands['brands'],
+            'all_brands'   => $brands['all'],
+            'brand_id'     => app()->bound('current_brand_id') && app('current_brand_id') !== null ? (int) app('current_brand_id') : null,
             'counts'       => [
                 'chats_waiting' => ChatConversation::query()->where('status', 'waiting')->count(),
                 'leads_new'     => Inquiry::query()->where('created_at', '>=', now()->subDay())->count(),
@@ -86,5 +104,27 @@ class WorkspaceController extends Controller
     public function start(Request $request, CrmSetupProgress $setup): JsonResponse
     {
         return response()->json($setup->for((int) $request->attributes->get('workspace_org')->id));
+    }
+
+    public function teamDayPlan(Request $request, TeamDayPlan $plan): JsonResponse
+    {
+        $args = $request->validate(['date' => 'sometimes|date_format:Y-m-d']);
+        return response()->json($plan->for($request->attributes->get('workspace_org'), $request->user(), $args['date'] ?? null))
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    public function teamCustomers(Request $request, TeamDashboard $dashboard, TeamCustomers $customers): JsonResponse
+    {
+        $args = $request->validate(['period' => 'sometimes|in:week,month,all']);
+        return response()->json($dashboard->customers($request->attributes->get('workspace_org'), $request->user(), $args['period'] ?? 'all', $customers))
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    public function teamDashboard(Request $request, TeamDashboard $dashboard): JsonResponse
+    {
+        $args = $request->validate(['period' => 'sometimes|in:week,month', 'filter' => 'sometimes|in:all,urgent,email,followup,delivery,new,needed,waiting_week,checkin',
+            'page' => 'sometimes|integer|min:1|max:100000', 'size' => 'sometimes|integer|in:4,8']);
+        return response()->json($dashboard->for($request->attributes->get('workspace_org'), $request->user(), $args['period'] ?? 'week',
+            $args['filter'] ?? 'all', (int) ($args['page'] ?? 1), (int) ($args['size'] ?? 8)))->header('Cache-Control', 'private, no-store');
     }
 }

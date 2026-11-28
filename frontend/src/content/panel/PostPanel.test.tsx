@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -6,7 +7,7 @@ import type { Bootstrap, PostDetail } from '../lib/types'
 import { keep, ownerOf } from './kept'
 import { PanelProvider, type PanelTarget } from './PanelProvider'
 import { formOf } from './panelState'
-import { PostPanel } from './PostPanel'
+import { PostPanel, PostEditorProvider } from './PostPanel'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -47,11 +48,11 @@ function render(target: PanelTarget | undefined, cached: PostDetail | null = pos
   if (cached) client.setQueryData(['content', 3, 'post', cached.id], cached)
   if (brand) client.setQueryData(['content', 3, 'brand'], brand)
   return renderToStaticMarkup(
-    <QueryClientProvider client={client}>
+    <MemoryRouter><QueryClientProvider client={client}>
       <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
-        <PanelProvider initial={target}><PostPanel /></PanelProvider>
+        <PanelProvider initial={target}><PostEditorProvider><PostPanel /></PostEditorProvider></PanelProvider>
       </ContentContext.Provider>
-    </QueryClientProvider>,
+    </QueryClientProvider></MemoryRouter>,
   )
 }
 
@@ -191,11 +192,11 @@ describe('PostPanel', () => {
     client.setQueryData(['content', 3, 'strategy', 2], { strategy: { id: 2, title: null, summary: null, status: 'active', created_at: null, ai_output: null, balance: null,
       pillars: [{ id: 7, name: 'Hair care', active: true, description: null, purpose: null, frequency_weight: 50 }, { id: 8, name: 'Old pillar', active: false, description: null, purpose: null, frequency_weight: 0 }] } })
     const out = renderToStaticMarkup(
-      <QueryClientProvider client={client}>
+      <MemoryRouter><QueryClientProvider client={client}>
         <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
-          <PanelProvider initial={{ kind: 'post', id: 5, seq: 1 }}><PostPanel /></PanelProvider>
+          <PanelProvider initial={{ kind: 'post', id: 5, seq: 1 }}><PostEditorProvider><PostPanel /></PostEditorProvider></PanelProvider>
         </ContentContext.Provider>
-      </QueryClientProvider>,
+      </QueryClientProvider></MemoryRouter>,
     )
     expect(out).toContain('>Hair care</option>')
     expect(out).not.toContain('>Old pillar</option>')
@@ -248,11 +249,11 @@ describe('PostPanel while approvals are on (spec 2026-10-16 §6.2)', () => {
     const client = new QueryClient()
     client.setQueryData(['content', 3, 'post', post.id], post)
     const html = renderToStaticMarkup(
-      <QueryClientProvider client={client}>
+      <MemoryRouter><QueryClientProvider client={client}>
         <ContentContext.Provider value={{ data: lockedBoot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
-          <PanelProvider initial={{ kind: 'post', id: 5, seq: 1 }}><PostPanel /></PanelProvider>
+          <PanelProvider initial={{ kind: 'post', id: 5, seq: 1 }}><PostEditorProvider><PostPanel /></PostEditorProvider></PanelProvider>
         </ContentContext.Provider>
-      </QueryClientProvider>,
+      </QueryClientProvider></MemoryRouter>,
     )
     expect(html).toContain('<option value="needs_review">')
     expect(html).not.toContain('<option value="approved">')

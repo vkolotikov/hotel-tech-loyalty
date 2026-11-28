@@ -89,7 +89,7 @@ function Status({ answer, recommended, preset }: { answer: OptionsAnswer; recomm
 }
 
 /** The checks, warnings first: each in a sentence, with its one-press fix (a manager's) and the card to open. */
-function Checks({ answer, open }: { answer: OptionsAnswer; open: (way: string) => void }) {
+export function Checks({ answer, open }: { answer: OptionsAnswer; open: (way: string) => void }) {
   const { t } = useTranslation()
   const advice = sayable(answer)
   if (advice.length === 0) return null

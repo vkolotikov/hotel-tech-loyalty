@@ -55,6 +55,7 @@ class AccessDecision
         $member->loadMissing('user');
         $tier = self::tierOf($member, $orgId);
         $validUntil = $member->membership_valid_until?->toDateString();
+        $validFrom = \App\Services\Loyalty\Members\MembershipValidity::startOf($member);
         // The venue's today, as PortalBootstrap::venueToday() reads it (the same zone), memoised for the request.
         $today = VenueClock::today($orgId);
         $daysLeft = $validUntil !== null ? self::daysBetween($today, $validUntil) : null;
@@ -66,6 +67,7 @@ class AccessDecision
             $daysLeft !== null && $daysLeft >= 0 && $daysLeft <= self::EXPIRING_DAYS ? $daysLeft : null,
             $tier ? ['id' => (int) $tier->id, 'name' => (string) $tier->name, 'color' => $tier->color_hex] : null,
             $allowed,
+            $validFrom,
         );
 
         if (MemberErasure::isErased($member) || MemberErasure::isSelfDeleted($member)) {
@@ -73,6 +75,9 @@ class AccessDecision
         }
         if (!$member->is_active) {
             return $verdict(AccessVerdict::MEMBER_OFF);
+        }
+        if ($validFrom !== null && $validFrom > ($event !== null ? \App\Services\Loyalty\Events\EventClock::day($event) : $today)) {
+            return $verdict(AccessVerdict::NOT_STARTED);
         }
         if ($validUntil !== null && $validUntil < ($event !== null ? \App\Services\Loyalty\Events\EventClock::day($event) : $today)) {
             return $verdict(AccessVerdict::EXPIRED);

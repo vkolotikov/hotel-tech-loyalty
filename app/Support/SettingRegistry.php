@@ -7,7 +7,7 @@ final class SettingRegistry
 {
     public const SECRET_KEYS = [
         'ai_openai_api_key', 'ai_anthropic_api_key',
-        'booking_smoobu_api_key', 'booking_smoobu_webhook_secret',
+        'booking_smoobu_api_key', 'booking_smoobu_api_secret', 'booking_smoobu_webhook_secret',
         'expo_access_token',
         'stripe_secret_key', 'stripe_webhook_secret',
         'twilio_auth_token',
@@ -169,6 +169,7 @@ final class SettingRegistry
 
             // Integrations — PMS
             ['key' => 'booking_smoobu_api_key',       'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API Key'],
+            ['key' => 'booking_smoobu_api_secret',    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API signing secret'],
             ['key' => 'booking_smoobu_channel_id',    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Channel ID'],
             ['key' => 'booking_smoobu_base_url',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API URL'],
             ['key' => 'booking_smoobu_webhook_secret', 'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Webhook Secret'],

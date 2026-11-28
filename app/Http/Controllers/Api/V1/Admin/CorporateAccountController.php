@@ -181,7 +181,12 @@ class CorporateAccountController extends Controller
         ]);
 
         if (array_key_exists('custom_data', $v)) {
-            $v['custom_data'] = $this->customFields->validate('corporate_account', $v['custom_data']);
+            // A value of a field the organisation switched off or deleted is kept (2026-11-12): it comes back with the field.
+            $v['custom_data'] = $this->customFields->keepUnlisted(
+                'corporate_account',
+                $corporateAccount->getAttribute('custom_data'),
+                $this->customFields->validate('corporate_account', $v['custom_data']),
+            );
         }
 
         $corporateAccount->update($v);

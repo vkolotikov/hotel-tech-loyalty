@@ -74,6 +74,9 @@
     }
   },
   "logo": {
+    "back_to_setup": "Back to setup",
+    "saved": "Logo saved. Your setup checklist has been updated.",
+    "tab_caption": "Logo and design availability",
     "alt": "The venue’s logo",
     "error": {
       "invalid": "Use a JPEG, PNG or WebP picture up to {{mb}} MB and {{edge}} pixels on its longest side.",
@@ -84,7 +87,7 @@
       "unknown": "The logo could not be uploaded. Please try again."
     },
     "hint": "JPEG, PNG or WebP, up to {{mb}} MB. Saved at once.",
-    "line": "Shown in the app and the member portal. It is the same logo as in the full admin’s Branding.",
+    "line": "Shown on member cards, in the app and in the member portal.",
     "none": "No logo yet.",
     "replace": "Replace logo",
     "title": "Logo",

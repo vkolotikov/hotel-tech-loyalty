@@ -1,3 +1,9 @@
+import { ExportControls } from '../exports/ExportControls'
+import { NO_FILTERS } from '../posts/postsFilters'
+import { Button } from '../../workspace/ui/Button'
+import { Link } from 'react-router-dom'
+import { useContentWork } from '../work/useContentWork'
+import { WorkStatus } from '../work/WorkStatus'
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,7 +13,6 @@ import { formatDate, isDateKey } from '../../workspace/lib/wallClock'
 import { Notice } from '../../workspace/ui/Notice'
 import { CalendarSkeleton } from '../../workspace/ui/Skeleton'
 import { useApi, useBoot, useBrandId } from '../ContentProvider'
-import { failureOf } from '../lib/api'
 import { PLAN_REFRESH_MS, UNDO_MS } from '../lib/constants'
 import { errorKey } from '../lib/errors'
 import { putInPlans, refreshLists } from '../lib/planCache'
@@ -24,7 +29,7 @@ import { isRunning, runEnded, runNote, useGenerationRun } from './generateRun'
 import { ListView } from './ListView'
 import { MonthGrid } from './MonthGrid'
 import { createMover, keyMove, leavesRange, movedDate, undoOf, type DropTarget } from './moveMath'
-import { filtered, keepWithinBrand, monthFigures, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
+import { filtered, keepWithinBrand, monthFigures, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
 import { canAdd, newPostDraft, usualTimes, type AddChoice } from './addMath'
 import { GoalsLine } from './GoalsLine'
 import { KeyDateEditor } from './KeyDateEditor'
@@ -42,6 +47,7 @@ import { WeekGrid } from './WeekGrid'
 import { NumbersLine } from './NumbersLine'
 import { PlanLegend } from './PlanLegend'
 import { PageHeader } from '../ui/PageHeader'
+import { PulseCard } from '../../workspace/pulse/PulseCard'
 
 /** The line under the toolbar after a move (with its Undo) or a refusal. */
 interface Note { tone: 'info' | 'danger'; text: string; undo: (() => void) | null }
@@ -59,9 +65,6 @@ export function PlanPage() {
   const boot = useBoot()
   const api = useApi()
   const brand = useBrandId()
-  // The brand on screen when an answer comes back (a Fill takes a while; the brand may change meanwhile).
-  const brandNow = useRef(brand)
-  useEffect(() => { brandNow.current = brand }, [brand])
   const panel = usePanel()
   const queryClient = useQueryClient()
   const wide = useMedia('(min-width: 1024px)')
@@ -129,6 +132,8 @@ export function PlanPage() {
 
   // The brand's channels (the same read as the panel's): what a new post from a day starts on, and each platform's usual time.
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
+  // The venue's clock and weather above the plan (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['content', brand, 'pulse'], queryFn: api.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
   const channels = useMemo(() => brandInfo.data?.channels ?? [], [brandInfo.data])
   const industry = boot.organization.industry
   const times = useMemo(() => usualTimes(channels, industry), [channels, industry])
@@ -229,22 +234,21 @@ export function PlanPage() {
   const openPost = (id: number) => { if (!drag.consumeClick()) panel.open(id) }
   // The usual time only once the brand's channels are read; before that the panel gives it when they arrive.
   const write = (slot: Slot) => { panel.openNew({ date: slot.date, platform: slot.platform, time: brandInfo.data ? times[slot.platform] ?? null : undefined }) }
-  const fill = async (slot: Slot) => {
-    setFilling(slotKey(slot))
-    const madeFor = brand
-    try {
-      const { post } = await api.fill(slot.date, slot.platform)
-      if (!opensAfterFill(madeFor, brandNow.current)) return // the brand changed while the AI wrote: this post belongs to the other one
+  const fillWork = useContentWork('fill', null, work => {
+    const id = work.result?.post_id
+    if (!id) return
+    const owns = panel.capture()
+    void api.post(id).then(({ post }) => {
       queryClient.setQueryData(['content', brand, 'post', post.id], post)
-      await refresh()
-      panel.open(post.id)
-    } catch (error) {
-      const [key, text] = errorKey('fill', failureOf(error).code)
-      setNote({ tone: 'danger', text: t(key, text), undo: null })
-      void refresh() // the slot may be taken, or the post written after all
-    } finally {
-      setFilling(null)
-    }
+      void refresh()
+      if (owns()) panel.open(post.id)
+    }, () => undefined)
+  })
+  const fill = async (slot: Slot) => {
+    if (fillWork.busy || fillWork.uncertain) return
+    setFilling(slotKey(slot))
+    await fillWork.start({ action: 'fill', date: slot.date, platform: slot.platform })
+    setFilling(null)
   }
 
   // A day's empty space or its "+" (spec 2026-10-15 §4). The click a drag's release fires over a day's empty space is
@@ -284,10 +288,13 @@ export function PlanPage() {
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
       {/* The owner's header (spec 2026-10-21 §6.1): the title, its line, the period's numbers, and New post. */}
       <div className="px-4 pb-3 pt-4 lg:px-6">
-        <PageHeader title={t('content.nav.plan', 'Plan')} line={t('content.plan.line', 'A clear view of what comes next.')}
-          below={<NumbersLine figures={data && view === 'month' ? monthFigures(data.posts, data.slots, date) : data?.figures} pending={!data || query.isPlaceholderData} />} newPost />
+        <PageHeader title={t('content.nav.plan', 'Plan')} line={t('content.plan.line', 'A clear view of what comes next.')} newPost />
+        {/* Counts get the full row: a longer translated figure must not push New post onto a second header row. */}
+        <NumbersLine figures={data && view === 'month' ? monthFigures(data.posts, data.slots, date) : data?.figures} pending={!data || query.isPlaceholderData} />
+        <div className="mt-3 c-plan-pulse"><PulseCard variant="strip" clockLabel={t('content.launch.planning_clock', 'Planning time: {{zone}}', { zone: boot.venue.timezone })} pulse={pulse.data ?? { timezone: boot.venue.timezone, now: '', today: boot.venue.today, place: null, weather: null }} name={boot.staff.name ? boot.staff.name.trim().split(/\s+/)[0] : null} /><div className="min-h-6 text-xs text-a-text-2">{!boot.venue.timezone_named && <>{t('content.launch.zone_unset', 'The planning clock uses UTC. Choose a time zone for your account.')} {boot.staff.can_manage && <Link to="/content/settings" className="c-launch-link">{t('content.launch.settings', 'Content settings')}</Link>}</>}</div></div>
       </div>
       {/* The owner's filter row, above the calendar bar (spec 2026-10-21 §6.2); the tray is the Unscheduled chip's list. */}
+      <div className="px-4 pb-3 lg:px-6"><ExportControls key={brand} plan filters={{ ...NO_FILTERS, from: range.from, to: range.to, platforms: prefs.filter.platforms, status: prefs.filter.status === 'all' ? '' : prefs.filter.status, exclude_archived: true }} /></div>
       <FilterRow platforms={chips} filter={prefs.filter} statuses={boot.statuses} onFilter={(filter) => setPrefs({ ...prefs, filter })}
         keyDates={prefs.keyDates} onKeyDates={(on) => setPrefs({ ...prefs, keyDates: on })}
         unscheduled={<UnscheduledChip posts={data?.unscheduled ?? []} total={data?.unscheduled_total} active={dropTarget?.kind === 'tray'} dragging={drag.state !== null} selectedId={selectedId}
@@ -299,9 +306,8 @@ export function PlanPage() {
         onView={(v) => setPrefs({ ...prefs, view: v })}
         onGenerate={() => setGenerating(true)} aiPaused={aiPaused} />
 
-      {view !== 'month' && showGoals(goals.data, range, today) && (
-        <div className="px-4 pb-3 lg:px-6"><GoalsLine goals={goals.data} /></div>
-      )}
+      {view !== 'month' && <div className="c-plan-goals px-4 pb-3 lg:px-6">{showGoals(goals.data, range, today) && <GoalsLine goals={goals.data!} />}</div>}
+      <div className="px-4 lg:px-6"><WorkStatus state={fillWork} />{fillWork.work?.status === 'succeeded' && fillWork.work.result?.post_id && <Button variant="secondary" size="sm" onClick={() => panel.open(fillWork.work!.result!.post_id!)}>{t('content.shell.page_write', 'Write')}</Button>}</div>
 
       {query.isError && (
         <div className="px-4 pb-3 lg:px-6"><Notice tone="danger">{t('content.plan.load_failed', 'The plan could not be refreshed. What you see may be out of date.')}</Notice></div>

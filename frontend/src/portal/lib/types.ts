@@ -13,6 +13,8 @@ export interface PortalVenue {
 
 export interface PortalCapabilities {
   loyalty: boolean
+  /** Missing on older servers; no wallet action is offered until setup is confirmed. */
+  wallets?: { apple: boolean; google: boolean }
   services: boolean
   stays: boolean
   chat: boolean
@@ -67,6 +69,7 @@ export interface PortalMember {
   member_since: string
   user: { id: number; name: string; email: string; phone: string | null; language: string | null; nationality?: string | null; avatar_url?: string | null; date_of_birth?: string | null }
   benefits: BenefitPreview[]
+  membership_mode?: 'assigned' | 'earned'
   /** Release 4, part A: the kinds of message, as the server reads them (PortalBootstrap::member()). A kind switched
    *  off is not sent at all — no push, no inbox row (NotificationService::send()). */
   notification_preferences?: NotificationPreferences
@@ -74,7 +77,7 @@ export interface PortalMember {
    *  portal shows the switch only then. */
   sms_consent?: boolean
   /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
-  membership?: { valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' }
+  membership?: { valid_from?: string | null; valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled' }
 }
 
 /** The categories of NotificationService::CATEGORIES, the keys PUT member/profile `notification_preferences` takes. */
@@ -183,6 +186,7 @@ export interface Redemption {
 }
 
 export interface Offer {
+  attachment?: { name: string; mime: string; bytes: number } | null
   id: number
   title: string
   description?: string | null
@@ -198,6 +202,7 @@ export interface Offer {
 export interface Claim {
   id: number
   status: string
+  usable_now?: boolean
   claimed_at?: string | null
   used_at?: string | null
   expires_at?: string | null
@@ -265,7 +270,7 @@ export interface Quote {
   duration_minutes: number
   lines: { service_price: number; extras: QuoteLine[]; extras_total: number }
   list_amount: number
-  discount: { amount: number; label: string; source: 'tier_benefit' | 'offer' | 'reward' } | null
+  discount: { amount: number; label: string; source: 'tier_benefit' | 'offer' | 'reward' | 'booking_promotion' } | null
   coupon: { source: 'offer' | 'reward'; source_id: number; label: string; status: 'applied' | 'outbid' | 'wrong_scope'; discount: number } | null
   total_amount: number
   currency: string
@@ -304,6 +309,7 @@ export interface StayPolicies { check_in_time: string; check_out_time: string; c
 export interface StayRules { currency: string; min_nights: number; max_nights: number }
 
 export interface StayCatalogue {
+  promotions_enabled?: boolean
   rooms: StayRoom[]
   extras: StayExtra[]
   policies: StayPolicies
@@ -335,6 +341,7 @@ export interface StayAvailability { rooms: AvailableRoom[]; nights: number; part
 
 /** One room (`unit_id`) or a combination of two or three (`unit_ids`, release 5) — never both. */
 export interface StayQuoteBody {
+  promo_code?: string
   unit_id?: string; unit_ids?: string[]; check_in: string; check_out: string; adults: number; children: number
   extras?: { id: string; quantity?: number }[]; coupon?: CouponRef | null
 }

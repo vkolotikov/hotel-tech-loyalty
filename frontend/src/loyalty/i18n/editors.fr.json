@@ -1,0 +1,23 @@
+{
+  "example": "Exemple",
+  "currency": "Devise",
+  "memberPreview": "Aperçu membre",
+  "editTitle": "Modifier {{name}}",
+  "calculation": "Calcul",
+  "discardTitle": "Abandonner les modifications non enregistrées ?",
+  "discardLine": "Vos modifications n’ont pas été enregistrées.",
+  "draft": "Brouillon",
+  "savedSettings": "Paramètres enregistrés",
+  "levelDetails": "Détails du niveau",
+  "memberDescription": "Description pour les membres",
+  "availability": "Disponibilité, limites et conditions",
+  "sharedRate": "Taux d’achat partagé",
+  "spendable": "Points échangeables",
+  "spendableLine": "L’expiration s’applique au solde que les membres peuvent échanger.",
+  "assignLater": "Attribuer à un niveau après l’enregistrement",
+  "assignLaterLine": "Définissez le niveau bénéficiaire, la valeur et le champ d’application de cet avantage.",
+  "chooseMethod": "Choisissez une méthode de gain",
+  "nextStep": "Vous définirez son taux et ses conditions à l’étape suivante.",
+  "continue": "Continuer",
+  "earningAdd": "Ajouter une règle de gain"
+}

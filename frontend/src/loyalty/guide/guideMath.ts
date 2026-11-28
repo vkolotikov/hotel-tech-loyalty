@@ -12,7 +12,8 @@ export type FeatureId = 'scan' | 'door' | 'members' | 'tiers' | 'places' | 'even
 export type TopicId = keyof typeof TOPIC_WORDS
 export type FaqId =
   | 'start' | 'roles' | 'look' | 'how_scan' | 'colours' | 'door' | 'expired' | 'nfc' | 'move_up' | 'by_hand' | 'end_date' | 'import' | 'rename_delete'
-  | 'run_event' | 'sign_up' | 'give_points' | 'redeem' | 'boosts' | 'portal_what' | 'portal_card'
+  | 'offer_send' | 'offer_private' | 'offer_missing'
+  | 'run_event' | 'sign_up' | 'give_points' | 'redeem' | 'boosts' | 'portal_what' | 'portal_card' | 'partners' | 'reuse_card' | 'push_voucher'
 
 export const STEPS: readonly { id: StepId; to: string }[] = [
   { id: 'tiers', to: '/loyalty/program' },
@@ -50,7 +51,9 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'door', topic: 'scan', to: '/loyalty/scan' },
   { id: 'expired', topic: 'scan' },
   { id: 'nfc', topic: 'scan' },
-  { id: 'move_up', topic: 'members', to: '/loyalty/options' },
+  { id: 'partners', topic: 'scan', to: '/loyalty/partners' },
+  { id: 'reuse_card', topic: 'scan', to: '/loyalty' },
+  { id: 'move_up', topic: 'members', to: '/loyalty/program?tab=tiers&settings=qualification' },
   { id: 'by_hand', topic: 'members', to: '/loyalty' },
   { id: 'end_date', topic: 'members', to: '/loyalty' },
   { id: 'import', topic: 'members', to: '/loyalty' },
@@ -58,9 +61,13 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'rename_delete', topic: 'members', to: '/loyalty/program' },
   { id: 'run_event', topic: 'events', to: '/loyalty/events' },
   { id: 'sign_up', topic: 'events', to: '/loyalty/events' },
+  { id: 'offer_send', topic: 'rewards', to: '/loyalty/rewards?tab=offers' },
+  { id: 'offer_private', topic: 'rewards', to: '/loyalty/rewards?tab=offers' },
+  { id: 'offer_missing', topic: 'rewards', to: '/loyalty/rewards?tab=offers' },
   { id: 'give_points', topic: 'rewards', to: '/loyalty/scan' },
   { id: 'redeem', topic: 'rewards', to: '/loyalty/requests' },
-  { id: 'boosts', topic: 'rewards', to: '/loyalty/program?tab=boosts' },
+  { id: 'push_voucher', topic: 'rewards', to: '/loyalty/campaigns?tab=push' },
+  { id: 'boosts', topic: 'rewards', to: '/loyalty/options?tab=bonus' },
   { id: 'portal_what', topic: 'portal' },
   { id: 'portal_card', topic: 'portal' },
 ]

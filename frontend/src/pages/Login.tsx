@@ -1097,11 +1097,11 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
             <>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">{t('auth.login.email', 'Email')}</label>
+                  <label htmlFor="signin-email" className="block text-[13px] font-medium text-slate-300 mb-1.5">{t('auth.login.email', 'Email')}</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
-                      type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      id="signin-email" name="email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}
                       autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
@@ -1109,14 +1109,14 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                 </div>
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <label className="block text-[13px] font-medium text-slate-300">{t('auth.login.password', 'Password')}</label>
+                    <label htmlFor="signin-password" className="block text-[13px] font-medium text-slate-300">{t('auth.login.password', 'Password')}</label>
                     <button type="button" onClick={() => { navigate(authPath(product, 'forgot-password')); setError('') }}
                       className="text-xs text-blue-400 hover:text-blue-300">{t('auth.login.forgot_password', 'Forgot password?')}</button>
                   </div>
                   <div className="relative">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
-                      type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                      id="signin-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
                       required placeholder={t('auth.login.password', 'Password')}
                       className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
@@ -1379,10 +1379,10 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
             <>
               <form onSubmit={handleForgot} className="space-y-4">
                 <div>
-                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
+                  <label htmlFor="forgot-email" className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
+                    <input id="forgot-email" name="email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                   </div>
                 </div>
@@ -1417,16 +1417,16 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                 )}
                 <form onSubmit={handleReset} className="space-y-4">
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Reset code</label>
-                    <input type="text" value={resetCode} onChange={e => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    <label htmlFor="reset-code" className="block text-[13px] font-medium text-slate-300 mb-1.5">Reset code</label>
+                    <input id="reset-code" name="code" type="text" autoComplete="one-time-code" value={resetCode} onChange={e => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       required maxLength={6} inputMode="numeric" placeholder="123456" autoFocus
                       className="w-full px-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-center text-lg tracking-[0.4em] font-mono text-white placeholder-slate-600 transition" />
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">New password</label>
+                    <label htmlFor="reset-password" className="block text-[13px] font-medium text-slate-300 mb-1.5">New password</label>
                     <div className="relative">
                       <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type={showPassword ? 'text' : 'password'} value={resetPassword} onChange={e => setResetPassword(e.target.value)}
+                      <input id="reset-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={resetPassword} onChange={e => setResetPassword(e.target.value)}
                         required minLength={8} placeholder={t('auth.common.password_placeholder', 'At least 8 characters')}
                         className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                       <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
@@ -1437,10 +1437,10 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Confirm new password</label>
+                    <label htmlFor="reset-confirm" className="block text-[13px] font-medium text-slate-300 mb-1.5">Confirm new password</label>
                     <div className="relative">
                       <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type={showPassword ? 'text' : 'password'} value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
+                      <input id="reset-confirm" name="password_confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
                         required minLength={8} placeholder={t('auth.reset.repeat_placeholder', 'Repeat your new password')}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>

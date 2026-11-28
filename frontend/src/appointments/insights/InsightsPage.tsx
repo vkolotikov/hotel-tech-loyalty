@@ -15,6 +15,7 @@ import {
   ARROW, PICKS, TONE_CLASS, average, canShow, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare,
   pickOf, pointsChange, rangeFor, rangeFromSearch, share, toneOf, type Change, type Metric, type Range,
 } from './insightsMath'
+import { PulseCard } from '../../workspace/pulse/PulseCard'
 
 const PICK_FALLBACK = { this_week: 'This week', last_week: 'Last week', this_month: 'This month', last_month: 'Last month', custom: 'Choose dates' }
 /** Table heads: mono, small caps feel (spec 4.6). */
@@ -31,10 +32,13 @@ export function InsightsPage() {
   const [search, setSearch] = useSearchParams()
   const range = rangeFromSearch(search, boot.venue.today)
   const q = useQuery({ queryKey: ['appointments', 'insights', range.from, range.to], queryFn: () => appointmentsApi.insights(range.from, range.to) })
+  // The venue's clock and weather above the figures (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['appointments', 'pulse'], queryFn: appointmentsApi.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
 
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <PageTitle>{t('appointments.insights.title', 'Insights')}</PageTitle>
+      <PulseCard pulse={pulse.data} name={boot.staff.name ? boot.staff.name.trim().split(/\s+/)[0] : null} />
       <PeriodPicker range={range} today={boot.venue.today} onGo={(r) => setSearch({ from: r.from, to: r.to })} />
       {q.isLoading && <p className="text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
       {q.isError && <InsightsError error={q.error} />}

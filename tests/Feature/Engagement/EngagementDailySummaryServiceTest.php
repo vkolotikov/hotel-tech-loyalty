@@ -114,6 +114,8 @@ class EngagementDailySummaryServiceTest extends TestCase
         $tokyoOrg = OrganizationFactory::new()->create(['timezone' => 'Asia/Tokyo']);
         $laOrg    = OrganizationFactory::new()->create(['timezone' => 'America/Los_Angeles']);
 
+        // Compare the same instant even when the two reads straddle a wall-clock second.
+        $this->freezeTime();
         $tokyoNow = $this->service->orgNow($tokyoOrg);
         $laNow    = $this->service->orgNow($laOrg);
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\Integrations\CrmMail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,6 +36,56 @@ class Inquiry extends Model
         return static::withoutGlobalScope(BrandScope::class)
             ->where($field ?? $this->getRouteKeyName(), $value)
             ->first() ?? abort(404);
+    }
+
+    protected $appends = ['value_currency'];
+
+    public function getValueCurrencyAttribute(): ?string
+    {
+        return self::currencyForValue($this->currency, $this->total_value !== null, (int) $this->organization_id, (int) $this->brand_id);
+    }
+
+    public static function currencyForValue(?string $stored, bool $hasValue, int $orgId, int $brandId): ?string
+    {
+        $code = strtoupper(trim($stored ?? ''));
+        if ($code !== '') {
+            return $code;
+        }
+
+        return $orgId === CrmMail::ORGANIZATION && $brandId === CrmMail::BRAND
+            ? ($hasValue ? 'XXX' : 'EUR') : null;
+    }
+
+    public function scopeMissingValueCurrency(Builder $query): void
+    {
+        $query->whereNotNull('total_value')->where('total_value', '<>', 0)->where(fn ($q) => $q
+            ->whereRaw('upper(trim(currency)) = ?', ['XXX'])
+            ->orWhere(fn ($fds) => $fds->where('organization_id', CrmMail::ORGANIZATION)
+                ->where('brand_id', CrmMail::BRAND)
+                ->where(fn ($c) => $c->whereNull('currency')->orWhereRaw("trim(currency) = ''"))));
+    }
+
+    private function isFdsCards(): bool
+    {
+        return (int) $this->organization_id === CrmMail::ORGANIZATION && (int) $this->brand_id === CrmMail::BRAND;
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $lead): void {
+            if ($lead->isFdsCards()) {
+                $lead->inquiry_type ??= null;
+                if ($lead->total_value !== null) {
+                    $lead->currency ??= 'EUR';
+                }
+            }
+        });
+
+        static::updating(function (self $lead): void {
+            if ($lead->isFdsCards() && $lead->isDirty('total_value') && $lead->getOriginal('total_value') === null && $lead->total_value !== null) {
+                $lead->currency ??= 'EUR';
+            }
+        });
     }
 
     protected $fillable = [
@@ -104,6 +156,7 @@ class Inquiry extends Model
         return $this->belongsTo(Pipeline::class);
     }
 
+    /** @return BelongsTo<PipelineStage, $this> */
     public function pipelineStage(): BelongsTo
     {
         return $this->belongsTo(PipelineStage::class);
@@ -130,11 +183,13 @@ class Inquiry extends Model
         return $this->hasMany(Task::class)->whereNull('completed_at')->orderBy('due_at');
     }
 
+    /** @return BelongsTo<CorporateAccount, $this> */
     public function corporateAccount(): BelongsTo
     {
         return $this->belongsTo(CorporateAccount::class);
     }
 
+    /** @return BelongsTo<Property, $this> */
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
@@ -146,6 +201,7 @@ class Inquiry extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    /** @return HasMany<InquiryAttachment, $this> */
     public function attachments(): HasMany
     {
         return $this->hasMany(InquiryAttachment::class)->orderByDesc('created_at');

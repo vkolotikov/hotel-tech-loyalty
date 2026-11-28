@@ -18,7 +18,7 @@ export const EXTENSIONS: readonly Extension[] = ['1m', '3m', '6m', '1y']
 export const EXTENSION_MONTHS: Record<Extension, number> = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }
 
 /** What a change sends: a date (or none, to remove it), or an extension; with this press's key. */
-export type ValidityBody = ({ valid_until: string | null } | { extend: Extension }) & { idempotency_key: string }
+export type ValidityBody = ({ valid_until: string | null; valid_from?: string | null } | { extend: Extension }) & { idempotency_key: string }
 
 /** A manager changes a membership's end date (as a tier change); everyone else reads it. A deleted member has none. */
 export function validityActions(can: Can, member: { is_erased?: boolean }): { change: boolean } {
@@ -68,16 +68,18 @@ export function timeLeft(today: string, end: string): { years: number; months: n
  * time left), `expiring` (ends in so many days: today, tomorrow, or n days), `expired` (ended on a day) or `off`.
  */
 export type ValidityHeadline =
+  | { kind: 'scheduled'; from: string; until: string | null }
   | { kind: 'none' }
   | { kind: 'active'; until: string; left: { years: number; months: number; days: number } }
   | { kind: 'expiring'; until: string; days: number }
   | { kind: 'expired'; until: string }
   | { kind: 'off'; until: string | null }
 
-export function headlineOf(member: Pick<MemberRow, 'valid_until' | 'membership_state' | 'is_active'>, today: string): ValidityHeadline {
+export function headlineOf(member: Pick<MemberRow, 'valid_from' | 'valid_until' | 'membership_state' | 'is_active'>, today: string): ValidityHeadline {
   const until = member.valid_until ?? null
   const state: MembershipState = member.membership_state ?? (member.is_active ? 'active' : 'off')
   if (state === 'off') return { kind: 'off', until }
+  if (state === 'scheduled' && member.valid_from) return { kind: 'scheduled', from: member.valid_from, until }
   if (!until) return { kind: 'none' }
   if (state === 'expired') return { kind: 'expired', until }
   if (state === 'expiring') return { kind: 'expiring', until, days: Math.max(0, daysBetween(today, until)) }
@@ -86,7 +88,7 @@ export function headlineOf(member: Pick<MemberRow, 'valid_until' | 'membership_s
 
 /** The state as a badge's tone (ToneBadge): green, amber, red, grey. Colour is never the only sign: the word goes with it. */
 export function stateTone(state: MembershipState): 'fulfilled' | 'pending' | 'declined' | 'cancelled' {
-  return state === 'expiring' ? 'pending' : state === 'expired' ? 'declined' : state === 'off' ? 'cancelled' : 'fulfilled'
+  return state === 'expiring' || state === 'scheduled' ? 'pending' : state === 'expired' ? 'declined' : state === 'off' ? 'cancelled' : 'fulfilled'
 }
 
 /** What stops Set a date before anything is sent: no day, or a day before the venue's today. */

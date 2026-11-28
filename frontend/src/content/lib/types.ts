@@ -1,4 +1,5 @@
 import type { DateKey } from '../../workspace/lib/wallClock'
+import type { ContentMedia } from './launchTypes'
 
 export type { DateKey } from '../../workspace/lib/wallClock'
 
@@ -24,7 +25,7 @@ export interface Bootstrap {
   accent: string | null
   venue: { timezone: string; timezone_named: boolean; today: DateKey }
   /** `id`: the user's own id — the posts they post (spec 2026-10-19 §4.4); `morning_email`: their switch (§4.5). */
-  staff: { name: string; role: string | null; can_manage: boolean; id?: number; morning_email?: boolean }
+  staff: { name: string; role: string | null; can_manage: boolean; id?: number; morning_email?: boolean; collaboration_email?: boolean }
   /** `requires_approval`: the brand's posts need a manager's approval (spec 2026-10-16 §6.1). */
   profile: { id: number; setup_completed: boolean; readiness: number; requires_approval?: boolean } | null
   ai: { status: BudgetStatus; percent: number | null }
@@ -83,6 +84,7 @@ export interface Quality {
 
 /** Everything the post panel shows and edits. */
 export interface PostDetail extends PostCard {
+  media?: ContentMedia[]
   language: string | null
   goal: string | null
   format: string | null
@@ -122,7 +124,7 @@ export interface PostDetail extends PostCard {
 /** A post in a group of versions, as the panel lists it (spec 2026-10-19 §3.4). */
 export interface GroupPost { id: number; platform: Platform; status: PostStatus; scheduled_date: DateKey | null; scheduled_time: string | null }
 /** A post's group: its posts oldest first, the versions the AI is still adapting, and those it did not adapt, and why (§3.3). */
-export interface PostGroup { id: number; posts: GroupPost[]; adapting: number[]; kept_original: number[]; kept_reason: 'budget' | 'ai_failed' | null }
+export interface PostGroup { id: number; posts: GroupPost[]; adapting: number[]; kept_original: number[]; kept_reason: 'budget' | 'ai_failed' | 'ai_model_unpriced' | null }
 /** Someone on the brand's team, for "Who posts it" (spec 2026-10-19 §4.1). */
 export interface TeamMember { id: number; name: string; role: 'manager' | 'staff' }
 
@@ -152,6 +154,8 @@ export interface PlanPayload {
 
 /** The fields the panel saves; each one optional, `null` for "none". */
 export interface PostFields {
+  campaign_id?: number | null
+  media_ids?: number[]
   platform?: Platform
   scheduled_date?: DateKey | null
   scheduled_time?: string | null
@@ -173,6 +177,7 @@ export interface PostFields {
 export interface Variation { id: number; type: Rewrite; copy: string }
 
 export interface GenerateBody {
+  campaign_id?: number | null
   from: DateKey
   to: DateKey
   platforms?: Platform[]
@@ -202,6 +207,9 @@ export interface PostsPage { data: PostCard[]; meta: { page: number; pages: numb
 
 /** The Posts page's filters ('' or null: not filtered), as the address and `GET posts` hold them. */
 export interface PostFilters {
+  campaign_id?: number | null
+  platforms?: Platform[]
+  exclude_archived?: boolean
   q: string
   status: PostStatus | ''
   platform: Platform | ''
@@ -440,12 +448,12 @@ export interface Series { id: number; every: RepeatEvery; until: DateKey | null;
 export interface Person { id: number; name: string }
 /** An approval step (spec §6.4). */
 export type EventKind = 'sent_for_approval' | 'approved' | 'sent_back' | 'changed_after_approval'
-export interface TimelineComment { type: 'comment'; id: number; user: Person | null; body: string; edited: boolean; mine: boolean; at: string }
+export interface TimelineComment { type: 'comment'; id: number; user: Person | null; body: string; edited: boolean; mine: boolean; at: string; mentions?: Person[]; media?: Pick<ContentMedia, 'id' | 'name' | 'mime' | 'url'> | null }
 export interface TimelineEvent { type: 'event'; id: number; kind: EventKind; user: Person | null; note: string | null; at: string }
 export type TimelineItem = TimelineComment | TimelineEvent
 
 /** One line of the "For you" list (spec §8): what waits for this manager, or news since they last looked. */
-export type InboxKind = 'waiting' | 'approved' | 'sent_back' | 'comment' | 'to_post' | 'not_posted'
+export type InboxKind = 'waiting' | 'approved' | 'sent_back' | 'comment' | 'mention' | 'to_post' | 'not_posted'
 export interface InboxItem {
   id: string
   kind: InboxKind

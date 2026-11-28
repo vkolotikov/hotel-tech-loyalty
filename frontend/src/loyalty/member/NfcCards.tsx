@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Nfc, Plus, PowerOff, Usb } from 'lucide-react'
+import { Nfc, Plus, PowerOff, Usb, QrCode, Download } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -11,12 +11,15 @@ import { ERRORS, errorKey, refusalKey } from '../lib/errors'
 import { day } from '../lib/format'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { afterCardChange, cardsApi, cardsKey, type NfcCardRow } from '../scan/cardsApi'
-import { detectEnv, hexWithColons, shortUid } from '../scan/scanMath'
+import { detectEnv, hexWithColons, modeState, shortUid } from '../scan/scanMath'
 import { UsbReader } from '../scan/UsbReader'
+import { WindowsReader } from '../scan/WindowsReader'
 import { useWebNfc } from '../scan/useWebNfc'
 import { CARD, CardHead } from './CardHead'
 import { cardActions } from './memberMath'
 import { memberAssets } from '../members/assets'
+import { usePartnerWords } from '../partners/words'
+import '../membership/card.css'
 
 const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 font-a-mono text-base text-a-text'
 
@@ -31,6 +34,7 @@ export function NfcCards({ member, locale, timeZone, redesigned = false }: { mem
   const query = useQuery({ queryKey: cardsKey(member.id), queryFn: () => cardsApi.list(member.id) })
   const actions = cardActions(member)
   const [dialog, setDialog] = useState<'link' | NfcCardRow | null>(null)
+  const [qr, setQr] = useState<NfcCardRow | null>(null)
   const [done, setDone] = useState<'linked' | 'already' | 'off' | null>(null)
   const cards = query.data?.cards ?? []
 
@@ -47,6 +51,7 @@ export function NfcCards({ member, locale, timeZone, redesigned = false }: { mem
       {query.isError && <Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice>}
       {!query.data && query.isLoading && <Skeleton className="h-12" />}
       {query.data && cards.length === 0 && <p className="text-sm text-a-text-2">{t('loyalty.member.cards_none', 'No NFC card is linked to this member.')}</p>}
+      <p className="text-sm text-a-text-2">{t('loyalty.membership.reusable.reuse', 'To reuse a returned card, switch it off here, then link its ID on the next member’s page.')}</p>
       {redesigned && actions.link && <div className="l-mb-nfc-action"><Button size="sm" variant="secondary" className="l-ov-button" onClick={() => { setDone(null); setDialog('link') }}>{t('loyalty.member.cards_link', 'Link NFC card')}</Button></div>}
       {cards.length > 0 && (
         <ul className="-mx-5 divide-y divide-a-border">
@@ -54,7 +59,7 @@ export function NfcCards({ member, locale, timeZone, redesigned = false }: { mem
             <li key={card.id} data-card={card.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 ${card.is_active ? '' : 'opacity-70'}`}>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-a-mono text-sm text-a-text" title={hexWithColons(card.uid)}>{shortUid(card.uid)}</span>
+                  <span className="font-a-mono text-sm text-a-text" title={card.uid ? hexWithColons(card.uid) : undefined}>{card.number ?? shortUid(card.uid)}</span>
                   {card.is_active
                     ? <span className="rounded-full bg-a-st-confirmed/12 px-2 py-0.5 text-xs font-semibold text-a-st-confirmed">{t('loyalty.member.cards_on', 'On')}</span>
                     : <span className="rounded-full bg-a-surface-2 px-2 py-0.5 text-xs font-semibold text-a-text-2">{t('loyalty.member.cards_off', 'Switched off')}</span>}
@@ -71,14 +76,27 @@ export function NfcCards({ member, locale, timeZone, redesigned = false }: { mem
               {card.is_active && actions.off && (
                 <Button size="sm" variant="ghost" onClick={() => { setDone(null); setDialog(card) }}><PowerOff size={14} aria-hidden />{t('loyalty.member.cards_switch_off', 'Switch off')}</Button>
               )}
+              <Button size="sm" variant="ghost" onClick={() => setQr(card)}><QrCode size={15} aria-hidden />{t('loyalty.membership.reusable.qr', 'Card QR')}</Button>
             </li>
           ))}
         </ul>
       )}
       {dialog === 'link' && <LinkNfcDialog memberId={member.id} name={member.name} onClose={() => setDialog(null)} onDone={(linked) => { setDialog(null); setDone(linked ? 'linked' : 'already') }} />}
+      {qr && <ReusableQrDialog memberId={member.id} card={qr} onClose={() => setQr(null)} />}
       {dialog !== null && dialog !== 'link' && <SwitchOffDialog memberId={member.id} card={dialog} onClose={() => setDialog(null)} onDone={() => { setDialog(null); setDone('off') }} />}
     </section>
   )
+}
+
+function ReusableQrDialog({ memberId, card, onClose }: { memberId: number; card: NfcCardRow; onClose: () => void }) {
+  const { t } = useTranslation(), w = usePartnerWords()
+  const query = useQuery({ queryKey: ['loyalty', 'card-qr', memberId, card.id], queryFn: () => cardsApi.qr(memberId, card.id), retry: false })
+  return <Dialog title={t('loyalty.membership.reusable.title', 'Reusable card QR')} onClose={onClose}><div className="space-y-4">
+    <p className="text-sm text-a-text-2">{t('loyalty.membership.reusable.hint', 'This QR contains the physical card ID. It follows the card when you relink it. Personal member and wallet QR codes stay with their member.')}</p>
+    {query.isError && <Notice tone="danger">{w('loadFailed')}</Notice>}
+    {query.data && <><div data-print-card="" className="flex flex-col items-center gap-3 rounded-xl border border-a-border bg-a-surface p-5"><img src={query.data.qr_svg} width={220} height={220} alt={t('loyalty.membership.reusable.title', 'Reusable card QR')} /><code>{card.number ?? query.data.code}</code></div><a className="inline-flex items-center gap-2 text-a-accent-text" href={query.data.qr_svg} download={`card-${query.data.code.replace(/[^a-zA-Z0-9-]/g, '-')}.svg`}><Download size={16} aria-hidden />{t('loyalty.membership.reusable.download', 'Download QR')}</a></>}
+    <div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{w('cancelled')}</Button></div>
+  </div></Dialog>
 }
 
 /** Link a card to this member: tap it (Web NFC), read it on a USB reader, or type its ID (a reader that types works too). */
@@ -86,6 +104,7 @@ function LinkNfcDialog({ memberId, name, onClose, onDone }: { memberId: number; 
   const { t } = useTranslation()
   const client = useQueryClient()
   const env = useMemo(() => detectEnv(), [])
+  const windows = modeState('windows', env) === 'ready'
   const field = useFirstFocus<HTMLInputElement>()
   const [typed, setTyped] = useState('')
   const [usb, setUsb] = useState(false)
@@ -112,11 +131,16 @@ function LinkNfcDialog({ memberId, name, onClose, onDone }: { memberId: number; 
               </div>
             )
             : <Button full className="py-3 text-base" onClick={nfc.start}><Nfc size={18} aria-hidden />{t('loyalty.member.cards_tap', 'Tap the card')}</Button>
-        ) : <p className="text-sm text-a-text-2">{t('loyalty.scan.nfc_unsupported', 'NFC works in Chrome on Android phones and tablets; on this device scan the QR code or type the number.')}</p>}
+        ) : !windows && <p className="text-sm text-a-text-2">{t('loyalty.scan.nfc_unsupported', 'NFC works in Chrome on Android phones and tablets; on this device scan the QR code or type the number.')}</p>}
         {nfc.trouble && nfc.trouble !== 'unsupported' && <Notice tone="warning">{t('loyalty.member.cards_tap_failed', 'The card could not be read here. Try again, or type its ID.')}</Notice>}
 
+        {windows && !usb && <WindowsReader onUid={value => {
+          if (link.isPending) return false
+          setTyped(hexWithColons(value))
+        }} />}
         {env.webHid && (usb
-          ? <UsbReader onUid={(uid) => { if (!link.isPending) link.mutate(hexWithColons(uid)) }} />
+          ? <><UsbReader onUid={(uid) => { if (!link.isPending) link.mutate(hexWithColons(uid)) }} />
+              {windows && <Button variant="ghost" onClick={() => setUsb(false)}>{t('loyalty.scandesign.windowsUse')}</Button>}</>
           : <Button full variant="secondary" className="py-3 text-base" onClick={() => setUsb(true)}><Usb size={18} aria-hidden />{t('loyalty.member.cards_usb', 'Use a USB reader')}</Button>)}
 
         <form className="space-y-1.5" onSubmit={submit}>
@@ -147,7 +171,7 @@ function SwitchOffDialog({ memberId, card, onClose, onDone }: { memberId: number
   const failure = off.isError ? failureOf(off.error) : null
 
   return (
-    <Dialog title={t('loyalty.member.cards_off_title', 'Switch off card {{id}}', { id: shortUid(card.uid) })} onClose={onClose} busy={off.isPending}>
+    <Dialog title={t('loyalty.member.cards_off_title', 'Switch off card {{id}}', { id: card.number ?? shortUid(card.uid) })} onClose={onClose} busy={off.isPending}>
       <div className="space-y-4">
         <p className="text-sm text-a-text">{t('loyalty.member.cards_off_effect', 'Scan will no longer find the member by this card. The member’s QR code and wallet pass keep working. Linking the card again later switches it back on.')}</p>
         {failure && <Notice tone="danger">{t(...refusalKey('loyalty', ERRORS, 'cards', failure))}</Notice>}

@@ -124,6 +124,7 @@ export function useLeadChanged(): () => void {
   const qc = useQueryClient()
   return useCallback(() => {
     void qc.invalidateQueries({ queryKey: ['crm', 'leads'] })
+    void qc.invalidateQueries({ queryKey: ['crm', 'insights', 'kpis'] })
     void qc.invalidateQueries({ queryKey: ['crm', 'pipeline'] })
     void qc.invalidateQueries({ queryKey: ['crm', 'deals'] })
     void qc.invalidateQueries({ queryKey: ['crm', 'tasks'] })

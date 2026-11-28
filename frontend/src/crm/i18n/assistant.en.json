@@ -36,7 +36,8 @@
     "rules_card_line": "Rules it always keeps, whatever a visitor asks.",
     "help_line": "When a person takes over, and what it says if it cannot help.",
     "more_title": "More options",
-    "more_line": "Rarely needed: instructions beyond the fields above."
+    "more_line": "Rarely needed: instructions beyond the fields above.",
+    "parts": "Parts of the behaviour"
   },
   "discard": "Discard",
   "documents": {
@@ -141,7 +142,9 @@
     "col_used": "Used",
     "col_actions": "Actions",
     "categories_line": "Tap one to see its answers.",
-    "show_category": "Show the answers in {{name}}"
+    "show_category": "Show the answers in {{name}}",
+    "keywords_count": "Keywords:",
+    "parts": "Parts of the knowledge"
   },
   "lengths": {
     "concise": "Short",
@@ -318,7 +321,10 @@
     "starter_hours": "What are your opening hours?",
     "starter_price": "How much does it cost?",
     "starter_book": "Can I book for this weekend?",
-    "starter_person": "Can I talk to a person?"
+    "starter_person": "Can I talk to a person?",
+    "behind_empty": "Nothing asked yet.",
+    "empty_short": "Ask as a visitor would.",
+    "subtitle_short": "Test chat: not kept, never seen by visitors"
   },
   "unsaved": "Unsaved changes",
   "caption": {
@@ -330,5 +336,47 @@
   },
   "state_on": "Answering visitors",
   "state_off": "Switched off",
-  "try_it": "Try the assistant"
+  "try_it": "Try the assistant",
+  "model": {
+    "blocked": "Your plan does not include {{model}}, so the assistant cannot answer with it: every chat waits for your team. Choose a model your plan includes.",
+    "check": "Check that the model answers",
+    "check_failed": "The check did not get an answer. Try again.",
+    "checking": "Checking…",
+    "model": "Model",
+    "not_in_plan": "Your plan does not include this model. Choose another.",
+    "not_in_plan_short": "not in your plan",
+    "older": "older, still works",
+    "plan_has": "Your plan includes {{count}} models.",
+    "provider": "Provider",
+    "ready": "It answers on the AI account.",
+    "reasoning": "Thinking before it answers",
+    "reasoning_high": "High, slower",
+    "reasoning_low": "Low (best for chat)",
+    "reasoning_medium": "Medium",
+    "reasoning_none": "None, fastest",
+    "reasoning_tip": "More thinking is slower. Above none, the model sets its own creativity.",
+    "reasoning_xhigh": "Highest, slowest",
+    "star": "★ is the one we recommend for a website chat.",
+    "temperature": "Creativity: {{n}}",
+    "temperature_own": "This model sets its own creativity.",
+    "temperature_tip": "Lower answers stick to the facts, higher ones vary more. 0.7 suits most venues.",
+    "tokens": "Longest reply: {{n}} tokens",
+    "tokens_tip": "1024 tokens are about 750 words.",
+    "tuning": "Fine-tuning",
+    "unavailable": "It does not answer on the AI account yet. Choose another, or try again later.",
+    "verbosity": "How much it says",
+    "verbosity_high": "Thorough",
+    "verbosity_low": "Short (best for chat)",
+    "verbosity_medium": "Balanced"
+  },
+  "part": {
+    "basics": "Basics",
+    "handover": "Hand over",
+    "identity": "Who it is",
+    "model": "AI model",
+    "more": "More",
+    "rules": "Rules",
+    "style": "How it talks"
+  },
+  "read_only_short": "Read only: a manager makes changes here."
 }

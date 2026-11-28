@@ -47,6 +47,9 @@ export interface LeadGuest {
 /** A row of `GET inquiries` (the paginator's `data`). */
 export interface LeadRow {
   id: number
+  reply_status?: Partial<Record<'email' | 'whatsapp', 'needs_reply' | 'awaiting_customer'>> | null
+  latest_correspondence?: Partial<Record<'email' | 'whatsapp', { at: string; direction: 'inbound' | 'outbound' }>> | null
+  brand_id?: number | null
   guest_id: number | null
   pipeline_id: number | null
   pipeline_stage_id: number | null
@@ -54,6 +57,8 @@ export interface LeadRow {
   priority: string | null
   source: string | null
   inquiry_type?: string | null
+  value_currency?: string | null
+  rate_offered?: string | number | null
   total_value: string | number | null
   assigned_to: string | null
   next_task_type: string | null
@@ -98,6 +103,14 @@ export interface LeadDetail extends LeadRow {
   last_contact_comment?: string | null
   ai_brief_at?: string | null
   reservations?: Reservation[]
+  /** A won lead's fulfilment and payment (the Deal tab; `GET inquiries/{id}` carries the columns). */
+  fulfillment_stage?: string | null
+  payment_status?: string | null
+  paid_amount?: string | number | null
+  fulfillment_started_at?: string | null
+  fulfillment_completed_at?: string | null
+  /** The lead's open tasks (the show endpoint loads them; the Tasks tab's count). */
+  open_tasks?: { id: number }[]
 }
 
 /** Laravel's paginator as `GET inquiries` answers it. */
@@ -140,18 +153,6 @@ export interface Attachment {
 
 export interface LostReason { id: number; label: string; slug?: string; sort_order?: number }
 
-/** `POST inquiries/{id}/ai-brief`. A failure still answers 200 with `error`. */
-export interface AiBrief {
-  brief: string | null
-  intent: string | null
-  win_probability: number | null
-  going_cold_risk: string | null
-  suggested_action: string | null
-  generated_at: string | null
-  cached: boolean
-  error?: string
-}
-
 /** `POST inquiries/{id}/guess-lost-reason`. */
 export interface LostGuess {
   lost_reason_id: number | null
@@ -160,9 +161,6 @@ export interface LostGuess {
   reasoning: string | null
   error?: string
 }
-
-/** `POST inquiries/{id}/draft-proposal`. */
-export interface ProposalDraft { subject: string; body: string; error?: string }
 
 export interface ChatMessage {
   id: number
@@ -213,9 +211,11 @@ export interface DeleteImpact {
 
 /** `GET inquiries/kpis`. */
 export interface LeadKpis {
+  open_value?: import('../lib/types').OpenLeadValue
   total: number
   due_today: number
   overdue: number
+  values_by_currency?: { currency: string | null; amount: number | string | null }[]
   estimated_value: number
   new_this_week: number
   /** New this week against the week before, in percent (null without a week before). */
@@ -259,6 +259,7 @@ export interface CaptureAnswer {
     num_adults?: number | string | null
     num_children?: number | string | null
     total_value?: number | string | null
+    currency?: string | null
     source?: string | null
     special_requests?: string | null
     notes?: string | null

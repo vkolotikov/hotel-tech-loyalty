@@ -96,6 +96,9 @@ describe('Campaigns (spec 2026-10-21 release 2 §6)', () => {
     expect(words).toContain('Create email')
     expect(html).toContain('href="/loyalty/campaigns/6"')
     expect(html).toContain('data-channel="campaigns" aria-current="page"')
+    expect(words).toContain('Platform email service')
+    expect(words).toContain('Own sending domain / SMTP · On hold')
+    expect(words).toContain('a campaign list does not confirm live delivery')
   })
 
   it('says calmly that the plan has no campaigns, and Segments still work', () => {

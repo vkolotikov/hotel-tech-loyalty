@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf } from '../lib/api'
+import { useRetainedState } from '../drafts/useRetainedState'
 import { errorKey } from '../lib/errors'
 
 /**
@@ -40,9 +41,9 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
   const { t } = useTranslation()
   const open = () => ({ draft: makeDraft(), base: (makeBase ?? makeDraft)() })
   const [first] = useState(() => (startOpen && canEdit ? open() : null))
-  const [draft, setDraft] = useState<F | null>(first?.draft ?? null)
-  const [base, setBase] = useState<F | null>(first?.base ?? null)
-  const [busy, setBusy] = useState(false)
+  const [draft, setDraft, retained] = useRetainedState<F | null>(`section:${id}:draft`, first?.draft ?? null)
+  const [base, setBase] = useRetainedState<F | null>(`section:${id}:base`, first?.base ?? null, false)
+  const [busy, setBusy] = useRetainedState(`section:${id}:busy`, false)
   const [error, setError] = useState<string | null>(null)
   const [invalid, setInvalid] = useState<string[]>([])
   const [warning, setWarning] = useState<string | null>(null)
@@ -74,6 +75,9 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
     try {
       const said = await save(draft, base ?? draft)
       setWarning(typeof said === 'string' ? said : null)
+      if (!retained.acknowledge(draft)) return
+      setBase(draft)
+      if (JSON.stringify(retained.current()) !== JSON.stringify(draft)) return
       setDraft(null)
       if (!onSaved) focusAfter.current = 'edit'
       onSaved?.()
@@ -97,7 +101,7 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
         </div>
         {canEdit && draft === null && (
           <Button size="sm" variant="secondary" data-section-edit=""
-            onClick={() => { const opened = open(); focusAfter.current = 'form'; setWarning(null); setDraft(opened.draft); setBase(opened.base) }}>{t('content.brand.edit', 'Edit')}</Button>
+            onClick={() => { const opened = open(); focusAfter.current = 'form'; setWarning(null); setDraft(opened.draft); retained.acknowledge(opened.draft); setBase(opened.base) }}>{t('content.brand.edit', 'Edit')}</Button>
         )}
       </div>
       {draft === null ? <>{readView}{warning && <Notice tone="warning">{warning}</Notice>}</> : (

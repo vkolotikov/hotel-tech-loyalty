@@ -49,12 +49,12 @@
 
 @media (prefers-color-scheme: dark) {
   [data-portal]:not([data-portal-theme="light"]) {
-    --p-bg: 15 17 19;
-    --p-surface: 24 27 31;
-    --p-surface-2: 34 38 43;
-    --p-text: 242 242 240;
-    --p-text-2: 162 167 174;
-    --p-border: 46 51 58;
+    --p-bg: 26 38 55;
+    --p-surface: 32 46 65;
+    --p-surface-2: 40 56 78;
+    --p-text: 245 248 255;
+    --p-text-2: 179 195 216;
+    --p-border: 54 75 100;
     --p-accent: var(--p-accent-d, 127 176 224);
     --p-accent-ink: var(--p-accent-d-ink, 15 17 19);
     --p-accent-deep: var(--p-accent-d-deep, 168 204 240);
@@ -73,12 +73,12 @@
 }
 
 [data-portal][data-portal-theme="dark"] {
-  --p-bg: 15 17 19;
-  --p-surface: 24 27 31;
-  --p-surface-2: 34 38 43;
-  --p-text: 242 242 240;
-  --p-text-2: 162 167 174;
-  --p-border: 46 51 58;
+  --p-bg: 26 38 55;
+  --p-surface: 32 46 65;
+  --p-surface-2: 40 56 78;
+  --p-text: 245 248 255;
+  --p-text-2: 179 195 216;
+  --p-border: 54 75 100;
   --p-accent: var(--p-accent-d, 127 176 224);
   --p-accent-ink: var(--p-accent-d-ink, 15 17 19);
   --p-accent-deep: var(--p-accent-d-deep, 168 204 240);

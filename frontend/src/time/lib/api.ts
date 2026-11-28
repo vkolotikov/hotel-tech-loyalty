@@ -3,6 +3,7 @@ import type {
   ApplyResult, AssistantAnswer, AssistantProposal, Board, Bootstrap, CaptureDraft, CoachOverview, Drafts, Insights, Person, PlanResult, Review, Strategy, Task, Today, Week,
   WeekPlanResult,
 } from './types'
+import type { Pulse } from '../../lib/venuePulse'
 
 /**
  * Every call HexaTech Time Planner makes goes through here (2026-11-09). Its own reads and AI live under
@@ -111,6 +112,8 @@ export interface PlanRequest {
 export const timeApi = {
   bootstrap: () => api.get<Bootstrap>(timeUrl('time/bootstrap')).then(r => r.data),
   today: () => get<Today>('time/today'),
+  /** The venue's clock, place and weather (VenuePulse), for My day's card. */
+  pulse: () => get<Pulse>('time/pulse'),
   day: (date: string, person?: string | null) => get<Board>(`time/day${params({ date, person })}`),
   week: (start: string, person?: string | null) => get<Week>(`time/week${params({ start, person })}`),
   people: () => get<{ people: Person[]; knowledge_max: number; note_max?: number; levels?: string[] }>('time/people'),

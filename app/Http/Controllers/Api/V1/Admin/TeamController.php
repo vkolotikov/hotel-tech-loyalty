@@ -51,6 +51,34 @@ class TeamController extends Controller
 {
     private const ROLES = ['super_admin', 'manager', 'staff'];
 
+    private function partnerRules(): array
+    {
+        return [
+            'loyalty_scan_only' => 'sometimes|boolean',
+            'loyalty_place_ids' => 'sometimes|array|max:100',
+            'loyalty_place_ids.*' => ['integer', 'distinct', \App\Services\Booking\Setup\OwnRows::rule('access_places')->where('is_active', true)],
+        ];
+    }
+
+    /** The canonical invitation writer also applies the scan-only role boundary. */
+    private function partnerRestrictions(array $data, ?Staff $staff = null): array
+    {
+        $restricted = (bool) ($data['loyalty_scan_only'] ?? $staff->loyalty_scan_only ?? false);
+        if (!$restricted) { return $data; }
+        if (($data['role'] ?? $staff?->role) !== 'staff') {
+            throw \Illuminate\Validation\ValidationException::withMessages(['role' => ['Remove scan-only access explicitly before changing the role.']]);
+        }
+        $places = $data['loyalty_place_ids'] ?? $staff->loyalty_place_ids ?? [];
+        if (!$places) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['loyalty_place_ids' => ['Choose at least one active place.']]);
+        }
+        return array_replace($data, [
+            'loyalty_scan_only' => true, 'loyalty_place_ids' => array_values(array_map('intval', $places)),
+            'can_award_points' => false, 'can_redeem_points' => false,
+            'can_manage_offers' => false, 'can_view_analytics' => false, 'allowed_nav_groups' => [],
+        ]);
+    }
+
     /**
      * Canonical list of sidebar group labels. Must stay in sync with
      * `navGroups` in frontend/src/components/Layout.tsx. Overview +
@@ -117,6 +145,8 @@ class TeamController extends Controller
                 'can_manage_offers'   => $s->can_manage_offers,
                 'can_view_analytics'  => $s->can_view_analytics,
                 'allowed_nav_groups'  => $s->allowed_nav_groups,
+                'loyalty_scan_only'    => (bool) $s->loyalty_scan_only,
+                'loyalty_place_ids'    => $s->loyalty_place_ids ?? [],
                 'planner_skills'      => $s->planner_skills,
                 'is_me'               => $s->user_id === $request->user()?->id,
             ]);
@@ -154,7 +184,9 @@ class TeamController extends Controller
             // groups via Settings → Planner.
             'planner_skills'       => 'nullable|array',
             'planner_skills.*'     => 'string|max:80',
+            ...$this->partnerRules(),
         ]);
+        $validated = $this->partnerRestrictions($validated);
 
         $email = strtolower(trim($validated['email']));
         $orgId = app('current_organization_id');
@@ -165,22 +197,18 @@ class TeamController extends Controller
             return response()->json(['error' => 'Only super-admins can invite super-admins.'], 403);
         }
 
-        // Plan-cap check. Skip when the email already maps to an existing
-        // staff record in this org — re-inviting an existing teammate
-        // doesn't add to the count and shouldn't be blocked.
-        $existingStaff = Staff::withoutGlobalScopes()
-            ->whereHas('user', fn ($q) => $q->where('email', $email))
-            ->where('organization_id', $orgId)
-            ->exists();
-        if (!$existingStaff) {
-            if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM)) {
-                return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
-            }
-        }
-
         try {
             $result = DB::transaction(function () use ($validated, $email, $orgId) {
                 Organization::whereKey($orgId)->lockForUpdate()->firstOrFail();
+                // Read seats only after locking: invitations and reactivations compete
+                // for the same quota. A resend preserves existing access/active status.
+                $existingStaff = Staff::withoutGlobalScopes()
+                    ->whereHas('user', fn ($q) => $q->where('email', $email)->where('user_type', 'staff'))
+                    ->where('organization_id', $orgId)
+                    ->exists();
+                if (!$existingStaff && ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM))) {
+                    return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
+                }
                 // Reuse an existing user in THIS org with THIS email.
                 // Migration `2026_05_25_120000_users_email_unique_per_org_for_staff`
                 // replaced the global users.email unique with two partial
@@ -240,6 +268,9 @@ class TeamController extends Controller
                         : ($validated['planner_skills'] ?? null),
                     'is_active'          => true,
                 ];
+                if (array_key_exists('loyalty_scan_only', $validated)) {
+                    $payload += \Illuminate\Support\Arr::only($validated, ['loyalty_scan_only', 'loyalty_place_ids']);
+                }
                 if ($staff) {
                     // Re-inviting is a resend, never a second role/capability editor or a reactivation.
                 } else {
@@ -257,6 +288,7 @@ class TeamController extends Controller
             Log::error('Team invite failed', ['error' => $e->getMessage(), 'email' => $email]);
             return response()->json(['error' => 'Could not create the invite: ' . $e->getMessage()], 500);
         }
+        if ($result instanceof JsonResponse) return $result;
 
         // Send the invite email outside the transaction so an SMTP hiccup
         // doesn't roll back the user creation. Admin can always Resend.
@@ -311,7 +343,9 @@ class TeamController extends Controller
             'allowed_nav_groups.*' => 'string|in:' . implode(',', self::TOGGLEABLE_GROUPS),
             'planner_skills'       => 'sometimes|nullable|array',
             'planner_skills.*'     => 'string|max:80',
+            ...$this->partnerRules(),
         ]);
+        $validated = $this->partnerRestrictions($validated, $staff);
 
         // Admins always see everything — clear any whitelist they may have
         // had from a previous "staff" assignment so they don't accidentally
@@ -347,7 +381,7 @@ class TeamController extends Controller
         // observability finding.
         $auditableFields = ['role','department','is_active','can_award_points',
             'can_redeem_points','can_manage_offers','can_view_analytics',
-            'allowed_nav_groups','planner_skills'];
+            'allowed_nav_groups','planner_skills','loyalty_scan_only','loyalty_place_ids'];
         $before = $staff->only($auditableFields);
 
         $staff->update($validated);
@@ -355,7 +389,7 @@ class TeamController extends Controller
         $after = $staff->fresh()->only($auditableFields);
         $changed = [];
         foreach ($auditableFields as $f) {
-            if (($before[$f] ?? null) !== ($after[$f] ?? null)) {
+            if ($before[$f] !== $after[$f]) {
                 $changed[] = $f;
             }
         }
@@ -443,9 +477,20 @@ class TeamController extends Controller
      */
     public function reactivate(Request $request, int $id): JsonResponse
     {
+        return DB::transaction(function () use ($request, $id) {
+            Organization::whereKey(app('current_organization_id'))->lockForUpdate()->firstOrFail();
+            return $this->reactivateLocked($request, $id);
+        });
+    }
+
+    private function reactivateLocked(Request $request, int $id): JsonResponse
+    {
         $staff = Staff::findOrFail($id);
         if ($staff->role === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {
             return response()->json(['error' => 'Only super-admins can change a super-admin.'], 403);
+        }
+        if (!$staff->is_active && ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_TEAM))) {
+            return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
         }
         $staff->update(['is_active' => true]);
 

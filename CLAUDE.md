@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-14-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-17-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -62,6 +62,21 @@ or add the next dated one, at the end of a session.
   benefits add `->whereNull('deleted_at')`), never a bare `exists:<table>,id`, which takes another organisation's row;
   `tests/Feature/CrmWorkspace/OwnIdsTest.php` refuses a bare rule anywhere under `app/Http` (2026-11-08).
 
+## Full admin menu and dashboards (2026-11-09, `docs/dashboards.md`)
+
+- The menu's decisions are `components/navMenu.ts` (pure, tested). An item that moves to another group keeps a `home`
+  naming the group it came from: hidden groups, a staff member's allowed groups and the industry's hidden groups are
+  asked about the `home`, never silently about the new group. The Workspaces launcher (`layout: 'apps'`) is a container
+  only the organisation can hide whole. A page that offers the menu's ways in reads `useVisibleMenu()`, never a copy.
+- Group accents live in `theme/navAccents.ts`; a new one gets its line in `GLASS_NAV_ACCENT_TEXT` and
+  `LIGHT_NAV_ACCENT_TEXT`. Dashboard colours go through `theme/dashboardPalette.ts` (`ink()`, `fill()`), whose written-out
+  `hx()` calls keep `hxColours.ts` registering them.
+- Every figure on a dashboard is the server's (`dashboard/trends`, `dashboard/kpis`…); the venue's clock, place, weather
+  and currency are `App\Services\Dashboard\VenuePulse` only, reached by each interface at its own `…/pulse` (a workspace
+  calls only its own area). Times are the venue's zone, never the browser's; a dashboard never fails because the weather
+  is unknown. The dashboard stays free of chart libraries (it is the first page after sign-in): its charts are
+  `pages/dashboard/charts.tsx`, and every motion stops for reduced motion.
+
 ## Landing-page code rules
 
 - One source of truth: the server serves the section catalogue; the editor derives from it. No mirrored
@@ -92,6 +107,17 @@ or add the next dated one, at the end of a session.
 
 ### Member portal — stays and cancellation (phase 3)
 
+- Booking journey review (owner 2026-11-13, `docs/booking-journey.md`) authorises the public widget's checkout,
+  accessibility and payment-recovery improvements. New public holds save contact details before payment and carry
+  `widget_checkout_version = 2`; their webhook recovery uses the one booking writer. Never infer success from bank
+  return parameters, create another intent while the earlier outcome is unknown, or accept client totals. Forrest's
+  promo activation is scoped to its verified public booking identifier; dates and published campaigns remain explicit.
+- Stay promotions (owner 2026-11-13, `docs/booking-promotions.md`): the main portal's public widget and member stays
+  accept an explicit promo code behind the per-organisation `booking_promotions_enabled` switch (off by default).
+  Campaigns discount accommodation only; extras stay at full price. Booking windows and occupied-night restrictions
+  are separate. Preserve the accepted campaign snapshot and allocations through Stripe and the one booking writer;
+  never re-evaluate an accepted campaign during its hold. Venues with the switch off and old member holds retain
+  their previous pricing rules. Read the runbook before changing this pricing path.
 - **The public booking widget must not change** (owner's ruling, 2026-09-29): `/api/v1/booking/*` and
   `/api/v1/services/*` keep their requests, responses, stored columns, prices, Smoobu payload and emails
   for a booking without a member. The tests named "widget" in `tests/Feature/Booking/BookingEngineConfirmTest.php`
@@ -247,8 +273,11 @@ or add the next dated one, at the end of a session.
 - Ways to earn (owner 2026-10-26, `docs/loyalty-workspace.md` "Ways to earn, tabs and checks"): what the page warns
   about is decided only by `Loyalty\Programme\ProgrammeAdvice` (reads only; a new check is a code there with its words
   in all five bundles), never computed in the workspace, and so is each check's one-press `fix` (options the server
-  has; saved as sent, it clears its own check); the earn rate is its own always-on card (`earn_rate`) because
-  `points_per_currency` serves bookings and the desk alike. No `#…` link in the workspace (`<base href="/">` sends it
+  has; saved as sent, it clears its own check); the earn rate is its own card (`earn_rate`) because
+  `points_per_currency` serves bookings and the desk alike. Owner 2026-11-17: `spend_points_enabled` (default true)
+  switches spending points off without losing the saved rate or stopping visits, stamps, credit or bonuses. Tier
+  progression remains a programme rule, shown without a disabled earning checkbox. A template's indexed stamp reward
+  is resolved only by ProgrammeSetup on Apply; existing members, tiers and catalogue rows stay in place. No `#…` link in the workspace (`<base href="/">` sends it
   to the site root); jump within a page with a button that scrolls.
 - Release 10 (owner 2026-10-26, from the owner's Figma; `docs/loyalty-workspace.md` "Release 10, the frame"): a page's
   sections are `loyalty/ui/SectionCards` (filters stay pills), an empty list is a `GetStarted` panel holding the one
@@ -326,7 +355,9 @@ or add the next dated one, at the end of a session.
   `crm/theme/crm.css`; every string is `t('crm.…')` in all five locales, one bundle per area
   (`crm/i18n/<area>.<lang>.json`, registered under `crm.<area>` by the glob in `crm/i18n/index.ts`).
 - Every call goes through `crm/lib/api.ts` (`get`, `send`, `crmApi`), only to the areas its `AREAS` lists, always with
-  `brand_id=all`; `crm/tokens.test.ts` refuses a raw `/v1/` path and any other area. The workspace's own reads are
+  a `brand_id` — the brand chosen in the header's switcher, or `all` (`crm/lib/brand.ts`; what each brand shows is the
+  server's `BrandMiddleware`, the brands offered `Crm\CrmBrands`); `crm/tokens.test.ts` refuses a raw `/v1/` path and
+  any other area. The workspace's own reads are
   `admin/crm/*` (`App\Http\Controllers\Api\V1\Admin\Crm\*`, `App\Services\Crm\*`, behind `workspace:crm`);
   everything else is the full admin's own chat and CRM endpoints under their AccessMap rules — a new rule goes into
   the shared controller or service, never into a copy in the workspace. Rights for hiding controls come from the
@@ -351,6 +382,21 @@ or add the next dated one, at the end of a session.
   answer. A deal is added through the lead form's deal mode (the lead, then the server's own `inquiries/{id}/won`), and
   every close as won — one or bulk — goes through `InquiryController::closeAsWon()`. The widget's cached config
   (`widget:config:<key>`) lives in `SharedCache`.
+- Round 4 (owner 2026-11-09): one task form for the CRM and the full admin's drawer — its rules in `src/lib/taskForm.ts`
+  (pure, tested), each screen in its own palette and bundle. A task's priority, length and repeat are its own fields
+  (`priority`, `duration_minutes`, `recurring_rule`), never `custom_data`, which keeps only the organisation's custom
+  fields; the next task of a repeating one is made only by `TaskController::nextOccurrence()` on completion.
+- Round 5 (owner 2026-11-12, "minimize copy, more icons … opening tabs, slides or popups … all features of the main
+  platform"; `docs/crm-workspace.md` "Round 5"): a lead, a contact or a company opens in its panel over the page through
+  `useRecords()` (`?lead=`, `?contact=`, `?company=`, `?rtab=`; rules in `crm/lib/records.ts`), never by leaving the list,
+  and a record's page draws the same `ui/RecordPanel` frame; something new opens through `?create=` (`CreateHost`, the
+  header's New, N), never a page's own form state. A list registers its ids with `useRecordList`. A page's sentence is
+  `Page`'s `line` and a card's `description` (both (i) tooltips), never a visible paragraph; icon-only actions are
+  `IconButton`/menus with a `title`. Lead-intake tokens carry only `crm:lead-intake` and Sanctum accepts them only on
+  `POST integrations/leads` (`CrmIntakeTokensServiceProvider`, registered in `bootstrap/providers.php` —
+  `AppServiceProvider` is not loaded); the sales reports are one service, `Crm\SalesReports`, for both admins; a
+  company's booking revenue is shown only to an organisation that may reach bookings. Alerts (`crm/alerts`) are mounted
+  once in the shell.
 
 ## Time-Planner-workspace code rules
 

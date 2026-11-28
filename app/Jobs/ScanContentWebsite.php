@@ -48,7 +48,9 @@ class ScanContentWebsite implements ShouldQueue
                 Auth::setUser($user);
             }
             ContentSite::withoutGlobalScopes()->whereKey($site->id)->where('scan_token', $this->token)->update(['scan_started_at' => now()]);
-            $scan->run($site->fresh(), $this->token, $this->updateSummary);
+            (new \App\Services\Content\ContentExecution((int)$site->organization_id, (int)$site->brand_id, $this->userId, true,
+                null, new \App\Services\ContentPlanner\CalendarGenerationBudget(null, 540)))
+                ->run(fn () => $scan->run($site->fresh(), $this->token, $this->updateSummary));
         } catch (\Throwable $e) {
             report($e);
             self::fail($this->siteId, $this->token, 'scan_failed');

@@ -1,0 +1,41 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="216" height="150" viewBox="0 0 216 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Editable artwork / referral">
+<path id="Vector" d="M21 122C60 95 132 37 198 22M25 135C72 105 142 48 210 34" stroke="#BBAAFF" stroke-opacity="0.22"/>
+<path id="Vector_2" d="M76 81H78M130 81H128M83 81H87M92 81H96M101 81H105M110 81H114M119 81H123" stroke-width="2" stroke="#B8C2FC"/>
+<g id="Group">
+<path id="Vector_3" d="M65 122C83.7777 122 99 106.778 99 88C99 69.2223 83.7777 54 65 54C46.2223 54 31 69.2223 31 88C31 106.778 46.2223 122 65 122Z" fill="#151E32"/>
+<path id="Vector_4" d="M65 116C83.7777 116 99 100.778 99 82C99 63.2223 83.7777 48 65 48C46.2223 48 31 63.2223 31 82C31 100.778 46.2223 116 65 116Z" fill="url(#paint0_linear_0_234)" stroke="url(#paint1_linear_0_234)"/>
+<path id="Vector_5" d="M92 82C92 96.9117 79.9117 109 65 109C50.0883 109 38 96.9117 38 82C38 67.0883 50.0883 55 65 55C79.9117 55 92 67.0883 92 82Z" stroke="#DBDAFD" stroke-opacity="0.47"/>
+<path id="Vector_6" d="M71 76C71 79.3137 68.3137 82 65 82C61.6863 82 59 79.3137 59 76C59 72.6863 61.6863 70 65 70C68.3137 70 71 72.6863 71 76Z" stroke="#F3EDFD"/>
+<path id="Vector_7" d="M54 94V91C54 87 58 84 65 84C72 84 76 87 76 91V94" stroke-linecap="round" stroke="#F3EDFD"/>
+</g>
+<g id="Group_2">
+<path id="Vector_8" d="M148 117C166.778 117 182 101.778 182 83C182 64.2223 166.778 49 148 49C129.222 49 114 64.2223 114 83C114 101.778 129.222 117 148 117Z" fill="#161F32"/>
+<path id="Vector_9" d="M148 111C166.778 111 182 95.7777 182 77C182 58.2223 166.778 43 148 43C129.222 43 114 58.2223 114 77C114 95.7777 129.222 111 148 111Z" fill="url(#paint2_linear_0_234)" stroke="url(#paint3_linear_0_234)"/>
+<path id="Vector_10" d="M175 77C175 91.9117 162.912 104 148 104C133.088 104 121 91.9117 121 77C121 62.0883 133.088 50 148 50C162.912 50 175 62.0883 175 77Z" stroke="#DBDAFD" stroke-opacity="0.47"/>
+<path id="Vector_11" d="M154 71C154 74.3137 151.314 77 148 77C144.686 77 142 74.3137 142 71C142 67.6863 144.686 65 148 65C151.314 65 154 67.6863 154 71Z" stroke="#F3EDFD"/>
+<path id="Vector_12" d="M137 89V86C137 82 141 79 148 79C155 79 159 82 159 86V89" stroke-linecap="round" stroke="#F3EDFD"/>
+</g>
+<path id="Vector_13" d="M194 29V35M194 35V41M194 35H188M194 35H200M29 99V103M29 103V107M29 103H25M29 103H33" stroke-linecap="round" stroke="#BBAAFF" stroke-opacity="0.75"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_234" x1="28" y1="34" x2="188" y2="124" gradientUnits="userSpaceOnUse">
+<stop stop-color="#4A467C"/>
+<stop offset="0.54" stop-color="#BBAAFF"/>
+<stop offset="1" stop-color="#4A467C"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_234" x1="21" y1="18" x2="199" y2="145" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E9F4FD"/>
+<stop offset="1" stop-color="#4A467C"/>
+</linearGradient>
+<linearGradient id="paint2_linear_0_234" x1="28" y1="34" x2="188" y2="124" gradientUnits="userSpaceOnUse">
+<stop stop-color="#4A467C"/>
+<stop offset="0.54" stop-color="#BBAAFF"/>
+<stop offset="1" stop-color="#4A467C"/>
+</linearGradient>
+<linearGradient id="paint3_linear_0_234" x1="21" y1="18" x2="199" y2="145" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E9F4FD"/>
+<stop offset="1" stop-color="#4A467C"/>
+</linearGradient>
+</defs>
+</svg>

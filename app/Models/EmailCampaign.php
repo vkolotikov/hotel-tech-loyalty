@@ -33,6 +33,12 @@ class EmailCampaign extends Model
         'body_blocks'     => 'array',
     ];
 
+    /** An offer outbox owns its immutable content, confirmed targets and delivery records. */
+    public function assertIndependent(): void
+    {
+        if ($this->getAttribute('offer_send_id')) throw new \App\Services\Loyalty\LoyaltyRefused('offer_delivery_locked', 'Manage this delivery from its offer. Duplicate it to make an independent campaign.', 409);
+    }
+
     public function segment(): BelongsTo
     {
         return $this->belongsTo(MemberSegment::class, 'segment_id');

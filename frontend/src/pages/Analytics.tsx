@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
+import { reportingValue } from '../crm/lib/format'
 import { LIGHT_CHART, lightChartChrome, useDataInk, useIsLight } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -142,7 +143,7 @@ function SectionCard({ title, icon, children }: { title: string; icon: React.Rea
 }
 
 export function Analytics() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const light = useIsLight()
   const ink = useDataInk()
   const CH = chartChrome(light)
@@ -1914,7 +1915,7 @@ export function Analytics() {
                   <div className={`p-2 rounded-lg ${c.bg} ${c.tint}`}>{c.icon}</div>
                 </div>
                 <p className="text-3xl font-bold text-white tabular-nums">
-                  {c.money ? `$${Number(c.value).toLocaleString()}` : Number(c.value).toLocaleString()}
+                  {c.money ? (leadsKpis?.open_value ? reportingValue(leadsKpis.open_value, i18n.language) : '—') : Number(c.value).toLocaleString()}
                 </p>
                 {c.delta != null && (
                   <div className={`flex items-center gap-1 text-[11px] mt-1 ${c.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>

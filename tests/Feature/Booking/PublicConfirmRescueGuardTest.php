@@ -804,6 +804,57 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->assertSame('carried_by_booking', $rows[0]->new_values['reason']);
     }
 
+    public function test_an_opted_in_checkout_is_told_when_its_cached_authorisation_was_released(): void
+    {
+        $hold = $this->hold(['stripe_payment_intent_id' => 'pi_recovery_own']);
+        $this->roomTaken();
+        $this->intents['pi_recovery_own'] = $this->intent('pi_recovery_own', 'requires_capture', $this->widgetMeta($hold->hold_token));
+        $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_recovery_own', 'recovery_version' => 1])
+            ->assertStatus(400)->assertJsonPath('payment_recovery', 'released');
+        $this->assertSame([['retrieve', 'pi_recovery_own'], ['retrieve', 'pi_recovery_own'], ['cancel', 'pi_recovery_own']], $this->calls);
+    }
+
+    public function test_a_retry_recognises_an_already_cancelled_cached_authorisation(): void
+    {
+        $hold = $this->hold(['stripe_payment_intent_id' => 'pi_recovery_cancelled']);
+        $this->intents['pi_recovery_cancelled'] = $this->intent('pi_recovery_cancelled', 'canceled', $this->widgetMeta($hold->hold_token));
+        $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_recovery_cancelled', 'recovery_version' => 1])
+            ->assertStatus(400)->assertJsonPath('payment_recovery', 'released');
+        $this->assertFalse(collect($this->calls)->contains(fn ($call) => in_array($call[0], ['cancel', 'refund', 'capture'], true)));
+    }
+
+    public function test_a_failed_cancellation_is_reported_as_unknown_and_never_as_released(): void
+    {
+        $hold = $this->hold(['stripe_payment_intent_id' => 'pi_recovery_unknown']);
+        $this->roomTaken();
+        $this->intents['pi_recovery_unknown'] = $this->intent('pi_recovery_unknown', 'requires_capture', $this->widgetMeta($hold->hold_token));
+        $this->cancelFails['pi_recovery_unknown'] = new \RuntimeException('Private Stripe failure');
+        $response = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_recovery_unknown', 'recovery_version' => 1]);
+        $response->assertStatus(400)->assertJsonPath('payment_recovery', 'unknown');
+        $this->assertStringNotContainsString('Private Stripe failure', $response->getContent());
+    }
+
+    public function test_a_captured_cached_payment_reports_a_refund_request_instead_of_an_authorisation_release(): void
+    {
+        $hold = $this->hold(['stripe_payment_intent_id' => 'pi_recovery_refund']);
+        $this->roomTaken();
+        $this->intents['pi_recovery_refund'] = $this->intent('pi_recovery_refund', 'succeeded', $this->widgetMeta($hold->hold_token));
+        $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_recovery_refund', 'recovery_version' => 1])
+            ->assertStatus(400)->assertJsonPath('payment_recovery', 'refund_requested');
+        $this->assertTrue(collect($this->calls)->contains(fn ($call) => $call[0] === 'refund'));
+        $this->assertFalse(collect($this->calls)->contains(fn ($call) => $call[0] === 'cancel'));
+    }
+
+    public function test_an_opted_in_checkout_does_not_learn_the_state_of_a_payment_not_cached_on_its_hold(): void
+    {
+        $hold = $this->hold(['stripe_payment_intent_id' => 'pi_cached_different']);
+        $this->roomTaken();
+        $this->intents['pi_other_reference'] = $this->intent('pi_other_reference', 'requires_capture', $this->widgetMeta('another-hold'));
+        $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_other_reference', 'recovery_version' => 1])
+            ->assertStatus(400)->assertJsonMissingPath('payment_recovery');
+        $this->assertFalse(collect($this->calls)->contains(fn ($call) => in_array($call[0], ['cancel', 'refund', 'capture'], true)));
+    }
+
     /** The same audit row and the same log line as the rescue has always written. */
     private function assertOutcome(string $action, string $piId, string $description, array $newValues, string $level): void
     {

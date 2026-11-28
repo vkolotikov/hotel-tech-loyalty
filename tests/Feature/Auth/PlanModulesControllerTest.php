@@ -216,6 +216,16 @@ class PlanModulesControllerTest extends TestCase
         $this->assertSame('loyalty', $this->org->fresh()->plan_slug);
     }
 
+    public function test_content_lite_can_be_chosen_with_one_active_and_three_inactive_colleagues(): void
+    {
+        $this->org->forceFill(['entitled_products' => ['content'], 'plan_slug' => 'content'])->save();
+        foreach (range(1, 3) as $unused) $this->staffUser($this->org, ['role' => 'staff', 'is_active' => false]);
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'content', 'package' => 'lite'])
+            ->assertOk()->assertJsonPath('done', 'package');
+        $this->assertSame('content_lite', $this->org->fresh()->plan_slug);
+        $this->assertSame('2', $this->org->fresh()->plan_features['max_team_members']);
+    }
+
     public function test_a_trial_on_a_yearly_subscription_changes_package_on_the_yearly_price(): void
     {
         $this->withBilling([$this->plan('loyalty', 8500, 'price_l', 'price_l_y'), $this->plan('loyalty_pro', 14900, 'price_lp', 'price_lp_y', ['max_loyalty_members' => '10000'])],

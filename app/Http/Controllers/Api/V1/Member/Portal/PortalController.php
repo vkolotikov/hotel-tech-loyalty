@@ -10,6 +10,14 @@ use Illuminate\Http\Request;
 
 class PortalController extends Controller
 {
+    /** The web portal's own read model; existing mobile responses stay compatible. */
+    public function programme(Request $request, \App\Services\Portal\MemberProgramme $programme): JsonResponse
+    {
+        $member = $request->user()->loyaltyMember()->firstOrFail();
+
+        return response()->json($programme->for($member));
+    }
+
     /** GET /v1/member/portal — the shell's one startup call. */
     public function index(Request $request, PortalBootstrap $bootstrap, MemberProvisioner $provisioner): JsonResponse
     {

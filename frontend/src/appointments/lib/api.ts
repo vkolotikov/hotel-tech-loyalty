@@ -4,6 +4,7 @@ import type {
   PointsResult, ServiceBody, SettingsBody, SetupCategory, SetupPayload, SetupService, SetupSettings, SetupTeamMember, SlotsPayload,
   TeamBody, TimeOffBody, Wall,
 } from './types'
+import type { Pulse } from '../../lib/venuePulse'
 
 /**
  * Every call the workspace makes, in one place, typed. All of them live
@@ -85,6 +86,8 @@ export const appointmentsApi = {
 
   takings: (date: DateKey): Promise<Takings> => watched(api.get(`${BASE}/takings`, { params: { date } })),
   insights: (from: DateKey, to: DateKey): Promise<Insights> => watched(api.get(`${BASE}/insights`, { params: { from, to } })),
+  /** The venue's clock, place and weather (VenuePulse), for Insights' card. */
+  pulse: (): Promise<Pulse> => watched(api.get(`${BASE}/pulse`)),
 
   setup: (): Promise<SetupPayload> => watched(api.get(`${BASE}/setup`)),
 

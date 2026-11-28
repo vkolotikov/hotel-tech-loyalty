@@ -5,9 +5,10 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Bot, Users, BedDouble, FileText, ClipboardList, LayoutDashboard, Settings as SettingsIcon,
-  Eye, EyeOff, Save, Info, Zap, ArrowRight, Globe, Lock,
+  Eye, EyeOff, Save, Info, Zap, ArrowRight, Globe, Lock, LayoutGrid,
 } from 'lucide-react'
 import { useVocabulary } from '../lib/vocabulary'
+import { NAV_ACCENT } from '../theme/navAccents'
 import { useIndustryHiddenGroups } from '../lib/industryGating'
 import { groupVisibility, visibleGroupCount } from '../lib/menuVisibility'
 
@@ -38,7 +39,11 @@ interface ToggleableGroup {
 // — the omission that made "Landing pages" unhideable after Task 5 moved it
 // out of "AI Chat" with no entry added here.
 export const TOGGLEABLE: ToggleableGroup[] = [
-  { label: 'AI Chat',          accent: '#a78bfa', icon: Bot,           description: 'Engagement Hub + chatbot setup. Hide if you do not use website chat.' },
+  // 2026-11-09: the ways into the HexaTech workspaces, gathered in one launcher at the top of the menu. Each also still
+  // hides with the group it used to sit in (Loyalty with Members & Loyalty, Appointments with Bookings, CRM and
+  // Content with CRM & Marketing, Time Planner with Operations); hiding this hides the launcher whole.
+  { label: 'Workspaces',       accent: NAV_ACCENT.teal, icon: LayoutGrid,    description: 'The HexaTech workspaces: Loyalty, Appointments, CRM, Content, Time Planner. Each one also hides with its own group below.' },
+  { label: 'AI Chat',          accent: NAV_ACCENT.violet, icon: Bot,           description: 'Engagement Hub + chatbot setup. Hide if you do not use website chat.' },
   // Task 5 fix round 1 — added alongside Layout.tsx's own new group (same
   // `defaultLabel`, "Landing pages", so `hidden_nav_groups` keys match).
   // Before this fix it hid bundled with "AI Chat"; moving it into its own
@@ -47,11 +52,11 @@ export const TOGGLEABLE: ToggleableGroup[] = [
   // readout below silently undercounted the live sidebar by one group.
   // `MenuSettings.navGroupParity.test.ts` guards this list staying in sync
   // with Layout.tsx's navGroups from here on.
-  { label: 'Landing pages',    accent: '#38bdf8', icon: Globe,         description: 'The landing page builder, plus a shortcut to Featured reviews. Hide if you do not use the landing page product.' },
-  { label: 'Members & Loyalty',accent: '#fbbf24', icon: Users,         description: 'Members, tiers, benefits, offers. Hide if you do not run a loyalty program.' },
-  { label: 'Bookings',         accent: '#34d399', icon: BedDouble,     description: 'Reservations + Services + Rooms + Payments. Hide if you do not use the booking engine.' },
-  { label: 'CRM & Marketing',  accent: '#f472b6', icon: FileText,      description: 'Leads, tasks, reports, companies, campaigns, reviews. The sales side.' },
-  { label: 'Operations',       accent: '#22d3ee', icon: ClipboardList, description: 'Planner, brands, properties, scan. Day-to-day ops board.' },
+  { label: 'Landing pages',    accent: NAV_ACCENT.sky, icon: Globe,         description: 'The landing page builder, plus a shortcut to Featured reviews. Hide if you do not use the landing page product.' },
+  { label: 'Members & Loyalty',accent: NAV_ACCENT.amber, icon: Users,         description: 'Members, tiers, benefits, offers, campaigns. Hide if you do not run a loyalty program.' },
+  { label: 'Bookings',         accent: NAV_ACCENT.emerald, icon: BedDouble,     description: 'Reservations + Services + Rooms + Payments. Hide if you do not use the booking engine.' },
+  { label: 'CRM & Marketing',  accent: NAV_ACCENT.pink, icon: FileText,      description: 'Leads, tasks, reports, companies, campaigns, reviews. The sales side.' },
+  { label: 'Operations',       accent: NAV_ACCENT.cyan, icon: ClipboardList, description: 'Planner, brands, properties. Hiding it also hides Scan and the Time Planner, which open from Members & Loyalty and Workspaces.' },
 ]
 
 export const LOCKED: { label: string; icon: any; reason: string }[] = [

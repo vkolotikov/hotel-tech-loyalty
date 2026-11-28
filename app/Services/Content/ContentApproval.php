@@ -117,6 +117,12 @@ final class ContentApproval
 
     public static function record(ContentPlannerPost $post, string $kind, ?int $userId, ?string $note = null): ContentPlannerPostEvent
     {
-        return ContentPlannerPostEvent::create(['post_id' => $post->id, 'brand_id' => $post->brand_id, 'user_id' => $userId, 'kind' => $kind, 'note' => $note]);
+        $event = new ContentPlannerPostEvent(['post_id' => $post->id, 'brand_id' => $post->brand_id, 'user_id' => $userId, 'kind' => $kind, 'note' => $note]);
+        // Capture the revision separately: the bell's event time remains the wall clock even if revisions run ahead.
+        $event->setAttribute('post_updated_at', $post->updated_at?->format('Y-m-d H:i:s.u'));
+        $event->save();
+        ContentNotifications::approval($post, $event);
+
+        return $event;
     }
 }

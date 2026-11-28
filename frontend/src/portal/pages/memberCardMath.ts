@@ -40,6 +40,7 @@ export function toGoPhrase(progress: CardProgress, currency: string, locale: str
 
 /** The English of the membership's lines (release 8 R8-2; release 9: an ending membership says so too). */
 export const MEMBERSHIP_WORDS = {
+  membership_starts: 'Membership starts {{day}}',
   membership_until: 'Member until {{day}}',
   membership_expiring: 'Ends {{day}} · ask the team to renew',
   membership_ended: 'Ended {{day}} · ask the team to renew',
@@ -51,6 +52,7 @@ export const MEMBERSHIP_WORDS = {
  * off. The date and the state are the server's (MembershipValidity), the day written in the member's language.
  */
 export function membershipPhrase(membership: PortalMember['membership'], locale: string): (CardPhrase & { tone: 'muted' | 'warning' | 'danger' }) | null {
+  if (membership?.state === 'scheduled' && membership.valid_from) return { key: 'portal.home.membership_starts', fallback: MEMBERSHIP_WORDS.membership_starts, options: { day: formatDay(membership.valid_from, locale) }, tone: 'warning' }
   if (!membership?.valid_until || membership.state === 'off') return null
   const day = formatDay(membership.valid_until, locale)
   if (membership.state === 'expired') return { key: 'portal.home.membership_ended', fallback: MEMBERSHIP_WORDS.membership_ended, options: { day }, tone: 'danger' }

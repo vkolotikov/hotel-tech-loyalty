@@ -21,8 +21,9 @@ class ContactsFeed
         'attachments' => ['inquiry_id', 'filename', 'mime_type', 'size_bytes', 'note', 'created_at', 'updated_at'],
     ];
 
-    public function page(int $org, int $brand, int $limit, ?string $cursor): array
+    public function page(int $org, int $brand, int $limit, ?string $cursor, ?int $guestId = null): array
     {
+        abort_if($guestId !== null && $cursor !== null, 422, 'A single contact lookup cannot use a feed cursor.');
         $resources = array_keys(self::COLUMNS);
         $state = ['resource' => 'profiles', 'after' => 0, 'brand' => $brand, 'org' => $org];
         if ($cursor !== null) {
@@ -36,12 +37,16 @@ class ContactsFeed
         }
         $resource = $state['resource'];
         $rows = $this->query($resource, $org, $brand)->where('id', '>', $state['after'])->orderBy('id')->limit($limit + 1)
+            ->when($guestId !== null, fn (Builder $query) => $query->where('id', $guestId))
             ->get(['id', ...self::COLUMNS[$resource]]);
         $more = $rows->count() > $limit;
         $rows = $rows->take($limit);
         $nextResource = $resources[array_search($resource, $resources, true) + 1] ?? null;
         $next = $more ? [...$state, 'after' => (int) $rows->last()->id]
             : ($nextResource ? [...$state, 'resource' => $nextResource, 'after' => 0] : null);
+        if ($guestId !== null) {
+            $next = null;
+        }
         $contacts = [];
         $history = [];
         $guestLinks = $this->guestLinks($resource, $rows->all(), $org, $brand);

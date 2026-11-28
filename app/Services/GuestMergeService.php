@@ -117,6 +117,7 @@ class GuestMergeService
             }
 
             // 3) Profile merge — winner wins, loser fills blanks only.
+            app(\App\Services\Crm\BusinessProfile::class)->merge($winner, $loser);
             $fillIfBlank = [
                 'email', 'phone', 'mobile', 'company', 'position_title',
                 'nationality', 'country', 'city', 'address', 'postal_code',

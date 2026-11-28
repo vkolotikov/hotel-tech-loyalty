@@ -77,7 +77,7 @@ const s = (v: unknown): string => (typeof v === 'string' ? v : '')
 
 /** Whether there is something to save: a search, a follow-up filter, a panel filter or a sort. */
 export function hasViewState(f: LeadFilters): boolean {
-  return Boolean(f.q.trim() || f.due || f.status || f.source || f.owner || f.priority || f.type || f.country || f.phone || f.from || f.to || f.sort !== 'newest')
+  return Boolean(f.q.trim() || f.due || f.status || f.source || f.owner || f.priority || f.type || f.country || f.phone || f.missingCurrency || f.from || f.to || f.sort !== 'newest')
 }
 
 /**
@@ -88,6 +88,7 @@ export function viewFilters(f: LeadFilters, me: string): Record<string, unknown>
   const crm = Object.fromEntries(Object.entries({
     q: f.q.trim(), due: f.due, status: f.status, source: f.source, owner: f.owner, priority: f.priority, type: f.type,
     country: f.country, phone: f.phone, from: f.from, to: f.to, sort: f.sort === 'newest' ? '' : f.sort,
+    missing_currency: f.missingCurrency ? '1' : '',
   }).filter(([, v]) => v))
   return {
     status: f.status, priority: f.priority, inquiryType: f.type, propertyId: '', assignedTo: f.owner === 'me' ? me : f.owner === NOBODY ? '' : f.owner,
@@ -105,6 +106,7 @@ export function filtersFromView(raw: Record<string, unknown> | null | undefined,
     set('q', s(crm.q))
     set('due', s(crm.due) === 'now' ? '1' : s(crm.due))
     set('stage', s(crm.status))
+    set('missing_currency', s(crm.missing_currency))
     for (const key of ['source', 'owner', 'priority', 'type', 'country', 'phone', 'from', 'to', 'sort']) set(key, s(crm[key]))
   } else if (raw) {
     set('stage', s(raw.status))
@@ -300,6 +302,7 @@ export function draftFromCapture(answer: CaptureAnswer | null | undefined, opts:
     country: text(d.country),
     owner: opts.owner,
     value: value !== null && value >= 0 ? String(value) : '',
+    currency: /^[A-Z]{3}$/.test(text(d.currency)) ? text(d.currency) : undefined,
     priority: pick(text(d.priority), opts.priorities, false),
     source: pick(text(d.source), [...SYSTEM_SOURCES, ...opts.sources], true),
     type: pick(text(d.inquiry_type), opts.types, opts.types.length > 0),
@@ -421,7 +424,7 @@ export function contactLinks(guest: { email?: string | null; phone?: string | nu
 
 /* ─── The toolbar's chips ───────────────────────────────────────────────── */
 
-export type ChipKey = 'q' | 'due' | 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'dates'
+export type ChipKey = 'q' | 'due' | 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'missingCurrency' | 'dates'
 
 /**
  * The filters in force, as removable chips: each with what removing it clears. The follow-up filter is the list's only
@@ -430,6 +433,7 @@ export type ChipKey = 'q' | 'due' | 'status' | 'source' | 'owner' | 'priority' |
 export function activeChips(f: LeadFilters, onList: boolean): { key: ChipKey; clear: Partial<LeadFilters> }[] {
   const out: { key: ChipKey; clear: Partial<LeadFilters> }[] = []
   if (f.q.trim()) out.push({ key: 'q', clear: { q: '' } })
+  if (f.missingCurrency) out.push({ key: 'missingCurrency', clear: { missingCurrency: false } })
   if (onList && f.due) out.push({ key: 'due', clear: { due: '' } })
   for (const key of ['status', 'source', 'owner', 'priority', 'type', 'country', 'phone'] as const) {
     if (f[key]) out.push({ key, clear: { [key]: '' } })

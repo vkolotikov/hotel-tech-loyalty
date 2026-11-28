@@ -33,6 +33,9 @@ export const ERRORS = {
     unknown: 'The points could not be reversed. Please try again.',
   },
   requests: {
+    membership_not_started: 'This membership has not started yet. Review its dates on the member’s page.',
+    membership_expired: 'This membership has ended. Renew it before using this benefit.',
+    member_inactive: 'This membership is switched off. A manager can review it on the member’s page.',
     wrong_state: 'Someone else already handled this request. The list now shows it as it is.',
     invalid: 'Say why the request is declined.',
     not_found: 'This request no longer exists.',
@@ -54,7 +57,7 @@ export const ERRORS = {
   // Release 5: a member's NFC cards (link, switch off). Another member's or organisation's card is never named.
   cards: {
     card_in_use: 'This card is linked to another member. Switch it off on that member’s page first.',
-    card_elsewhere: 'This card is in use elsewhere and cannot be linked here.',
+    card_elsewhere: 'This NFC tag is registered to another company. An owner or manager there can release it under Physical cards → Manage NFC tags.',
     bad_uid: 'This is not a card ID. Tap or read the card, or type the ID printed on it.',
     already_erased: 'This member was deleted.',
     invalid: 'Type the card’s ID.',

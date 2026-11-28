@@ -85,7 +85,7 @@ describe('StrategyPage', () => {
     const balance = { from: '2026-10-01', to: '2026-10-31', pillars: [
       { id: 7, name: 'Hair care', target_weight: 60, posts: 1 }, { id: 8, name: 'Colour', target_weight: 40, posts: 3 },
     ] } as const
-    const html = render('/content/strategy', [active], [detail(active, { balance: { ...balance, pillars: [...balance.pillars] } })])
+    const html = render('/content/strategy?section=pillars', [active], [detail(active, { balance: { ...balance, pillars: [...balance.pillars] } })])
     expect(html).toContain('Pillar balance this month')
     expect(html).toContain('3 posts · 75 % of posts · target 40 %')
   })

@@ -74,6 +74,9 @@
     }
   },
   "logo": {
+    "back_to_setup": "Retour à la configuration",
+    "saved": "Logo enregistré. Votre liste de configuration a été actualisée.",
+    "tab_caption": "Logo et disponibilité des outils de design",
     "alt": "Le logo de l’établissement",
     "error": {
       "invalid": "Utilisez une image JPEG, PNG ou WebP de {{mb}} Mo au plus et de {{edge}} pixels au plus sur son plus grand côté.",
@@ -84,7 +87,7 @@
       "unknown": "Le logo n’a pas pu être importé. Veuillez réessayer."
     },
     "hint": "JPEG, PNG ou WebP, jusqu’à {{mb}} Mo. Enregistré aussitôt.",
-    "line": "Affiché dans l’application et le portail membre. C’est le même logo que dans « Branding » de l’administration complète.",
+    "line": "Affiché sur les cartes de membre, dans l’application et le portail membre.",
     "none": "Pas encore de logo.",
     "replace": "Remplacer le logo",
     "title": "Logo",

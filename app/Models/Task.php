@@ -20,6 +20,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Marking complete writes a sibling `Activity(type=task_completed,
  * subject=task.title)` so completed work flows into the timeline
  * without callers needing to remember.
+ *
+ * `custom_data` is declared here because its migration adds it in a loop over table names, which the analyser
+ * cannot follow (2026_05_10_130000_create_custom_fields).
+ *
+ * @property array<string, mixed>|null $custom_data
  */
 class Task extends Model
 {
@@ -33,6 +38,8 @@ class Task extends Model
         'completed_at', 'outcome', 'recurring_rule',
         // CRM Phase 7 — admin-defined custom fields (entity='task').
         'custom_data',
+        // 2026-11-09: low / normal / high (null reads as normal) and the planned length.
+        'priority', 'duration_minutes',
     ];
 
     protected $casts = [
@@ -40,6 +47,7 @@ class Task extends Model
         'completed_at'   => 'datetime',
         'recurring_rule' => 'array',
         'custom_data'    => 'array',
+        'duration_minutes' => 'integer',
     ];
 
     /** @return BelongsTo<Inquiry, $this> */

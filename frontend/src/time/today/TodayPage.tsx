@@ -27,6 +27,7 @@ import { QueryState } from '../ui/QueryState'
 import { StatTile } from '../ui/StatTile'
 import { useToast } from '../ui/Toast'
 import { partOfDay, progressOf, timed, untimed, weekHeights } from './todayLogic'
+import { PulseCard, PulseFact } from '../../workspace/pulse/PulseCard'
 
 /**
  * My day (2026-11-09): what I am on now and next, my day on the clock, what has no time yet, what is overdue, what the
@@ -40,6 +41,8 @@ export function TodayPage() {
   const refresh = useRefresh()
   const { openTask, openCapture } = useTimeActions()
   const today = useQuery({ queryKey: ['time', 'today'], queryFn: () => timeApi.today(), refetchInterval: 60_000 })
+  // The venue's clock and weather for the card at the top (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['time', 'pulse'], queryFn: () => timeApi.pulse(), staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
   const [planning, setPlanning] = useState(false)
   const [quick, setQuick] = useState('')
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
@@ -83,6 +86,13 @@ export function TodayPage() {
           <Wand2 size={15} aria-hidden />{t('time.today.plan', 'Plan my day with AI')}
         </AiButton>
       )}>
+      <PulseCard pulse={pulse.data} greet={false}>
+        {data?.next && (
+          <>
+            {data.next && <PulseFact value={data.next.start_time ? data.next.start_time.slice(0, 5) : '·'} label={`${t('time.today.next', 'Up next')}: ${data.next.title}`} />}
+          </>
+        )}
+      </PulseCard>
       <QueryState loading={today.isLoading} error={today.error} onRetry={() => void today.refetch()}>
         {data && (
           <div className="space-y-5">

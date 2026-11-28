@@ -8,8 +8,88 @@ use Illuminate\Support\Str;
 /** Version recovery is separate from database backups. No method changes bucket policy or live object keys. */
 class MediaRecovery
 {
+    private const RETENTION_RULE = 'hexatech-noncurrent-retention';
+
+    /** Read-only policy preview. Credentials and unrelated rule contents never leave the service. */
+    public function recoveryPolicy(int $days): array
+    {
+        if ($days < 1 || $days > 3650) throw new \InvalidArgumentException('media_retention_invalid');
+        $client = $this->client();
+        $versioning = $client->getBucketVersioning(['Bucket' => $this->bucket()]);
+        try {
+            $rules = $client->getBucketLifecycleConfiguration(['Bucket' => $this->bucket()])['Rules'] ?? [];
+        } catch (\Aws\Exception\AwsException $e) {
+            if ($e->getAwsErrorCode() !== 'NoSuchLifecycleConfiguration') throw $e;
+            $rules = [];
+        }
+        $editable = true;
+        foreach ($rules as $rule) {
+            if (!$this->managedRetentionRule($rule)) $editable = false;
+        }
+        $matches = count($rules) === 1 && $editable && $rules[0]['Status'] === 'Enabled'
+            && (int) $rules[0]['NoncurrentVersionExpiration']['NoncurrentDays'] === $days;
+
+        return [
+            'bucket' => $this->bucket(),
+            'endpoint_host' => $this->endpointHost(),
+            'versioning' => $versioning['Status'] ?? 'not_enabled',
+            'existing_rule_count' => count($rules),
+            'existing_current_expiration' => count(array_filter($rules, fn ($rule) => isset($rule['Expiration']))) > 0,
+            'can_apply' => $editable,
+            'policy_matches' => $matches,
+            'proposed_rule' => $this->retentionRule($days),
+        ];
+    }
+
+    /** Explicit operator write; refuses an unexpected target or any unmanaged lifecycle rule. */
+    public function enableRecoveryPolicy(int $days, string $expectedBucket, string $expectedHost): array
+    {
+        if ($expectedBucket === '' || $expectedHost === '' || $expectedBucket !== $this->bucket()
+            || $expectedHost !== $this->endpointHost()) throw new \InvalidArgumentException('media_target_mismatch');
+        $before = $this->recoveryPolicy($days);
+        if (!$before['can_apply']) throw new \RuntimeException('media_lifecycle_review_required');
+        $client = $this->client();
+        // Install the bounded retention rule before enabling new version creation.
+        if (!$before['policy_matches']) {
+            $client->putBucketLifecycleConfiguration(['Bucket' => $this->bucket(),
+                'LifecycleConfiguration' => ['Rules' => [$this->retentionRule($days)]]]);
+        }
+        if ($before['versioning'] !== 'Enabled') {
+            $client->putBucketVersioning(['Bucket' => $this->bucket(), 'VersioningConfiguration' => ['Status' => 'Enabled']]);
+        }
+        $after = $this->recoveryPolicy($days);
+        if ($after['versioning'] !== 'Enabled' || !$after['policy_matches']) throw new \RuntimeException('media_policy_not_confirmed');
+
+        return $after;
+    }
+
+    private function endpointHost(): ?string
+    {
+        return parse_url((string) config('filesystems.disks.'.MediaService::disk().'.endpoint'), PHP_URL_HOST) ?: null;
+    }
+
+    private function retentionRule(int $days): array
+    {
+        return ['ID' => self::RETENTION_RULE, 'Status' => 'Enabled', 'Prefix' => '',
+            'NoncurrentVersionExpiration' => ['NoncurrentDays' => $days]];
+    }
+
+    private function managedRetentionRule(array $rule): bool
+    {
+        if (($rule['ID'] ?? null) !== self::RETENTION_RULE
+            || array_diff(array_keys($rule), ['ID', 'Status', 'Prefix', 'Filter', 'NoncurrentVersionExpiration'])
+            || ($rule['Prefix'] ?? '') !== '') return false;
+        // Providers may canonicalise an empty Prefix into Filter.Prefix.
+        $filter = $rule['Filter'] ?? [];
+        $expiration = $rule['NoncurrentVersionExpiration'] ?? [];
+
+        return !array_diff(array_keys($filter), ['Prefix']) && ($filter['Prefix'] ?? '') === ''
+            && !array_diff(array_keys($expiration), ['NoncurrentDays']) && isset($expiration['NoncurrentDays']);
+    }
+
     public function versioning(): string
     {
+        if (MediaService::disk() === config('media.cloud_disk')) return app(\App\Services\Media\Archive::class)->health(MediaService::disk());
         if (config('filesystems.disks.'.MediaService::disk().'.driver') !== 's3') return 'unobserved';
         $answer = $this->client()->getBucketVersioning(['Bucket' => $this->bucket()]);
         return ($answer['Status'] ?? '') === 'Enabled' ? 'ok' : 'attention';

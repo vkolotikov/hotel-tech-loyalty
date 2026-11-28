@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, BookOpen, Bot, Check, Code2, Columns3, ListChecks, MessageCircleReply, PartyPopper, Users, type LucideIcon } from 'lucide-react'
+import { ArrowRight, BookOpen, Bot, Check, Code2, Columns3, ListChecks, MessageCircleReply, PartyPopper, Rocket, Users, type LucideIcon } from 'lucide-react'
 import { crmApi } from '../lib/api'
 import type { SetupStepKey } from '../lib/types'
-import { Card } from '../ui/Card'
+import { InfoTip } from '../ui/InfoTip'
 import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
@@ -42,7 +42,7 @@ export function StartPage() {
   const actions = useStepActions()
 
   return (
-    <Page title={t('crm.start.title', 'Get started')} line={t('crm.start.line', 'Six steps to a website chat that answers, and a pipeline that follows up.')}>
+    <Page icon={Rocket} title={t('crm.start.title', 'Get started')} line={t('crm.start.line', 'Six steps to a website chat that answers, and a pipeline that follows up.')}>
       <QueryState loading={start.isLoading} error={start.error} onRetry={() => { void start.refetch() }}>
         {start.data && (() => {
           const data = start.data
@@ -76,40 +76,41 @@ export function StartPage() {
                 </div>
               </section>
 
-              <Card title={t('crm.start.list_title', 'The steps')} description={t('crm.start.list_line', 'Each step is ticked by itself once it is done.')} icon={ListChecks} padded={false}>
-                <ol className="divide-y divide-a-border">
-                  {data.steps.map((step, index) => {
-                    const { icon: Icon, to: target } = STEPS[step.key]
-                    const isNext = next?.key === step.key
-                    return (
-                      <li key={step.key} className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center ${isNext ? 'bg-a-accent/6' : ''}`}>
-                        <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                          <span aria-hidden className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-xl ${step.done ? 'bg-a-st-confirmed/12 text-a-st-confirmed' : isNext ? 'bg-a-accent text-a-accent-ink' : 'bg-a-surface-2 text-a-text-2'}`}>
-                            <Icon size={18} />
-                            {step.done && <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border-2 border-a-surface bg-a-st-confirmed text-a-surface"><Check size={11} strokeWidth={3} /></span>}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="flex flex-wrap items-center gap-2">
-                              <span className={`text-sm font-semibold ${step.done ? 'text-a-text-2' : 'text-a-text'}`}>
-                                <span className="tabular-nums">{index + 1}.</span> {t(`crm.start.${step.key}.title`, DEFAULTS[step.key][0])}
-                              </span>
-                              {step.done
-                                ? <Pill tone="success">{t('crm.start.done', 'Done')}</Pill>
-                                : isNext ? <Pill tone="accent">{t('crm.start.up_next', 'Up next')}</Pill> : <span className="sr-only">{t('crm.start.to_do', 'To do')}</span>}
+              {/* Round 5 (owner 2026-11-12, "more icons, minimize copy"): the steps as tiles; each one's sentence is its (i). */}
+              <ol aria-label={t('crm.start.list_title', 'The steps')} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {data.steps.map((step, index) => {
+                  const { icon: Icon, to: target } = STEPS[step.key]
+                  const isNext = next?.key === step.key
+                  return (
+                    <li key={step.key} className={`flex min-w-0 flex-col gap-3 rounded-2xl border bg-a-surface p-4 shadow-a-sm ${isNext ? 'border-a-accent' : 'border-a-border'}`}>
+                      <div className="flex items-start gap-3">
+                        <span aria-hidden className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-xl ${step.done ? 'bg-a-st-confirmed/12 text-a-st-confirmed' : isNext ? 'bg-a-accent text-a-accent-ink' : 'bg-a-surface-2 text-a-text-2'}`}>
+                          <Icon size={18} />
+                          {step.done && <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border-2 border-a-surface bg-a-st-confirmed text-a-surface"><Check size={11} strokeWidth={3} /></span>}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1.5">
+                            <span className={`min-w-0 text-sm font-semibold ${step.done ? 'text-a-text-2' : 'text-a-text'}`}>
+                              <span className="tabular-nums">{index + 1}.</span> {t(`crm.start.${step.key}.title`, DEFAULTS[step.key][0])}
                             </span>
-                            <span className="mt-0.5 block text-sm text-a-text-2">{t(`crm.start.${step.key}.line`, DEFAULTS[step.key][1])}</span>
-                          </span>
+                            <InfoTip text={t(`crm.start.${step.key}.line`, DEFAULTS[step.key][1])} />
+                          </p>
+                          <p className="mt-1">
+                            {step.done
+                              ? <Pill tone="success">{t('crm.start.done', 'Done')}</Pill>
+                              : isNext ? <Pill tone="accent">{t('crm.start.up_next', 'Up next')}</Pill> : <span className="text-xs text-a-text-2">{t('crm.start.to_do', 'To do')}</span>}
+                          </p>
                         </div>
-                        <Link to={target}
-                          className={`${BUTTON} self-start sm:self-auto ${step.done ? 'border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2' : isNext ? 'bg-a-accent text-a-accent-ink hover:bg-a-accent-deep' : 'border border-a-accent/40 bg-a-surface text-a-accent-text hover:bg-a-accent/10'}`}>
-                          {step.done ? t('crm.start.open', 'Open') : actions[step.key]}
-                          <ArrowRight size={14} aria-hidden />
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ol>
-              </Card>
+                      </div>
+                      <Link to={target}
+                        className={`${BUTTON} mt-auto self-start ${step.done ? 'border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2' : isNext ? 'bg-a-accent text-a-accent-ink hover:bg-a-accent-deep' : 'border border-a-accent/40 bg-a-surface text-a-accent-text hover:bg-a-accent/10'}`}>
+                        {step.done ? t('crm.start.open', 'Open') : actions[step.key]}
+                        <ArrowRight size={14} aria-hidden />
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ol>
             </div>
           )
         })()}

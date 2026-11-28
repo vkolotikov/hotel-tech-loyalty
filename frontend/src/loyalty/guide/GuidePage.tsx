@@ -8,6 +8,9 @@ import {
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
 import { ScanDemo } from './ScanDemo'
+import { Walkthroughs } from './Walkthroughs'
+import { matchingWalks } from './walkMath'
+import './guide.css'
 import {
   FAQ, STEPS, TOPICS, faqWords, featureWords, featuresFor, narrow, stepWords, topicWord,
   type FaqId, type FeatureId, type Say, type StepId, type TopicId,
@@ -38,23 +41,29 @@ export function GuidePage() {
   const features = featuresFor(boot.staff.can)
   const found = narrow(query, topic, features, say)
   const searching = query.trim() !== ''
-  const nothing = searching && found.features.length === 0 && found.faq.length === 0
+  const resultCount = found.features.length + found.faq.length + matchingWalks(query, say).length
+  const nothing = searching && resultCount === 0
 
   return (
     <div className="space-y-8 px-4 py-6 lg:px-6">
       <header className="relative overflow-hidden rounded-3xl border border-a-border bg-linear-to-br from-a-accent/15 via-a-surface to-a-surface p-6 sm:p-8">
-        <Floating />
+
         <div className="relative max-w-2xl space-y-4">
           <PageHeader title={t('loyalty.guide.page.title', 'Guide')} />
-          <p className="text-base text-a-text-2">{t('loyalty.guide.page.line', 'Everything the workspace does, in short answers.')}</p>
-          <label className="relative block">
+          <p className="text-base text-a-text-2">{t('loyalty.guide.page.line', "Find an answer, follow a task or practise a scan. Start with what you want to do.")}</p>
+          <label className="l-guide-search relative block">
             <span className="sr-only">{t('loyalty.guide.page.search', 'Search the guide')}</span>
             <Search size={18} aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-a-text-2" />
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('loyalty.guide.page.search', 'Search the guide')}
               className="w-full rounded-2xl border border-a-border bg-a-surface py-3.5 pl-11 pr-4 text-base text-a-text shadow-a-sm" />
           </label>
+          <p className="text-sm text-a-text-2">{t('loyalty.guide.page.updated', "Includes the latest programme, events, portal and voucher delivery features.")}</p>
         </div>
       </header>
+
+
+      {(searching || topic !== 'all') && <div className="flex flex-wrap items-center justify-between gap-3" role="status" aria-live="polite"><span className="text-sm text-a-text-2">{t('loyalty.guide.page.results', '{{count}} results', { count: resultCount })}</span><button type="button" className="min-h-10 rounded-xl border border-a-border px-4 text-sm text-a-accent-text" onClick={() => { setQuery(''); setTopic('all') }}>{t('loyalty.guide.page.clear', 'Clear search & filters')}</button></div>}
+      <Walkthroughs query={query} say={say} can={boot.staff.can} />
 
       {!searching && <QuickStart say={say} />}
 
@@ -187,24 +196,5 @@ function Question({ id, to, open, say }: { id: FaqId; to?: string; open: boolean
         </div>
       </details>
     </li>
-  )
-}
-
-/** The hero's drifting icons, on a wide screen only (below xl they would sit on the search): the workspace at a glance. */
-function Floating() {
-  const spots: [LucideIcon, string, string][] = [
-    [ScanLine, 'right-10 top-8', 'animate-a-float'],
-    [Crown, 'right-36 top-16', 'animate-a-float [animation-delay:1.5s]'],
-    [CalendarDays, 'right-16 bottom-10', 'animate-a-float [animation-delay:3s]'],
-    [Gift, 'right-44 bottom-6', 'animate-a-float [animation-delay:4.5s]'],
-  ]
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 hidden xl:block">
-      {spots.map(([Icon, where, motion]) => (
-        <span key={where} className={`absolute ${where} ${motion} grid h-14 w-14 place-items-center rounded-2xl border border-a-border bg-a-surface/80 text-a-accent-text shadow-a-sm`}>
-          <Icon size={26} />
-        </span>
-      ))}
-    </div>
   )
 }

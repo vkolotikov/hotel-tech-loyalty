@@ -55,6 +55,7 @@ class BootstrapController extends Controller
                 'can_manage'    => ContentAccess::canManage($user),
                 // Spec 2026-10-19 §4.5: the switch in Content's menu.
                 'morning_email' => (bool) ($user->wants_content_morning_email ?? false),
+                'collaboration_email' => (bool) ($user->wants_content_collaboration_email ?? false),
             ],
             'profile'      => $profile ? [
                 'id'              => (int) $profile->id,

@@ -1,0 +1,176 @@
+Observation 1
+The performance trace has been stopped.
+Emulating viewport: {"deviceScaleFactor":1,"isMobile":false,"hasTouch":false,"isLandscape":false,"width":1440,"height":1000}
+## Summary of Performance trace findings:
+URL: https://app.hexa-tech.uk/content
+Trace bounds: {min: 198401937978µs, max: 198407128074µs}
+CPU throttling: 1x
+Network throttling: none
+
+# Available insight sets
+
+The following is a list of insight sets. An insight set covers a specific part of the trace, split by navigations. The insights within each insight set are specific to that part of the trace. Be sure to consider the insight set id and bounds when calling functions. If no specific insight set or navigation is mentioned, assume the user is referring to the first one.
+
+## insight set id: NAVIGATION_0
+
+URL: https://app.hexa-tech.uk/content
+Bounds: {min: 198401942474µs, max: 198407128074µs}
+Metrics (lab / observed):
+  - LCP: 928 ms, event: (eventKey: r-17707, ts: 198402870574), nodeId: 880
+  - LCP breakdown:
+    - TTFB: 89 ms, bounds: {min: 198401942474µs, max: 198402030990µs}
+    - Render delay: 840 ms, bounds: {min: 198402030990µs, max: 198402870574µs}
+  - CLS: 0.30, event: (eventKey: s-20925, ts: 198402486942)
+Metrics (field / real users): n/a – no data for this page in CrUX
+Available insights:
+  - insight name: LCPBreakdown
+    description: Each [subpart has specific improvement strategies](https://developer.chrome.com/docs/performance/insights/lcp-breakdown). Ideally, most of the LCP time should be spent on loading the resources, not within delays.
+    relevant trace bounds: {min: 198401942474µs, max: 198402870574µs}
+    example question: Help me optimize my LCP score
+    example question: Which LCP subpart was most problematic?
+    example question: What can I do to reduce the LCP time for this page load?
+  - insight name: CLSCulprits
+    description: Layout shifts occur when elements move absent any user interaction. [Investigate the causes of layout shifts](https://developer.chrome.com/docs/performance/insights/cls-culprit), such as elements being added, removed, or their fonts changing as the page loads.
+    relevant trace bounds: {min: 198402486942µs, max: 198404296543µs}
+    example question: Help me optimize my CLS score
+    example question: How can I prevent layout shifts on this page?
+  - insight name: RenderBlocking
+    description: Requests are blocking the page’s initial render, which may delay LCP. [Deferring or inlining](https://developer.chrome.com/docs/performance/insights/render-blocking) can move these network requests out of the critical path.
+    relevant trace bounds: {min: 198402038006µs, max: 198402058000µs}
+    estimated metric savings: FCP 0 ms, LCP 0 ms
+    example question: Show me the most impactful render-blocking requests that I should focus on
+    example question: How can I reduce the number of render-blocking requests?
+  - insight name: NetworkDependencyTree
+    description: [Avoid chaining critical requests](https://developer.chrome.com/docs/performance/insights/network-dependency-tree) by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.
+    relevant trace bounds: {min: 198401943096µs, max: 198403376423µs}
+    example question: How do I optimize my network dependency tree?
+  - insight name: Cache
+    description: A long cache lifetime can speed up repeat visits to your page. [Learn more about caching](https://developer.chrome.com/docs/performance/insights/cache).
+    relevant trace bounds: {min: 198402842099µs, max: 198402857595µs}
+    estimated metric savings: FCP 0 ms, LCP 0 ms
+    example question: What caching strategies can I apply to improve my page performance?
+
+
+
+Observation 2
+The performance trace has been stopped.
+Emulating viewport: {"deviceScaleFactor":1,"isMobile":false,"hasTouch":false,"isLandscape":false,"width":1440,"height":1000}
+## Summary of Performance trace findings:
+URL: https://app.hexa-tech.uk/content
+Trace bounds: {min: 198427069023µs, max: 198432246273µs}
+CPU throttling: 1x
+Network throttling: none
+
+# Available insight sets
+
+The following is a list of insight sets. An insight set covers a specific part of the trace, split by navigations. The insights within each insight set are specific to that part of the trace. Be sure to consider the insight set id and bounds when calling functions. If no specific insight set or navigation is mentioned, assume the user is referring to the first one.
+
+## insight set id: NAVIGATION_0
+
+URL: https://app.hexa-tech.uk/content
+Bounds: {min: 198427073542µs, max: 198432246273µs}
+Metrics (lab / observed):
+  - LCP: 881 ms, event: (eventKey: r-12794, ts: 198427954756), nodeId: 70
+  - LCP breakdown:
+    - TTFB: 85 ms, bounds: {min: 198427073542µs, max: 198427158997µs}
+    - Render delay: 796 ms, bounds: {min: 198427158997µs, max: 198427954756µs}
+  - CLS: 0.30, event: (eventKey: s-15864, ts: 198427605074)
+Metrics (field / real users): n/a – no data for this page in CrUX
+Available insights:
+  - insight name: LCPBreakdown
+    description: Each [subpart has specific improvement strategies](https://developer.chrome.com/docs/performance/insights/lcp-breakdown). Ideally, most of the LCP time should be spent on loading the resources, not within delays.
+    relevant trace bounds: {min: 198427073542µs, max: 198427954756µs}
+    example question: Help me optimize my LCP score
+    example question: Which LCP subpart was most problematic?
+    example question: What can I do to reduce the LCP time for this page load?
+  - insight name: CLSCulprits
+    description: Layout shifts occur when elements move absent any user interaction. [Investigate the causes of layout shifts](https://developer.chrome.com/docs/performance/insights/cls-culprit), such as elements being added, removed, or their fonts changing as the page loads.
+    relevant trace bounds: {min: 198427605074µs, max: 198429500978µs}
+    example question: Help me optimize my CLS score
+    example question: How can I prevent layout shifts on this page?
+  - insight name: RenderBlocking
+    description: Requests are blocking the page’s initial render, which may delay LCP. [Deferring or inlining](https://developer.chrome.com/docs/performance/insights/render-blocking) can move these network requests out of the critical path.
+    relevant trace bounds: {min: 198427164795µs, max: 198427173034µs}
+    estimated metric savings: FCP 0 ms, LCP 0 ms
+    example question: Show me the most impactful render-blocking requests that I should focus on
+    example question: How can I reduce the number of render-blocking requests?
+  - insight name: NetworkDependencyTree
+    description: [Avoid chaining critical requests](https://developer.chrome.com/docs/performance/insights/network-dependency-tree) by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.
+    relevant trace bounds: {min: 198427074103µs, max: 198428479811µs}
+    example question: How do I optimize my network dependency tree?
+  - insight name: Cache
+    description: A long cache lifetime can speed up repeat visits to your page. [Learn more about caching](https://developer.chrome.com/docs/performance/insights/cache).
+    relevant trace bounds: {min: 198427917765µs, max: 198427931577µs}
+    estimated metric savings: FCP 0 ms, LCP 0 ms
+    example question: What caching strategies can I apply to improve my page performance?
+
+
+
+Observation 3
+Emulating viewport: {"deviceScaleFactor":1,"isMobile":false,"hasTouch":false,"isLandscape":false,"width":1440,"height":1000}
+## Insight Title: Layout shift culprits
+
+## Insight Summary:
+Cumulative Layout Shifts (CLS) is a measure of the largest burst of layout shifts for every unexpected layout shift that occurs during the lifecycle of a page. This is a Core Web Vital and the thresholds for categorizing a score are:
+- Good: 0.1 or less
+- Needs improvement: more than 0.1 and less than or equal to 0.25
+- Bad: over 0.25
+
+## Detailed analysis:
+The worst layout shift cluster was the cluster that started at 549 ms and ended at 2,359 ms, with a duration of 1,810 ms.
+The score for this cluster is 0.2994.
+
+Layout shifts in this cluster:
+### Layout shift 1:
+- Impacted elements:
+  - KBD class='ml-auto hidden shrink-0 rounded-md border border-a-border px-1.5 font-a-mono text-xs sm:inline'
+
+- Start time: 549 ms
+- Score: 0.0000
+- Potential root causes:
+  - A font that was loaded over the network: https://app.hexa-tech.uk/spa/assets/inter-tight-latin-wght-DX-nOvPD.woff2 (eventKey: s-12546, ts: 198402456172).
+- A font that was loaded over the network: https://app.hexa-tech.uk/spa/assets/ibm-plex-mono-latin-500-DSY6xOcd.woff2 (eventKey: s-12555, ts: 198402456270).
+### Layout shift 2:
+- Impacted elements:
+  - DIV class='mt-auto space-y-1 border-t border-a-side-2 pt-4'
+  - BUTTON class='hidden min-w-0 shrink-0 items-center justify-center gap-2 rounded-xl border border-a-border bg-a-surface p-2 text-left text-sm text-a-text-2 shadow-a-sm enabled:hover:border-a-text-2/40 disabled:opacity-60 sm:flex sm:min-w-40 sm:max-w-md sm:flex-1 sm:shrink sm:justify-start sm:px-3 lg:ml-4'
+  - DIV class='min-w-0'
+
+- Start time: 917 ms
+- Score: 0.0061
+- No potential root causes identified
+### Layout shift 3:
+- Impacted elements:
+  - DIV class='flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4 lg:px-6'
+  - DIV class='px-4 pb-3 lg:px-6'
+  - DIV class='relative'
+  - DIV class='relative'
+
+- Start time: 1,222 ms
+- Score: 0.2495
+- No potential root causes identified
+### Layout shift 4:
+- Impacted elements:
+  - DIV class='flex flex-wrap items-center gap-1 rounded-lg border border-dashed border-a-border bg-a-canvas/60 px-2 py-1.5'
+  - DIV class='flex flex-wrap items-center gap-1 rounded-lg border border-dashed border-a-border bg-a-canvas/60 px-2 py-1.5'
+  - DIV class='flex flex-wrap items-center gap-1 rounded-lg border border-dashed border-a-border bg-a-canvas/60 px-2 py-1.5'
+  - DIV class='flex flex-wrap items-center gap-1 rounded-lg border border-dashed border-a-border bg-a-canvas/60 px-2 py-1.5'
+  - BUTTON class='inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-a-text-2 hover:bg-a-surface-2 hover:text-a-text disabled:opacity-50'
+
+- Start time: 1,298 ms
+- Score: 0.0038
+- No potential root causes identified
+### Layout shift 5:
+- Impacted elements:
+  - DIV class='flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4 lg:px-6'
+
+- Start time: 1,359 ms
+- Score: 0.0400
+- No potential root causes identified
+
+## Estimated savings: none
+
+## External resources:
+- https://developer.chrome.com/docs/performance/insights/cls-culprit
+- https://web.dev/articles/cls
+- https://web.dev/articles/optimize-cls

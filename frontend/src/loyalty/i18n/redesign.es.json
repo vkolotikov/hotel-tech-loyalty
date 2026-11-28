@@ -1,4 +1,5 @@
 {
+  "scheduled": "Programada",
   "membersLine": "Encuentre a un miembro, consulte su membresía y ayúdele a dar el siguiente paso.",
   "membersTotal": "{{n}} miembros",
   "activeCount": "{{n}} activos",

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Bot, FileText, GraduationCap, Languages, Lightbulb, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { Bot, FileText, GraduationCap, Languages, Lightbulb, Loader2, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { resolveImage } from '../../lib/api'
 import { dateTime } from '../lib/format'
 import { BUBBLE_CLASS, canTranslate, isSafeAttachment, type Side } from './inboxLogic'
@@ -64,18 +64,21 @@ export function MessageBubble({ message: m, side, first, last, visitorName, zone
           )}
         </div>
         {(last || m.sender_type === 'ai' || translation) && (
-          <span className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-a-text-2 ${right ? 'justify-end' : ''}`}>
-            {last && m.created_at && <time dateTime={m.created_at}>{dateTime(m.created_at, i18n.language, zone)}</time>}
-            {canTranslateHere && canTranslate(m) && (
-              <button type="button" onClick={onTranslate} disabled={translation?.state === 'loading'}
-                className="inline-flex items-center gap-1 rounded-sm font-medium text-a-accent-text hover:underline disabled:opacity-60">
-                <Languages size={13} aria-hidden />
-                {translation?.state === 'loading' ? t('crm.inbox.translating', 'Translating…')
-                  : translation?.state === 'done' && translation.showing ? t('crm.inbox.show_original', 'Show the original')
-                  : translation?.state === 'failed' ? t('crm.inbox.translate_again', 'Translation failed, try again')
-                  : t('crm.inbox.translate', 'Translate')}
-              </button>
-            )}
+          <span className={`mt-0.5 flex flex-wrap items-center gap-x-1 px-1 text-xs text-a-text-2 ${right ? 'justify-end' : ''}`}>
+            {last && m.created_at && <time dateTime={m.created_at} className="mr-1">{dateTime(m.created_at, i18n.language, zone)}</time>}
+            {canTranslateHere && canTranslate(m) && (() => {
+              const label = translation?.state === 'loading' ? t('crm.inbox.translating', 'Translating…')
+                : translation?.state === 'done' && translation.showing ? t('crm.inbox.show_original', 'Show the original')
+                : translation?.state === 'failed' ? t('crm.inbox.translate_again', 'Translation failed, try again')
+                : t('crm.inbox.translate', 'Translate')
+              const on = translation?.state === 'done' && translation.showing
+              return (
+                <button type="button" onClick={onTranslate} disabled={translation?.state === 'loading'} aria-label={label} title={label}
+                  className={`${TOOL} ${translation?.state === 'failed' ? 'text-a-danger' : on ? 'text-a-accent-text' : ''}`}>
+                  {translation?.state === 'loading' ? <Loader2 size={14} aria-hidden className="animate-spin" /> : <Languages size={14} aria-hidden />}
+                </button>
+              )
+            })()}
             {m.sender_type === 'ai' && <Rating message={m} onRate={onRate} />}
           </span>
         )}
@@ -84,29 +87,35 @@ export function MessageBubble({ message: m, side, first, last, visitorName, zone
   )
 }
 
-/** An AI answer's rating: what was said about it, or the two buttons that rate it. */
+/** A small icon under a bubble, its name the tooltip. */
+const TOOL = 'grid h-7 w-7 place-items-center rounded-full text-a-text-2 transition-colors hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent disabled:opacity-60'
+
+/** An AI answer's rating (round 5: icons): what was said about it — a press changes it —, or the two thumbs that rate it. */
 function Rating({ message: m, onRate }: { message: Message; onRate: (rating: 'good' | 'bad') => void }) {
   const { t } = useTranslation()
   const saved = m.feedback
   if (saved) {
+    const good = saved.rating === 'good'
+    const said = good ? t('crm.inbox.rated_good', 'Rated good') : t('crm.inbox.rated_bad', 'Rated wrong')
+    const label = `${said} · ${t('crm.inbox.change_rating', 'Change')}`
     return (
-      <span className="inline-flex items-center gap-2">
-        {saved.rating === 'good'
-          ? <span className="inline-flex items-center gap-1 text-a-st-confirmed"><ThumbsUp size={13} aria-hidden />{t('crm.inbox.rated_good', 'Rated good')}</span>
-          : <span className="inline-flex items-center gap-1 text-a-danger"><ThumbsDown size={13} aria-hidden />{t('crm.inbox.rated_bad', 'Rated wrong')}</span>}
+      <span className="inline-flex items-center">
+        <button type="button" onClick={() => onRate(saved.rating)} aria-label={label} title={label}
+          className={`${TOOL} ${good ? 'text-a-st-confirmed' : 'text-a-danger'}`}>
+          {good ? <ThumbsUp size={14} aria-hidden className="fill-current" /> : <ThumbsDown size={14} aria-hidden className="fill-current" />}
+        </button>
         {saved.applied_to_training
-          ? <span className="inline-flex items-center gap-1 crm-ai-text"><GraduationCap size={13} aria-hidden />{t('crm.inbox.taught', 'Taught')}</span>
-          : saved.suggested_answer && <span className="inline-flex items-center gap-1 crm-ai-text" title={t('crm.inbox.suggested_hint', 'A right answer was suggested; a manager will check it.')}><Lightbulb size={13} aria-hidden />{t('crm.inbox.suggested', 'Answer suggested')}</span>}
-        <button type="button" onClick={() => onRate(saved.rating)} className="rounded-sm font-medium text-a-accent-text hover:underline">{t('crm.inbox.change_rating', 'Change')}</button>
+          ? <span title={t('crm.inbox.taught', 'Taught')} className="grid h-7 w-7 place-items-center crm-ai-text"><GraduationCap size={14} aria-hidden /><span className="sr-only">{t('crm.inbox.taught', 'Taught')}</span></span>
+          : saved.suggested_answer && <span title={t('crm.inbox.suggested_hint', 'A right answer was suggested; a manager will check it.')} className="grid h-7 w-7 place-items-center crm-ai-text"><Lightbulb size={14} aria-hidden /><span className="sr-only">{t('crm.inbox.suggested', 'Answer suggested')}</span></span>}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center">
       <button type="button" onClick={() => onRate('good')} aria-label={t('crm.inbox.rate_good', 'A good answer')} title={t('crm.inbox.rate_good', 'A good answer')}
-        className="grid h-7 w-7 place-items-center rounded-full text-a-text-2 hover:bg-a-st-confirmed/12 hover:text-a-st-confirmed"><ThumbsUp size={14} aria-hidden /></button>
+        className={`${TOOL} hover:bg-a-st-confirmed/12 hover:text-a-st-confirmed`}><ThumbsUp size={14} aria-hidden /></button>
       <button type="button" onClick={() => onRate('bad')} aria-label={t('crm.inbox.rate_bad', 'A wrong answer')} title={t('crm.inbox.rate_bad', 'A wrong answer')}
-        className="grid h-7 w-7 place-items-center rounded-full text-a-text-2 hover:bg-a-danger/12 hover:text-a-danger"><ThumbsDown size={14} aria-hidden /></button>
+        className={`${TOOL} hover:bg-a-danger/12 hover:text-a-danger`}><ThumbsDown size={14} aria-hidden /></button>
     </span>
   )
 }

@@ -26,15 +26,10 @@ export function CodesTab() {
     <div className="space-y-3">
       <p className="text-xs text-p-text-2">{t('portal.rewards.codes_hint', 'Each code works once. The venue marks it used when you present it.')}</p>
       {rows.map(r => (
-        <Card key={r.id} className={`p-4 flex items-center justify-between gap-3 ${r.status !== 'pending' ? 'opacity-70' : ''}`}>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold truncate">{r.reward?.name}</p>
-            <p className="text-[11px] text-p-text-2">{formatDay(r.created_at, i18n.language)} · {r.points_spent.toLocaleString(resolveLocale(i18n.language))} {t('portal.common.points', 'points')}</p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="font-mono text-sm font-semibold tracking-wider">{r.code}</p>
-            <div className="mt-1"><Chip tone={tone(r.status)}>{label(r.status)}</Chip></div>
-          </div>
+        <Card key={r.id} className={`p-4 ${r.status === 'pending' ? 'p-code-ready' : 'opacity-70'}`}>
+          <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold">{r.reward?.name}</p><Chip tone={tone(r.status)}>{label(r.status)}</Chip></div>
+          <p className={`font-mono font-semibold tracking-wider my-3 break-all ${r.status === 'pending' ? 'text-2xl' : 'text-sm'}`}>{r.code}</p>
+          <p className="text-[11px] text-p-text-2">{formatDay(r.created_at, i18n.language)} · {r.points_spent.toLocaleString(resolveLocale(i18n.language))} {t('portal.common.points', 'points')}</p>
         </Card>
       ))}
     </div>

@@ -28,6 +28,18 @@ export function dueLabel(t: TFunction, due: DueFilter): string {
 export function sortLabel(t: TFunction, sort: SortKey): string {
   switch (sort) {
     case 'oldest': return t('crm.leads.sort_oldest', 'Oldest first')
+    case 'name': return t('crm.leads.col_lead') + ' ↑'
+    case 'name_desc': return t('crm.leads.col_lead') + ' ↓'
+    case 'stage': return t('crm.leads.field_stage') + ' ↑'
+    case 'stage_desc': return t('crm.leads.field_stage') + ' ↓'
+    case 'value_asc': return t('crm.leads.col_value') + ' ↑'
+    case 'ai_asc': return t('crm.leads.col_ai_short') + ' ↑'
+    case 'follow_up_desc': return t('crm.leads.col_next') + ' ↓'
+    case 'owner': return t('crm.leads.col_owner_short') + ' ↑'
+    case 'owner_desc': return t('crm.leads.col_owner_short') + ' ↓'
+    case 'touches': return t('crm.leads.col_touches') + ' ↓'
+    case 'touches_asc': return t('crm.leads.col_touches') + ' ↑'
+    case 'arrival_desc': return t('crm.leads.col_stay') + ' ↓'
     case 'follow_up': return t('crm.leads.sort_follow_up', 'Follow-up soonest')
     case 'updated': return t('crm.leads.sort_updated', 'Recently changed')
     case 'value': return t('crm.leads.sort_value', 'Largest value first')

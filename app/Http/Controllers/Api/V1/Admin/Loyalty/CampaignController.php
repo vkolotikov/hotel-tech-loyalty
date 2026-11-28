@@ -100,7 +100,7 @@ class CampaignController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         LoyaltyAccess::requireManager($request->user());
-        $this->campaign($id);
+        $this->campaign($id)->assertIndependent();
         $data = $request->validate([
             'name'        => 'required|string|max:120',
             'subject'     => 'nullable|string|max:200',
@@ -141,6 +141,7 @@ class CampaignController extends Controller
     {
         LoyaltyAccess::requireManager($request->user());
         $campaign = $this->campaign($id);
+        $campaign->assertIndependent();
 
         $gone = EmailCampaign::query()->whereKey($campaign->id)->where('status', EmailCampaign::STATUS_DRAFT)->delete();
         if ($gone !== 1) {
@@ -186,6 +187,7 @@ class CampaignController extends Controller
         $user = $request->user();
         LoyaltyAccess::requireManager($user);
         $campaign = $this->campaign($id);
+        $campaign->assertIndependent();
         $missing = array_values(array_filter(CampaignStart::incomplete($campaign), fn (string $m) => in_array($m, ['subject', 'body'], true)));
         if ($missing !== []) {
             throw new LoyaltyRefused('incomplete', 'This campaign is not ready to test.', 422, ['missing' => $missing]);
@@ -287,7 +289,7 @@ class CampaignController extends Controller
         $source = $this->campaign($id);
         $data = $request->validate(['name' => 'nullable|string|max:200']);
 
-        $copy = $source->replicate(['status', 'sent_at', 'sent_count', 'failed_count', 'recipient_count', 'error_message', 'sent_by_user_id', 'last_progress_at', 'scheduled_at']);
+        $copy = $source->replicate(['status', 'sent_at', 'sent_count', 'failed_count', 'recipient_count', 'error_message', 'sent_by_user_id', 'last_progress_at', 'scheduled_at', 'offer_send_id']);
         $copy->forceFill([
             'name'               => mb_substr(trim((string) ($data['name'] ?? '')) ?: $source->name . ' (copy)', 0, 120),
             'status'             => EmailCampaign::STATUS_DRAFT,

@@ -66,6 +66,15 @@ class EventSignUpTest extends TestCase
         $this->assertSame([$this->staffMember->id, ['event_id' => $event->id, 'source' => 'staff']], [(int) $audit->causer_id, $audit->new_values]);
     }
 
+    public function test_signup_judges_the_start_date_on_the_event_day(): void
+    {
+        DB::table('loyalty_members')->where('id', $this->ada->id)->update(['membership_valid_from' => '2026-10-10']);
+        $early = $this->makeEvent(['sign_up' => true, 'starts_at' => '2026-10-09 18:00:00', 'ends_at' => '2026-10-09 21:00:00']);
+        $this->assertSame('membership_not_started', EventSignUp::refusal($early, $this->ada->fresh())?->errorCode);
+        $firstDay = $this->makeEvent(['sign_up' => true, 'starts_at' => '2026-10-10 18:00:00', 'ends_at' => '2026-10-10 21:00:00']);
+        $this->assertNull(EventSignUp::refusal($firstDay, $this->ada->fresh()));
+    }
+
     public function test_a_press_sent_again_with_its_key_answers_the_sign_up_it_made(): void
     {
         $event = $this->makeEvent(['sign_up' => true]);

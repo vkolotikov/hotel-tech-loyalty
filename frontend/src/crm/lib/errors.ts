@@ -18,3 +18,8 @@ export function errorKey(error: unknown): string {
 export function errorText(t: TFunction, error: unknown): string {
   return t(errorKey(error), t('crm.errors.unknown', 'Something went wrong. Please try again.'))
 }
+
+/** Wait for validation feedback to render before moving focus inside the submitted form. */
+export function focusInvalid(form: HTMLFormElement | null): void {
+  requestAnimationFrame(() => form?.querySelector<HTMLElement>('[aria-invalid="true"]:not(:disabled)')?.focus())
+}

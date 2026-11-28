@@ -1,0 +1,14 @@
+{
+  "card": "Tap My card in the header, or Enlarge on Home. Show the QR code or your member number at the venue.",
+  "wallet": "Open My card. Where the venue offers it, use Add to Apple Wallet or Add to Google Wallet.",
+  "balance": "Your balance is on Home. See all beside Recent activity opens every points change.",
+  "spend": "Choose an available reward in Rewards, then Redeem. Confirm to receive a code for the venue.",
+  "benefits": "Rewards brings your level benefits together. Some apply automatically; others have a Request this button.",
+  "offers": "Extras for members appear alongside the other rewards. Claim an available offer to use it.",
+  "book": "Use Book on Home or Bookings, choose what and when, then confirm.",
+  "details": "In Profile, choose Edit beside Personal details. Ask the venue to change your email.",
+  "messages": "In Profile, open Notifications. A kind you switch off is not sent at all. Expand How we reach you for delivery channels.",
+  "delete": "In Profile, expand Account & help, then choose Delete account.",
+  "sign_up": "Open Events from Home, Rewards or Account & help in Profile. Choose Sign up. You can cancel there too.",
+  "door": "Open My card in the header. The team scans its QR code."
+}

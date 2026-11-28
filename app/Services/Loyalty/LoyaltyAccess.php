@@ -35,6 +35,13 @@ final class LoyaltyAccess
         return Staff::where('user_id', $user->id)->where('is_active', true)->first();
     }
 
+    public static function requireActiveStaff(User $user): void
+    {
+        if (!self::staff($user)) {
+            throw new LoyaltyRefused('staff_inactive', 'Your access to this organisation has been switched off.', 403);
+        }
+    }
+
     public static function isManager(User $user): bool
     {
         return in_array(self::staff($user)?->role, AccessMap::MANAGER_ROLES, true);

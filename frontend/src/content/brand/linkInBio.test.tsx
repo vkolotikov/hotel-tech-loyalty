@@ -44,11 +44,11 @@ const editor = (draft = bioFormOf(payload()), invalid: string[] = [], bio = payl
 )
 
 describe('the Link-in-bio section (spec 2026-10-19 §6.4)', () => {
-  it('sits on the Brand page after Channels', () => {
-    const html = renderBrand(brandWith(), true)
+  it('is reachable in the Links section', () => {
+    const html = renderBrand(brandWith(), true, undefined, 'links')
     const at = html.indexOf('id="content-bio"')
-    expect(at).toBeGreaterThan(html.indexOf('id="content-channels"'))
-    expect(at).toBeLessThan(html.indexOf('id="content-keydates"'))
+    expect(at).toBeGreaterThan(-1)
+    expect(html).toContain('value="links" selected=""')
   })
 
   it('shows managers the page, its address with Copy and Open page, its buttons with their clicks, and Edit', () => {

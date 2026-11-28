@@ -84,6 +84,17 @@ describe('CrmShell (2026-11-07)', () => {
 })
 
 describe('the areas', () => {
+  it('offers the brand switcher where the organisation name stood, only with more than one brand (2026-11-09)', () => {
+    const one = render({}, { brands: [{ id: 1, name: 'Villa Riga', is_default: true, color: null, logo: null }], all_brands: true, brand_id: null })
+    expect(one).not.toContain('Choose another')
+    const two = render({}, {
+      brands: [{ id: 1, name: 'Villa Riga', is_default: true, color: null, logo: null }, { id: 2, name: 'Old Town Studio', is_default: false, color: '#2255aa', logo: null }],
+      all_brands: true, brand_id: 2,
+    })
+    expect(two).toContain('aria-label="Brand: Old Town Studio. Choose another"')
+    expect(two).toContain('Old Town Studio')
+  })
+
   it('reads the area from the address', () => {
     expect(areaOf('/crm')).toBe('today')
     expect(areaOf('/crm/inbox')).toBe('inbox')

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Content;
 
+use App\Models\ContentPlannerPost;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpContentSchema;
@@ -106,7 +107,7 @@ class PosterTest extends TestCase
     public function test_the_poster_may_mark_an_approved_or_ready_post_published_while_approvals_are_on_and_no_other_staff_case_changes(): void
     {
         $this->profile->forceFill(['requires_approval' => true])->save();
-        $mark = fn (int $id) => $this->asStaffMember()->postJson($this->api("posts/{$id}/mark-published"), ['published_url' => 'https://instagram.com/p/abc']);
+        $mark = fn (int $id) => $this->asStaffMember()->postJson($this->api("posts/{$id}/mark-published"), ['published_url' => 'https://instagram.com/p/abc', 'updated_at' => ContentPlannerPost::findOrFail($id)->updated_at->toISOString()]);
 
         $approved = $this->makePost(['status' => 'approved', 'poster_id' => $this->staffMember->id]);
         $mark($approved->id)->assertOk()->assertJsonPath('post.status', 'published')->assertJsonPath('post.published_url', 'https://instagram.com/p/abc');
@@ -124,7 +125,7 @@ class PosterTest extends TestCase
         $this->assertSame('draft', $draft->fresh()->status);
 
         // Managers as before.
-        $this->asManager()->postJson($this->api("posts/{$draft->id}/mark-published"))->assertOk()->assertJsonPath('post.status', 'published');
+        $this->asManager()->postJson($this->api("posts/{$draft->id}/mark-published"), ['updated_at' => $draft->fresh()->updated_at->toISOString()])->assertOk()->assertJsonPath('post.status', 'published');
     }
 
     public function test_versions_repeat_copies_and_duplicates_keep_who_posts_it(): void
@@ -145,7 +146,7 @@ class PosterTest extends TestCase
         $this->profile->forceFill(['requires_approval' => true])->save();
         $post = $this->makePost(['status' => 'approved', 'poster_id' => $this->staffMember->id]);
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['is_active' => false]);
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"))->assertStatus(403)->assertJsonPath('error', 'staff_inactive');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertStatus(403)->assertJsonPath('error', 'staff_inactive');
         $this->assertSame('approved', $post->fresh()->status);
     }
 }

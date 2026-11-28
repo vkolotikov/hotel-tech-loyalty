@@ -14,7 +14,7 @@ import { programAssets } from './design/assets'
 import { useRedesignWords } from '../redesign/words'
 import { PROGRAM_KEY, programApi } from './api'
 import { TierDialog } from './TierDialog'
-import { TierBenefitDialog } from './TierBenefitDialog'
+import { TierAssignmentEditor } from '../management/TierAssignmentEditor'
 import { RemoveTier } from './RemoveDialogs'
 import { TakeOff } from './ProgramPage'
 import type { TierBenefit } from './types'
@@ -25,7 +25,7 @@ export function TierEditorPage({ id }: { id: string }) {
   const say = useRedesignWords()
   const boot = useBoot()
   const navigate = useNavigate()
-  const close = () => navigate('/loyalty/program?tab=tiers')
+  const close = () => navigate('/loyalty/program?tab=tiers' + (id === 'new' ? '' : '&selected=' + encodeURIComponent(id)))
   const query = useQuery({ queryKey: PROGRAM_KEY, queryFn: programApi.program })
   const [all, setAll] = useState(false)
   const [open, setOpen] = useState<{ kind: 'benefit' | 'take_off'; benefit: TierBenefit | null } | { kind: 'delete' } | null>(null)
@@ -42,7 +42,7 @@ export function TierEditorPage({ id }: { id: string }) {
     <div className="l-rd-split-line">{tier.benefits.length > 2 && <button type="button" className="l-ov-link" onClick={() => setAll(!all)} aria-expanded={all}>{say('viewAll', { n: tier.benefits.length })}</button>}<Link className="l-ov-link" to="/loyalty/rewards?tab=benefits">{say('catalogue')}</Link><small>{say('benefitsSeparate')}</small></div>
   </section>
   return <><TierDialog key={id} page tier={tier} onClose={close} benefits={benefits} more={more} />
-    {tier && open?.kind === 'benefit' && <TierBenefitDialog tier={tier} current={open.benefit} benefits={data.benefits} options={data.options} onClose={() => setOpen(null)} />}
+    {tier && open?.kind === 'benefit' && <TierAssignmentEditor program={data} tierId={tier.id} current={open.benefit} onClose={() => setOpen(null)} />}
     {tier && open?.kind === 'take_off' && open.benefit && <TakeOff tier={tier} tb={open.benefit} onClose={() => setOpen(null)} />}
     {tier && open?.kind === 'delete' && <RemoveTier tier={tier} onClose={() => setOpen(null)} />}
   </>

@@ -1,13 +1,18 @@
 async page => {
   const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/campaigns/', base=new URL(page.url()).origin;
   const checks=[];const check=(name,ok)=>{if(!ok)throw new Error(name);checks.push(name)};
+  check('Email setup is platform-managed, not inferred from a list',await page.locator('.l-cm-requirements').innerText().then(t=>t.includes('HexaTech must configure')&&t.includes('does not confirm live delivery')));
+  await page.getByText('Own sending domain / SMTP · On hold',{exact:true}).click();
+  check('Self-service SMTP is explicitly on hold',await page.locator('.l-cm-requirements').innerText().then(t=>t.includes('not available yet')));
   const screenshot=async name=>{await page.waitForLoadState('networkidle');await page.evaluate(()=>document.fonts.ready);for(const frame of page.frames().filter(f=>f.parentFrame()))await frame.waitForFunction(()=>document.readyState==='complete'&&!!document.body?.innerText.trim());for(const iframe of await page.locator('iframe').all()){await iframe.scrollIntoViewIfNeeded();await page.screenshot({path:root+'render-'+name+'-preview.png'});}await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:root+'render-'+name+'.png',fullPage:false})};
   await page.getByRole('link',{name:'Open Your next reward is waiting',exact:true}).click();await page.getByRole('heading',{name:'Write your email'}).waitFor();await screenshot('email-editor');
   await page.getByRole('button',{name:/2 Audience/}).click();await page.getByRole('button',{name:'Send to 412 members',exact:true}).waitFor();await screenshot('email-audience');
   check('Audience comes from server exclusions',await page.locator('[data-confirmation="ok"]').innerText().then(t=>t.includes('412')&&t.includes('48')));
   await page.goto(base+'/loyalty/campaigns?tab=segments');await page.getByRole('button',{name:'Edit segment rules'}).waitFor();await screenshot('segments');
   await page.goto(base+'/loyalty/campaigns?tab=push&message=2');await page.locator('[data-phone-preview]').waitFor();await screenshot('push-editor');
+  check('Push explains app and device requirements',await page.locator('.l-cm-requirements').innerText().then(t=>t.includes('registered devices')));
   await page.goto(base+'/loyalty/campaigns?tab=sms&message=2');await page.locator('[data-sms-preview]').waitFor();await screenshot('sms-editor');
+  check('SMS explains tenant Twilio account and consent',await page.locator('.l-cm-requirements').innerText().then(t=>t.includes('own Twilio account')&&t.includes('SMS consent')));
   for(const width of [320,390,768,1024]){
     await page.setViewportSize({width,height:844});await page.goto(base+'/loyalty/campaigns');await page.locator('.l-cm-row').first().waitFor();
     check('Email list fits '+width,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('email-list-'+width);

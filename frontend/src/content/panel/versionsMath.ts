@@ -13,14 +13,14 @@ export const aiAllowed = (budget: BudgetStatus): boolean => budget !== 'over'
 export type VersionNote =
   | { kind: 'adapting'; platform: Platform }
   | { kind: 'adapting_others' }
-  | { kind: 'kept'; reason: 'budget' | 'ai_failed' }
+  | { kind: 'kept'; reason: 'budget' | 'ai_failed' | 'ai_model_unpriced' }
   | null
 
 /** This version being adapted, the other versions being adapted, or this one kept as written (and why). */
 export function versionNote(group: PostGroup | null, post: Pick<PostDetail, 'id' | 'platform'>): VersionNote {
   if (!group) return null
   if (group.adapting.includes(post.id)) return { kind: 'adapting', platform: post.platform }
-  if (group.kept_original.includes(post.id)) return { kind: 'kept', reason: group.kept_reason === 'ai_failed' ? 'ai_failed' : 'budget' }
+  if (group.kept_original.includes(post.id)) return { kind: 'kept', reason: group.kept_reason ?? 'budget' }
   return group.adapting.length > 0 ? { kind: 'adapting_others' } : null
 }
 

@@ -50,6 +50,28 @@ function render(answer: OptionsAnswer, start?: WizardStart) {
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the setup wizard (release 7 §1)', () => {
+  it('shows required programme rules without a disabled earning checkbox', () => {
+    const data = answerFixture()
+    data.ways.push({ key: 'tier_progress', switch: null, zero_off: null, fields: ['tier_progress_by'] })
+    data.fields.tier_progress_by = { type: 'enum', default: 'points', min: null, max: null, choices: ['points', 'visits', 'spend'], when: null }
+    data.options.tier_progress_by = 'points'
+    const html = render(data, { step: 'choose' })
+    const rule = html.match(/<section[^>]+data-programme-rule="tier_progress"[\s\S]*?<\/section>/)?.[0]
+    expect(rule).toBeDefined()
+    expect(rule).not.toContain('type="checkbox"')
+    expect(text(rule!)).toContain('Programme rule')
+  })
+
+  it('offers the selected business template rewards separately from the saved catalogue', () => {
+    const data = answerFixture()
+    Object.assign(data.presets[0], { stamp_rewards: [{ index: 0, name: 'Brow Tidy', points_cost: 400 }] })
+    const form = recommendedForm(data, data.presets[0], data.options)
+    form.stamp_card.values.stamp_reward_kind = 'reward'
+    const html = render(data, { step: 'configure', choice: 'beauty', form })
+    expect(html).toContain('<optgroup label="Suggested rewards for Beauty and spa">')
+    expect(html).toContain('value="-1">Brow Tidy</option>')
+    expect(html).toContain('<optgroup label="Your saved rewards">')
+  })
   it('shows four steps, the first current, with Next and Skip but no Back', () => {
     const html = render(fresh)
     const words = text(html)
@@ -64,24 +86,62 @@ describe('the setup wizard (release 7 §1)', () => {
   it('a new venue chooses a starting programme, its industry’s first, chosen and marked', () => {
     const html = render(fresh)
     const words = text(html)
-    expect(html.indexOf('data-choice="beauty"')).toBeLessThan(html.indexOf('data-choice="hotel_classic"'))
+    expect(html).toContain('data-choice="beauty"')
+    expect(html).not.toContain('data-choice="hotel_classic"')
+    expect(words).toContain('Browse templates')
     expect(html).toMatch(/data-choice="beauty" data-checked=""/)
     expect(words).toContain('Beauty and spa')
     expect(words).toContain('Suggested for your business')
-    expect(words).toContain('Tiers: Welcome, Devotee, Inner Circle')
-    expect(words).toContain('Rewards such as Brow Tidy, 10 Off Any Service')
-    expect(words).not.toContain('Keep my tiers and rewards')
+    expect(words).toContain('Welcome')
+    expect(words).toContain('Devotee')
+    expect(words).toContain('Inner Circle')
+    expect(words).toContain('Brow Tidy')
+    expect(words).toContain('10 Off Any Service')
+    expect(words).not.toContain('Keep current earning rules')
     expect(html).not.toMatch(/type="radio"[^>]*disabled=""/)
   })
 
-  it('a venue with tiers keeps them, and sees the presets greyed with why', () => {
+  it('an existing venue keeps its programme and can select industry recommendations', () => {
     const html = render(answerFixture())
     const words = text(html)
-    expect(words).toContain('Keep my tiers and rewards')
+    expect(words).toContain('Keep current earning rules')
     expect(words).toContain('Tiers: 3. Rewards in the catalogue: 2. Nothing in them changes.')
-    expect(words).toContain('Starting programmes set up a new venue’s tiers only.')
+    expect(words).toContain('Choose an industry template for suggested earning rules.')
     expect(html).toMatch(/data-choice="keep" data-checked=""/)
-    expect((html.match(/type="radio"[^>]*disabled=""/g) ?? []).length).toBe(2)
+    expect(html).not.toMatch(/type="radio"[^>]*disabled=""/)
+  })
+
+  it('explains the selected industry and member outcomes in open, distinct preview sections', () => {
+    const html = render(fresh, { choice: 'beauty' })
+    expect(html).toContain('data-setup-preview=""')
+    expect(html).toContain('data-preview-template="beauty"')
+    for (const group of ['membership', 'earn', 'bonus', 'rule']) expect(html).toContain(`data-preview-group="${group}"`)
+    expect(html).toContain('data-member-journey=""')
+    const preview = html.slice(html.indexOf('<aside'))
+    expect(preview).not.toContain('<details')
+    expect(preview).not.toContain('tabindex="0"')
+    expect(text(preview)).toContain('Brow Tidy')
+    expect(text(preview)).toContain('New members get 100 points when they join.')
+    expect(text(preview)).toContain('Points expire 18 months after they are earned.')
+  })
+
+  it('shows the real existing catalogue when a different industry is selected', () => {
+    const html = render(answerFixture(), { choice: 'beauty' })
+    const preview = html.slice(html.indexOf('<aside'))
+    expect(preview).toContain('data-catalogue="preserved"')
+    expect(text(preview)).toContain('Your existing levels and rewards stay in place.')
+    expect(text(preview)).toContain('Free coffee')
+    expect(preview).toContain('data-template-rewards="beauty"')
+    expect(text(preview)).toContain('Suggested rewards for Beauty and spa')
+    expect(text(preview)).toContain('Brow Tidy')
+    expect(text(preview)).not.toContain('Inner Circle')
+  })
+
+  it('explains that points never expire when expiry is disabled', () => {
+    const form = recommendedForm(fresh, presetFixture('beauty', true), fresh.options)
+    form.points_expiry.on = false
+    const html = render(fresh, { choice: 'beauty', form })
+    expect(text(html.slice(html.indexOf('<aside')))).toContain('Points never expire.')
   })
 
   it('step 2 ticks every way as the preset suggests, with what members get for the ticked ones', () => {
@@ -126,6 +186,14 @@ describe('the setup wizard (release 7 §1)', () => {
     const words = text(render(answerFixture(), { step: 'review', choice: 'keep', form }))
     expect(words).toContain('Your tiers and rewards stay as they are.')
     expect(words).toContain('Not used: Stamp card, Check-in, Earn at the desk, Cashback credit.')
+  })
+
+  it('an existing programme can review a chosen template without promising a replacement catalogue', () => {
+    const form = recommendedForm(answerFixture(), presetFixture('beauty', true), answerFixture().options)
+    const words = text(render(answerFixture(), { step: 'review', choice: 'beauty', form }))
+    expect(words).toContain('Suggested earning rules: Beauty and spa.')
+    expect(words).toContain('Your tiers, benefits and rewards stay as they are.')
+    expect(words).not.toContain('a first rewards catalogue')
   })
 
   it('warns when nothing is ticked', () => {

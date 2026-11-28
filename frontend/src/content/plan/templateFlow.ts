@@ -1,4 +1,4 @@
-import { failureOf, type ContentApi } from '../lib/api'
+import { type ContentApi } from '../lib/api'
 import { suggestedTimes } from '../lib/bestTimes'
 import type { Channel, DateKey, PillarRef, Platform, PostDetail, PostFields, Slot, Template } from '../lib/types'
 import type { NewDraft, PanelApi } from '../panel/PanelProvider'
@@ -21,10 +21,11 @@ export function templateDraft(
 
 /** What "Write with AI" works with: the calls, a way to keep a post the server answered with, and the panel. */
 export interface TemplateFlow {
-  api: Pick<ContentApi, 'createPost' | 'write'>
+  api: Pick<ContentApi, 'createPost'>
+  queue: (postId: number, templateId: number) => Promise<unknown>
   /** Puts the post into the panel's cache and reads the lists again. */
   keep: (post: PostDetail) => void
-  panel: Pick<PanelApi, 'guard' | 'open' | 'noteWriting'>
+  panel: Pick<PanelApi, 'guard' | 'open' | 'noteWriting'> & Partial<Pick<PanelApi, 'capture'>>
 }
 
 /**
@@ -33,21 +34,14 @@ export interface TemplateFlow {
  */
 export async function startPost(flow: TemplateFlow, body: PostFields & { platform: Platform }): Promise<PostDetail | null> {
   if (!flow.panel.guard()) return null
+  const current = flow.panel.capture?.() ?? (() => true)
   const { post } = await flow.api.createPost(body)
   flow.keep(post)
-  flow.panel.noteWriting(post.id, { failed: null })
-  flow.panel.open(post.id)
+  if (current()) { flow.panel.open(post.id) }
   return post
 }
 
 /** Second half: the AI writes the post following the template; the panel takes its answer, or learns why it stopped. */
 export async function writeInto(flow: TemplateFlow, postId: number, templateId: number): Promise<void> {
-  try {
-    const { post } = await flow.api.write(postId, null, templateId)
-    flow.keep(post)
-    // Only this post's note: another post may still be written from its template.
-    flow.panel.noteWriting(postId, null)
-  } catch (e) {
-    flow.panel.noteWriting(postId, { failed: failureOf(e).code })
-  }
+  await flow.queue(postId, templateId)
 }

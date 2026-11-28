@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +8,7 @@ import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { leadPath } from '../lib/links'
+import { useRecords } from '../lib/useRecords'
 import { SidePanel } from '../ui/SidePanel'
 import { TextArea, TextInput } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
@@ -74,16 +74,24 @@ export function ContactPanel({ conversation, onClose, onSaved }: { conversation:
   )
 }
 
-/** Make a lead (and a contact) of this chat (`POST chat-inbox/{id}/capture-lead`), then open it in Leads. */
-export function LeadPanel({ conversation, onClose, onSaved }: { conversation: Conversation; onClose: () => void; onSaved: () => void }) {
+/**
+ * Make a lead (and a contact) of this chat (`POST chat-inbox/{id}/capture-lead`), then open it in its panel. Round 5:
+ * `onOwnAction` tells the alerts as the request leaves that the hot leads are about to rise by the person's own doing
+ * (and gives back a way to take that back if the request fails).
+ */
+export function LeadPanel({ conversation, onClose, onSaved, onOwnAction }: { conversation: Conversation; onClose: () => void; onSaved: () => void; onOwnAction?: () => () => void }) {
   const { t } = useTranslation()
   const toast = useToast()
+  const records = useRecords()
+  const own = useRef<(() => void) | null>(null)
   const [form, setForm] = useState<LeadForm>(() => leadForm(conversation))
   const [tried, setTried] = useState(false)
   const [made, setMade] = useState<number | null>(null)
   const errors = leadErrors(form)
   const save = useMutation({
     mutationFn: () => send<{ inquiry_id?: number }>('post', `chat-inbox/${conversation.id}/capture-lead`, leadPayload(form)),
+    onMutate: () => { own.current = onOwnAction?.() ?? null },
+    onError: () => { own.current?.(); own.current = null },
     onSuccess: answer => { setMade(leadIdOf(answer) ?? 0); toast(t('crm.inbox.lead_made', 'Lead created')); onSaved() },
   })
   const set = (key: keyof LeadForm) => (value: string) => setForm(f => ({ ...f, [key]: value }))
@@ -98,7 +106,7 @@ export function LeadPanel({ conversation, onClose, onSaved }: { conversation: Co
           <p className="font-a-display text-xl text-a-text">{t('crm.inbox.lead_made', 'Lead created')}</p>
           <p className="max-w-sm text-sm text-a-text-2">{t('crm.inbox.lead_made_line', 'The lead and its contact are in your CRM, linked to this chat.')}</p>
           {made > 0 && (
-            <Link to={leadPath(made)} className="inline-flex items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep">
+            <Link to={records.href('lead', made)} onClick={onClose} className="inline-flex items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep">
               {t('crm.inbox.open_lead', 'Open the lead')}<ArrowRight size={15} aria-hidden />
             </Link>
           )}

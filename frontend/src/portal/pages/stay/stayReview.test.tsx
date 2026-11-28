@@ -138,6 +138,18 @@ describe('StayReviewStep', () => {
     expect(html).not.toContain('Subtotal')
   })
 
+  it('lets a guest remove a selected code if the venue disables promotions before a fresh quote', async () => {
+    const chosen = { ...state, promoCode: 'EARLYFOR20' }
+    const chosenKey = stayQuoteQueryOptions(stayQuoteBody(chosen)).queryKey
+    const html = await renderAsync(<StayReviewStep catalogue={{ ...stayCatalogue, promotions_enabled: false }} state={chosen} onChange={noop} onBack={noop} onBounce={noop} onContinue={noop} />, stayVenue, async c => {
+      await c.prefetchQuery({ queryKey: chosenKey, queryFn: () => Promise.reject({ response: { status: 422, data: { error: 'promotion_unavailable' } } }), retry: false })
+    })
+    expect(html).toContain('Remove code')
+    expect(html).toContain('EARLYFOR20')
+    expect(html).toContain('Promo codes are not available')
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Continue/)
+  })
+
   it('says nothing about free cancellation when the venue gives no hours', () => {
     const html = render(review(), stayVenue, c => c.setQueryData(key, { ...stayQuote, policy: { ...stayQuote.policy, cancel_hours: 0 } }))
     expect(html).not.toContain('Free cancellation up to')

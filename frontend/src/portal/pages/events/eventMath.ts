@@ -42,6 +42,7 @@ export const EVENT_WORDS = {
 
 /** Why the member cannot sign up, in their words (EventSignUp's codes; a code without a word reads as `closed`). */
 export const WHY_WORDS: Record<string, string> = {
+  membership_not_started: 'Your membership starts after this event',
   event_full: 'Full',
   tier_not_allowed: 'For other membership levels',
   membership_expired: 'Your membership ends before this event',
@@ -54,6 +55,7 @@ export const WHY_WORDS: Record<string, string> = {
 
 /** What a failed sign-up or cancel says (the server's refusals; anything else reads as `unknown`). */
 export const ERROR_WORDS: Record<string, string> = {
+  membership_not_started: 'Your membership starts after this event. Please contact the team.',
   event_full: 'Sorry, the last place has just gone.',
   tier_not_allowed: 'This event is for other membership levels.',
   membership_expired: 'Your membership ends before this event. Ask the team to renew it.',

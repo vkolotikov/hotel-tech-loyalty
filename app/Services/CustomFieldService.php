@@ -87,6 +87,25 @@ class CustomFieldService
     }
 
     /**
+     * The `custom_data` an update saves (2026-11-12): what `validate()` made of the request for the active fields, beside
+     * the values the record already holds for keys that are no active field of the entity — a field switched off, or
+     * deleted, keeps its values and they come back with it (Settings → Fields says so). Before, any save of the record's
+     * own fields dropped them. Null when nothing is left.
+     *
+     * @param array<string, mixed>|null $stored
+     * @param array<string, mixed>|null $clean
+     * @return array<string, mixed>|null
+     */
+    public function keepUnlisted(string $entity, ?array $stored, ?array $clean): ?array
+    {
+        $active = CustomField::where('entity', $entity)->where('is_active', true)->pluck('key')->all();
+        $kept = array_diff_key($stored ?? [], array_flip($active));
+        $out = $kept + ($clean ?? []);
+
+        return $out === [] ? null : $out;
+    }
+
+    /**
      * Type-coerce a single value. Anything that doesn't fit throws
      * InvalidArgumentException with a user-readable message.
      */

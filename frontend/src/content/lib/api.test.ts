@@ -23,6 +23,34 @@ describe('contentUrl', () => {
 })
 
 describe('contentApi', () => {
+  it.each(['workspace_disabled', 'subscription_required'])('observes normalized export Blob refusal %s before rethrowing', async code => {
+    const heard = vi.fn(), stop = onWorkspaceOff(heard)
+    calls.fail = { response: { status: 403, data: new Blob([JSON.stringify({ error: code })], { type: 'application/json' }) } }
+    try {
+      await expect(contentApi(5).exportSchedule('csv', { q: '', status: '', platform: '', pillar_id: null, from: '', to: '', unscheduled: false, page: 1 })).rejects.toBe(calls.fail)
+      expect(heard).toHaveBeenCalledTimes(1)
+      expect(failureOf(calls.fail).code).toBe(code)
+    } finally { stop(); calls.fail = null }
+  })
+
+  it('retains an actionable safe failure when an export Blob is not JSON', async () => {
+    const heard = vi.fn(), stop = onWorkspaceOff(heard)
+    calls.fail = { response: { status: 503, data: new Blob(['<html>Unavailable</html>']) } }
+    try {
+      await expect(contentApi(5).exportSchedule('ics', { q: '', status: '', platform: '', pillar_id: null, from: '', to: '', unscheduled: false, page: 1 })).rejects.toBe(calls.fail)
+      expect(heard).not.toHaveBeenCalled()
+      expect(failureOf(calls.fail).code).toBe('unknown')
+    } finally { stop(); calls.fail = null }
+  })
+
+  it('submits the actual complete viewed revision for both manual transitions', async () => {
+    calls.fail = null
+    const seen = '2026-11-13T06:00:00.123456Z'
+    await contentApi(5).markReady(9, seen)
+    expect(last().body).toEqual({ updated_at: seen })
+    await contentApi(5).markPublished(9, null, seen)
+    expect(last().body).toEqual({ published_url: null, updated_at: seen })
+  })
   it('sends every call under the prefix, with its brand, and the plan range as parameters', async () => {
     calls.fail = null
     const api = contentApi(5)

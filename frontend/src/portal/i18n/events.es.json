@@ -21,6 +21,7 @@
   "when": "{{day}} · {{time}}",
   "from_to": "Del {{from}} al {{to}}",
   "why": {
+    "membership_not_started": "Su membresía comienza después de este evento",
     "event_full": "Completo",
     "tier_not_allowed": "Para otros niveles de membresía",
     "membership_expired": "Su membresía termina antes de este evento",
@@ -31,6 +32,7 @@
     "closed": "Inscripción cerrada"
   },
   "error": {
+    "membership_not_started": "Su membresía comienza después de este evento. Contacte con el equipo.",
     "event_full": "Lo sentimos, la última plaza acaba de ocuparse.",
     "tier_not_allowed": "Este evento es para otros niveles de membresía.",
     "membership_expired": "Su membresía termina antes de este evento. Pida al equipo que la renueve.",

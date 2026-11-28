@@ -1,3 +1,4 @@
+import type { FeedRange } from './feedLogic'
 import type { CHANNELS, INTENTS } from './inboxLogic'
 import type { ConvStatus } from './types'
 
@@ -58,3 +59,11 @@ export const FIELD_ERROR_DEFAULTS = {
   email: 'This does not look like an email address.',
   too_long: 'This is too long.',
 } as const
+
+/** Round 5: the feed's windows (crm.inbox.range.<key>). */
+export const RANGE_DEFAULTS: Record<FeedRange, string> = {
+  all: 'All time',
+  today: 'Today',
+  week: '7 days',
+  month: '30 days',
+}

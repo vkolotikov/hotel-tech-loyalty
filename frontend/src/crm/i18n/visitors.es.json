@@ -24,8 +24,10 @@
   "messages": "Mensajes",
   "messages_count": "{{n}} mensajes",
   "no_chats": "Aún no hay chats. Inicie uno y se abrirá en la bandeja de entrada.",
+  "no_chats_short": "Aún no hay chat.",
   "no_pages": "Aún no hay páginas registradas.",
   "no_reach": "Aún no ha dejado correo ni teléfono. Inicie un chat y pregúnteselo.",
+  "no_reach_short": "Aún sin correo ni teléfono.",
   "none": "Aún no hay visitantes aquí",
   "none_found": "Nadie coincide",
   "none_line": "Los visitantes aparecen aquí en cuanto el chat está en su sitio web, escriban o no.",
@@ -41,17 +43,26 @@
     "online": "En el sitio ahora",
     "recent": "Estuvo hace poco"
   },
+  "ptab": {
+    "chats": "Chats",
+    "overview": "Resumen",
+    "pages": "Páginas"
+  },
   "reach_title": "Cómo contactarle",
   "reachable": "Dejó un contacto",
   "refresh": "Actualizar",
   "remove_filter": "Quitar el filtro",
   "search": "Buscar por nombre, correo, dirección o página",
   "seen": "Visto {{when}}",
+  "show_all": "Mostrar a todos",
   "site_title": "En el sitio web",
   "start_chat": "Iniciar un chat",
   "tab": {
     "all": "Todos",
+    "has_contact": "Con contacto",
+    "hot_lead": "Clientes potenciales calientes",
     "leads": "Clientes potenciales",
+    "missed": "Perdidos",
     "offline": "Ausentes",
     "online": "En el sitio ahora"
   },

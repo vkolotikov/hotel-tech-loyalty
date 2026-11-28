@@ -1,4 +1,5 @@
 {
+  "scheduled": "Prévu",
   "membersLine": "Trouvez un membre, comprenez son adhésion et accompagnez sa progression.",
   "membersTotal": "{{n}} membres",
   "activeCount": "{{n}} actifs",

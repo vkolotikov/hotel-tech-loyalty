@@ -49,6 +49,18 @@ final class TierAdvice
             ];
         }
 
+        // The first active, non-invitation tier is the entry level. Later levels need a floor on this measure.
+        $progression = array_values(array_filter($tiers, fn (array $t) => $t['is_active'] && !$t['invitation_only']));
+        $missing = array_values(array_filter(array_slice($progression, 1), fn (array $t) => $t[$column] === null));
+        if ($missing !== []) {
+            $advice[] = [
+                'code' => 'tiers_missing_threshold', 'level' => ProgrammeAdvice::WARN,
+                'params' => ['n' => count($missing)],
+                'tiers' => array_map(fn (array $t) => ['id' => $t['id'], 'name' => $t['name']], $missing),
+                'benefits' => [],
+            ];
+        }
+
         $inUse = array_column(array_filter($tiers, fn (array $t) => $t['is_active']), 'id');
         $unused = array_values(array_filter($benefits, fn (array $b) => $b['is_active']
             && array_intersect($givenBy[$b['id']] ?? [], $inUse) === []));

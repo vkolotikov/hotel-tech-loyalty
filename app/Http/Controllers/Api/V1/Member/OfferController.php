@@ -21,7 +21,8 @@ class OfferController extends Controller
             ->forTier($member->tier_id)
             ->orderByDesc('is_featured')
             ->orderByDesc('created_at')
-            ->get();
+            ->get()->filter(fn (SpecialOffer $offer) => $offer->allowsMembership($member))->values()
+            ->each(fn (SpecialOffer $offer) => $offer->setAttribute('attachment', \App\Services\Loyalty\Offers\OfferFiles::metadata($offer)));
 
         // The member's own offers: AI-personalised ones they haven't acted
         // on yet, AND anything they have actually claimed.
@@ -42,7 +43,12 @@ class OfferController extends Controller
             ->with('offer')
             ->orderByRaw('used_at IS NULL DESC')
             ->orderByDesc('claimed_at')
-            ->get();
+            ->get()->each(function (MemberOffer $claim) use ($member) {
+                $offer = $claim->getRelation('offer');
+                $claim->setAttribute('usable_now', $offer instanceof SpecialOffer && $offer->allowsMembership($member));
+                if ($offer instanceof SpecialOffer && $offer->allowsRecipient($member)) $offer->setAttribute('attachment', \App\Services\Loyalty\Offers\OfferFiles::metadata($offer));
+                elseif ($offer) $claim->setRelation('offer', null);
+            });
 
         return response()->json([
             'general'      => $offers,
@@ -60,11 +66,13 @@ class OfferController extends Controller
         $member = $request->user()->loyaltyMember;
         \App\Services\Loyalty\Members\MemberStatus::assertActive($member);
         $offer = SpecialOffer::active()->findOrFail($offerId);
+        abort_unless($offer->allowsRecipient($member), 404);
 
         // tier_ids null/empty = open to every tier; otherwise the member's
         // tier must be one of the listed ones. This was never checked here,
         // so a bronze member could claim a gold-only offer by id.
         $tierIds = array_map('intval', (array) ($offer->tier_ids ?? []));
+        if ($tierIds !== []) \App\Services\Loyalty\Members\MemberStatus::assertMembershipBenefits($member);
         if ($tierIds !== [] && !in_array((int) $member->tier_id, $tierIds, true)) {
             return response()->json(['error' => 'wrong_tier', 'message' => 'This offer is for another membership level.'], 422);
         }
@@ -80,6 +88,7 @@ class OfferController extends Controller
                 // "4,812 / 100 used". Under load, two claims could also both
                 // read 99 and both proceed.
                 $locked = SpecialOffer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
+                abort_unless($locked->allowsRecipient($member), 404);
 
                 // Release 7: the member's own bonus_points claim, before the
                 // limits (which count it). One held from before release 7, or

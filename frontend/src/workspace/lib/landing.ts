@@ -10,6 +10,7 @@ export type WorkspaceName = 'appointments' | 'content' | 'loyalty' | 'crm' | 'ti
 
 export interface LandingUser {
   user_type?: string
+  loyalty_scan_only?: boolean
   workspaces?: {
     appointments?: { landing?: boolean; has_services?: boolean; only?: boolean }
     content?: { landing?: boolean; only?: boolean }
@@ -96,6 +97,7 @@ export function loginPathAfterExpiry(pathname: string, search: string): string {
  */
 export function landingPath(user: LandingUser | null | undefined, fallback: string): string {
   if (user?.user_type === 'member') return '/portal'
+  if (user?.loyalty_scan_only) return '/loyalty/partner'
   const held = planModules(user)
   if (held) return held.some(name => pageOf(name).test(fallback)) || ACCOUNT_PAGE.test(fallback) ? fallback : moduleHome(user)!
   if (fallback === '/' && user?.workspaces?.appointments?.landing === true) return '/appointments'

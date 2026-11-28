@@ -35,12 +35,16 @@ class ValidityController extends Controller
             throw new LoyaltyRefused('already_erased', 'This member was deleted.', 409);
         }
         $data = $request->validate([
+            'valid_from'      => 'sometimes|nullable|string|max:10',
             'valid_until'     => 'sometimes|nullable|string|max:10',
             'extend'          => ['sometimes', 'nullable', 'string', Rule::in(array_keys(MembershipValidity::EXTENSIONS))],
             'idempotency_key' => 'nullable|string|max:64',
         ]);
 
         $change = [];
+        if ($request->exists('valid_from')) {
+            $change['valid_from'] = $data['valid_from'] ?? null;
+        }
         if ($request->exists('valid_until')) {
             $change['valid_until'] = $data['valid_until'] ?? null;
         }
@@ -52,6 +56,7 @@ class ValidityController extends Controller
 
         return response()->json([
             'member'      => MemberProfile::of($done['member']),
+            'valid_from'  => $done['valid_from'],
             'valid_until' => $done['valid_until'],
             'state'       => $done['state'],
             'changed'     => $done['changed'],

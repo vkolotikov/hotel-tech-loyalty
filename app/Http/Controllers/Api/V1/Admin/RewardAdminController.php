@@ -100,21 +100,7 @@ class RewardAdminController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         $reward = Reward::findOrFail($id);
-        // Soft-protection: refuse delete if there's a pending redemption.
-        $pending = RewardRedemption::where('reward_id', $id)
-            ->where('status', RewardRedemption::STATUS_PENDING)
-            ->count();
-        if ($pending > 0) {
-            return response()->json([
-                'message' => "Cannot delete — {$pending} pending redemption(s). Fulfil or cancel them first, or deactivate the reward instead.",
-            ], 422);
-        }
-
-        $name = $reward->name;
-        $reward->delete();
-
-        AuditLog::record('reward_deleted', null, ['reward_id' => $id, 'name' => $name], [],
-            $request->user(), "Reward '{$name}' deleted");
+        app(\App\Services\Loyalty\RewardManagement::class)->delete($reward, $request->user());
 
         return response()->json(['success' => true]);
     }
@@ -122,12 +108,7 @@ class RewardAdminController extends Controller
     public function toggleActive(Request $request, int $id): JsonResponse
     {
         $reward = Reward::findOrFail($id);
-        $reward->is_active = !$reward->is_active;
-        $reward->save();
-
-        AuditLog::record('reward_toggled', $reward, ['is_active' => $reward->is_active],
-            ['is_active' => !$reward->is_active], $request->user(),
-            "Reward '{$reward->name}' " . ($reward->is_active ? 'activated' : 'deactivated'));
+        $reward = app(\App\Services\Loyalty\RewardManagement::class)->state($reward, null, $request->user());
 
         return response()->json(['reward' => $reward]);
     }

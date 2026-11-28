@@ -1,3 +1,4 @@
+import { DesignDialog } from '../redesign/DesignUI'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -93,7 +94,7 @@ export function RemoveTier({ tier, onClose }: { tier: Tier; onClose: () => void 
   const loadFailure = query.isError ? failureOf(query.error) : null
 
   return (
-    <Dialog title={t('loyalty.program.remove_tier.title', 'Delete {{name}}?', { name: tier.name })} onClose={onClose} busy={remove.isPending}>
+    <DesignDialog title={t('loyalty.program.remove_tier.title', 'Delete {{name}}?', { name: tier.name })} onClose={onClose} busy={remove.isPending}>
       <div className="space-y-4 text-sm text-a-text">
         {!removal && query.isLoading && (
           <div role="status" className="space-y-2">
@@ -144,7 +145,7 @@ export function RemoveTier({ tier, onClose }: { tier: Tier; onClose: () => void 
           )}
         </div>
       </div>
-    </Dialog>
+    </DesignDialog>
   )
 }
 

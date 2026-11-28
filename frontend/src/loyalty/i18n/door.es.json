@@ -58,6 +58,8 @@
     "choose_again": "Vuelve a elegir"
   },
   "reason": {
+    "not_started_plain": "Esta membresía aún no ha comenzado.",
+    "not_started": "La membresía comienza el {{date}}.",
     "member_erased": "Este miembro fue eliminado.",
     "member_off": "Esta membresía está desactivada.",
     "expired": "La membresía venció el {{date}}.",

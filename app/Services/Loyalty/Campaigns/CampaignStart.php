@@ -85,6 +85,7 @@ final class CampaignStart
      */
     public function start(EmailCampaign $campaign, User $by, int $confirmed, string $revision): EmailCampaign
     {
+        $campaign->assertIndependent();
         if ($campaign->status !== EmailCampaign::STATUS_DRAFT) {
             throw self::alreadyStarted($campaign->status);
         }
@@ -119,8 +120,9 @@ final class CampaignStart
      * The existing full-admin HTML editor and explicit-member API retain their payloads. Both now use the same
      * audience checks, atomic draft claim and queue-failure recovery as the Loyalty workspace.
      */
-    public function startFullAdmin(EmailCampaign $campaign, User $by, array $memberIds = []): EmailCampaign
+    public function startFullAdmin(EmailCampaign $campaign, User $by, array $memberIds = [], bool $offerDelivery = false): EmailCampaign
     {
+        if (!$offerDelivery) $campaign->assertIndependent();
         if ($campaign->status !== EmailCampaign::STATUS_DRAFT) {
             throw self::alreadyStarted($campaign->status);
         }
@@ -204,6 +206,7 @@ final class CampaignStart
      */
     public function schedule(EmailCampaign $campaign, User $by, string $sendAt, string $revision): array
     {
+        $campaign->assertIndependent();
         $orgId = (int) $campaign->organization_id;
         if (!in_array($campaign->status, [EmailCampaign::STATUS_DRAFT, SendLater::STATUS], true)) {
             throw self::alreadyStarted($campaign->status);

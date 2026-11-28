@@ -76,6 +76,7 @@ class SendEmailCampaignChunk implements ShouldQueue
         // No request means no tenant binding. Without this every scoped
         // read below returns nothing (TenantScope fails closed).
         app()->instance('current_organization_id', (int) $campaign->organization_id);
+        $offerSend = $campaign->getAttribute('offer_send_id') ? \App\Models\SpecialOfferSend::query()->find($campaign->getAttribute('offer_send_id')) : null;
 
         $slice = array_slice($this->memberIds, $this->offset, self::CHUNK);
 
@@ -135,6 +136,14 @@ class SendEmailCampaignChunk implements ShouldQueue
                 continue;
             }
 
+            if ($campaign->getAttribute('offer_send_id')) {
+                $offer = $offerSend?->offer_id ? \App\Models\SpecialOffer::withoutGlobalScope(\App\Scopes\BrandScope::class)->find($offerSend->offer_id) : null;
+                if (!$offer || !in_array((int) $member->id, $offerSend->member_ids, true) || !$member->is_active || !$offer->canDeliver() || !$offer->allowsMembership($member)) {
+                    $this->settle((int) $campaign->id, (int) $member->id, self::DELIVERY_SUPPRESSED);
+                    continue;
+                }
+            }
+
             $email = $member->user?->email;
             if (!$email) {
                 $this->settle((int) $campaign->id, (int) $member->id, self::DELIVERY_FAILED);
@@ -145,15 +154,15 @@ class SendEmailCampaignChunk implements ShouldQueue
                 // Tags are filled per member after the body was rendered: escaped in the body, one plain line in
                 // the subject (CampaignTags, which the test sends and the workspace's preview use too).
                 $tags = CampaignTags::forMember($member, (string) $orgName);
-                $html = CampaignTags::html((string) $campaign->body_html, $tags);
-                $subject = CampaignTags::subject((string) $campaign->subject, $tags);
+                $html = CampaignTags::html((string) ($offerSend ? $offerSend->snapshot['body_html'] : $campaign->body_html), $tags);
+                $subject = CampaignTags::subject((string) ($offerSend ? $offerSend->snapshot['subject'] : $campaign->subject), $tags);
                 if ($isMarketing) {
                     $html .= $compliance->footerHtml($member, $orgName);
                 }
 
                 // From this point even an exception may mean the provider accepted it.
                 $unused--;
-                $message = Mail::html($html, function ($mail) use ($email, $subject, $member, $compliance, $category, $identity) {
+                $message = Mail::html($html, function ($mail) use ($email, $subject, $member, $compliance, $category, $identity, $offerSend) {
                     $mail->to($email, $member->user->name ?? null)
                          ->subject($subject);
 
@@ -184,6 +193,9 @@ class SendEmailCampaignChunk implements ShouldQueue
                     }
 
                     $compliance->applyHeaders($mail, $member, $category);
+                    if ($offerSend?->attachment_content && ($attachment = $offerSend->snapshot['attachment'] ?? null)) {
+                        $mail->attachData(base64_decode($offerSend->attachment_content, true), $attachment['name'], ['mime' => $attachment['mime']]);
+                    }
                 });
                 // No message back: the suppression listener (BlockSuppressedRecipients) cancelled it at the
                 // transport — not sent, and not a failure either.

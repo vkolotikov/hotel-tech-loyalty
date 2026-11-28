@@ -5,6 +5,12 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
+// Durable recovery for form replies reserved before a request stopped. Atomic claims prevent duplicate attempts.
+Schedule::command('lead-forms:send-pending')->everyMinute()->withoutOverlapping(5);
+
+Schedule::call(fn () => \App\Services\Crm\SalesProfileCapture::expirePending())
+    ->name('crm-sales-profile-expire-pending')->everyTenMinutes()->withoutOverlapping(5);
+
 // Heartbeat — every minute, write a row directly via a closure
 // schedule. Bypasses both withoutOverlapping() and the
 // ScheduledTask* event chain, so it isolates "is schedule:work
@@ -72,6 +78,8 @@ Schedule::command('loyalty:reward-nudges')
 // Auto-resolve abandoned chat conversations idle for >4h so the inbox stays
 // clean and "active" / "waiting" stats reflect reality.
 Schedule::command('chat:reap')->hourly();
+Schedule::command('crm:sync-fds-builder-prices')->hourlyAt(17)->withoutOverlapping(5);
+Schedule::command('crm:sync-lead-correspondence')->everyMinute()->withoutOverlapping(3)->runInBackground();
 
 // Daily sweep for post-stay review invitations. Each form opts in via
 // config.auto_send_post_stay and sets its own delay via auto_send_delay_days.
@@ -208,6 +216,7 @@ Schedule::command('loyalty:assess-tiers --at-venue-hour=5')
 Schedule::command('loyalty:retry-visit-effects')->everyFiveMinutes()->withoutOverlapping(10);
 Schedule::command('loyalty:sync-wallets')->everyFiveMinutes()->withoutOverlapping(10);
 Schedule::command('media:check-recovery')->dailyAt('04:20')->withoutOverlapping(10);
+Schedule::command('media:backup-cloud --apply --prune')->dailyAt('03:40')->withoutOverlapping(60);
 
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating

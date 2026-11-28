@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, Lock, Plus, X, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
+import { InfoTip } from '../ui/InfoTip'
 import { TextInput } from '../ui/inputs'
 import { addText, removeAt } from './lists'
 
@@ -11,17 +12,20 @@ export function ReadOnlyNote({ children }: { children?: ReactNode }) {
   const { t } = useTranslation()
   return (
     <Notice>
-      <span className="flex items-center gap-2"><Lock size={14} aria-hidden className="shrink-0" />{children ?? t('crm.assistant.read_only', 'Only an owner or a manager can change the assistant. You can read everything here.')}</span>
+      <span className="flex items-center gap-2"><Lock size={14} aria-hidden className="shrink-0" />{children ?? t('crm.assistant.read_only_short', 'Read only: a manager makes changes here.')}</span>
     </Notice>
   )
 }
 
-/** A section's own heading row: what it holds in one line, and its main action at the end. */
+/**
+ * A section's own slim row (round 5, "minimize copy"): its main action or state at the end, and what the section is
+ * for as an (i) beside it rather than a sentence.
+ */
 export function SectionIntro({ line, action }: { line: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <p className="min-w-0 flex-1 text-sm text-a-text-2">{line}</p>
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+      <InfoTip text={line} align="right" />
     </div>
   )
 }

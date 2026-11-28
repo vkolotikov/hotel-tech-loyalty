@@ -93,7 +93,7 @@ class EventCheckInTest extends TestCase
         $row = ScanEvent::withoutGlobalScopes()->where('member_id', $this->grace->id)->firstOrFail();
         $line = PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->firstOrFail();
 
-        $this->assertSame(['granted' => true, 'reason' => 'welcome', 'valid_until' => null, 'expires_in_days' => null, 'tier' => ['id' => $this->tiers['silver']->id, 'name' => 'Silver', 'color' => '#9ca3af'], 'allowed_tiers' => []], $json['verdict']);
+        $this->assertSame(['granted' => true, 'reason' => 'welcome', 'valid_until' => null, 'valid_from' => null, 'expires_in_days' => null, 'tier' => ['id' => $this->tiers['silver']->id, 'name' => 'Silver', 'color' => '#9ca3af'], 'allowed_tiers' => []], $json['verdict']);
         $this->assertSame([true, null, true, 50, (int) $attendance->id, (int) $row->id], [$json['checked_in'], $json['already_in'], $json['signed_up'], $json['points'], $json['attendance_id'], $json['scan_event_id']]);
         $this->assertTrue($json['stamp']['added']);
 

@@ -5,6 +5,7 @@ namespace App\Services\Loyalty\Programme;
 use App\Models\AuditLog;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyTier;
+use App\Models\Reward;
 use App\Models\User;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\LoyaltyPresetService;
@@ -19,7 +20,8 @@ use Illuminate\Validation\ValidationException;
  * (`LoyaltyPresetService::apply`, which on a venue without members builds its tiers, benefits and rewards, and on one
  * with members never replaces a tier or overwrites the welcome bonus or point economics); then the options are saved
  * through ProgrammeOptions and `programme_setup_completed_at` stamped. A venue that already has tiers keeps them and its
- * rewards: a named preset is then not applied (`reason: has_tiers`). A venue with no tier must name a preset, or it
+ * rewards: a named preset is then not applied (`reason: has_tiers`). An optional indexed template reward creates or
+ * reuses only that reward, without applying the rest of the preset to an existing programme. A venue with no tier must name a preset, or it
  * would be left with a programme members cannot join.
  *
  * One setup at a time per organisation (an advisory lock), so two managers pressing Apply on a new venue cannot both
@@ -40,16 +42,23 @@ final class ProgrammeSetup
 
     /**
      * @param array<string, mixed> $options
-     * @return array{preset: ?string, preset_applied: bool, reason: ?string, summary: ?array<string, mixed>, completed_at: string, replayed: bool}
+     * @return array{preset: ?string, preset_applied: bool, reason: ?string, summary: ?array<string, mixed>, completed_at: string, replayed: bool, stamp_reward_id?: int, stamp_reward_created?: bool}
      */
-    public function apply(int $orgId, ?string $preset, array $options, User $by, ?string $key): array
+    public function apply(int $orgId, ?string $preset, array $options, User $by, ?string $key, ?int $templateRewardIndex = null): array
     {
-        // Checked before anything is written: a wrong field leaves the venue as it was, preset and all.
-        ProgrammeOptions::validate($orgId, $options);
+        // Legacy requests are checked before anything is written. A template reward does not exist yet: that request
+        // is validated in full after resolving its id, in the same transaction, so every write still rolls back.
+        if ($templateRewardIndex === null) {
+            ProgrammeOptions::validate($orgId, $options);
+        }
         $replayKey = $key !== null && $key !== '' ? self::replayKey($orgId, $key) : null;
-        $hash = hash('sha256', (string) json_encode([$preset, self::sorted($options)]));
+        $body = [$preset, self::sorted($options)];
+        if ($templateRewardIndex !== null) {
+            $body[] = $templateRewardIndex;
+        }
+        $hash = hash('sha256', (string) json_encode($body));
 
-        $outcome = AdvisoryLock::transaction(self::lockKey($orgId), function () use ($orgId, $preset, $options, $by, $replayKey, $hash) {
+        $outcome = AdvisoryLock::transaction(self::lockKey($orgId), fn () => self::underOrg($orgId, function () use ($orgId, $preset, $options, $by, $replayKey, $hash, $templateRewardIndex) {
             if ($replayKey !== null && is_array($seen = SharedCache::store()->get($replayKey))) {
                 if (($seen['hash'] ?? null) !== $hash) {
                     throw new LoyaltyRefused('key_reused', 'This key was already used for a different setup.', 422);
@@ -64,6 +73,8 @@ final class ProgrammeSetup
             }
 
             $before = ProgrammeOptions::for($orgId);
+            $templateReward = $templateRewardIndex !== null ? self::templateReward($preset, $templateRewardIndex, $options, $before) : null;
+            $rewardBefore = $templateReward !== null ? self::matchingReward($orgId, $templateReward) : null;
             $summary = null;
             $reason = null;
             if ($preset !== null && $hasTiers) {
@@ -72,7 +83,27 @@ final class ProgrammeSetup
                 $summary = $this->presets->apply($preset, $orgId);
             }
 
+            $selection = [];
+            if ($templateReward !== null) {
+                $reward = self::matchingReward($orgId, $templateReward);
+                if ($reward === null) {
+                    $reward = Reward::withoutGlobalScopes()->create($templateReward + [
+                        'organization_id' => $orgId,
+                        'is_active' => true,
+                        'sort_order' => (int) Reward::withoutGlobalScopes()->where('organization_id', $orgId)->max('sort_order') + 1,
+                    ]);
+                    if ($summary !== null) {
+                        $summary['rewards_added']++;
+                    }
+                }
+                $options['stamp_reward_id'] = (int) $reward->id;
+                $selection = ['stamp_reward_id' => (int) $reward->id, 'stamp_reward_created' => $rewardBefore === null];
+            }
+
             ProgrammeOptions::save($orgId, $options, $by);
+            if ($preset !== null) {
+                ProgrammeOptions::rememberTemplate($orgId, $preset);
+            }
             $at = ProgrammeOptions::markSetUp($orgId);
             $after = ProgrammeOptions::for($orgId);
 
@@ -82,7 +113,7 @@ final class ProgrammeSetup
                 'reason'         => $reason,
                 'summary'        => $summary,
                 'completed_at'   => $at,
-            ];
+            ] + $selection;
             AuditLog::create([
                 'organization_id' => $orgId,
                 'causer_type'     => User::class,
@@ -91,7 +122,7 @@ final class ProgrammeSetup
                 'subject_type'    => 'organization',
                 'subject_id'      => $orgId,
                 'old_values'      => $before,
-                'new_values'      => $after + ['preset' => $preset, 'preset_applied' => $summary !== null, 'reason' => $reason, 'summary' => $summary],
+                'new_values'      => $after + ['preset' => $preset, 'preset_applied' => $summary !== null, 'reason' => $reason, 'summary' => $summary] + $selection,
                 'description'     => $summary !== null
                     ? "Loyalty programme set up with the preset {$preset}"
                     : 'Loyalty programme set up' . ($reason === 'has_tiers' ? " (preset {$preset} not applied: the venue has tiers)" : ''),
@@ -102,12 +133,68 @@ final class ProgrammeSetup
             }
 
             return ['replayed' => false] + $outcome;
-        });
+        }));
 
         // Again once committed: a reader between the inner flush and the commit may have cached the settings as they were.
         HotelSetting::flushCacheFor($orgId);
 
         return $outcome;
+    }
+
+    /** @param array<string, mixed> $options @param array<string, mixed> $before @return array<string, mixed> */
+    private static function templateReward(?string $preset, int $index, array $options, array $before): array
+    {
+        // Canonical picker keys only: an alias or an arbitrary catalogue id never identifies a suggestion.
+        $reward = $preset !== null ? (LoyaltyPresetService::PRESETS[$preset]['rewards'][$index] ?? null) : null;
+        if ($index < 0 || $reward === null) {
+            throw ValidationException::withMessages(['stamp_reward_template_index' => ['Choose a reward from the selected template.']]);
+        }
+        if (isset($options['stamp_reward_id']) && $options['stamp_reward_id'] !== '') {
+            throw ValidationException::withMessages(['stamp_reward_template_index' => ['Choose either a saved reward or a template reward.']]);
+        }
+        $enabled = $options['stamps_enabled'] ?? $before['stamps_enabled'];
+        $kind = $options['stamp_reward_kind'] ?? $before['stamp_reward_kind'];
+        if (!in_array($enabled, [true, 1, '1', 'true'], true) || $kind !== 'reward') {
+            throw ValidationException::withMessages(['stamp_reward_template_index' => ['Enable a stamp card that gives a reward before choosing a template reward.']]);
+        }
+
+        return $reward;
+    }
+
+    /** @param array<string, mixed> $template */
+    private static function matchingReward(int $orgId, array $template): ?Reward
+    {
+        return Reward::withoutGlobalScopes()->where('organization_id', $orgId)->where('is_active', true)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($template['name']))])
+            ->where('points_cost', $template['points_cost'])->orderBy('id')->get()
+            ->first(fn (Reward $reward) => $reward->isRedeemable());
+    }
+
+    /** A queued/console caller may have another tenant (and its brand) bound; all setup writes belong to the named org. */
+    private static function underOrg(int $orgId, \Closure $work): array
+    {
+        $bound = app()->bound('current_organization_id');
+        $prior = $bound ? app('current_organization_id') : null;
+        $brandBound = app()->bound('current_brand_id');
+        $priorBrand = $brandBound ? app('current_brand_id') : null;
+        app()->instance('current_organization_id', $orgId);
+        if ((int) $prior !== $orgId) {
+            app()->forgetInstance('current_brand_id');
+        }
+        try {
+            return $work();
+        } finally {
+            if ($bound) {
+                app()->instance('current_organization_id', $prior);
+            } else {
+                app()->forgetInstance('current_organization_id');
+            }
+            if ($brandBound) {
+                app()->instance('current_brand_id', $priorBrand);
+            } else {
+                app()->forgetInstance('current_brand_id');
+            }
+        }
     }
 
     /**

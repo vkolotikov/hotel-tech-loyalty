@@ -10,11 +10,14 @@ import {
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { failureOf } from '../crm/lib/api'
+import { errorText } from '../crm/lib/errors'
 import { useSettings, type InquiryFieldConfig } from '../lib/crmSettings'
 import { BrandBadge } from '../components/BrandBadge'
 import { TaskDrawer } from '../components/TaskDrawer'
 import { InquiryAttachmentsPanel } from '../components/InquiryAttachmentsPanel'
 import { ChatHistoryPanel } from '../components/ChatHistoryPanel'
+import { AdminCrmEmailHistory as CrmEmailHistory } from '../components/AdminCrmEmailHistory'
 import { SendTemplateModal } from '../components/SendTemplateModal'
 import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
 import { useDataInk } from '../theme/hx'
@@ -290,6 +293,7 @@ export function InquiryDetail() {
       )}
       {draftingProposal && (
         <ProposalModal
+          key={inq.id}
           inq={inq}
           onClose={() => setDraftingProposal(false)}
           onUseAsEmail={(draft) => {
@@ -929,6 +933,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
           a trip back to the Engagement Hub. Backend looks up the chain
           inquiry → guest → visitor → conversations in one round-trip. */}
       {fieldCfg.chat_history && <ChatHistoryPanel inquiryId={inq.id} />}
+      <CrmEmailHistory key={inq.id} resource="inquiries" id={inq.id} />
 
       {adding && (
         <TaskDrawer
@@ -1330,27 +1335,43 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
   onClose: () => void
   onUseAsEmail: (draft: { subject: string; body: string }) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const [reviewNotes, setReviewNotes] = useState<string[]>([])
+  const [holdReason, setHoldReason] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [comment, setComment] = useState('')
+  const [sourceId, setSourceId] = useState('')
+  const requested = useRef(false)
 
-  // Phase 5 — kick off the draft on mount, plus a refresh button for
-  // when the agent wants a different angle. Editable fields so the
-  // human can tighten before pasting into the composer.
   const draft = useMutation({
-    mutationFn: () => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal`).then(r => r.data),
+    mutationFn: (action?: 'revise' | 'fresh') => api.post(`/v1/admin/inquiries/${inq.id}/draft-proposal?brand_id=${inq.brand_id ?? 'all'}`, {
+      language: (i18n.resolvedLanguage ?? 'en').split('-')[0], focus: action ? comment.trim() : '',
+      ...(action === 'revise' ? { revise: { source_id: sourceId, subject, body } } : {}),
+    }).then(r => r.data),
     onSuccess: (data) => {
-      if (data.error) {
-        toast.error(data.error)
-        return
-      }
+      setComment('')
+      setSourceId(data.source_id ?? '')
       setSubject(data.subject ?? '')
       setBody(data.body ?? '')
+      setReviewNotes(data.review_notes ?? [])
+      setHoldReason(data.decision && data.decision !== 'draft' ? data.reason || t('inquiryDetail.proposal.review') : '')
     },
-    onError: () => toast.error('Could not draft proposal'),
+    onError: error => {
+      const failure = failureOf(error)
+      if ([401, 403, 404, 409].includes(failure.status) && failure.code !== 'ai_budget_used_up') {
+        setSubject('')
+        setBody('')
+        setSourceId('')
+        setReviewNotes([])
+        setHoldReason(t('crm.sales.reload'))
+      }
+    },
   })
 
   useEffect(() => {
+    if (requested.current) return
+    requested.current = true
     draft.mutate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1374,7 +1395,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
           </button>
         </div>
         <p className="text-xs text-t-secondary mb-3">
-          {t('inquiryDetail.proposal.subtitle', "Pulled from this inquiry's stay details + special requests. Edit before sending — the model is helpful, not magical.")}
+          {t('inquiryDetail.proposal.subtitle')}
         </p>
 
         {draft.isPending && !body ? (
@@ -1384,12 +1405,13 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
+            {holdReason ? <p role="status" className="text-sm text-t-secondary">{holdReason}</p> : <>
             <div>
               <label className="text-[10px] uppercase tracking-wide font-bold text-t-secondary mb-1.5 block">
                 {t('inquiryDetail.proposal.subject', 'Subject')}
               </label>
               <input
-                value={subject}
+                value={subject} maxLength={240} disabled={draft.isPending}
                 onChange={e => setSubject(e.target.value)}
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent"
               />
@@ -1399,25 +1421,42 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 {t('inquiryDetail.proposal.body', 'Body')}
               </label>
               <textarea
-                value={body}
+                value={body} maxLength={10000} disabled={draft.isPending}
                 onChange={e => setBody(e.target.value)}
                 rows={14}
                 className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
               />
             </div>
+            </>}
+            <label className="block space-y-1 text-sm text-t-secondary">
+              <span>{t('inquiryDetail.proposal.comment')}</span>
+              <textarea value={comment} rows={2} maxLength={600} disabled={draft.isPending} onChange={e => setComment(e.target.value)}
+                placeholder={t('inquiryDetail.proposal.comment_hint')}
+                className="w-full rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white focus:border-accent" />
+            </label>
+            {draft.isError && <p role="alert" className="text-sm text-red-300">{errorText(t, draft.error)}</p>}
+            {reviewNotes.some(note => note !== holdReason) && <div className="text-sm text-t-secondary">
+              <p className="font-semibold">{t('inquiryDetail.proposal.review')}</p>
+              <ul className="list-disc pl-5">{reviewNotes.filter(note => note !== holdReason).slice(0, 3).map(note => <li key={note}>{note}</li>)}</ul>
+            </div>}
           </div>
         )}
 
-        <div className="flex justify-between items-center gap-2 pt-3 mt-3 border-t border-dark-border">
+        <div className="flex flex-wrap justify-between items-center gap-2 pt-3 mt-3 border-t border-dark-border">
+          <div className="flex flex-wrap items-center gap-1">
+            {sourceId && <button type="button" disabled={draft.isPending || !comment.trim() || !body.trim() || !subject.trim()}
+              className="flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-purple-300 hover:bg-dark-surface2 disabled:opacity-50"
+              onClick={() => draft.mutate('revise')}><Wand2 size={13} />{t('inquiryDetail.proposal.revise')}</button>}
           <button
-            onClick={() => draft.mutate()}
+            onClick={() => draft.mutate('fresh')}
             disabled={draft.isPending}
             className="flex items-center gap-1.5 px-3 py-2 text-xs text-t-secondary hover:text-white disabled:opacity-50"
             title={t('inquiryDetail.proposal.regenerate_tooltip', 'Try a different draft')}
           >
             <RefreshCw size={12} className={draft.isPending ? 'animate-spin' : ''} />
-            {t('inquiryDetail.proposal.regenerate', 'Regenerate')}
+            {t('inquiryDetail.proposal.fresh')}
           </button>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={onClose}
@@ -1425,14 +1464,14 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
             >
               Cancel
             </button>
-            <button
+            {!holdReason && <button
               onClick={() => onUseAsEmail({ subject, body })}
-              disabled={!body.trim()}
+              disabled={draft.isPending || !subject.trim() || !body.trim()}
               className="bg-accent text-black font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 hover:bg-accent/90 flex items-center gap-2"
             >
               <Mail size={14} />
               Use as email draft
-            </button>
+            </button>}
           </div>
         </div>
       </div>

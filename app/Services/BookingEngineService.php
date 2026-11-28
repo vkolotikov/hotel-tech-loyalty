@@ -223,6 +223,13 @@ class BookingEngineService
         if ($totalCapacity < $adults + $children) {
             throw new \InvalidArgumentException('Selected rooms do not have enough capacity for your group');
         }
+        $party = \App\Services\Booking\StayCombination::party(array_column($rooms, 'max_guests'), (int) $adults, (int) $children);
+        if ($party === null) throw new \InvalidArgumentException('Every room in a combination needs an adult and enough guest capacity.');
+        foreach ($rooms as $index => &$room) {
+            $room['adults'] = $party[$index]['adults'];
+            $room['children'] = $party[$index]['children'];
+        }
+        unset($room);
 
         $this->assertExtrasMeetLeadTime($extras, $checkIn);
         $extrasTotal = $this->calcExtras($extras, (int) $adults, (int) $children, $nights);
@@ -296,6 +303,11 @@ class BookingEngineService
                 ->where('stripe_payment_intent_id', $piId)
                 ->first();
             if ($existingMirror) {
+                if ($existingMirror->booking_state === 'cancelled' || $existingMirror->getAttribute('cancelled_at')
+                    || in_array($existingMirror->internal_status, ['cancelled', 'no-show'], true)
+                    || in_array($existingMirror->payment_status, ['refunded', 'cancelled', 'canceled', 'capture_expired'], true)) {
+                    throw new \App\Services\Booking\PublicCheckoutBlocked('booking_not_active', 'This reservation is no longer active. Please contact the venue before making another payment.');
+                }
                 // A room group's payment is on its lead room (GroupPayment):
                 // the replay answers the lead, with what the one payment paid
                 // for all the group's rooms.
@@ -347,6 +359,10 @@ class BookingEngineService
 
         $payload = $hold->payload_json;
         $guest   = $data['guest'] ?? [];
+        if (($payload['discount_source'] ?? null) === 'booking_promotion' && (float) $payload['gross_total'] === 0.0 && empty($data['payment_intent_id'])) {
+            $data['payment_status'] = PaymentStatus::Paid->value;
+            $data['payment_method'] = 'promotion';
+        }
 
         // Stamp guest info onto the hold before the main flow runs.
         // If the /confirm endpoint crashes after Stripe charged the
@@ -995,7 +1011,7 @@ class BookingEngineService
             $paymentMethod   = $data['payment_method'] ?? null;
             $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? PaymentStatus::Paid->value : null);
 
-            $mirror = BookingMirror::create([
+            $mirror = $this->saveCheckoutMirror([
                 'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                 'reservation_id'    => (string) ($result['id'] ?? ''),
                 'booking_reference' => $result['reference-id'] ?? null,
@@ -1461,11 +1477,67 @@ class BookingEngineService
     }
 
     /**
+     * A webhook/import can save the PMS reservation before its create response
+     * reaches checkout. Complete that same imported row with the accepted quote
+     * and payment instead of inserting a second row. Never adopt another
+     * checkout, another guest/stay, or a reservation staff already cancelled.
+     * Called inside the checkout transaction; no booking-row lock is acquired.
+     */
+    private function saveCheckoutMirror(array $attributes): BookingMirror
+    {
+        $orgId = $attributes['organization_id'] ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+        if (!$orgId) throw new \RuntimeException('A booking must belong to an organisation.');
+        $attributes['organization_id'] = $orgId;
+        $identity = ['organization_id' => $orgId, 'reservation_id' => (string) $attributes['reservation_id']];
+        AdvisoryLock::within('pms-reservation:' . $orgId . ':' . $identity['reservation_id']);
+
+        // firstOrCreate confines a racing unique violation to a savepoint on
+        // PostgreSQL, and only recovers the winner of this exact identity.
+        $mirror = BookingMirror::withoutGlobalScopes()->firstOrCreate($identity, $attributes);
+        if ($mirror->wasRecentlyCreated) return $mirror;
+
+        $raw = (array) $mirror->raw_json;
+        $email = mb_strtolower(trim((string) ($attributes['guest_email'] ?? '')));
+        $sameImport = ($raw['_currency_source'] ?? '') === 'provider_snapshot'
+            && (string) ($raw['id'] ?? '') === $identity['reservation_id']
+            && (string) $mirror->apartment_id === (string) $attributes['apartment_id']
+            && $mirror->arrival_date?->toDateString() === substr((string) $attributes['arrival_date'], 0, 10)
+            && $mirror->departure_date?->toDateString() === substr((string) $attributes['departure_date'], 0, 10)
+            && $email !== '' && mb_strtolower(trim((string) $mirror->guest_email)) === $email
+            && !$mirror->stripe_payment_intent_id && !$mirror->getAttribute('member_id') && !$mirror->booking_group_id
+            && !$mirror->getAttribute('cancelled_at') && $mirror->booking_state !== 'cancelled'
+            && !in_array($mirror->internal_status, ['cancelled', 'checked-in', 'checked-out'], true)
+            && empty($raw['_staff_internal_status']);
+        if (!$sameImport) {
+            throw new \RuntimeException('The reservation is already linked to another booking. Please contact the venue.');
+        }
+
+        $attributes['raw_json'] = array_replace($raw, (array) $attributes['raw_json']);
+        // The accepted quote replaces the import's provisional receipt in the
+        // same transaction; persistPriceElements() writes the canonical lines.
+        $mirror->priceElements()->delete();
+        $mirror->fill($attributes)->save();
+        return $mirror;
+    }
+
+    /**
      * Upsert a booking mirror from already-fetched Smoobu data (no extra API call).
      */
     public function upsertBookingFromData(array $data): ?BookingMirror
     {
         if (empty($data['id'])) return null;
+
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        return DB::transaction(function () use ($data, $orgId) {
+            // Read the checkout-owned snapshots only after the checkout writer
+            // has finished. A stale importer must not reopen an authorised stay.
+            AdvisoryLock::within('pms-reservation:' . $orgId . ':' . substr((string) $data['id'], 0, 30));
+            return $this->upsertBookingSnapshot($data);
+        });
+    }
+
+    private function upsertBookingSnapshot(array $data): BookingMirror
+    {
 
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
 
@@ -1906,7 +1978,10 @@ class BookingEngineService
 
                 foreach ($rooms as $idx => $room) {
                     $apartmentId = $room['unit_id'];
+                    $roomAdults = (int) ($room['adults'] ?? $adults);
+                    $roomChildren = (int) ($room['children'] ?? $children);
                     $roomTotal   = $room['room_total'];
+                    $roomDiscount = (float) ($payload['stay_discount_allocations'][$idx] ?? 0);
                     $unitName    = $room['unit_name'] ?? 'Room';
                     $isFirstRoom = ($idx === 0);
 
@@ -1930,7 +2005,7 @@ class BookingEngineService
                             $extrasTotalThisRoom += (float) $ex['line_total'];
                         }
                     }
-                    $smoobuRoomPrice = round($roomTotal + $extrasTotalThisRoom, 2);
+                    $smoobuRoomPrice = round($roomTotal - $roomDiscount + $extrasTotalThisRoom, 2);
                     $roomPaid = $paymentStatus === PaymentStatus::Paid->value ? $smoobuRoomPrice : 0;
 
                     // Build priceElements (basePrice + addons on first room).
@@ -1943,7 +2018,7 @@ class BookingEngineService
                             (int) $nights,
                             $nights === 1 ? '' : 's',
                         ),
-                        'amount'       => round((float) $roomTotal, 2),
+                        'amount'       => round((float) $roomTotal - $roomDiscount, 2),
                         'quantity'     => (int) $nights,
                         'currencyCode' => $comboCurrency,
                         'sortOrder'    => 1,
@@ -1987,6 +2062,7 @@ class BookingEngineService
                             );
                         }
                     }
+                    if ($roomDiscount > 0) $assistantLines[] = ($payload['discount_label'] ?? 'Stay discount') . ': -' . self::receiptMoney($roomDiscount, $comboCurrency);
                     $assistantLines[] = 'Room total: ' . self::receiptMoney($smoobuRoomPrice, $comboCurrency);
 
                     $smoobuPayload = [
@@ -1997,8 +2073,8 @@ class BookingEngineService
                         'lastName'      => $guest['last_name'] ?? '',
                         'email'         => $guest['email'] ?? '',
                         'phone'         => $guest['phone'] ?? '',
-                        'adults'        => $adults,
-                        'children'      => $children,
+                        'adults'        => $roomAdults,
+                        'children'      => $roomChildren,
                         'price'         => $smoobuRoomPrice,
                         'price-paid'    => $roomPaid,
                         'priceStatus'   => $roomPaid > 0 ? 1 : 0,
@@ -2103,7 +2179,8 @@ class BookingEngineService
                     ];
                     $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
 
-                    $mirror = BookingMirror::create([
+                    $roomPayload = $this->comboRoomPayload($payload, $room, ['list' => round($roomTotal + $extrasTotalThisRoom, 2), 'discount' => $roomDiscount, 'total' => $smoobuRoomPrice], $isFirstRoom);
+                    $mirror = $this->saveCheckoutMirror([
                         'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
                         'booking_group_id'         => $groupId,
@@ -2118,8 +2195,8 @@ class BookingEngineService
                         'guest_name'               => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
                         'guest_email'              => $guest['email'] ?? null,
                         'guest_phone'              => $guest['phone'] ?? null,
-                        'adults'                   => $adults,
-                        'children'                 => $children,
+                        'adults'                   => $roomAdults,
+                        'children'                 => $roomChildren,
                         'arrival_date'             => $checkIn,
                         'departure_date'           => $checkOut,
                         'price_total'              => $smoobuRoomPrice,
@@ -2135,7 +2212,8 @@ class BookingEngineService
                         // sibling rooms get an empty array so admin code
                         // can distinguish "no extras" from "missing data".
                         'extras_json'              => $isFirstRoom ? $comboExtrasSnapshot : [],
-                    ]);
+                    ] + $this->memberColumns($roomPayload, $data));
+                    if (!empty($payload['promotion']) || !$mirror->wasRecentlyCreated) $this->persistPriceElements($mirror, $roomPayload, $orgId);
                     $mirrors[] = $mirror;
                 }
             });
@@ -2315,7 +2393,9 @@ class BookingEngineService
         // What the PMS is told was paid: confirm()'s own rule.
         $isPaid = $paymentStatus === PaymentStatus::Paid->value || !empty($paymentIntentId);
 
-        $shares = \App\Services\Booking\StayCombination::shares(
+        $shares = isset($payload['stay_discount_allocations'])
+            ? \App\Services\Booking\StayCombination::stayShares(array_column($rooms, 'room_total'), (float) ($payload['extras_total'] ?? 0), $payload['stay_discount_allocations'])
+            : \App\Services\Booking\StayCombination::shares(
             array_map(fn (array $r) => (float) ($r['room_total'] ?? 0), $rooms),
             (float) ($payload['extras_total'] ?? 0),
             (float) $payload['gross_total'],
@@ -2400,7 +2480,7 @@ class BookingEngineService
                 foreach ($rooms as $i => $room) {
                     $roomPayload = $this->comboRoomPayload($payload, $room, $shares[$i], $i === 0);
                     $total = $shares[$i]['total'];
-                    $mirror = BookingMirror::create([
+                    $mirror = $this->saveCheckoutMirror([
                         'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
                         'booking_group_id'         => $groupId,
@@ -2593,6 +2673,28 @@ class BookingEngineService
         if (!in_array($status, ['succeeded', 'requires_capture'], true)) {
             $failed[] = ['payment_not_completed', 'Payment no longer payable at confirm (status: ' . ($status !== '' ? $status : 'none') . ')'];
             throw new \RuntimeException('Payment has not been completed.');
+        }
+        self::assertWidgetPaymentNotRefunded($stripe, $intent);
+    }
+
+    /** A captured card remains succeeded after refund; that does not fund a new stay. */
+    public static function assertWidgetPaymentNotRefunded(StripeService $stripe, \Stripe\PaymentIntent $intent): void
+    {
+        if ($intent->status !== 'succeeded') return;
+        try {
+            $charge = $intent->toArray()['latest_charge'] ?? null;
+            if (!is_array($charge)) {
+                $intent = StripeService::underLock(fn () => $stripe->retrievePaymentIntent($intent->id, ['latest_charge']));
+                $charge = $intent->toArray()['latest_charge'] ?? null;
+            }
+            if ($intent->status !== 'succeeded' || !is_array($charge) || !is_numeric($charge['amount_refunded'] ?? null)) {
+                throw new \RuntimeException('Captured payment refund state could not be verified.');
+            }
+        } catch (\Throwable $error) {
+            throw new PaymentUnverifiable(PaymentUnverifiable::MESSAGE, 0, $error);
+        }
+        if ((int) $charge['amount_refunded'] > 0 || ($charge['refunded'] ?? false)) {
+            throw new \App\Services\Booking\PublicCheckoutBlocked('payment_refunded', 'This payment has already been refunded or partly refunded. Contact the venue before making another payment.');
         }
     }
 
@@ -3261,12 +3363,12 @@ class BookingEngineService
      */
     private function memberColumns(array $payload, array $data): array
     {
-        if (empty($payload['member_id'])) {
-            return [];
+        if (empty($payload['member_id']) && ($payload['discount_source'] ?? null) !== 'booking_promotion') {
+            return ['notice' => trim((string) ($data['special_requests'] ?? '')) ?: null];
         }
 
         return [
-            'member_id'          => (int) $payload['member_id'],
+            'member_id'          => empty($payload['member_id']) ? null : (int) $payload['member_id'],
             'list_total'         => $payload['list_total'] ?? $payload['gross_total'],
             'discount_amount'    => round((float) ($payload['discount'] ?? 0), 2),
             'discount_source'    => $payload['discount_source'] ?? null,
@@ -3282,6 +3384,7 @@ class BookingEngineService
      */
     private function persistPriceElements(BookingMirror $mirror, array $payload, ?int $orgId): void
     {
+        app(\App\Services\Booking\StayPromotions::class)->record($payload, $mirror);
         $reservationId = (string) ($mirror->reservation_id ?? '');
         $currency      = $payload['currency'] ?? 'EUR';
         $nights        = max(1, (int) ($payload['nights'] ?? 1));
@@ -3714,7 +3817,7 @@ class BookingEngineService
         // line. For a member booking the rows we wrote ourselves are the
         // truth — never call Smoobu here. Covers both the post-commit call
         // in confirm() and the periodic call from upsertBookingFromData().
-        if (!empty($mirror->member_id)) {
+        if (!empty($mirror->member_id) || $mirror->getAttribute('discount_source') === 'booking_promotion') {
             return;
         }
         if (!$mirror->reservation_id || str_starts_with($mirror->reservation_id, 'LOCAL-')) {

@@ -156,7 +156,8 @@
     "tier_progress_visits": "Les membres progressent selon leur fréquence de venue : une visite par jour compte, quelle que soit la dépense. Ils voient « Encore 3 visites avant Gold ».",
     "tier_progress_spend": "Les membres progressent selon ce qu’ils dépensent lors de leurs visites. Ils voient « Encore 120 € avant Gold ».",
     "earn_rate": "Les membres gagnent {{points}} pour chaque {{money}} dépensé.",
-    "earn_rate_none": "Les dépenses ne rapportent rien pour l’instant : activez « Points sur les réservations » ou « Gagner à l’accueil »."
+    "earn_rate_none": "Les dépenses ne rapportent rien pour l’instant : activez « Points sur les réservations » ou « Gagner à l’accueil ».",
+    "earn_rate_off": "Les dépenses ne rapportent pas de points. Les visites et les bonus peuvent toujours récompenser les membres."
   },
   "setup": {
     "error": {
@@ -252,7 +253,15 @@
     "title": "Configurer votre programme",
     "to_configure": "Retour au réglage",
     "to_members": "Aller aux membres",
-    "to_options": "Aller à « Façons de gagner »"
+    "to_options": "Aller à « Façons de gagner »",
+    "programme_rule": "Règle du programme",
+    "programme_rule_line": "Configurez cette règle du programme à l’étape suivante.",
+    "suggested_rewards": "Récompenses suggérées pour {{preset}}",
+    "suggested_rewards_line": "Choisissez une récompense pour la carte de tampons : elle sera ajoutée lors de l’application. Vos récompenses existantes restent disponibles.",
+    "saved_rewards": "Vos récompenses enregistrées",
+    "template_reward_added": "Vos règles de gain sont enregistrées. La récompense choisie est prête pour la carte de tampons.",
+    "current_catalogue": "Catalogue actuel",
+    "reward_unavailable": "Indisponible"
   },
   "group": {
     "earn": "Gagner des points",
@@ -313,5 +322,24 @@
     "bonus": "Cadeaux de bienvenue, d’anniversaire et de parrainage",
     "rule": "Comment les membres montent et quand les points expirent",
     "more": "Autres façons proposées par votre programme"
+  },
+  "preview": {
+    "title": "Votre programme en un coup d’œil",
+    "template": "Modèle par secteur",
+    "current": "Votre programme actuel",
+    "currentLine": "Vos niveaux, récompenses et règles de cumul enregistrés.",
+    "catalogue": "Adhésion et récompenses",
+    "kept": "Vos niveaux et récompenses existants sont conservés.",
+    "starting": "Niveaux suggérés et idées de récompenses. Vous pourrez les modifier ensuite.",
+    "levels": "{{n}} niveaux d’adhésion",
+    "rewards": "{{n}} récompenses",
+    "rewardExamples": "Exemples de récompenses :",
+    "noRewards": "Ajoutez votre première récompense dans Récompenses et avantages.",
+    "journey": "Le parcours du membre",
+    "join": "Adhérer",
+    "earn": "Cumuler des points",
+    "use": "Utiliser les récompenses",
+    "off": "Non activé : {{ways}}.",
+    "templateLine": "Règles de cumul suggérées. Choisissez celles à utiliser à l’étape suivante."
   }
 }

@@ -1,6 +1,6 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useRef, useId, useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, Sparkles, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -8,13 +8,14 @@ import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { failureOf, get, params, send } from '../lib/api'
-import { errorText } from '../lib/errors'
-import { leadPath } from '../lib/links'
+import { errorText, focusInvalid } from '../lib/errors'
+import { withRecord } from '../lib/records'
 import { CONTROL, Select, TextArea, TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
 import { Tabs } from '../ui/Tabs'
 import { useToast } from '../ui/Toast'
 import { useTeam } from '../tasks/taskData'
+import { LeadCurrency } from './LeadCurrency'
 import { CustomFieldInputs } from './CustomFields'
 import { useLeadChanged, useLeadFields, useLeadSettings, usePipelines } from './leadData'
 import {
@@ -31,8 +32,11 @@ const SERVER_FIELDS: Record<string, LeadField> = {
 /**
  * Add a lead (the full admin's Add inquiry): a new contact (`POST guests`) or one already known, then the lead
  * (`POST inquiries`) in the default pipeline's first stage unless another is chosen. Stay details only for a hotel;
- * the enquiry type where the organisation has types; its own fields when it has some. Opens on `/crm/leads?new=1`
- * (Today and Find link there), or filled in by the AI from a pasted message (`initial`).
+ * the enquiry type where the organisation has types; its own fields when it has some. Opens from the header's New and
+ * the pages' Add and a contact's "New lead" (`?create=lead|deal`, `&guest=`, CreateHost), on an old link to
+ * `/crm/leads?new=1&guest=`, or filled in
+ * by the AI from a pasted message (`initial`). What was made opens in its record panel over the same page (round 5),
+ * a deal on its Deal tab.
  *
  * From Deals (`deal`, owner 2026-11-08): the same form adds a deal — the lead, then `POST inquiries/{id}/won`, the
  * server's own close as won (the won stage, "Confirmed", the timeline line, a hotel's draft reservation). A lead made
@@ -41,7 +45,7 @@ const SERVER_FIELDS: Record<string, LeadField> = {
 export function LeadForm({ presetGuest, initial, deal = false, onClose }: { presetGuest?: number | null; initial?: LeadDraft | null; deal?: boolean; onClose: () => void }) {
   const { t } = useTranslation()
   const boot = useBoot()
-  const navigate = useNavigate()
+  const [, setSearch] = useSearchParams()
   const toast = useToast()
   const changed = useLeadChanged()
   const formId = useId()
@@ -51,6 +55,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
   const fieldsQuery = useLeadFields()
   const fields = activeFields(fieldsQuery.data)
   const stay = boot.organization.industry === 'hotel'
+  const defaultCurrency = boot.venue.lead_currency ?? boot.venue.currency
   const stages = sortedStages(defaultPipeline(pipelines.data)?.stages).filter(s => s.kind === 'open')
 
   const [draft, setDraft] = useState<LeadDraft>(() => initial ?? ({
@@ -64,6 +69,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
   const [madeGuest, setMadeGuest] = useState<number | null>(null)
   /** A deal's lead made by an earlier try whose close as won failed: closed again, never made twice. */
   const [madeLead, setMadeLead] = useState<LeadDetail | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const [tried, setTried] = useState(false)
   const set = (patch: Partial<LeadDraft>) => setDraft(d => ({ ...d, ...patch }))
 
@@ -100,14 +106,21 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
       changed()
       toast(deal ? t('crm.deals.added', 'Deal added') : t('crm.leads.added', 'Lead added'))
       onClose()
-      navigate(leadPath(lead.id))
+      // The new record opens over the page it was made on (the address keeps the page's own keys; `?new=` and
+      // `?guest=`, the old way in, are let go so the form does not open again).
+      setSearch(prev => {
+        const next = withRecord(prev, 'lead', lead.id, deal ? 'deal' : null)
+        next.delete('new')
+        next.delete('guest')
+        return next
+      })
     },
   })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setTried(true)
-    if (Object.keys(errors).length > 0 || missing.length > 0) return
+    if (Object.keys(errors).length > 0 || missing.length > 0) return focusInvalid(formRef.current)
     create.mutate()
   }
 
@@ -125,7 +138,7 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
           <Button type="submit" form={formId} loading={create.isPending}>{deal ? t('crm.deals.add', 'Add the deal') : t('crm.leads.add', 'Add the lead')}</Button>
         </div>
       )}>
-      <form id={formId} onSubmit={submit} noValidate className="space-y-5">
+      <form ref={formRef} id={formId} onSubmit={submit} noValidate className="space-y-5">
         {initial && <Notice tone="info"><span className="inline-flex items-start gap-2"><Sparkles size={15} aria-hidden className="crm-ai-text mt-0.5 shrink-0" />{deal
           ? t('crm.deals.capture_filled', 'Filled in by the AI from the message. Check it before you add the deal.')
           : t('crm.leads.capture_filled', 'Filled in by the AI from the message. Check it before you add the lead.')}</span></Notice>}
@@ -187,9 +200,12 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
                 {sourceOptions(settings.sources).map(s => <option key={s} value={s}>{sourceLabel(t, s)}</option>)}
               </Select>
             </Field>
-            <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency: boot.venue.currency })}>
-              <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })}
+            <Field label={t('crm.leads.field_value', 'Value ({{currency}}, optional)', { currency: draft.currency ?? defaultCurrency })}>
+              <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+                <LeadCurrency value={draft.currency ?? defaultCurrency} onChange={currency => set({ currency })} />
+                <TextInput type="number" inputMode="decimal" min={0} step="0.01" value={draft.value} onChange={e => set({ value: e.target.value })}
                 aria-invalid={problem('value') ? true : undefined} />
+              </div>
               {problem('value') && <span className="mt-1 block text-xs text-a-danger">{problem('value')}</span>}
             </Field>
             <Field label={t('crm.leads.field_priority', 'Priority')}>
@@ -204,7 +220,9 @@ export function LeadForm({ presetGuest, initial, deal = false, onClose }: { pres
                 {owners.map(o => <option key={o} value={o}>{o === boot.staff.name ? t('crm.leads.owner_me', 'Me ({{name}})', { name: o }) : o}</option>)}
               </Select>
             </Field>
-            {(settings.types.length > 0 || draft.type) && (
+            {settings.types.length === 0 ? (
+              <Field label={t('crm.leads.field_type', 'Type of enquiry')}><TextInput maxLength={50} value={draft.type} onChange={e => set({ type: e.target.value })} /></Field>
+            ) : (
               <Field label={t('crm.leads.field_type', 'Type of enquiry')}>
                 <Select value={draft.type} onChange={e => set({ type: e.target.value })}>
                   <option value="">{t('crm.leads.type_none', 'Not set')}</option>

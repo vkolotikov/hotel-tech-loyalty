@@ -22,50 +22,58 @@ final class ContentGenerationRun
     /** Pressed Generate: waiting for the worker. */
     public static function queued(int $brandId, int $userId, string $from, string $to, string $owner): void
     {
-        SharedCache::store()->put(self::key($brandId), [
-            'status' => 'running', 'owner' => $owner, 'queued_at' => CarbonImmutable::now()->toIso8601String(), 'started_at' => null,
-            'by' => $userId, 'from' => $from, 'to' => $to,
-        ], ContentAiGate::QUEUED_SECONDS + ContentAiGate::RUN_SECONDS + 300);
+        self::stateChange($brandId, function () use ($brandId, $userId, $from, $to, $owner) {
+            SharedCache::store()->put(self::key($brandId), [
+                'status' => 'running', 'owner' => $owner, 'queued_at' => CarbonImmutable::now()->toIso8601String(), 'started_at' => null,
+                'by' => $userId, 'from' => $from, 'to' => $to,
+            ], ContentAiGate::QUEUED_SECONDS + ContentAiGate::RUN_SECONDS + 300);
+        });
     }
 
     /** The job has started: its run time counts from now. */
     public static function started(int $brandId, string $owner): void
     {
-        $state = self::stateOf($brandId, $owner);
-        if ($state !== null) {
-            SharedCache::store()->put(self::key($brandId), ['started_at' => CarbonImmutable::now()->toIso8601String()] + $state,
-                ContentAiGate::RUN_SECONDS + 300);
-        }
+        self::stateChange($brandId, function () use ($brandId, $owner) {
+            $state = self::stateOf($brandId, $owner);
+            if ($state !== null) {
+                SharedCache::store()->put(self::key($brandId), ['started_at' => CarbonImmutable::now()->toIso8601String()] + $state,
+                    ContentAiGate::RUN_SECONDS + 300);
+            }
+        });
     }
 
     /** @param array{created: iterable<ContentPlannerPost>, skipped_dates: array, failed_windows: array} $result */
     public static function finish(int $brandId, array $result, string $owner): void
     {
-        if (self::stateOf($brandId, $owner) === null) {
-            return;
-        }
-        $ids = collect($result['created'])->map(fn (ContentPlannerPost $post) => (int) $post->id)->values()->all();
-        $incomplete = $result['failed_windows'] !== [];
-        SharedCache::store()->put(self::key($brandId), [
-            'status'         => $incomplete ? ($ids !== [] ? 'partial' : 'failed') : 'completed',
-            'owner'          => $owner,
-            'post_ids'       => $ids,
-            'skipped'        => $result['skipped_dates'],
-            'failed_windows' => $result['failed_windows'],
-            'finished_at'    => CarbonImmutable::now()->toIso8601String(),
-        ], self::RESULT_SECONDS);
+        self::stateChange($brandId, function () use ($brandId, $result, $owner) {
+            if (self::stateOf($brandId, $owner) === null) {
+                return;
+            }
+            $ids = collect($result['created'])->map(fn (ContentPlannerPost $post) => (int) $post->id)->values()->all();
+            $incomplete = $result['failed_windows'] !== [];
+            SharedCache::store()->put(self::key($brandId), [
+                'status'         => $incomplete ? ($ids !== [] ? 'partial' : 'failed') : 'completed',
+                'owner'          => $owner,
+                'post_ids'       => $ids,
+                'skipped'        => $result['skipped_dates'],
+                'failed_windows' => $result['failed_windows'],
+                'finished_at'    => CarbonImmutable::now()->toIso8601String(),
+            ], self::RESULT_SECONDS);
+        });
     }
 
     /** A run that stopped before it could report (`no_channels`, `generation_failed`). */
     public static function fail(int $brandId, string $code, string $owner): void
     {
-        if (self::stateOf($brandId, $owner) === null) {
-            return;
-        }
-        SharedCache::store()->put(self::key($brandId), [
-            'status' => 'failed', 'owner' => $owner, 'error' => $code, 'post_ids' => [], 'skipped' => [], 'failed_windows' => [],
-            'finished_at' => CarbonImmutable::now()->toIso8601String(),
-        ], self::RESULT_SECONDS);
+        self::stateChange($brandId, function () use ($brandId, $code, $owner) {
+            if (self::stateOf($brandId, $owner) === null) {
+                return;
+            }
+            SharedCache::store()->put(self::key($brandId), [
+                'status' => 'failed', 'owner' => $owner, 'error' => $code, 'post_ids' => [], 'skipped' => [], 'failed_windows' => [],
+                'finished_at' => CarbonImmutable::now()->toIso8601String(),
+            ], self::RESULT_SECONDS);
+        });
     }
 
     /**
@@ -108,6 +116,48 @@ final class ContentGenerationRun
         $state = SharedCache::store()->get(self::key($brandId));
 
         return is_array($state) && ($state['owner'] ?? null) === $owner && $state['status'] === 'running' ? $state : null;
+    }
+
+    /** This small shared mutex covers cancellation and result inserts, never the provider. */
+    public static function commit(int $brandId, string $owner, callable $write): mixed
+    {
+        return self::stateChange($brandId, function () use ($brandId, $owner, $write) {
+            self::assertRunning($brandId, $owner);
+            return $write();
+        });
+    }
+
+    public static function assertRunning(int $brandId, string $owner): void
+    {
+        $state = self::stateOf($brandId, $owner);
+        if (!$state || self::describe($brandId)['status'] !== 'running'
+            || !app(ContentAiGate::class)->ownsGeneration(ContentContext::orgId(), $brandId, $owner)) {
+            throw new ContentRefused('cancelled', 'This generation is no longer running.', 409);
+        }
+    }
+
+    public static function cancel(int $orgId, int $brandId, \App\Models\User $user): void
+    {
+        self::stateChange($brandId, function () use ($orgId, $brandId, $user) {
+            $state = SharedCache::store()->get(self::key($brandId));
+            if (!is_array($state) || ($state['status'] ?? null) !== 'running') return;
+            if ((int)($state['by'] ?? 0) !== (int)$user->id && !ContentAccess::canManage($user)) {
+                throw new ContentRefused('not_yours', 'Only the requester or a manager can cancel this generation.', 403);
+            }
+            SharedCache::store()->put(self::key($brandId), ['status'=>'cancelled','finished_at'=>CarbonImmutable::now()->toIso8601String()] + $state, self::RESULT_SECONDS);
+            app(ContentAiGate::class)->endGeneration($orgId, $brandId, $state['owner']);
+        });
+    }
+
+    private static function stateChange(int $brandId, callable $change): mixed
+    {
+        // The short SQL transaction also protects a slow insert if the cache lease expires.
+        // Organisation first matches work submission's lock order. No provider runs in this boundary.
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($brandId, $change) {
+            $orgId = \App\Models\Brand::withoutGlobalScopes()->whereKey($brandId)->value('organization_id');
+            if ($orgId) \App\Models\Organization::whereKey($orgId)->lockForUpdate()->first();
+            return ContentAiGate::lease("content:generation-commit:{$brandId}", 20)->block(5, $change);
+        }, 3);
     }
 
     private static function key(int $brandId): string

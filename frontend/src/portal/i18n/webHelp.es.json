@@ -1,0 +1,14 @@
+{
+  "card": "Abra Mi tarjeta en la cabecera o Ampliar en Inicio. Muestre el código QR o su número de miembro.",
+  "wallet": "Abra Mi tarjeta. Si el establecimiento lo ofrece, use Add to Apple Wallet o Add to Google Wallet.",
+  "balance": "Su saldo aparece en Inicio. Ver todo junto a la actividad reciente abre todos los movimientos de puntos.",
+  "spend": "Elija una recompensa disponible en Recompensas y pulse Canjear. Confirme para recibir un código.",
+  "benefits": "Recompensas reúne las ventajas de su nivel. Algunas se aplican automáticamente; otras se solicitan con el botón correspondiente.",
+  "offers": "Las ofertas para miembros aparecen junto a las demás recompensas. Reclame una oferta disponible para utilizarla.",
+  "book": "Use Reservar en Inicio o Reservas, elija el servicio y la fecha y confirme.",
+  "details": "En Perfil, elija Editar junto a Datos personales. Para cambiar su correo, contacte con el establecimiento.",
+  "messages": "Abra Notificaciones en Perfil. Las categorías desactivadas no se envían. Despliegue los canales para elegir cómo recibir los mensajes.",
+  "delete": "En Perfil, despliegue Cuenta y ayuda y elija Eliminar cuenta.",
+  "sign_up": "Abra Eventos desde Inicio, Recompensas o Cuenta y ayuda en Perfil. Elija Inscribirse. También puede cancelar allí.",
+  "door": "Abra Mi tarjeta en la cabecera. El equipo escanea su código QR."
+}

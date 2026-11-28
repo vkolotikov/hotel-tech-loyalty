@@ -96,6 +96,7 @@ export const LIGHT_NAV_ACCENT_TEXT: Record<string, string> = {
   '#f472b6': '#9d174d', // pink
   '#22d3ee': '#155e75', // cyan
   '#9ca3af': '#1f2937', // gray
+  '#2dd4bf': '#115e59', // teal (Workspaces, 2026-11-09)
 }
 
 /** Tailwind's corner scale in Clean light (cards 14 px, controls 10 px). */

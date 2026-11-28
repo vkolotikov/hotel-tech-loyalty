@@ -58,6 +58,8 @@
     "choose_again": "Neu wählen"
   },
   "reason": {
+    "not_started_plain": "Diese Mitgliedschaft hat noch nicht begonnen.",
+    "not_started": "Die Mitgliedschaft beginnt am {{date}}.",
     "member_erased": "Dieses Mitglied wurde gelöscht.",
     "member_off": "Diese Mitgliedschaft ist ausgeschaltet.",
     "expired": "Die Mitgliedschaft ist am {{date}} abgelaufen.",

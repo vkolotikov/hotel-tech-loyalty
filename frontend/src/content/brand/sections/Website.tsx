@@ -1,3 +1,4 @@
+import { useRetainedState } from '../../drafts/useRetainedState'
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -53,8 +54,8 @@ function CompanySummary({ payload, canEdit }: { payload: SitePayload; canEdit: b
   const brand = useBrandId()
   const queryClient = useQueryClient()
   const site = payload.site
-  const [draft, setDraft] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [draft, setDraft, retained] = useRetainedState<string | null>('summary', null)
+  const [busy, setBusy] = useRetainedState('summary:busy', false)
   const [error, setError] = useState<string | null>(null)
   const scanning = site?.status === 'scanning'
   const box = useRef<HTMLDivElement>(null)
@@ -78,7 +79,8 @@ function CompanySummary({ payload, canEdit }: { payload: SitePayload; canEdit: b
     setError(null)
     try {
       queryClient.setQueryData(['content', brand, 'site'], await api.saveSite({ summary: draft }))
-      close()
+      if (!retained.acknowledge(draft)) return
+      if (JSON.stringify(retained.current()) === JSON.stringify(draft)) close()
     } catch (e) {
       const code = failureOf(e).code
       const [key, text] = errorKey('site', code)
@@ -99,7 +101,7 @@ function CompanySummary({ payload, canEdit }: { payload: SitePayload; canEdit: b
         </h3>
         {canEdit && draft === null && (
           <Button size="sm" variant="secondary" data-summary-edit="" disabled={scanning}
-            onClick={() => { focusAfter.current = 'textarea'; setDraft(site?.summary ?? ''); setError(null) }}>{t('content.site.summary_edit', 'Edit summary')}</Button>
+            onClick={() => { focusAfter.current = 'textarea'; setDraft(site?.summary ?? ''); retained.acknowledge(site?.summary ?? ''); setError(null) }}>{t('content.site.summary_edit', 'Edit summary')}</Button>
         )}
       </div>
       <p className="text-xs text-a-text-2">{t('content.site.summary_intro', 'What the AI knows about your company from your website. The AI reads it for every post it writes.')}</p>

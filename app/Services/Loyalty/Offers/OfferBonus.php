@@ -54,6 +54,11 @@ final class OfferBonus
         if (!self::paysPoints($offer)) {
             return null;
         }
+        if (!$offer->allowsRecipient($member)) throw \App\Services\Loyalty\LoyaltyRefused::notFound();
+        if ((array) $offer->tier_ids !== []) {
+            \App\Services\Loyalty\Members\MemberStatus::assertMembershipBenefits($member);
+            if (!$offer->allowsMembership($member)) throw new \App\Services\Loyalty\LoyaltyRefused('wrong_tier', 'This offer is for another membership level.', 422);
+        }
 
         $line = $this->loyalty->awardPoints(
             $member,

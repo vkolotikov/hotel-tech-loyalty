@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Megaphone, Search } from 'lucide-react'
+import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Megaphone, Search, Images, Settings } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -22,7 +22,7 @@ import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
 import { onShortcuts } from './lib/shortcuts'
 import { usePanel } from './panel/PanelProvider'
 import { PanelFailed } from './panel/PanelFailed'
-import { PostPanel } from './panel/PostPanel'
+import { PostPanel, PostEditorProvider } from './panel/PostPanel'
 import { PageBoundary } from '../workspace/ui/PageBoundary'
 import { ContentShortcuts } from './ui/ContentShortcuts'
 import { BrandCrumb } from './shell/BrandCrumb'
@@ -38,8 +38,13 @@ import { pageKeyOf } from './shell/shellMath'
  * the dashboard for staff.
  */
 export function ContentShell({ children }: { children: ReactNode }) {
+  const { data } = useContent()
+  return data ? <PostEditorProvider><ContentFrame>{children}</ContentFrame></PostEditorProvider> : <ContentFrame>{children}</ContentFrame>
+}
+function ContentFrame({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
+  const fullWrite = pathname.startsWith('/content/write/')
   const { data, isLoading, isError, error, refetch, switchBrand } = useContent()
   const panel = usePanel()
   const navigate = useNavigate()
@@ -105,10 +110,13 @@ export function ContentShell({ children }: { children: ReactNode }) {
     { to: '/content/promote', end: false, icon: Megaphone, label: t('content.nav.promote', 'Promote') },
     { to: '/content/strategy', end: false, icon: Compass, label: t('content.nav.strategy', 'Strategy') },
     { to: '/content/brand', end: false, icon: Fingerprint, label: t('content.nav.brand', 'Brand') },
+    { to: '/content/campaigns', end: false, phone: false, icon: Megaphone, label: t('content.campaigns.title', 'Campaigns') },
+    { to: '/content/media', end: false, phone: false, icon: Images, label: t('content.launch.media', 'Media library') },
+    { to: '/content/settings', end: false, phone: false, icon: Settings, label: t('content.launch.settings', 'Content settings') },
   ]
   // The breadcrumb's page (spec 2026-10-21 §4.2): the side panel's names, and Write for 7b's writing view.
   const pageKey = pageKeyOf(pathname)
-  const pageName = pageKey === 'write' ? t('content.shell.page_write', 'Write') : (nav.find(n => (pageKey === 'plan' ? n.to === '/content' : n.to === `/content/${pageKey}`))?.label ?? '')
+  const pageName = pageKey === 'guide' ? t('content.guide.title', 'Content guide') : pageKey === 'write' ? t('content.shell.page_write', 'Write') : (nav.find(n => (pageKey === 'plan' ? n.to === '/content' : n.to === `/content/${pageKey}`))?.label ?? '')
   const findLabel = t('content.shell.find', 'Find a post or action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
   const canManage = Boolean(data?.staff.can_manage)
@@ -123,6 +131,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
   // Find: what it offers (the pages this person sees above), and what each choice does.
   const slim = look.rail === 'slim'
   const foot = {
+    guide: { to: '/content/guide', label: t('content.guide.title', 'Content guide') },
     look, fullAdmin, moduleLinks: modules.links, person: data?.staff.name, role: data?.staff.role ?? null, onLeave: panel.guard,
     onShortcuts: () => { if (ready) setHelpOpen(true) }, onFind: () => { if (ready) setFindOpen(true) },
   }
@@ -158,7 +167,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
       moduleLinks={modules.links}
       onLeave={panel.guard}
       // The owner's side panel (spec 2026-10-21 §4.1): the areas as cards, and Settings, Help & resources and the person.
-      variant="cards" railLabel={t('content.shell.workspace', 'Workspace')}
+      variant="cards" railLabel={t('content.shell.workspace', 'Workspace')} navScroll
       footer={<FrameFooter {...foot} />}
       // From 640 px the breadcrumb starts the top bar; on a phone it has the row above Find (beside the six area buttons it cannot fit).
       crumbs={crumb && <div className="hidden min-w-0 sm:flex">{crumb}</div>}
@@ -180,7 +189,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
         <PageBoundary key={panel.target?.seq ?? 0}
           message={t('content.panel.failed', 'This post could not be shown. What you saved is safe.')}
           reload={t('content.common.reload', 'Reload the page')} fallback={<PanelFailed />}>
-          <PostPanel />
+          {!fullWrite && <PostPanel />}
         </PageBoundary>
         <ContentFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, findPhone, main]} />
         <ContentShortcuts open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, findPhone, main]} />
@@ -222,7 +231,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
             </button>
           </div>
           {(data.ai.status === 'warn' || data.ai.status === 'over' || !setUp) && (
-            <div className={`space-y-2 px-4 pt-3 lg:px-6 ${panel.target ? 'xl:pr-[400px]' : ''}`}>
+            <div className={`space-y-2 px-4 pt-3 lg:px-6 ${panel.target && !fullWrite ? 'xl:pr-[400px]' : ''}`}>
               {data.ai.status === 'warn' && (
                 <Notice tone="warning">{t('content.shell.budget_warn', "This month's AI budget is {{percent}} % used.", { percent: data.ai.percent ?? 80 })}</Notice>
               )}
@@ -239,7 +248,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
             </div>
           )}
           {/* From 1280 px the open post's panel is a column beside the page: the page makes room for it (spec 2026-10-21 §7.1). */}
-          <main ref={main} tabIndex={-1} className={`min-h-0 min-w-0 flex-1 ${panel.target ? 'xl:pr-[400px]' : ''}`}>
+          <main key={data.brand?.id} ref={main} tabIndex={-1} className={`min-h-0 min-w-0 flex-1 ${panel.target && !fullWrite ? 'xl:pr-[400px]' : ''}`}>
             <PageBoundary key={pathname}
               message={t('content.common.page_failed', 'This page could not be shown. What you saved is safe.')}
               reload={t('content.common.reload', 'Reload the page')}>

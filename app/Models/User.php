@@ -33,6 +33,7 @@ class User extends Authenticatable
         'wants_loyalty_digest' => 'boolean',
         'loyalty_digest_last_sent_at' => 'datetime',
         'wants_content_morning_email' => 'boolean',
+        'wants_content_collaboration_email' => 'boolean',
         'content_morning_email_last_sent_at' => 'datetime',
     ];
 

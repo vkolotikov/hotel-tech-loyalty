@@ -310,6 +310,7 @@ class AuthController extends Controller
             }
         }
         $userArray = $user->toArray();
+        $userArray['loyalty_scan_only'] = \App\Services\Loyalty\Partners\PartnerAccess::authHint($user);
         $userArray['industry'] = $industry;
         $userArray['industry_explicit'] = $industryExplicit;
         // HexaTech's own operators (services.saas.platform_admin_emails), not
@@ -533,6 +534,7 @@ class AuthController extends Controller
 
         $data = [
             'id'        => $user->id,
+            'loyalty_scan_only' => \App\Services\Loyalty\Partners\PartnerAccess::authHint($user),
             'name'      => $user->name,
             'email'     => $user->email,
             'phone'     => $user->phone,
@@ -847,11 +849,33 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|max:191',
             'name'  => 'nullable|string|max:191',
+            'purpose' => 'nullable|string|in:verify,claim',
         ]);
 
         // Normalize email — verification codes are matched on exact equality,
         // so stray casing or whitespace between send/verify breaks the flow.
         $validated['email'] = strtolower(trim($validated['email']));
+        $purpose = $validated['purpose'] ?? 'verify';
+        $store = \App\Support\SharedCache::store();
+        $sendKey = 'verification-send:' . $purpose . ':' . sha1($validated['email']);
+
+        // Atomic across replicas, including requests for an unknown member.
+        // Resends reuse the original proof, so created_at cannot track the last send.
+        if (!$store->add($sendKey, true, now()->addMinute())) {
+            return response()->json(['error' => 'Please wait before requesting another code.'], 429);
+        }
+
+        if ($purpose === 'claim') {
+            // The public member activation form never chooses a tenant/account by row order.
+            // Staff invitations keep their own bound grants; generic signup proof is separate.
+            $users = User::where('email', $validated['email'])->where('user_type', 'member')->limit(2)->get();
+            if ($users->count() !== 1) {
+                return response()->json(['message' => 'Verification code sent.']);
+            }
+            $record = EmailVerificationCode::issueFor($users->first(), 'claim', now()->addMinutes(15), reuseUnexpired: true);
+
+            return $this->queueVerificationCode($record, $validated, $sendKey, genericClaim: true);
+        }
 
         // Rate limit: max 1 code per email per 60 seconds
         $recent = EmailVerificationCode::where('email', $validated['email'])
@@ -863,35 +887,37 @@ class AuthController extends Controller
             return response()->json(['error' => 'Please wait before requesting another code.'], 429);
         }
 
-        // Generate 6-digit code
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        // A fresh code means fresh attempts. Without this, someone who
-        // fumbled five entries was told "request a new code" — and then the
-        // new code ALSO bounced off the still-full counter for 15 minutes,
-        // a dead end with no way out from the UI.
-        // The shared cache (2026-11-04): production's default cache is each container's own, so the limit was per replica.
-        \App\Support\SharedCache::store()->forget('verify_attempts:' . $validated['email']);
-
-        // Invalidate old codes
-        EmailVerificationCode::where('email', $validated['email'])
+        // SMTP retries and mailbox delivery can reorder messages. Every resend
+        // during the original window carries the same code, with no new lifetime.
+        $record = EmailVerificationCode::where('email', $validated['email'])
             ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))
-            ->whereNull('verified_at')
-            ->delete();
+            ->whereNull('verified_at')->where('expires_at', '>', now())->latest('id')->first();
 
-        $record = EmailVerificationCode::create([
-            'email'      => $validated['email'],
-            'purpose'    => 'verify',
-            'code'       => $code,
-            'expires_at' => now()->addMinutes(15),
-        ]);
+        if (!$record) {
+            EmailVerificationCode::where('email', $validated['email'])
+                ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))
+                ->whereNull('verified_at')->delete();
+            do {
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            } while (EmailVerificationCode::where('email', $validated['email'])->where('code', $code)->exists());
 
+            $record = EmailVerificationCode::create([
+                'email' => $validated['email'], 'purpose' => 'verify', 'code' => $code,
+                'expires_at' => now()->addMinutes(15),
+            ]);
+        }
+
+        return $this->queueVerificationCode($record, $validated, $sendKey);
+    }
+
+    private function queueVerificationCode(EmailVerificationCode $record, array $validated, string $sendKey, bool $genericClaim = false): JsonResponse
+    {
         try {
             // queue() instead of send() — VerificationCodeMail now
             // implements ShouldQueue. A transient SMTP outage no longer
             // 500s the request or reveals account existence via the
             // error side channel.
-            Mail::to($validated['email'])->queue(new VerificationCodeMail($code, $validated['name'] ?? ''));
+            Mail::to($validated['email'])->queue(new VerificationCodeMail($record->code, $validated['name'] ?? ''));
         } catch (\Exception $e) {
             report($e);
             // Drop the row we just wrote. startTrial gates on "a code exists
@@ -899,10 +925,20 @@ class AuthController extends Controller
             // the client's 502 fallback into a dead end: it skipped the
             // verify step, then startTrial rejected the signup with 422
             // "Email not verified" for a code that was never sent.
-            $record->delete();
+            if ($record->wasRecentlyCreated) {
+                $record->delete();
+            }
+            // Account existence must not be exposed by a transport failure.
+            if ($genericClaim) {
+                return response()->json(['message' => 'Verification code sent.']);
+            }
+            \App\Support\SharedCache::store()->forget($sendKey);
             return response()->json(['error' => 'Could not send verification email. Please try again.'], 502);
         }
 
+        if (!$genericClaim) {
+            \App\Support\SharedCache::store()->forget('verify_attempts:' . $validated['email']);
+        }
         return response()->json(['message' => 'Verification code sent.']);
     }
 
@@ -949,7 +985,7 @@ class AuthController extends Controller
         // same success, no attempt burned.
         if ($record->verified_at !== null) {
             if ($record->verified_at->gt(now()->subMinutes(30))) {
-                \Illuminate\Support\Facades\Cache::forget($attemptKey);
+                \App\Support\SharedCache::store()->forget($attemptKey);
                 return response()->json(['verified' => true]);
             }
             return response()->json(['error' => 'Code has expired. Please request a new one.'], 422);
@@ -962,7 +998,7 @@ class AuthController extends Controller
         $record->update(['verified_at' => now()]);
 
         // Clear attempt counter on success
-        \Illuminate\Support\Facades\Cache::forget($attemptKey);
+        \App\Support\SharedCache::store()->forget($attemptKey);
 
         return response()->json(['verified' => true]);
     }
@@ -2335,7 +2371,12 @@ class AuthController extends Controller
                 ]);
                 $member = LoyaltyMember::withoutGlobalScopes()->where('user_id', $user->id)->with('tier')->first();
                 $token = $user->createToken('mobile-app')->plainTextToken;
-                return response()->json(['token' => $token, 'user' => $user, 'member' => $member]);
+                $userData = $user->toArray();
+                $userData['loyalty_scan_only'] = \App\Services\Loyalty\Partners\PartnerAccess::authHint($user);
+                if ($user->isStaff() && \Illuminate\Support\Facades\Schema::hasColumn('staff', 'last_login_at')) {
+                    Staff::where('user_id', $user->id)->where('is_active', true)->update(['last_login_at' => now()]);
+                }
+                return response()->json(['token' => $token, 'user' => $userData, 'member' => $member]);
             });
     }
     /**

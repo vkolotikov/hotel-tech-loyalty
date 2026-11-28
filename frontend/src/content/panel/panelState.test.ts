@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../i18n/content.en.json'
 import type { PostDetail } from '../lib/types'
-import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, refusalOf, withChannels } from './panelState'
+import { BRIEF_TEXT, REWRITE_TEXT, adoptedPost, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, refusalOf, withChannels } from './panelState'
 
 describe('fallback words', () => {
   it('name the rewrites and the brief\'s fields in the English bundle\'s words', () => {
@@ -18,11 +18,26 @@ const detail: PostDetail = {
   quality: null, published_url: null, published_at: null, generated_by: 'manual', hook_alternatives: [], visual_brief: null,
 }
 
+describe('delayed post adoption', () => {
+  it('rejects an older microsecond revision after a successful save', () => {
+    const saved = { ...detail, hook: 'Successfully saved words', updated_at: '2026-10-05T06:00:00.000001Z' }
+    const editing = { post: saved, base: formOf(saved), draft: formOf(saved) }
+    expect(adoptedPost(editing, detail)).toBe(editing)
+  })
+  it('accepts same-revision metadata and rebases later typing', () => {
+    const fresh = { ...detail, quality: { overall: 9, scores: {}, flags: [], improvements: [], verdict: '' } }
+    const editing = { post: detail, base: formOf(detail), draft: { ...formOf(detail), hook: 'Later typing' } }
+    const adopted = adoptedPost(editing, fresh)
+    expect(adopted.post).toBe(fresh)
+    expect(adopted.draft.hook).toBe('Later typing')
+  })
+})
+
 describe('formOf and newForm', () => {
   it('turns a post into the inputs\' text, with "" for none', () => {
     expect(formOf(detail)).toEqual({
-      platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: '09:00', status: 'draft', pillar_id: '2', audience_id: '',
-      language: 'en', topic: 'Autumn', hook: 'Three colours', main_copy: 'Warm tones.\nBook now.', cta: '', hashtags: '#autumn hair', poster_id: '', link: '',
+      platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: '09:00', status: 'draft', pillar_id: '2', audience_id: '', campaign_id: '',
+      language: 'en', topic: 'Autumn', hook: 'Three colours', main_copy: 'Warm tones.\nBook now.', cta: '', hashtags: '#autumn hair', poster_id: '', link: '', media_ids: '',
     })
   })
 
@@ -199,4 +214,13 @@ describe('a save refused for the group’s platform', () => {
   it('marks Platform', () => {
     expect(refusalOf('version_exists', undefined)).toEqual({ invalid: ['platform'], family: 'save' })
   })
+})
+// Revision tokens carry six fractional digits; Date.parse alone loses the last three.
+it('orders microsecond revisions and equivalent timezone instants', () => {
+  expect(newer('2026-10-05T06:00:00.000002Z', '2026-10-05T06:00:00.000001Z')).toBe(true)
+  expect(newer('2026-10-05T06:00:00.000001Z', '2026-10-05T06:00:00.000002Z')).toBe(false)
+  expect(newer('2026-10-05T09:00:00.000001+03:00', '2026-10-05T06:00:00.000001Z')).toBe(false)
+  expect(newer('2026-10-05T09:00:00.000002+03:00', '2026-10-05T06:00:00.000001Z')).toBe(true)
+  expect(newer('2026-10-05T06:00:00.001Z', '2026-10-05T06:00:00.000999Z')).toBe(true)
+  expect(newer('invalid', '2026-10-05T06:00:00Z')).toBe(false)
 })

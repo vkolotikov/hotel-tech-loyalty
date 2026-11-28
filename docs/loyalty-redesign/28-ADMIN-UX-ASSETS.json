@@ -1,0 +1,694 @@
+[
+  {
+    "key": "tierCard",
+    "screen": "levels",
+    "figma_asset": "imgIllustrationBrushedGoldMembershipCard",
+    "source_file": "levels-c2bc0.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-c2bc0.svg",
+    "sha256": "d156ba40561883b1b68277eca04057059a563aa60aa391079b4404cde1dbc713",
+    "width": 222.0,
+    "height": 156.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx"
+    ]
+  },
+  {
+    "key": "bronze",
+    "screen": "levels",
+    "figma_asset": "imgIconBronze",
+    "source_file": "levels-df325.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-df325.svg",
+    "sha256": "55f8487fda61926256796ef242ee3e1cc362c445a1588851072af42bad17dc57",
+    "width": 24.0,
+    "height": 24.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx"
+    ]
+  },
+  {
+    "key": "silver",
+    "screen": "levels",
+    "figma_asset": "imgIconSilver",
+    "source_file": "levels-b6cae.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-b6cae.svg",
+    "sha256": "65865de0bb427d783a6ad5b66e18c457c698f91f1209fb96b53f4d349306da32",
+    "width": 24.0,
+    "height": 24.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx"
+    ]
+  },
+  {
+    "key": "gold",
+    "screen": "levels",
+    "figma_asset": "imgIconGold",
+    "source_file": "levels-54da2.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-54da2.svg",
+    "sha256": "6d8ee6e134a992c60265980f1f3c972502862167c02e47255c4edca573925024",
+    "width": 24.0,
+    "height": 24.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx",
+      "frontend/src/loyalty/management/LevelsPage.tsx",
+      "frontend/src/loyalty/management/PlacesDirectory.tsx",
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "platinum",
+    "screen": "levels",
+    "figma_asset": "imgIconPlatinum",
+    "source_file": "levels-f1897.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-f1897.svg",
+    "sha256": "773403ab6d24429c7dd11949c630628b06b3ff4813dc2c188380cba424357eda",
+    "width": 24.0,
+    "height": 24.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx"
+    ]
+  },
+  {
+    "key": "diamond",
+    "screen": "levels",
+    "figma_asset": "imgIconDiamond",
+    "source_file": "levels-68fa5.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-68fa5.svg",
+    "sha256": "4728cf0cefff0444ae9cedd226b50a1aa41a95bb63e07ba3a490d3490d4f9198",
+    "width": 24.0,
+    "height": 24.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx"
+    ]
+  },
+  {
+    "key": "steps",
+    "screen": "levels",
+    "figma_asset": "imgIconSteps",
+    "source_file": "levels-4f575.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-4f575.svg",
+    "sha256": "dbf84ea7e18e2c32657aa87d0d16aa147f656e1e9b5653a536848fc01ff5e386",
+    "width": 22.0,
+    "height": 22.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx"
+    ]
+  },
+  {
+    "key": "members",
+    "screen": "levels",
+    "figma_asset": "imgIconMembers",
+    "source_file": "levels-38333.svg",
+    "local": "frontend/src/loyalty/overview/assets/38333.svg",
+    "sha256": "26543803facae927b6ea13712ee81487302df0eb0243c8c7b198f4a5245ffa0d",
+    "width": 20.0,
+    "height": 20.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/MembershipBenefitsPage.tsx"
+    ]
+  },
+  {
+    "key": "arrow",
+    "screen": "levels",
+    "figma_asset": "imgIconArrow",
+    "source_file": "levels-2c0d8.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-2c0d8.svg",
+    "sha256": "74f24167d755d64df813935542506ebd8a17a2d1ae2251fbe16378611f22bea6",
+    "width": 16.0,
+    "height": 16.0,
+    "consumers": [
+      "frontend/src/loyalty/management/ManagementUI.tsx"
+    ]
+  },
+  {
+    "key": "chevron",
+    "screen": "levels",
+    "figma_asset": "imgIconChevron",
+    "source_file": "levels-38b74.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-38b74.svg",
+    "sha256": "8b7c36b6e56cde9b79ebfe305b813259093fba538425cd508e590d7f7e091dd0",
+    "width": 16.0,
+    "height": 16.0,
+    "consumers": [
+      "frontend/src/loyalty/management/ManagementUI.tsx"
+    ]
+  },
+  {
+    "key": "activeDot",
+    "screen": "levels",
+    "figma_asset": "imgEllipse",
+    "source_file": "levels-17fc5.svg",
+    "local": "frontend/src/loyalty/overview/assets/17fc5.svg",
+    "sha256": "e409dc7b4ef72fb377afc4ab9184704cac65fc03aa5468b6898bd7c57305817f",
+    "width": 5.0,
+    "height": 5.0,
+    "consumers": [
+      "frontend/src/loyalty/management/ManagementUI.tsx"
+    ]
+  },
+  {
+    "key": "warningDot",
+    "screen": "levels",
+    "figma_asset": "imgEllipse1",
+    "source_file": "levels-b7fd2.svg",
+    "local": "frontend/src/loyalty/overview/assets/b7fd2.svg",
+    "sha256": "6dd809ea56500f920dd376d39cf31aa7b22dd3eec5e37d7fe4525b14ae0c72cb",
+    "width": 5.0,
+    "height": 5.0,
+    "consumers": [
+      "frontend/src/loyalty/management/ManagementUI.tsx"
+    ]
+  },
+  {
+    "key": "accessArt",
+    "screen": "places",
+    "figma_asset": "imgEditableArtworkAccess",
+    "source_file": "places-b04e6.svg",
+    "local": "frontend/src/loyalty/management/assets/places-b04e6.svg",
+    "sha256": "a21e4c4a7342ff64437b0cf25a2a22919a5ec2f431517aaaadf9c9e0cf3a9911",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/management/PlacesDirectory.tsx"
+    ]
+  },
+  {
+    "key": "door",
+    "screen": "places",
+    "figma_asset": "imgIconDoor",
+    "source_file": "places-e05b2.svg",
+    "local": "frontend/src/loyalty/management/assets/places-e05b2.svg",
+    "sha256": "8684d87a670d6c3e1beff6c648c049ce2890db33f84c34efff6523e4c57d334a",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/PlacesDirectory.tsx"
+    ]
+  },
+  {
+    "key": "tap",
+    "screen": "places",
+    "figma_asset": "imgIconTap1",
+    "source_file": "places-d82d0.svg",
+    "local": "frontend/src/loyalty/management/assets/places-d82d0.svg",
+    "sha256": "687b9e3aa05c71949aa1081c113514465c6c5b2ea57e0d890156f2e59691427d",
+    "width": 14.0,
+    "height": 14.0,
+    "consumers": [
+      "frontend/src/loyalty/management/PlacesDirectory.tsx"
+    ]
+  },
+  {
+    "key": "qr",
+    "screen": "places",
+    "figma_asset": "imgIconQr",
+    "source_file": "places-36d03.svg",
+    "local": "frontend/src/loyalty/management/assets/places-36d03.svg",
+    "sha256": "548ffe181b8772fc07a1073602190f8a04b9bef5409ee17554e9a37e641ec32e",
+    "width": 14.0,
+    "height": 14.0,
+    "consumers": [
+      "frontend/src/loyalty/management/PlacesDirectory.tsx"
+    ]
+  },
+  {
+    "key": "search",
+    "screen": "places",
+    "figma_asset": "imgIconSearch2",
+    "source_file": "places-e3323.svg",
+    "local": "frontend/src/loyalty/management/assets/places-e3323.svg",
+    "sha256": "0e3383d6b96c017ebe340ddf23881dd3a99750ec2155b5758cc4fbb1bdbc3e58",
+    "width": 14.0,
+    "height": 14.0,
+    "consumers": [
+      "frontend/src/loyalty/management/EarningPage.tsx",
+      "frontend/src/loyalty/management/PlacesDirectory.tsx",
+      "frontend/src/loyalty/rewards/design/MembershipBenefitsPage.tsx",
+      "frontend/src/loyalty/rewards/design/OffersDesignPage.tsx",
+      "frontend/src/loyalty/rewards/design/PointsRewardsPage.tsx"
+    ]
+  },
+  {
+    "key": "peopleGold",
+    "screen": "places",
+    "figma_asset": "imgIconPeople",
+    "source_file": "places-071d2.svg",
+    "local": "frontend/src/loyalty/management/assets/places-071d2.svg",
+    "sha256": "5e866cbb81732c0bce25a3e6938488d91c2c018b5a613d136ba3273d6e96c2f7",
+    "width": 17.0,
+    "height": 17.0,
+    "consumers": [
+      "frontend/src/loyalty/management/PlacesDirectory.tsx"
+    ]
+  },
+  {
+    "key": "setupArt",
+    "screen": "setup",
+    "figma_asset": "imgEditableArtworkSetup",
+    "source_file": "setup-69c51.svg",
+    "local": "frontend/src/loyalty/management/assets/setup-69c51.svg",
+    "sha256": "36680c7cb4d0fc94eb70c37c41e5c6e39af1ae9b73446be28510213ac0e32000",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/options/SetupPreview.tsx"
+    ]
+  },
+  {
+    "key": "earnArt",
+    "screen": "earning",
+    "figma_asset": "imgEditableArtworkEarn",
+    "source_file": "earning-a9868.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-a9868.svg",
+    "sha256": "0a07a1349a616e472d28db96b2563e9bf40fd689dc1ec7fb6ce48b0a3c2d9c10",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/management/EarningPage.tsx"
+    ]
+  },
+  {
+    "key": "coins",
+    "screen": "earning",
+    "figma_asset": "imgIconCoins",
+    "source_file": "earning-cd48f.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-cd48f.svg",
+    "sha256": "2f6eddd6f4a2f3681190fbc190e2c78c103e0c7c3ecf65644756bcd67a86d7d4",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/LevelsPage.tsx",
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "receipt",
+    "screen": "earning",
+    "figma_asset": "imgIconReceipt",
+    "source_file": "earning-bd57c.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-bd57c.svg",
+    "sha256": "e2439cc733811b2acfaaa1e86753ed0d07c2ced34099871ab3bbe280cbd81129",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "ticket",
+    "screen": "earning",
+    "figma_asset": "imgIconTicket",
+    "source_file": "earning-53008.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-53008.svg",
+    "sha256": "e4811e58bb7c62c69332fde7af09dd5e40ae0cb04e4d6069abf9fce8cd4746a4",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "pin",
+    "screen": "earning",
+    "figma_asset": "imgIconPin",
+    "source_file": "earning-cb89e.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-cb89e.svg",
+    "sha256": "995c729a9cbce90d0cadd9aac1d0643baac1264235ac5e0b8b2fab74d3d4655c",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "calendar",
+    "screen": "earning",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "earning-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/earningIcon.ts",
+      "frontend/src/loyalty/rewards/design/OffersDesignPage.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "purchase",
+    "screen": "earning",
+    "figma_asset": "imgIconCard",
+    "source_file": "earning-9944b.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-9944b.svg",
+    "sha256": "4be0d28e70eb54634b4dd4895865732283eadebd39d1ec43b2c6e2287e77de58",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/EarningPage.tsx",
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "expiry",
+    "screen": "earning",
+    "figma_asset": "imgIconClock",
+    "source_file": "earning-3a95e.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-3a95e.svg",
+    "sha256": "d9c91f343dcb40f42a8c466f4ce1a29a328306dc77a46ffb2d3ae17eddf1c280",
+    "width": 22.0,
+    "height": 22.0,
+    "consumers": [
+      "frontend/src/loyalty/management/EarningPage.tsx",
+      "frontend/src/loyalty/rewards/design/RewardEditorPage.tsx"
+    ]
+  },
+  {
+    "key": "pen",
+    "screen": "earning",
+    "figma_asset": "imgIconPen",
+    "source_file": "earning-53dcc.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-53dcc.svg",
+    "sha256": "a6cdfd844e35e87f22339b985f84dadeb0fb3380617dafa61cd89f75420190e7",
+    "width": 15.0,
+    "height": 15.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "people",
+    "screen": "earning",
+    "figma_asset": "imgIconPeople",
+    "source_file": "earning-7c640.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-7c640.svg",
+    "sha256": "239d58dc79e3714fa28f2efa1f8a10a55338af205725e5a5f77ba2f5c691d4f9",
+    "width": 17.0,
+    "height": 17.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx",
+      "frontend/src/loyalty/management/EarningPage.tsx"
+    ]
+  },
+  {
+    "key": "bookingSmall",
+    "screen": "earning",
+    "figma_asset": "imgIconCalendar1",
+    "source_file": "earning-2805d.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-2805d.svg",
+    "sha256": "852a668653f7eecaa9db9aa87e5393a2b652c73f8366e94d15c6c4500122768b",
+    "width": 17.0,
+    "height": 17.0,
+    "consumers": [
+      "frontend/src/loyalty/management/EarningPage.tsx"
+    ]
+  },
+  {
+    "key": "referralArt",
+    "screen": "bonuses",
+    "figma_asset": "imgEditableArtworkReferral",
+    "source_file": "bonuses-9fb38.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-9fb38.svg",
+    "sha256": "295040e0ed713ea31a9ed3e7bfbfba5a57e5afcf60d082f5a057974ef8538b0e",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx"
+    ]
+  },
+  {
+    "key": "referral",
+    "screen": "bonuses",
+    "figma_asset": "imgIconPeople",
+    "source_file": "bonuses-1cdc6.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-1cdc6.svg",
+    "sha256": "086b8fbf4898ee27d65163388e7a13b88f8d7b5571a8eb5413770b3ada71528d",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx",
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "birthday",
+    "screen": "bonuses",
+    "figma_asset": "imgIconCake",
+    "source_file": "bonuses-a2752.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-a2752.svg",
+    "sha256": "796f442b0cd6ce4e06b3f320ad4b4ce9c0fcd859125608bbafc1c130ef21052b",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx",
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "welcome",
+    "screen": "bonuses",
+    "figma_asset": "imgIconGift",
+    "source_file": "bonuses-e4a9d.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-e4a9d.svg",
+    "sha256": "7788243736549461919354220cdcee479bf5f5c560e029b55003a953c7fd0d47",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx",
+      "frontend/src/loyalty/management/earningIcon.ts"
+    ]
+  },
+  {
+    "key": "boost",
+    "screen": "bonuses",
+    "figma_asset": "imgIconZap",
+    "source_file": "bonuses-14bc6.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-14bc6.svg",
+    "sha256": "ca1e199f5deb7771beea02e717ff184c82a67320c77eb2e889fb5e6a5109bf6e",
+    "width": 22.0,
+    "height": 22.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx"
+    ]
+  },
+  {
+    "key": "boostSmall",
+    "screen": "bonuses",
+    "figma_asset": "imgIconZap1",
+    "source_file": "bonuses-fec13.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-fec13.svg",
+    "sha256": "ffbe2bf02300007dff716f7b44fd54d6bc1213fbf539c944b510182ce78183b3",
+    "width": 18.0,
+    "height": 18.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx"
+    ]
+  },
+  {
+    "key": "bonusCalendar",
+    "screen": "bonuses",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "bonuses-fda0b.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-fda0b.svg",
+    "sha256": "a2bb472fc8b414116795dfe1deb44ecd81d03be330a1850f3b8fda350898644c",
+    "width": 18.0,
+    "height": 18.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx"
+    ]
+  },
+  {
+    "key": "rewardArt",
+    "screen": "rewards",
+    "figma_asset": "imgEditableArtworkReward",
+    "source_file": "rewards-d5968.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-d5968.svg",
+    "sha256": "303948cda640047be0bcc07f16a05cf161a5290b973b327ec54cc25af75ccba1",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/PointsRewardsPage.tsx"
+    ]
+  },
+  {
+    "key": "rewardTicket",
+    "screen": "rewards",
+    "figma_asset": "imgIconTicket",
+    "source_file": "rewards-443c2.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-443c2.svg",
+    "sha256": "9e3bb3ef9ccbecbeab6332c67814f111857277f737403e20599cd85206972d24",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "rewardClock",
+    "screen": "rewards",
+    "figma_asset": "imgIconClock",
+    "source_file": "rewards-366eb.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-366eb.svg",
+    "sha256": "8ca569cfa0af62ef44960a11aacb1465412c01bd5d54b95583b1dff75d5ddb9f",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "rewardFile",
+    "screen": "rewards",
+    "figma_asset": "imgIconFile",
+    "source_file": "rewards-156e8.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-156e8.svg",
+    "sha256": "39f828cd6f1970120bc81261efa26175e3c6aee2f569964d591f7ee18d25fd06",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "redeemCoin",
+    "screen": "rewards",
+    "figma_asset": "imgIconCoin",
+    "source_file": "rewards-f6db4.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-f6db4.svg",
+    "sha256": "00b89c0f761843e735816d222dd898a0569efb4ae79a0dc5402c38d48a7947dc",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "perkArt",
+    "screen": "perks",
+    "figma_asset": "imgEditableArtworkPerk",
+    "source_file": "perks-ca68b.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-ca68b.svg",
+    "sha256": "b80e4372fe739323e8c5f774e7e00d73490256a0ea6bfa276a52726300175525",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/MembershipBenefitsPage.tsx"
+    ]
+  },
+  {
+    "key": "perkPeople",
+    "screen": "perks",
+    "figma_asset": "imgIconPeople",
+    "source_file": "perks-720fc.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-720fc.svg",
+    "sha256": "ea9c443c11c525166cf8571c4c63181268248c452d5315c50443f5cdc2d63e99",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "perkSpark",
+    "screen": "perks",
+    "figma_asset": "imgIconSpark",
+    "source_file": "perks-c4790.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-c4790.svg",
+    "sha256": "0887e8bad50e6bfdb826e6988b0c31252a5c874d92281dd7eda90b3f9a3ffd78",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "perkTag",
+    "screen": "perks",
+    "figma_asset": "imgIconTag",
+    "source_file": "perks-3bbb3.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-3bbb3.svg",
+    "sha256": "2faeb4c19ad86a563559e2f200496e8fafdd377ad336f34a3239a01d678ca2d7",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "perkCalendar",
+    "screen": "perks",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "perks-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "delivery",
+    "screen": "perks",
+    "figma_asset": "imgIconPeople2",
+    "source_file": "perks-f2b20.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-f2b20.svg",
+    "sha256": "d04cb70226adbacf2a85c47d04dfe71fbedfcdfd1a1f9d2674efe2b278271abf",
+    "width": 17.0,
+    "height": 17.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/MembershipBenefitsPage.tsx"
+    ]
+  },
+  {
+    "key": "offerArt",
+    "screen": "offers",
+    "figma_asset": "imgEditableArtworkSpaOfferTicket",
+    "source_file": "offers-e4072.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-e4072.svg",
+    "sha256": "3a74f279ccb19b242789909ae6a9a340d71b4676b4704e26d333c3a5d103ff8e",
+    "width": 216.0,
+    "height": 150.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/OffersDesignPage.tsx"
+    ]
+  },
+  {
+    "key": "offerGift",
+    "screen": "offers",
+    "figma_asset": "imgIconGift",
+    "source_file": "offers-89659.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-89659.svg",
+    "sha256": "a7732895e29c118986babd03d135f21114b20478d36f29e78983b2e826ec4698",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/management/BonusBoostsPage.tsx",
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  },
+  {
+    "key": "offerCalendar",
+    "screen": "offers",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "offers-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0,
+    "consumers": [
+      "frontend/src/loyalty/rewards/design/presentation.tsx",
+      "frontend/src/loyalty/rewards/design/RewardUI.tsx"
+    ]
+  }
+]

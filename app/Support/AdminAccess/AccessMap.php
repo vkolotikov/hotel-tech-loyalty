@@ -82,6 +82,23 @@ final class AccessMap
         'admin/content'                         => ['staff',              'staff',              'content'],       // HexaTech Content; brand, strategy and whole-calendar AI keep their own manager rule (ContentAccess)
         'admin/crm'                             => ['staff',              'staff',              'crm'],           // HexaTech CRM (2026-11-07): bootstrap, Today, setup steps, the inbox's AI draft; reads only but the draft
         'admin/crm/bot-gaps'                    => ['staff',              'manager',            'chat'],           // HexaTech CRM: answers the chatbot got wrong (read by everyone; answering teaches the bot: manager, as admin/knowledge)
+        // CRM round 5 (Today and Insights, 2026-11-12): the team's activity, and the full admin's sales reports (SalesReports) under the Reports page's rule.
+        'admin/crm/activity'                    => ['staff',              'staff',              'crm'],           // The leads' and contacts' newest timeline lines (reads only; every staff member reads a lead's timeline)
+        'admin/crm/reports'                     => ['can_view_analytics', 'can_view_analytics', 'crm'],           // Funnel, forecast, lost reasons, sources, owners, companies (reads only; as admin/reporting, product crm: CRM data, a company's reservations only for a full customer)
+        // CRM round 5 (Integrations, 2026-11-12): what the full admin keeps under `admin`, limited to what the CRM needs.
+        'admin/crm/intake-tokens'               => ['manager',            'manager',            'crm'],           // Lead-intake API tokens (manager, as admin/api-tokens); each reaches only POST integrations/leads (IntakeTokens)
+        'admin/crm/mail-settings'               => ['staff',              'manager',            'crm'],           // The emails' sender name and reply-to only (read by everyone, as admin/settings; changes: an owner, SenderSettings)
+        'admin/crm/ai-usage'                    => ['manager',            'manager',            'crm'],           // This month's AI spend against the allowance, this organisation's own (manager, as admin/ai-usage)
+        'admin/crm/whatsapp-status'             => ['manager',            'manager',            'crm'],
+        'admin/crm/sales-profile'               => ['staff',              'manager',            'crm'],
+        'admin/crm/team-day-plan'               => ['staff',              'staff',              'crm'],
+        'admin/crm/team-dashboard'              => ['staff',              'staff',              'crm'],
+        'admin/crm/team-customers'              => ['staff',              'staff',              'crm'],
+        'admin/crm/sales-profile/capture'       => ['manager',            'manager',            'crm'],
+        'admin/crm/leads/{inquiry}/assistant'   => ['staff',              'staff',              'crm'],
+        'admin/crm/leads/{inquiry}/assistant/quote' => ['manager',        'manager',            'crm'],
+        'admin/crm/leads/{inquiry}/assistant/review' => ['manager',       'manager',            'crm'],
+        'admin/integrations/messenger'          => ['manager',            'manager',            'chat'],           // Facebook Messenger pages for the inbox (manager; was `admin/integrations`, admin, whose only routes these are — a new integrations route falls back to manager / admin); `chat`: HexaTech CRM connects them too
         'admin/time'                            => ['staff',              'staff',              'time'],          // HexaTech Time Planner (2026-11-09; sold as a module, or the Enterprise plan's time_management): whose day one may plan is PlanningMode
         'admin/time/people/{user}'              => ['staff',              'manager',            'time'],          // A person's planner profile (knowledge, hours, days, break): a manager's, as the team's skills (admin/team)
         'admin/time/settings'                   => ['staff',              'manager',            'time'],          // The planner's settings (types, tasks, preferences, the work day, the planning mode): read by everyone, changed by a manager (2026-11-09)
@@ -95,6 +112,9 @@ final class AccessMap
         'admin/loyalty/program/boosts/confirm-times' => ['manager',       'manager',            'loyalty'],       // Release 6: "These times are right" for boosts flagged "check the time" (manager)
         'admin/loyalty/rewards'                 => ['staff',              'can_manage_offers',  'loyalty'],       // The rewards catalogue (changes: can_manage_offers, as admin/rewards)
         'admin/loyalty/offers'                  => ['staff',              'can_manage_offers',  'loyalty'],       // Offers (changes: can_manage_offers, as admin/offers)
+        'admin/loyalty/offers/{id}/attachment' => ['staff', 'can_manage_offers', 'loyalty'],
+        'admin/loyalty/offers/{id}/send-preview' => ['can_manage_offers', 'can_manage_offers', 'loyalty'],
+        'admin/loyalty/offers/{id}/send' => ['can_manage_offers', 'can_manage_offers', 'loyalty'],
         'admin/loyalty/redemptions'             => ['staff',              'can_redeem_points',  'loyalty'],       // Fulfil or cancel a redemption (can_redeem_points, as the full admin's routes)
         'admin/loyalty/members/{id}/tier'       => ['staff',              'manager',            'loyalty'],       // Release 2: a member's tier is a manager's correction
         'admin/loyalty/members/{id}/deactivate' => ['staff',              'manager',            'loyalty'],       // Deactivate a member (manager)
@@ -114,6 +134,12 @@ final class AccessMap
         'admin/loyalty/push'                    => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/sms'                     => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/members/{id}/cards'      => ['staff',              'staff',              'loyalty'],       // Release 5: a member's NFC cards (link, switch off: every staff member, as Edit details and admin/nfc-cards)
+        'admin/loyalty/card-batches'            => ['staff',              'manager',            'loyalty'],
+        'admin/loyalty/card-batches/{id}/qr'    => ['manager',            'manager',            'loyalty'],
+        'admin/loyalty/physical-cards'          => ['staff',              'staff',              'loyalty'],
+        'admin/loyalty/members/{id}/membership' => ['manager',            'manager',            'loyalty'],
+        'admin/loyalty/partner'                 => ['staff',              'staff',              'loyalty'],
+        'admin/loyalty/partners'                => ['manager',            'manager',            'loyalty'],
         'admin/loyalty/options'                 => ['staff',              'manager',            'loyalty'],       // Release 7: the programme's options and the setup wizard (changes: manager, as Program)
         'admin/loyalty/start'                   => ['staff',              'manager',            'loyalty'],       // Release 10: "Start here", the setup steps and which are done (reads only)
         'admin/loyalty/members/{id}/check-in'   => ['staff',              'can_award_points',   'loyalty'],       // Release 7: a check-in or a purchase at the desk (it writes points: can_award_points, as Award)
@@ -143,7 +169,6 @@ final class AccessMap
         'admin/diag'                            => ['manager',            'manager',            'admin'],         // Operator diagnostics (route already needs super_admin)
         'admin/documentation'                   => ['staff',              'staff',              'admin'],         // Help pages
         'admin/industry-presets'                => ['staff',              'manager',            'admin'],         // Industry presets (Pipelines admin)
-        'admin/integrations'                    => ['manager',            'manager',            'admin'],         // Integrations and their secrets (Settings, manager)
         'admin/landing-pages'                   => ['staff',              'manager',            'admin'],         // Landing page (menu: manager)
         'admin/planner'                         => ['staff',              'staff',              'time'],          // Planner (menu: everyone); product `time`: HexaTech Time Planner works on it (2026-11-09). Whose day one may change is PlanningMode
         'admin/planner-presets'                 => ['staff',              'manager',            'time'],          // Planner presets (Settings, manager); the planner's, product `time` (2026-11-09)
@@ -156,6 +181,7 @@ final class AccessMap
         'admin/team'                            => ['staff',              'manager',            'account'],       // Team (Settings, manager); the Planner lists team members for everyone. Account: an organisation on modules manages its team at /account/team (2026-11-02)
 
         // ── Bookings, rooms and services
+        'admin/booking-promotions'              => ['manager',            'manager',            'booking'],
         'admin/booking-extras'                  => ['staff',              'manager',            'booking'],       // Room extras (menu: manager)
         'admin/booking-rooms'                   => ['staff',              'manager',            'booking'],       // Rooms (menu: manager); booking screens read them
         'admin/bookings'                        => ['staff',              'staff',              'booking'],       // Room bookings (menu: everyone); submissions overridden below
@@ -198,11 +224,18 @@ final class AccessMap
         'admin/deals'                           => ['staff',              'staff',              'crm'],           // Deals (menu: everyone)
         'admin/email-campaigns'                 => ['staff',              'manager',            'crm'],           // Email campaigns (Marketing, manager)
         'admin/email-templates'                 => ['staff',              'manager',            'crm'],           // Email templates (Marketing, manager); sending one is overridden below
+        'admin/guests/{guest}/email-history'     => ['staff',              'staff',              'crm'],
+        'admin/inquiries/{inquiry}/email-history' => ['staff',             'staff',              'crm'],
+        'admin/guests/{guest}/whatsapp-history'     => ['staff',            'staff',              'crm'],
+        'admin/inquiries/{inquiry}/whatsapp-history' => ['staff',          'staff',              'crm'],
+        'admin/guests/{guest}/business-profile'     => ['staff',            'staff',              'crm'],
+        'admin/inquiries/{inquiry}/business-profile' => ['staff',          'staff',              'crm'],
         'admin/guests'                          => ['staff',              'staff',              'crm'],           // Guests and clients
         'admin/inquiries'                       => ['staff',              'staff',              'crm'],           // Leads (menu: everyone)
         'admin/inquiry-lost-reasons'            => ['staff',              'manager',            'crm'],           // Lost reasons (Pipelines admin)
         'admin/inquiry-lost-reasons-admin'      => ['manager',            'manager',            'crm'],           // Lost reasons admin list (Pipelines admin)
         'admin/lead-forms'                      => ['staff',              'staff',              'crm'],           // Lead forms tab of Leads (menu: everyone)
+        'admin/lead-forms/{leadForm}/auto-reply' => ['staff',              'manager',            'crm'],
         'admin/pipeline-stages'                 => ['staff',              'manager',            'crm'],           // Pipeline stages (Pipelines admin)
         'admin/pipelines'                       => ['staff',              'manager',            'crm'],           // Pipelines (Pipelines admin)
         'admin/saved-views'                     => ['staff',              'staff',              'crm'],           // A person's saved views

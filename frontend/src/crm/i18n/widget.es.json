@@ -46,7 +46,9 @@
     "person_line": "Formas de contactar con su equipo desde el chat.",
     "privacy_line": "Antes de un chat, después y en su bandeja de entrada.",
     "hours_card_line": "Cuándo responde su equipo y qué dice el chat el resto del tiempo.",
-    "same_weekdays": "Usar el horario del lunes de martes a viernes"
+    "same_weekdays": "Usar el horario del lunes de martes a viernes",
+    "parts": "Partes del comportamiento",
+    "same_weekdays_short": "Lunes para todos los días laborables"
   },
   "discard": "Descartar",
   "fix_first": "Corrija los campos marcados para guardar.",
@@ -97,7 +99,8 @@
     "builders": "Creador de sitios web",
     "rotate_confirm_title": "¿Sustituir la clave del widget?",
     "rotate_confirm_warn": "El chat desaparece de inmediato de su sitio web.",
-    "rotate_confirm_line": "El código de su sitio web deja de funcionar en cuanto se sustituye la clave. El chat vuelve a aparecer cuando pegue allí el nuevo código. Hágalo solo si la clave se usó indebidamente."
+    "rotate_confirm_line": "El código de su sitio web deja de funcionar en cuanto se sustituye la clave. El chat vuelve a aparecer cuando pegue allí el nuevo código. Hágalo solo si la clave se usó indebidamente.",
+    "code_short": "Péguelo una vez, justo antes de </body>."
   },
   "line": "El chat de su web: cómo se ve, cómo recibe a los visitantes y cómo ponerlo en su sitio.",
   "look": {
@@ -166,7 +169,9 @@
     "box_title": "El cuadro de mensaje",
     "box_line": "Más opciones: el texto de dentro y la ayuda de debajo.",
     "suggestions_line": "Botones que un visitante toca en lugar de escribir.",
-    "avatar_line": "La imagen del asistente y la línea bajo el chat."
+    "avatar_line": "La imagen del asistente y la línea bajo el chat.",
+    "avatar_short": "PNG o JPG cuadrado, 2 MB como máximo",
+    "parts": "Partes del aspecto"
   },
   "preview": {
     "branding": "Con la tecnología de su negocio",
@@ -224,5 +229,18 @@
   "state_on": "Visible en su sitio web",
   "state_off": "Desactivado",
   "get_code": "Obtener el código",
-  "unsaved_line": "su sitio web los muestra al guardar"
+  "unsaved_line": "su sitio web los muestra al guardar",
+  "part": {
+    "contact": "Datos de contacto",
+    "hours": "Horario",
+    "launcher": "Botón",
+    "person": "Hablar con una persona",
+    "picture": "Imagen",
+    "privacy": "Consentimiento y valoraciones",
+    "questions": "Preguntas",
+    "site": "En el sitio web",
+    "style": "Estilo",
+    "words": "Textos"
+  },
+  "read_only_short": "Solo lectura: los cambios los hace un responsable."
 }

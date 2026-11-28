@@ -5,6 +5,8 @@ import { Building2, Plus, Pencil, X, Store, Upload, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { PairTabs, LOCATIONS_TABS } from '../components/PairTabs'
 import { useVocabulary } from '../lib/vocabulary'
+import { CityPicker } from '../components/CityPicker'
+import { applyPlace, countryOptions, timeZoneNames, zoneIsUnset } from '../lib/places'
 
 interface Property {
   id: number
@@ -204,15 +206,23 @@ export function Properties() {
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
             <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Phone"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-            <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="City"
-              className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-            <input value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} placeholder="Country"
-              className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+            {/* 2026-11-09: the city is picked from a search (it fills the country and an empty time zone), so the
+                dashboards' weather and clock find the location; the country is a list. */}
+            <CityPicker value={form.city} onType={city => setForm({ ...form, city })} onPick={place => setForm(applyPlace(form, place))} />
+            <select value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} aria-label="Country"
+              className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm">
+              <option value="">Country</option>
+              {countryOptions(form.country).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             <input value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} placeholder="Currency" maxLength={3}
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
-            <input value={form.timezone} onChange={e => setForm({ ...form, timezone: e.target.value })} placeholder="Timezone (e.g. Asia/Dubai)"
+            <input value={form.timezone} onChange={e => setForm({ ...form, timezone: e.target.value })} placeholder="Timezone (e.g. Europe/Riga)" list="property-time-zones"
               className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
+            <datalist id="property-time-zones">{timeZoneNames().map(z => <option key={z} value={z} />)}</datalist>
           </div>
+          {zoneIsUnset(form.timezone) && form.city.trim() !== '' && (
+            <p className="text-xs text-t-muted">Pick the city from the list to fill its time zone; the dashboards show this location's clock in it.</p>
+          )}
           <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Full address"
             className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
           <button type="submit" disabled={saveMutation.isPending}

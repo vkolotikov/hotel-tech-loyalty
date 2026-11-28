@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { useBoot } from '../LoyaltyProvider'
+import { loyaltyApi } from '../lib/api'
+import { PulseCard } from '../../workspace/pulse/PulseCard'
 import { money, points, when } from '../lib/format'
 import { overviewAssets as assets } from './assets'
 import { cleanAssets, metricIcons } from './cleanAssets'
@@ -13,6 +16,7 @@ import { useOnline, useOverviewModule, usePhone } from './useOverview'
 import { useOverviewWords } from './words'
 import type { Panel, Summary } from './types'
 import { MobileHome } from '../mobile/MobileHome'
+import { SetupChecklist } from '../start/SetupChecklist'
 
 export function OverviewPage() {
   const phone = usePhone()
@@ -42,6 +46,8 @@ function DesktopOverviewPage() {
   const metrics = useOverviewModule('metrics', period)
   const queue = useOverviewModule('queue', period)
   const activity = useOverviewModule('activity', period, filter)
+  // The venue's clock and weather above the overview (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['loyalty', 'pulse'], queryFn: loyaltyApi.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
   const s = summary.data?.data
   const c = checks.data?.data
   const m = metrics.data?.data
@@ -72,14 +78,15 @@ function DesktopOverviewPage() {
   const panels = { program: say('programPanel'), preview: say('previewPanel'), issues: say('issuesPanel'), numbers: say('about'), activity: say('activity'), requests: say('requestsPanel') }
   return <div className="l-ov-page l-ov-clean-page">
     {heading}
+    <PulseCard pulse={pulse.data} name={boot.staff.name ? boot.staff.name.trim().split(/\s+/)[0] : null} />
     {!online && <div className="l-ov-inset l-ov-offline" role="status"><strong>{say('offline')}</strong><p>{say('offlineLine')}</p></div>}
     {summary.isError && !s && <OverviewRecovery title={say('unavailableOverview')} busy={summary.isFetching} onRetry={retry(summary)} forbidden={summary.forbidden} />}
     {!s && !summary.isError && <section className="l-ov-panel"><OverviewSkeleton rows={4} /></section>}
     {initial && <SetupState />}
+    {s?.configured && <SetupChecklist setup={s.setup} />}
     {s?.configured && <>
       {!limited && <>{attention}<ProgramSummary summary={s} onDetails={() => setPanel('program')} onPreview={() => setPanel('preview')} /></>}
       {limited && <><section className="l-ov-panel l-ov-limited"><OverviewBadge>{say('limited')}</OverviewBadge><h2>{say('dailyService')}</h2><p>{say('managedByOwner')}</p></section><div className="l-ov-service-actions">{[['/loyalty', 'findMember'], ['/loyalty/requests', 'review'], ['/loyalty/scan', 'scan']].map(([to, key]) => <Link to={to} className="l-ov-panel" key={to}>{say(key as 'findMember' | 'review' | 'scan')} →</Link>)}</div></>}
-      {boot.staff.can.manage_program && !s.options.programme_setup_completed_at && <section className="l-ov-inset l-ov-setup-progress"><div className="l-ov-clean-alert"><span className="l-ov-clean-icon" data-tone="cyan"><img src={cleanAssets.program} alt="" /></span><strong>{say('setupProgress', { done: s.setup.done, total: s.setup.total })}</strong></div><Link to="/loyalty/start" className="l-ov-link">{say('checklist')} →</Link></section>}
     </>}
     {!initial && !limited && <section className="l-ov-glance" aria-labelledby="overview-glance">
       <div className="l-ov-glance-controls"><h2 id="overview-glance">{say('keyMetrics')}</h2><button className="l-ov-link l-ov-about" onClick={() => setPanel('numbers')}><img src={cleanAssets.help} alt="" />{say('about')}</button>
@@ -132,5 +139,5 @@ function ProgramSummary({ summary: s, onDetails, onPreview }: { summary: Summary
 function SetupState() {
   const say = useOverviewWords()
   const boot = useBoot()
-  return <><section className="l-ov-panel l-ov-first"><h2>{say('firstProgram')}</h2><div className="l-ov-setup-choices">{(['discounts', 'points', 'visits'] as const).map(mode => <div className="l-ov-inset" key={mode}><span className="l-ov-clean-icon" data-tone={mode === 'visits' ? 'green' : 'cyan'}><img src={mode === 'discounts' ? cleanAssets.setupDiscounts : mode === 'points' ? cleanAssets.setupPoints : cleanAssets.setupVisits} alt="" /></span><h3>{say(`${mode}Option`)}</h3><p>{say(`${mode}Hint`)}</p></div>)}</div><div className="l-ov-actions">{boot.staff.can.manage_program && <Link to="/loyalty/options/setup" className="l-ov-button l-ov-primary"><img src={assets.program} alt="" />{say('startSetup')}</Link>}<Link to="/loyalty/guide" className="l-ov-link">{say('guide')} →</Link></div></section><section className="l-ov-panel l-ov-clean-setup"><h2>{say('setupSteps')}</h2><ol className="l-ov-steps">{(['step1', 'step2', 'step3', 'step4'] as const).map((key, index) => <li key={key}><span>{index + 1}</span>{say(key)}</li>)}</ol></section><p className="l-ov-clean-preserve"><img src={cleanAssets.setupHelp} alt="" />{say('preserveLine')}</p></>
+  return <><section className="l-ov-panel l-ov-first"><h2>{say('firstProgram')}</h2><div className="l-ov-setup-choices">{(['discounts', 'points', 'visits'] as const).map(mode => <div className="l-ov-inset" key={mode}><span className="l-ov-clean-icon" data-tone={mode === 'visits' ? 'green' : 'cyan'}><img src={mode === 'discounts' ? cleanAssets.setupDiscounts : mode === 'points' ? cleanAssets.setupPoints : cleanAssets.setupVisits} alt="" /></span><h3>{say(`${mode}Option`)}</h3><p>{say(`${mode}Hint`)}</p></div>)}</div><div className="l-ov-actions">{boot.staff.can.manage_program && <Link to="/loyalty/program/setup" className="l-ov-button l-ov-primary"><img src={assets.program} alt="" />{say('startSetup')}</Link>}<Link to="/loyalty/guide" className="l-ov-link">{say('guide')} →</Link></div></section><section className="l-ov-panel l-ov-clean-setup"><h2>{say('setupSteps')}</h2><ol className="l-ov-steps">{(['step1', 'step2', 'step3', 'step4'] as const).map((key, index) => <li key={key}><span>{index + 1}</span>{say(key)}</li>)}</ol></section><p className="l-ov-clean-preserve"><img src={cleanAssets.setupHelp} alt="" />{say('preserveLine')}</p></>
 }

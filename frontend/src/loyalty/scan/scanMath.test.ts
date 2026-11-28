@@ -7,7 +7,7 @@ import {
 } from './scanMath'
 import { decodeRecord } from './useWebNfc'
 
-const env = (more: Partial<ScanEnv> = {}): ScanEnv => ({ secure: true, camera: true, webNfc: true, webHid: true, ...more })
+const env = (more: Partial<ScanEnv> = {}): ScanEnv => ({ secure: true, camera: true, webNfc: true, webHid: true, windows: false, ...more })
 const failure = (code: string, extra: Record<string, unknown> = {}): ApiFailure => ({ status: 404, code, extra })
 const named = (name: string) => Object.assign(new Error(name), { name })
 
@@ -38,7 +38,7 @@ describe('a scan that got no answer (release 9)', () => {
 
 describe('which ways of scanning a device offers', () => {
   it('reads nothing where there is no browser (the tests, a server render)', () => {
-    expect(detectEnv()).toEqual({ secure: false, camera: false, webNfc: false, webHid: false })
+    expect(detectEnv()).toEqual({ secure: false, camera: false, webNfc: false, webHid: false, windows: false })
   })
 
   it('the camera needs https and a camera; NFC needs Web NFC; the USB reader needs WebHID', () => {
@@ -151,7 +151,7 @@ describe('what a tap sends', () => {
 
 describe('the other ways in', () => {
   it('a USB reader’s hex is sent and linked with colons; the camera’s text as decoded; the field’s trimmed', () => {
-    expect(usbAttempt('04a2b3c4')).toEqual({ code: '04:A2:B3:C4', source: 'usb', card: '04:A2:B3:C4' })
+    expect(usbAttempt('04a2b3c4')).toEqual({ code: 'HTCARD:04:A2:B3:C4', source: 'usb', card: '04:A2:B3:C4' })
     expect(cameraAttempt('{"a":1}')).toEqual({ code: '{"a":1}', source: 'camera', card: null })
     expect(fieldAttempt(' LS-001001 ')).toEqual({ code: 'LS-001001', source: 'field', card: null })
     expect(fieldAttempt('0077771716')).toEqual({ code: '0077771716', source: 'field', card: '0077771716' })

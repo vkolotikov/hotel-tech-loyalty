@@ -1,4 +1,9 @@
 {
+  "keyConditions": "Key conditions",
+  "availabilityLimits": "Availability & limits",
+  "advancedDetailsSummary": "Terms, member description and reward management",
+  "advancedEditorSummary": "Terms, availability and member details",
+  "termsHint": "Add the conditions members should know before claiming.",
   "pointsRewards": "Points rewards",
   "benefits": "Membership benefits",
   "offers": "Offers",

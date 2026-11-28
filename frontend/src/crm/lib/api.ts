@@ -1,5 +1,7 @@
 import { api } from '../../lib/api'
+import { brandParam } from './brand'
 import type { Bootstrap, BotGap, SetupProgress, Today } from './types'
+import type { Pulse } from '../../lib/venuePulse'
 
 /**
  * Every call HexaTech CRM makes goes through here (2026-11-07). The workspace's own reads live under
@@ -18,6 +20,8 @@ export const AREAS = [
   'tasks', 'saved-views', 'custom-fields', 'lead-forms', 'corporate-accounts', 'crm-settings',
   // Round 2 (the main platform's leads): sending an email template from a lead, and the CRM's AI capture of a lead.
   'email-templates', 'crm-ai',
+  // Round 5 (Integrations): the Facebook Messenger pages (`integrations/messenger*`, AccessMap product chat, a manager's).
+  'integrations',
 ] as const
 
 export type Area = (typeof AREAS)[number]
@@ -25,15 +29,16 @@ export type Area = (typeof AREAS)[number]
 const AREA_SET = new Set<string>(AREAS)
 
 /**
- * The address of a call: `/v1/admin/<area>/…`. Every call names `brand_id=all`: the CRM is the organisation's, and the
- * full admin's request hook (src/lib/api.ts) otherwise adds the brand someone last picked there. A staff member
- * restricted to one brand is still held to it by the server.
+ * The address of a call: `/v1/admin/<area>/…`. Every call names its `brand_id`: the brand chosen in the CRM's switcher,
+ * or `all` (lib/brand.ts, 2026-11-09) — never left out, because the full admin's request hook (src/lib/api.ts) would
+ * otherwise add the brand someone last picked there. The server decides what each brand shows, and holds a staff
+ * member restricted to their brands (BrandMiddleware).
  */
 export function crmUrl(path: string): string {
   const clean = path.replace(/^\/+/, '')
   const area = clean.split(/[/?]/)[0]
   if (!AREA_SET.has(area)) throw new Error(`HexaTech CRM does not call /v1/admin/${area}`)
-  return `/v1/admin/${clean}${clean.includes('?') ? '&' : '?'}brand_id=all`
+  return `/v1/admin/${clean}${clean.includes('?') ? '&' : '?'}brand_id=${encodeURIComponent(brandParam())}`
 }
 
 /** Query parameters with nothing empty in them: what the list endpoints take. */
@@ -110,6 +115,8 @@ export function send<T>(method: 'post' | 'put' | 'patch' | 'delete', path: strin
 export const crmApi = {
   bootstrap: () => api.get<Bootstrap>(crmUrl('crm/bootstrap')).then(r => r.data),
   today: () => get<Today>('crm/today'),
+  /** The venue's clock, place and weather (VenuePulse), for Today's card. */
+  pulse: () => get<Pulse>('crm/pulse'),
   start: () => get<SetupProgress>('crm/start'),
   botGaps: () => get<{ data: BotGap[] }>('crm/bot-gaps').then(r => r.data),
   draft: (conversationId: number, instruction?: string) =>

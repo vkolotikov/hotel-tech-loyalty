@@ -3,6 +3,7 @@
 namespace Tests\Feature\Content;
 
 use App\Jobs\GenerateContentCalendar;
+use App\Models\ContentPlannerCampaign;
 use App\Models\ContentPlannerChannel;
 use App\Models\ContentPlannerPost;
 use App\Services\Content\ContentAiGate;
@@ -129,6 +130,43 @@ class GenerateTest extends TestCase
             ->assertJsonPath('status', 'completed')->assertJsonPath('created_count', 1)->assertJsonPath('posts.0.status', 'draft');
         // The brand is free again.
         $this->asManager()->postJson($this->api('generate'), ['from' => '2026-10-12', 'to' => '2026-10-18'])->assertStatus(202);
+    }
+
+    public function test_a_legacy_serialized_calendar_job_without_campaign_still_generates(): void
+    {
+        $this->fakeAi([$this->calendarItem('2026-10-05', 'instagram')]);
+        Queue::fake();
+        $this->asManager()->postJson($this->api('generate'), ['from' => '2026-10-05', 'to' => '2026-10-11'])->assertStatus(202);
+        $queued = Queue::pushed(GenerateContentCalendar::class)->first();
+        // Pre-deploy payloads have every existing job field, but no campaignId key.
+        unset($queued->campaignId);
+        $this->assertArrayNotHasKey('campaignId', $queued->__serialize());
+        $restored = unserialize(serialize($queued));
+        $restored->handle(app(ContentCalendarGenerationService::class));
+
+        $this->asManager()->getJson($this->api('generate'))->assertOk()
+            ->assertJsonPath('status', 'completed')->assertJsonPath('created_count', 1);
+        $this->assertNull($restored->campaignId);
+        $this->assertNull(ContentPlannerPost::sole()->campaign_id);
+        Http::assertSentCount(1);
+    }
+
+    public function test_a_serialized_calendar_job_retains_its_selected_campaign_context_and_assignment(): void
+    {
+        $campaign = ContentPlannerCampaign::create(['planner_profile_id' => $this->profile->id, 'name' => 'Queued winter', 'goal' => 'Returning guests', 'notes' => 'Selected serialized campaign brief']);
+        $this->fakeAi([$this->calendarItem('2026-10-05', 'instagram')]);
+        Queue::fake();
+        $this->asManager()->postJson($this->api('generate'), ['from' => '2026-10-05', 'to' => '2026-10-11', 'campaign_id' => $campaign->id])->assertStatus(202);
+        $restored = unserialize(serialize(Queue::pushed(GenerateContentCalendar::class)->first()));
+        $this->assertSame($campaign->id, $restored->campaignId);
+        $restored->handle(app(ContentCalendarGenerationService::class));
+
+        $this->asManager()->getJson($this->api('generate'))->assertOk()
+            ->assertJsonPath('status', 'completed')->assertJsonPath('created_count', 1);
+        $this->assertSame($campaign->id, ContentPlannerPost::sole()->campaign_id);
+        Http::assertSent(fn ($request) => str_contains($request->body(), 'Queued winter')
+            && str_contains($request->body(), 'Returning guests')
+            && str_contains($request->body(), 'Selected serialized campaign brief'));
     }
 
     public function test_fill_with_ai_is_refused_while_a_queued_generation_runs(): void

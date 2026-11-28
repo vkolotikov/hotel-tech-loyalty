@@ -97,6 +97,9 @@ class MemberMergeServiceTest extends TestCase
     {
         parent::setUp();
         $this->setUpMemberMergeSchema();
+        if (!Schema::hasTable('special_offer_recipients')) Schema::create('special_offer_recipients', function (\Illuminate\Database\Schema\Blueprint $t) {
+            $t->id(); $t->unsignedBigInteger('organization_id')->nullable(); $t->unsignedBigInteger('offer_id')->default(1); $t->unsignedBigInteger('member_id'); $t->unique(['offer_id', 'member_id']);
+        });
         $this->buildMembershipSchema();
         $this->buildCampaignDeliveriesSchema();
         $this->buildPushSchema();
@@ -511,6 +514,19 @@ class MemberMergeServiceTest extends TestCase
         $this->assertGreaterThan(20, count($found), 'the scan found too few member columns to be reading the migrations');
         $missing = array_diff_key($found, $handled);
         $this->assertSame([], $missing, 'member columns the merge neither moves nor keeps (MemberMergeService::MEMBER_COLUMNS / KEPT_COLUMNS)');
+    }
+
+    public function test_private_offer_recipients_move_and_duplicates_are_kept_in_the_merge_audit(): void
+    {
+        $winner = $this->makeMember(); $loser = $this->makeMember();
+        $this->parentRowsExist('special_offers', [7, 8]);
+        foreach ([[$winner->id, 7], [$loser->id, 7], [$loser->id, 8]] as [$memberId, $offerId]) {
+            DB::table('special_offer_recipients')->insert(['organization_id' => app('current_organization_id'), 'member_id' => $memberId, 'offer_id' => $offerId]);
+        }
+        $this->service->merge($winner, $loser);
+        $this->assertSame([7, 8], DB::table('special_offer_recipients')->where('member_id', $winner->id)->orderBy('offer_id')->pluck('offer_id')->map(fn ($id) => (int) $id)->all());
+        $dropped = json_decode(DB::table('member_merges')->value('merged_data'), true)['dropped']['special_offer_recipients'];
+        $this->assertCount(1, $dropped);
     }
 
     public function test_a_shared_offer_keeps_the_row_that_went_furthest_and_records_the_other(): void

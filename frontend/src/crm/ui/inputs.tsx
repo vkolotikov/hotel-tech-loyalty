@@ -17,12 +17,12 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 }
 
 /** A search box with its magnifier; `label` is its name and placeholder. */
-export function SearchInput({ label, value, onChange, className = '' }: { label: string; value: string; onChange: (v: string) => void; className?: string }) {
+export function SearchInput({ label, placeholder = label, value, onChange, className = '' }: { label: string; placeholder?: string; value: string; onChange: (v: string) => void; className?: string }) {
   return (
     <label className={`relative block ${className}`}>
       <span className="sr-only">{label}</span>
       <Search size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-a-text-2" />
-      <input type="search" value={value} onChange={e => onChange(e.target.value)} placeholder={label} className={`${CONTROL} pl-9`} />
+      <input type="search" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={`${CONTROL} pl-9`} />
     </label>
   )
 }

@@ -1,0 +1,13 @@
+{
+  "hot": "{{count}} clientes potenciales calientes nuevos",
+  "hot_one": "Un nuevo cliente potencial caliente",
+  "toggle_blocked": "Las alertas de escritorio están bloqueadas en la configuración de este navegador",
+  "toggle_off": "Activar las alertas de escritorio",
+  "toggle_on": "Las alertas de escritorio están activadas",
+  "toggle_unsupported": "Este navegador no puede mostrar alertas de escritorio",
+  "turned_off": "Las alertas de escritorio están desactivadas",
+  "turned_on": "Las alertas de escritorio están activadas",
+  "waiting": "{{count}} chats más esperan una respuesta",
+  "waiting_one": "Un chat espera una respuesta",
+  "open": "Abrir"
+}

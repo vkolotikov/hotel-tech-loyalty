@@ -43,7 +43,7 @@ final class OperationsStatus
         if ($user->isPlatformAdmin()) {
             $checks[] = $this->observe('media_versioning', function () {
                 $cache = \App\Support\SharedCache::store();
-                if ($cache->has('ops:media-recovery-copy')) return ['status' => 'attention'];
+                if ($cache->has('ops:media-recovery-copy') || $cache->has('ops:cloud-media-recovery-copy')) return ['status' => 'attention'];
                 return $cache->get('ops:media-versioning') ?? ['status' => 'unobserved'];
             });
             $checks[] = $this->observe('scheduler', function () {

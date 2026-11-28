@@ -24,8 +24,10 @@
   "messages": "Nachrichten",
   "messages_count": "{{n}} Nachrichten",
   "no_chats": "Noch kein Chat. Beginnen Sie einen, er öffnet sich im Posteingang.",
+  "no_chats_short": "Noch kein Chat.",
   "no_pages": "Noch keine Seiten erfasst.",
   "no_reach": "Noch keine E-Mail oder Telefonnummer. Starten Sie einen Chat und fragen Sie danach.",
+  "no_reach_short": "Noch keine E-Mail oder Telefonnummer.",
   "none": "Hier sind noch keine Besucher",
   "none_found": "Niemand passt",
   "none_line": "Besucher erscheinen hier, sobald der Chat auf Ihrer Website ist – ob sie schreiben oder nicht.",
@@ -41,17 +43,26 @@
     "online": "Gerade auf der Website",
     "recent": "Kürzlich da"
   },
+  "ptab": {
+    "chats": "Chats",
+    "overview": "Überblick",
+    "pages": "Seiten"
+  },
   "reach_title": "So erreichen Sie sie",
   "reachable": "Kontakt hinterlassen",
   "refresh": "Aktualisieren",
   "remove_filter": "Filter entfernen",
   "search": "Nach Name, E-Mail, Adresse oder Seite suchen",
   "seen": "Gesehen {{when}}",
+  "show_all": "Alle zeigen",
   "site_title": "Auf der Website",
   "start_chat": "Chat beginnen",
   "tab": {
     "all": "Alle",
+    "has_contact": "Mit Kontakt",
+    "hot_lead": "Heiße Leads",
     "leads": "Leads",
+    "missed": "Verpasst",
     "offline": "Abwesend",
     "online": "Gerade auf der Website"
   },

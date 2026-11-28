@@ -18,6 +18,7 @@ export const BELL_TEXT: Record<InboxKind, string> = {
   approved: '{{name}} approved: {{post}}',
   sent_back: '{{name}} sent back: {{post}}',
   comment: '{{name}} commented: {{post}}',
+  mention: '{{name}} mentioned you: {{post}}',
   // Release 5a (spec 2026-10-19 §4.3): the posts the person is to put out.
   to_post: 'To post today: {{post}}',
   not_posted: 'Not marked as posted: {{post}}',

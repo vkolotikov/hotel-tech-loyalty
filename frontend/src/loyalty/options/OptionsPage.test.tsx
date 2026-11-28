@@ -85,7 +85,7 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     expect(earn).toMatch(/<section data-group="earn" data-hue="earn"/)
     expect(text(earn)).toMatch(/Earn points 2 of 6 on/)
     const words = text(earn)
-    for (const line of ['Earn rate Members get 1 point for every €1 they spend.', 'Points on bookings On Completed bookings earn points at your earn rate.', 'No stamp card.', 'No cashback credit.']) {
+    for (const line of ['Earn rate On Members get 1 point for every €1 they spend.', 'Points on bookings On Completed bookings earn points at your earn rate.', 'No stamp card.', 'No cashback credit.']) {
       expect(words).toContain(line)
     }
     expect(text(tab('bonus'))).toContain('New members get 500 points when they join.')
@@ -104,7 +104,7 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     expect(text(card(earn, 'desk_earn'))).not.toContain('Change')
     expect(text(card(earn, 'points_on_spend'))).not.toContain('Change')
     expect(text(card(earn, 'earn_rate'))).toContain('Change Earn rate')
-    expect(card(earn, 'earn_rate')).not.toContain('role="switch"')
+    expect(card(earn, 'earn_rate')).toContain('role="switch" aria-checked="true"')
     expect(card(earn, 'stamp_card')).toMatch(/^data-way="stamp_card" data-hue="off"/)
 
     const referrals = card(opened('referrals'), 'referrals')
@@ -140,10 +140,10 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
   it('gives a manager working switches and the wizard; a card shows its Save only once something changed', () => {
     const html = tab('earn')
     expect((html.match(/role="switch"[^>]*disabled=""/g) ?? []).length).toBe(0)
-    expect((html.match(/role="switch"/g) ?? []).length).toBe(5)
+    expect((html.match(/role="switch"/g) ?? []).length).toBe(6)
     expect(html).not.toContain('type="submit"')
     expect(text(html)).not.toContain('Not saved yet.')
-    expect(html).toContain('href="/loyalty/options/setup"')
+    expect(html).toContain('href="/loyalty/program/setup"')
     expect(text(html)).not.toContain('You see them as they are.')
   })
 
@@ -152,7 +152,7 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     const html = tab('bonus', false, data)
     expect(text(html)).toContain('Only an owner or a manager can change these. You see them as they are.')
     expect(html).not.toContain('type="submit"')
-    expect(html).not.toContain('href="/loyalty/options/setup"')
+    expect(html).not.toContain('href="/loyalty/program/setup"')
     expect((html.match(/role="switch"[^>]*disabled=""/g) ?? []).length).toBe(3)
     expect(text(html)).not.toContain('Change')
     expect(text(card(html, 'referrals'))).toContain('250 points')

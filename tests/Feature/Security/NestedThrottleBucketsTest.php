@@ -87,9 +87,24 @@ class NestedThrottleBucketsTest extends TestCase
             . 'instead of their own route\'s.');
     }
 
+    /**
+     * Buckets shared on purpose, each with exactly the paths that share it. `crm-mail-read` and `crm-mail-refresh`
+     * (2026-11-12): a person's email-history reads, and their refreshes from the mail provider, count once whether they
+     * come from a lead or a contact (one mailbox, one provider allowance;
+     * CrmMailTest::test_history_reads_keep_their_own_limit_across_contact_and_lead_routes pins it).
+     */
+    private const SHARED_ON_PURPOSE = [
+        'crm-mail-read' => ['api/v1/admin/guests/{guest}/email-history', 'api/v1/admin/inquiries/{inquiry}/email-history'],
+        'crm-mail-refresh' => ['api/v1/admin/guests/{guest}/email-history', 'api/v1/admin/inquiries/{inquiry}/email-history'],
+        // The same matched WhatsApp history and discovery profile open from either view of the customer.
+        'crm-whatsapp' => ['api/v1/admin/guests/{guest}/whatsapp-history', 'api/v1/admin/inquiries/{inquiry}/whatsapp-history'],
+        'crm-business-profile' => ['api/v1/admin/guests/{guest}/business-profile', 'api/v1/admin/inquiries/{inquiry}/business-profile'],
+    ];
+
     public function test_distinct_endpoints_do_not_reuse_each_others_prefix(): void
     {
         $seen = [];
+        $shared = [];
 
         foreach ($this->nested() as $route) {
             $path = substr($route['uri'], strpos($route['uri'], ' ') + 1);
@@ -97,6 +112,12 @@ class NestedThrottleBucketsTest extends TestCase
             foreach ($route['inner'] as $throttle) {
                 $prefix = self::prefix($throttle);
                 if ($prefix === '') {
+                    continue;
+                }
+
+                if (isset(self::SHARED_ON_PURPOSE[$prefix])) {
+                    $this->assertContains($path, self::SHARED_ON_PURPOSE[$prefix], "Throttle prefix '{$prefix}' is shared on purpose only by its listed paths, not {$path}.");
+                    $shared[$prefix][$path] = true;
                     continue;
                 }
 
@@ -108,5 +129,8 @@ class NestedThrottleBucketsTest extends TestCase
         }
 
         $this->assertNotEmpty($seen);
+        foreach (self::SHARED_ON_PURPOSE as $prefix => $paths) {
+            $this->assertEqualsCanonicalizing($paths, array_keys($shared[$prefix] ?? []), "Shared CRM limit {$prefix} must cover both entry points.");
+        }
     }
 }

@@ -1,5 +1,7 @@
 # Member portal (web) — how it is built and checked
 
+Launch rehearsal (9 November 2026): [evidence and remaining gates](audits/2026-11-09-loyalty-launch-rehearsal.md), [isolated real-backend instructions](../frontend/e2e/LAUNCH-REHEARSAL.md). The optional bootstrap flags `capabilities.wallets.apple/google` use the organisation's plan, active provider setup and existing pass eligibility. The web wallet actions are hidden when flags are missing or false; Apple also requires an Apple device. These flags do not replace issuance/provider approval checks. Native apps retain their endpoint contracts.
+
 The member portal is the customer-facing half of the SPA: `/portal/*`, one lazy chunk
 (`frontend/src/portal/`), served on the admin hosts for users with `user_type = member`.
 Spec: `docs/superpowers/specs/2026-09-23-member-portal-v2-design.md`.
@@ -9,6 +11,18 @@ A member can view their profile, benefits and booking history; book a service ap
 cancel either kind themselves inside the venue's cancellation window (`## Cancellation (phase 3)`).
 
 ## Backend
+
+Member activation (17 November 2026): `/portal/claim` requests `POST auth/send-code` with `purpose=claim`.
+The server issues an account-bound member grant, retaining the same generic response for staff, ambiguous or
+unknown addresses. Omitting purpose retains signup verification; that proof cannot claim an account or reset
+its password. Resends within the original fifteen-minute window reuse the code without extending expiry;
+the shared send throttle permits one request per address/purpose per minute. Successful verification clears
+the same shared attempt counter that failed entries increment. Expired, used and wrong-purpose grants remain
+refused. Published Android2.1.0/build31 opens this hosted claim page; the exact release runtime was checked.
+The physical user device and live email delivery remain separate checks, recorded in the
+[activation audit](audits/2026-11-17-loyalty-setup-activation.md).
+
+Personal offers (11 November 2026): `member/offers` adds optional `attachment: {name, mime, bytes}` metadata. The Rewards cards and expanded new-offer Inbox messages download authenticated blobs from `GET member/portal/offers/{id}/attachment`. Current tenant, active member, offer expiry and recipient eligibility are rechecked for every download. Individually targeted offers remain absent for other members, including guessed codes. Delivery writes the portal inbox through `NotificationService::keep` with offer preferences, and never claims the offer or awards points automatically. See the personal-offers audit and loyalty runbook for the staff workflow and immutable email outbox.
 
 - `GET /api/v1/member/portal` (`Member\Portal\PortalController`) is the shell's one startup call:
   venue identity + accent tokens (`App\Services\Portal\PortalTheme`, contrast-checked by
@@ -93,7 +107,7 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 ## Running it locally
 
 ```
-cd /c/wamp64/www/<worktree> && /c/wamp64/bin/php/php8.4.20/php.exe artisan serve --host=127.0.0.1 --port=8010
+cd /c/wamp64/www/<worktree> && /c/wamp64/bin/php/php8.5.12-nts/php.exe artisan serve --host=127.0.0.1 --port=8010
 cd frontend && VITE_API_URL=http://127.0.0.1:8010/api npm run dev
 ```
 Open the dev server as **`localhost`**, not `127.0.0.1`: the SPA only uses `VITE_API_URL` when the page's
@@ -123,9 +137,9 @@ on the Laravel host.
 
 ## Checks
 
-- Backend: `php artisan test tests/Feature/Member/` (with the PHP 8.4 binary named in `CLAUDE.md`; portal tests live in `tests/Feature/Member/Portal/`),
+- Backend: `php artisan test tests/Feature/Member/` (with the PHP 8.5 binary named in `CLAUDE.md`; portal tests live in `tests/Feature/Member/Portal/`),
   plus `tests/Feature/Booking/BookingCapabilityTest.php`, `tests/Feature/Pwa/`, `tests/Feature/Mail/`.
-- Frontend: `cd frontend && npx tsc -b && npx vitest run` (3 `plannerMeta` failures are pre-existing).
+- Frontend: `cd frontend && npx tsc -b && npx vitest run` (the suite is green; a failure is new).
 - Eyes first: screenshots at 390 and 1440, light and dark, against spec §4's quality bar.
 
 ## Booking (phase 2)
@@ -1188,3 +1202,22 @@ Since 2 Nov 2026 (stack plan step 4g): `stripe/stripe-php` 22.1, `@stripe/stripe
   a venue that already has any tier row, even an inactive (paused) one.
 - An old mobile app build that still calls `POST member/reservations` gets 404 — that endpoint is
   retired; the app books stays through the widget WebView instead.
+
+
+## Simplified member web portal (10 November 2026)
+
+Figma page 414:8135 supplies the Home, Rewards, Bookings and Profile layouts and their on-demand panels.
+The primary navigation has those four destinations (three without loyalty). Booking creation remains in Home
+and Bookings; Events is reached from Home, Rewards and Profile; Help and security/account actions are in Profile.
+Existing route and reward-tab bookmarks remain valid. Notifications are the Updates bell and Profile's
+Notifications panel. Delivery channels expand within that panel.
+
+The common Sheet uses a native modal dialog with an inert background, unique accessible title, focus return
+and a counted body scroll lock. A pending redemption cannot dismiss its confirmation, and a synchronous guard
+prevents rapid double confirmation. Booking detail/cancellation/payment implementations remain unchanged.
+
+GET member/portal/programme is a member-only, read-only web DTO: an allowlist of ProgrammeOptions earning
+facts, plus active places evaluated by AccessDecision. Never infer admission from a tier in the browser.
+QR and branding remain server data; the original Figma demo QR is never used. New layout strings live in
+i18n/design.*.json, and web navigation Help overrides in i18n/webHelp.*.json. Native-shared words and logic
+retain their existing behaviour. Test/rehearsal and release evidence: docs/audits/2026-11-10-member-portal-design.md.

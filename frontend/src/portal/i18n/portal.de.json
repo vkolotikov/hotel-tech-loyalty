@@ -8,6 +8,8 @@
   },
   "shell": { "greeting": "Hallo, {{name}}", "membership": "Meine Mitgliedschaft", "menu": "Menü", "portal_off": "Das Mitgliederportal ist für dieses Unternehmen deaktiviert. Bitte wenden Sie sich direkt an das Unternehmen." },
   "home": {
+    "membership_starts": "Mitgliedschaft beginnt am {{day}}",
+    "membership_from": "Mitglied seit {{day}}",
     "balance": "Punktestand", "progress_to": "Fortschritt bis {{tier}}",
     "lifetime_one": "{{count}} insgesamt gesammelt", "lifetime_few": "{{count}} insgesamt gesammelt", "lifetime_many": "{{count}} insgesamt gesammelt", "lifetime_other": "{{count}} insgesamt gesammelt",
     "points_to_go_one": "Noch {{count}} Punkt", "points_to_go_few": "Noch {{count}} Punkte", "points_to_go_many": "Noch {{count}} Punkte", "points_to_go_other": "Noch {{count}} Punkte",
@@ -23,6 +25,10 @@
     "wallet_unavailable": "Wallet-Karten sind für dieses Unternehmen noch nicht eingerichtet.", "wallet_error": "Die Karte konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut."
   },
   "rewards": {
+    "download_voucher": "Gutschein herunterladen", "voucher_unavailable": "Dieser Gutschein ist nicht verfügbar. Bitte wenden Sie sich an das Team.", "view_offer": "Angebot ansehen",
+    "offer_membership_unavailable": "Dieses Angebot erfordert eine aktive Mitgliedschaft der vorgesehenen Stufe.",
+    "membership_expired": "Ihre Mitgliedschaft ist abgelaufen. Bitte kontaktieren Sie das Team.",
+    "membership_not_started": "Diese Mitgliedschaft hat noch nicht begonnen.",
     "title": "Prämien", "tab_benefits": "Vorteile",
     "you_have_one": "Sie haben {{count}} Punkt", "you_have_few": "Sie haben {{count}} Punkte", "you_have_many": "Sie haben {{count}} Punkte", "you_have_other": "Sie haben {{count}} Punkte", "tab_catalogue": "Katalog",
     "tab_offers": "Angebote", "tab_codes": "Meine Codes",
@@ -136,6 +142,16 @@
     "claim_failed": "Dieser Code hat nicht funktioniert. Bitte prüfen und erneut versuchen.", "already_set_up": "Bereits eingerichtet?"
   },
   "book": {
+    "promotion_unavailable": "Aktionscodes sind hier nicht verfügbar.",
+    "promotion_invalid": "Dieser Aktionscode ist nicht bekannt.",
+    "promotion_inactive": "Dieser Aktionscode ist nicht aktiv.",
+    "promotion_expired": "Dieser Aktionscode liegt außerhalb seines Buchungszeitraums.",
+    "promotion_currency": "Dieser Aktionscode gilt nicht für die Buchungswährung.",
+    "promotion_min_nights": "Der Aufenthalt ist für diesen Aktionscode zu kurz.",
+    "promotion_dates": "Diese Übernachtungsdaten sind von der Aktion ausgeschlossen.",
+    "promotion_room": "Dieser Code gilt nicht für die gewählte Unterkunft.",
+    "promotion_rate_unavailable": "Der Preis der kostenlosen Nacht konnte nicht geprüft werden. Bitte erneut versuchen.",
+    "coupon_membership_inactive": "Dieser Code erfordert eine heute gültige Mitgliedschaft der vorgesehenen Stufe.",
     "title": "Buchen", "step_service": "Leistung", "step_staff": "Wer", "step_when": "Wann", "step_review": "Übersicht", "step_pay": "Zahlung",
     "your_price": "Ihr Preis", "list_price": "Listenpreis", "member_price_note": "{{label}} angewendet", "duration": "{{count}} Min.",
     "any_staff": "Nächste verfügbare Person", "choose_staff": "Wählen Sie, mit wem", "pick_day": "Tag auswählen",
@@ -172,6 +188,10 @@
     "error": { "payment_check_failed": "Wir konnten Ihre Zahlung gerade nicht prüfen. Es wurde keine neue Zahlung vorgenommen. Bitte bestätigen Sie noch einmal." }
   },
   "stay": {
+    "promo_code": "Aktionscode",
+    "promo_hint": "Nur für die Unterkunft. Zusatzleistungen bleiben zum vollen Preis.",
+    "promo_apply": "Code anwenden",
+    "promo_remove": "Code entfernen",
     "title": "Aufenthalt buchen", "step_dates": "Daten", "step_room": "Zimmer", "step_review": "Prüfen", "step_pay": "Bezahlen",
     "heading_dates": "Wann möchten Sie kommen?", "heading_room": "Wählen Sie ein Zimmer", "heading_review": "Prüfen Sie die Angaben", "heading_pay": "Aufenthalt bestätigen",
     "check_in": "Anreise", "check_out": "Abreise", "adults": "Erwachsene", "children": "Kinder", "nights_count": "Nächte: {{count}}",

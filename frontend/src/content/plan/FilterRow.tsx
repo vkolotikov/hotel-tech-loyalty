@@ -27,46 +27,49 @@ export function FilterRow({ platforms, filter, statuses, onFilter, keyDates = tr
   const { t } = useTranslation()
   const statusName = filter.status === 'all' ? null : t(`content.status.${filter.status}`, filter.status)
   return (
-    <div data-filter-row="" className="flex flex-wrap items-center gap-1.5 px-4 pb-3 lg:px-6">
-      {platforms.length > 1 && (
-        <div role="group" aria-label={t('content.plan.filter_platforms', 'Platforms')} className="flex flex-wrap items-center gap-1.5">
-          {platforms.map(p => {
-            const on = filter.platforms.length === 0 || filter.platforms.includes(p)
-            return (
-              <button key={p} type="button" aria-pressed={on} onClick={() => onFilter({ ...filter, platforms: toggleShown(filter.platforms, p, platforms) })}
-                className={`${CHIP} ${on ? 'border-a-border bg-a-surface text-a-text' : 'border-a-border bg-transparent text-a-text-2 hover:text-a-text'}`}>
-                <PlatformMark platform={p} size="sm" />{t(`content.platform.${p}`, p)}
-                {on && <Check data-tick="" size={12} aria-hidden className="text-a-accent-text" />}
-              </button>
-            )
-          })}
-        </div>
-      )}
-      <SideMenu label={t('content.plan.filter_status', 'Status')} kind="menu" place="down" listClassName="w-56"
-        buttonClassName={`${CHIP} ${statusName ? 'border-a-accent-text bg-a-surface text-a-text' : 'border-a-border bg-a-surface text-a-text hover:bg-a-surface-2'}`}
-        face={<>
-          <ListFilter size={13} aria-hidden className="text-a-text-2" />
-          {statusName ? t('content.plan.status_chip', 'Status: {{name}}', { name: statusName }) : t('content.plan.filter_status', 'Status')}
-          <ChevronDown size={12} aria-hidden className="text-a-text-2" />
-        </>}>
-        {(['all', ...statuses] as PlanFilter['status'][]).map(s => (
-          <button key={s} type="button" role="menuitemradio" aria-checked={filter.status === s} tabIndex={-1}
-            onClick={() => onFilter({ ...filter, status: s })} className={ITEM}>
-            <span className="w-3.5 shrink-0">{filter.status === s && <Check size={13} aria-hidden className="text-a-accent-text" />}</span>
-            {s === 'all' ? t('content.plan.all_statuses', 'All statuses') : t(`content.status.${s}`, s)}
+    <div data-filter-row="" className="c-plan-filters px-4 pb-3 lg:px-6">
+      {/* Keep one scrollable chip row present before the plan arrives. The other controls have their own column,
+          so neither a newly configured platform nor its translated name can move Status or Unscheduled. */}
+      <div role="group" aria-label={t('content.plan.filter_platforms', 'Platforms')} className="c-plan-platforms">
+        {platforms.length > 1 && platforms.map(p => {
+          const on = filter.platforms.length === 0 || filter.platforms.includes(p)
+          return (
+            <button key={p} type="button" aria-pressed={on} onClick={() => onFilter({ ...filter, platforms: toggleShown(filter.platforms, p, platforms) })}
+              onFocus={event => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
+              className={`${CHIP} shrink-0 whitespace-nowrap ${on ? 'border-a-border bg-a-surface text-a-text' : 'border-a-border bg-transparent text-a-text-2 hover:text-a-text'}`}>
+              <PlatformMark platform={p} size="sm" />{t(`content.platform.${p}`, p)}
+              {on && <Check data-tick="" size={12} aria-hidden className="text-a-accent-text" />}
+            </button>
+          )
+        })}
+      </div>
+      <div className="c-plan-filter-controls">
+        <SideMenu label={t('content.plan.filter_status', 'Status')} kind="menu" place="down" listClassName="w-56"
+          buttonClassName={`${CHIP} ${statusName ? 'border-a-accent-text bg-a-surface text-a-text' : 'border-a-border bg-a-surface text-a-text hover:bg-a-surface-2'}`}
+          face={<>
+            <ListFilter size={13} aria-hidden className="text-a-text-2" />
+            {statusName ? t('content.plan.status_chip', 'Status: {{name}}', { name: statusName }) : t('content.plan.filter_status', 'Status')}
+            <ChevronDown size={12} aria-hidden className="text-a-text-2" />
+          </>}>
+          {(['all', ...statuses] as PlanFilter['status'][]).map(s => (
+            <button key={s} type="button" role="menuitemradio" aria-checked={filter.status === s} tabIndex={-1}
+              onClick={() => onFilter({ ...filter, status: s })} className={ITEM}>
+              <span className="w-3.5 shrink-0">{filter.status === s && <Check size={13} aria-hidden className="text-a-accent-text" />}</span>
+              {s === 'all' ? t('content.plan.all_statuses', 'All statuses') : t(`content.status.${s}`, s)}
+            </button>
+          ))}
+        </SideMenu>
+        {unscheduled}
+        {onKeyDates && (
+          <button type="button" role="switch" aria-checked={keyDates} onClick={() => onKeyDates(!keyDates)}
+            className="ml-auto inline-flex items-center gap-2 rounded-lg px-1.5 py-1 text-xs font-medium text-a-text">
+            {t('content.plan.key_dates', 'Key dates')}
+            <span aria-hidden className={`relative h-4 w-7 rounded-full transition-colors ${keyDates ? 'bg-a-accent' : 'bg-a-border'}`}>
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-a-surface transition-all ${keyDates ? 'left-3.5' : 'left-0.5'}`} />
+            </span>
           </button>
-        ))}
-      </SideMenu>
-      {unscheduled}
-      {onKeyDates && (
-        <button type="button" role="switch" aria-checked={keyDates} onClick={() => onKeyDates(!keyDates)}
-          className="ml-auto inline-flex items-center gap-2 rounded-lg px-1.5 py-1 text-xs font-medium text-a-text">
-          {t('content.plan.key_dates', 'Key dates')}
-          <span aria-hidden className={`relative h-4 w-7 rounded-full transition-colors ${keyDates ? 'bg-a-accent' : 'bg-a-border'}`}>
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-a-surface transition-all ${keyDates ? 'left-3.5' : 'left-0.5'}`} />
-          </span>
-        </button>
-      )}
+        )}
+      </div>
     </div>
   )
 }

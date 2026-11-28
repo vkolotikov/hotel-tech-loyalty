@@ -35,6 +35,9 @@ class GenerateContentCalendar implements ShouldQueue
     /** The AI's time for the whole run: on the queue it is not held to the in-request 240 s, so a month can finish. */
     public const BUDGET_SECONDS = 540;
 
+    /** Jobs queued before campaigns shipped omit this key when deserialized. */
+    public ?int $campaignId = null;
+
     /** @param list<string>|null $platforms */
     public function __construct(
         public int $organizationId,
@@ -47,7 +50,9 @@ class GenerateContentCalendar implements ShouldQueue
         public ?string $instructions,
         public string $lockOwner,
         public int $userId,
+        ?int $campaignId = null,
     ) {
+        $this->campaignId = $campaignId;
         // The long AI jobs have their own queue and worker: mail never waits behind them (queue review).
         $this->onQueue('ai');
     }
@@ -77,12 +82,18 @@ class GenerateContentCalendar implements ShouldQueue
 
                 return;
             }
-            $result = $calendar->generate($profile, $this->from, $this->to, [
+            $context = new \App\Services\Content\ContentExecution($this->organizationId, $this->brandId, $this->userId, true,
+                fn () => ContentGenerationRun::assertRunning($this->brandId, $this->lockOwner), new CalendarGenerationBudget(null, self::BUDGET_SECONDS));
+            $result = $context->run(fn () => $calendar->generate($profile, $this->from, $this->to, [
                 'platforms'       => $this->platforms,
                 'fill_empty_only' => $this->fillEmptyOnly,
                 'instructions'    => $this->instructions,
-            ], new CalendarGenerationBudget(null, self::BUDGET_SECONDS));
+                'campaign_id' => $this->campaignId,
+                'commit' => fn ($write) => ContentGenerationRun::commit($this->brandId, $this->lockOwner, $write),
+            ], $context->budget));
             ContentGenerationRun::finish($this->brandId, $result, $this->lockOwner);
+        } catch (\App\Services\Content\ContentRefused $e) {
+            ContentGenerationRun::fail($this->brandId, $e->errorCode, $this->lockOwner);
         } catch (\InvalidArgumentException $e) {
             // The service's refusal for a brand without an active channel (checked before the queue, so rare here);
             // anything else of that kind is a failure to report.

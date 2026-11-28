@@ -17,7 +17,12 @@ class ContentPlannerPostEvent extends Model
     /** A step happens once: it has no later version. */
     public const UPDATED_AT = null;
 
+    protected $dateFormat = 'Y-m-d H:i:s.u';
+
     protected $fillable = ['post_id', 'brand_id', 'user_id', 'kind', 'note'];
+
+    // A serialized revision, not the event's wall clock; retain all six digits when assigning it.
+    protected $casts = ['post_updated_at' => 'string'];
 
     public function user(): BelongsTo
     {

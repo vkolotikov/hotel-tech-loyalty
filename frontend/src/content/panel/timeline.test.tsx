@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
     i18n: { language: 'en-GB' },
   }),
 }))
-vi.mock('../../lib/api', () => ({ api: {} }))
+vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string) => url }))
 
 import { ContentContext } from '../ContentProvider'
 import { bootFor } from '../brand/brandTesting'
@@ -72,5 +72,13 @@ describe('Comments and history (spec 2026-10-16 §7.1)', () => {
     const html = render(items)
     expect(html).toContain('Write a comment')
     expect(html).toContain('Enter sends · Shift + Enter adds a line')
+  })
+
+  it('shows safe asset context and explicit people without interpreting HTML', () => {
+    const html = render([{ ...items[1], type: 'comment', media: { id: 2, name: 'Photo', mime: 'image/png', url: '/storage/photo.png' }, mentions: [{ id: 3, name: '<b>Anna</b>' }] } as TimelineItem])
+    expect(html).toContain('Photo')
+    expect(html).toContain('&lt;b&gt;Anna&lt;/b&gt;')
+    expect(html).toContain('Mention teammates')
+    expect(html).toContain('Discuss an attachment')
   })
 })

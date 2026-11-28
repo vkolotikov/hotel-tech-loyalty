@@ -16,7 +16,7 @@ use OpenAI\Laravel\Facades\OpenAI;
  * HexaTech CRM's "Draft a reply" in the inbox (2026-11-07): the AI writes a reply a person reads, changes and sends —
  * it never sends anything itself and stores nothing but the spend. It speaks as the venue's assistant is set up to
  * (ChatbotBehaviorConfig: name, tone, length, language, rules) and answers from the venue's knowledge
- * (KnowledgeService::searchRelevantItems, read without counting a use).
+ * (the conversation brand's shared company facts, answers and document passages, read without counting a use).
  *
  * Refusals, in our words (CrmRefused): `ai_budget_used_up` once the month's AI allowance is spent
  * (AiUsageService::budgetStatus, the same stop as the website widget), `model_not_allowed` when the plan's model list
@@ -55,8 +55,9 @@ final class ReplyDrafter
             throw new CrmRefused('nothing_to_answer', 'The visitor has not written anything to answer yet.', 422);
         }
 
-        $behavior = ChatbotBehaviorConfig::getForOrg((int) $org->id);
-        $facts = $this->knowledge->searchRelevantItems((string) $lastVisitor->content, (int) $org->id, 5);
+        $brandId = $conversation->getAttribute('brand_id');
+        $behavior = ChatbotBehaviorConfig::getForOrg((int) $org->id, $brandId);
+        $knowledge = $this->knowledge->getKnowledgeContext((string) $lastVisitor->content, (int) $org->id, $brandId, countUse: false);
 
         $thread = $messages->map(fn (ChatMessage $m) => '[' . match ($m->sender_type) {
             'visitor' => 'VISITOR',
@@ -64,9 +65,9 @@ final class ReplyDrafter
             'agent'   => 'STAFF',
             default   => 'NOTE',
         } . '] ' . mb_substr((string) $m->content, 0, 800))->implode("\n");
-        $knowledge = $facts->isEmpty()
-            ? '(no matching answers in the knowledge base: do not invent prices, times or policies; offer to check)'
-            : $facts->map(fn ($i) => "Q: {$i->question}\nA: {$i->answer}")->implode("\n\n");
+        if ($knowledge === '') {
+            $knowledge = '(no matching answers in the knowledge base: do not invent prices, times or policies; offer to check)';
+        }
         $rules = collect((array) ($behavior->core_rules ?? []))->filter()->map(fn ($r) => '- ' . mb_substr((string) $r, 0, 300))->implode("\n");
         $length = match ($behavior->reply_length) {
             'concise'  => 'one to three short sentences',

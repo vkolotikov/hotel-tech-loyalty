@@ -71,5 +71,14 @@
   "pushLimit": "Push öffnet die Mitglieder-App. Test-Push und eigene Zielseiten sind hier nicht verfügbar.",
   "cost": "Der Anbieter berechnet SMS-Teile. Eine Preisschätzung ist hier nicht verfügbar.",
   "email": "E-Mail",
-  "push": "Push"
+  "push": "Push",
+  "platformEmail": "E-Mail-Dienst der Plattform",
+  "appRequired": "Mitglieder-App erforderlich",
+  "ownTwilio": "Twilio-Konto Ihrer Organisation",
+  "deliverySetup": "Voraussetzungen für den Versand",
+  "emailRequirements": "Der E-Mail-Versand ist integriert. HexaTech muss den Mailanbieter und die Versandverarbeitung der Plattform einrichten. Ihre Organisation nutzt diesen gemeinsamen Dienst; eine Kampagnenliste bestätigt keine Zustellung.",
+  "customSenderHold": "Eigene Absenderdomain / SMTP · Zurückgestellt",
+  "customSenderDetail": "Eigene Domain- und SMTP-Verbindungen sind noch nicht im Selfservice verfügbar. Absendername und Antwortadresse lassen sich einrichten; die Versandadresse gehört zur Plattform.",
+  "smsRequirements": "Verbinden Sie das eigene Twilio-Konto Ihrer Organisation und eine Absendernummer oder einen Messaging Service unter Integrationen. Twilio rechnet mit Ihrem Konto ab. Nur berechtigte Mitglieder mit SMS-Einwilligung erhalten Kampagnen.",
+  "pushRequirements": "Push benötigt die Mitglieder-App, Apple-/Google-Push-Zugangsdaten der Plattform und registrierte Geräte mit erlaubten Mitteilungen. Browser-Push und eigene App-Layouts sind hier nicht verfügbar."
 }

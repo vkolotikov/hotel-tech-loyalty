@@ -23,15 +23,7 @@ export const isDay = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(valu
 export type DueFilter = '' | 'now' | 'overdue' | 'today' | 'soon'
 export const DUE_FILTERS: readonly DueFilter[] = ['', 'now', 'overdue', 'today', 'soon']
 
-export type SortKey = 'newest' | 'oldest' | 'follow_up' | 'updated' | 'value' | 'ai' | 'arrival'
-export const SORT_KEYS: readonly SortKey[] = ['newest', 'oldest', 'follow_up', 'updated', 'value', 'ai', 'arrival']
-
-/**
- * The server's sort column and direction for each choice (InquiryController::index's allow-list of real columns; round
- * 2 put `total_value` and `ai_win_probability` on it, so "Largest first" and "Most likely to win" sort on the server).
- * Arrival is a hotel's (`check_in`).
- */
-export const SORTS: Record<SortKey, { sort: string; dir: 'asc' | 'desc' }> = {
+export const SORTS = {
   newest: { sort: 'created_at', dir: 'desc' },
   oldest: { sort: 'created_at', dir: 'asc' },
   follow_up: { sort: 'next_task_due', dir: 'asc' },
@@ -39,13 +31,37 @@ export const SORTS: Record<SortKey, { sort: string; dir: 'asc' | 'desc' }> = {
   value: { sort: 'total_value', dir: 'desc' },
   ai: { sort: 'ai_win_probability', dir: 'desc' },
   arrival: { sort: 'check_in', dir: 'asc' },
-}
+  name: { sort: 'lead_name', dir: 'asc' },
+  name_desc: { sort: 'lead_name', dir: 'desc' },
+  stage: { sort: 'stage_name', dir: 'asc' },
+  stage_desc: { sort: 'stage_name', dir: 'desc' },
+  value_asc: { sort: 'total_value', dir: 'asc' },
+  ai_asc: { sort: 'ai_win_probability', dir: 'asc' },
+  follow_up_desc: { sort: 'next_task_due', dir: 'desc' },
+  owner: { sort: 'assigned_to', dir: 'asc' },
+  owner_desc: { sort: 'assigned_to', dir: 'desc' },
+  touches: { sort: 'touch_count', dir: 'desc' },
+  touches_asc: { sort: 'touch_count', dir: 'asc' },
+  arrival_desc: { sort: 'check_in', dir: 'desc' },
+} as const
+export type SortKey = keyof typeof SORTS
+export const SORT_KEYS = Object.keys(SORTS) as SortKey[]
 
-/** The sorts offered: arrival only to a hotel (other venues' leads have no stay). */
+export const HEADER_SORTS = {
+  name: ['name', 'name_desc'],
+  newest: ['newest', 'oldest'],
+  stage: ['stage', 'stage_desc'],
+  value: ['value', 'value_asc'],
+  ai: ['ai', 'ai_asc'],
+  follow_up: ['follow_up', 'follow_up_desc'],
+  owner: ['owner', 'owner_desc'],
+  touches: ['touches', 'touches_asc'],
+  arrival: ['arrival', 'arrival_desc'],
+} as const satisfies Record<string, readonly [SortKey, SortKey]>
+
 export function sortChoices(hotel: boolean): SortKey[] {
-  return SORT_KEYS.filter(key => key !== 'arrival' || hotel)
+  return SORT_KEYS.filter(key => hotel || SORTS[key].sort !== 'check_in')
 }
-
 /** Has a phone: any, with a phone or mobile, without one (the server's `has_phone`). */
 export type PhoneFilter = '' | 'yes' | 'no'
 
@@ -64,6 +80,7 @@ export interface LeadFilters {
   /** The contact's country. */
   country: string
   phone: PhoneFilter
+  missingCurrency: boolean
   /** Created from / to, `YYYY-MM-DD`. */
   from: string
   to: string
@@ -72,11 +89,13 @@ export interface LeadFilters {
 }
 
 export const NO_FILTERS: LeadFilters = {
+  missingCurrency: false,
   q: '', due: '', status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '', sort: 'newest', page: 1,
 }
 
 /** The "Filters" panel's choices, all cleared (search, follow-up and sort stay). */
-export const PANEL_CLEARED: Pick<LeadFilters, 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'from' | 'to'> = {
+export const PANEL_CLEARED: Pick<LeadFilters, 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'missingCurrency' | 'from' | 'to'> = {
+  missingCurrency: false,
   status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '',
 }
 
@@ -96,10 +115,11 @@ export function readFilters(sp: URLSearchParams): LeadFilters {
     priority: read(sp, 'priority'),
     type: read(sp, 'type'),
     country: read(sp, 'country'),
+    missingCurrency: read(sp, 'missing_currency') === '1',
     phone: read(sp, 'phone') === 'yes' || read(sp, 'phone') === 'no' ? (read(sp, 'phone') as PhoneFilter) : '',
     from: isDay(from) ? from : '',
     to: isDay(to) ? to : '',
-    sort: SORT_KEYS.includes(sort) ? sort : 'newest',
+    sort: SORT_KEYS.includes(sort) ? sort : due === '1' || due === 'now' ? 'follow_up' : 'newest',
     page: Number.isInteger(page) && page > 1 ? page : 1,
   }
 }
@@ -117,9 +137,10 @@ export function writeFilters(filters: LeadFilters, current: URLSearchParams = ne
   set('type', filters.type)
   set('country', filters.country)
   set('phone', filters.phone)
+  set('missing_currency', filters.missingCurrency ? '1' : '')
   set('from', filters.from)
   set('to', filters.to)
-  set('sort', filters.sort === 'newest' ? '' : filters.sort)
+  set('sort', filters.sort === (filters.due === 'now' ? 'follow_up' : 'newest') ? '' : filters.sort)
   set('page', filters.page > 1 ? String(filters.page) : '')
   return next
 }
@@ -131,7 +152,7 @@ export function withFilter(filters: LeadFilters, patch: Partial<LeadFilters>): L
 
 /** How many of the "Filters" panel's choices are set (stage, source, owner, priority, type, country, phone, dates). */
 export function activeFilterCount(filters: LeadFilters): number {
-  return [filters.status, filters.source, filters.owner, filters.priority, filters.type, filters.country, filters.phone, filters.from || filters.to]
+  return [filters.status, filters.source, filters.owner, filters.priority, filters.type, filters.country, filters.phone, filters.missingCurrency, filters.from || filters.to]
     .filter(Boolean).length
 }
 
@@ -166,8 +187,9 @@ export function listQuery(filters: LeadFilters, me: string, perPage = 25): Query
     inquiry_type: filters.type,
     country: filters.country,
     has_phone: filters.phone,
+    ...(filters.missingCurrency ? { missing_currency: 1 } : {}),
     ...dateRange(filters.from, filters.to),
-    task_due: filters.due === 'now' ? '' : filters.due,
+    task_due: filters.due,
     sort: sort.sort,
     dir: sort.dir,
     page: filters.page,
@@ -183,16 +205,27 @@ export function dueSections(filters: LeadFilters, me: string): { key: 'overdue' 
   if (filters.due !== 'now') return []
   return (['overdue', 'today'] as const).map(key => ({
     key,
-    query: { ...listQuery({ ...filters, due: key, sort: 'follow_up', page: 1 }, me, 100) },
+    query: listQuery({ ...filters, due: key, page: 1 }, me, 100),
   }))
 }
 
-/** The CSV export of what the list shows (the same filters, every page). */
-export function exportQuery(filters: LeadFilters, me: string): Query {
-  const { page: _page, per_page: _perPage, task_due, ...rest } = listQuery(filters, me)
+/** A list's file: the full admin's styled Excel workbook (its export's default), or plain CSV for other tools. */
+export type ExportFormat = 'xlsx' | 'csv'
+
+/** The format's query, as the full admin's call writes it: nothing for the workbook, `format=csv` for the CSV. */
+export function formatParam(format: ExportFormat): { format?: 'csv' } {
+  return format === 'csv' ? { format: 'csv' } : {}
+}
+
+/**
+ * The export of what the list shows (`GET inquiries/export`, round 5): the same filters, every page, as a workbook or
+ * CSV. Before, the CSV was asked of `GET inquiries`, which answers JSON, so the file came out empty.
+ */
+export function exportQuery(filters: LeadFilters, me: string, format: ExportFormat = 'xlsx'): Query {
+  const { page: _page, per_page: _perPage, ...rest } = listQuery(filters, me)
   void _page
   void _perPage
-  return { ...rest, task_due: filters.due === 'now' ? '' : task_due, format: 'csv' }
+  return { ...rest, ...formatParam(format) }
 }
 
 /* ─── Pipelines and stages ───────────────────────────────────────────────── */
@@ -307,6 +340,7 @@ export interface LeadDraft {
   status: string
   source: string
   value: string
+  currency?: string
   priority: string
   owner: string
   /** The enquiry type (`inquiry_type`), where the organisation has a list of them. */
@@ -382,7 +416,10 @@ export function leadBody(draft: LeadDraft, guestId: number, opts: { stay: boolea
   put('inquiry_type', draft.type)
   put('notes', draft.notes)
   const value = number(draft.value)
-  if (value !== null && !Number.isNaN(value)) body.total_value = value
+  if (value !== null && !Number.isNaN(value)) {
+    body.total_value = value
+    if (draft.currency) body.currency = draft.currency
+  }
   if (opts.stay) {
     if (isDay(draft.checkIn)) body.check_in = draft.checkIn
     if (isDay(draft.checkOut)) body.check_out = draft.checkOut

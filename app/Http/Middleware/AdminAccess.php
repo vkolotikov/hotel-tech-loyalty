@@ -78,6 +78,11 @@ class AdminAccess
 
         // Tenant-scoped (TenantScope): this organisation's row, never another one's; an active one first.
         $staff = Staff::where('user_id', $user->id)->orderByDesc('is_active')->first();
+        if (\App\Services\Loyalty\Partners\PartnerAccess::restricted($staff)
+            && (!$staff->is_active || !\App\Services\Loyalty\Partners\PartnerAccess::allowedRoute($route->uri(), $method))) {
+            $this->recorder->record($orgId, (int) $user->id, $staff->role, $rule->key, $method, 'scan_only', true);
+            return response()->json(['error' => 'scan_only', 'message' => 'This account can only scan members at its assigned places.'], 403);
+        }
         $reason = match (true) {
             $staff === null || !$staff->is_active => 'staff_inactive',
             !self::meets($staff, $need)           => 'not_allowed',

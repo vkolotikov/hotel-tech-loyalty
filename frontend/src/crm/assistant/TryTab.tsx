@@ -53,7 +53,7 @@ export function TryTab({ canManage, assistantName }: { canManage: boolean; assis
           <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full crm-ai-fill"><Bot size={17} /></span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-a-text">{name}</span>
-            <span className="block truncate text-xs text-a-text-2">{t('crm.assistant.try.subtitle', 'A test chat. Nothing is kept and no visitor sees it.')}</span>
+            <span className="block truncate text-xs text-a-text-2">{t('crm.assistant.try.subtitle_short', 'Test chat: not kept, never seen by visitors')}</span>
           </span>
           {history.length > 0 && (
             <Button variant="ghost" size="sm" onClick={restart}><RotateCcw size={14} aria-hidden />{t('crm.assistant.try.clear', 'Start again')}</Button>
@@ -63,7 +63,7 @@ export function TryTab({ canManage, assistantName }: { canManage: boolean; assis
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-a-canvas/40 p-4" aria-live="polite">
             {history.length === 0 && (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <p className="max-w-sm text-sm text-a-text-2">{t('crm.assistant.try.empty', 'Ask what a visitor would ask: "Do you have parking?" The answer uses what is saved now.')}</p>
+                <p className="max-w-sm text-sm text-a-text-2">{t('crm.assistant.try.empty_short', 'Ask as a visitor would.')}</p>
                 <div className="flex flex-wrap justify-center gap-2">
                   {starters.map(q => (
                     <button key={q} type="button" onClick={() => ask1(q)} disabled={ask.isPending}
@@ -109,22 +109,20 @@ export function TryTab({ canManage, assistantName }: { canManage: boolean; assis
       </section>
 
       <Card title={t('crm.assistant.try.behind', 'Behind the answer')} icon={BookOpen} tone="ai"
-        description={t('crm.assistant.try.behind_short', 'Where the last answer came from.')}>
+        description={t('crm.assistant.try.behind_line', 'After an answer, see whether it came from your knowledge and what the assistant was told.')}>
         {last ? (
           <div className="space-y-3">
             {last.kb_context_used
               ? <Pill tone="success">{t('crm.assistant.try.used_knowledge', 'Answered from your knowledge')}</Pill>
               : <Pill tone="pending">{t('crm.assistant.try.no_knowledge', 'No answer in your knowledge matched')}</Pill>}
-            <p className="text-sm text-a-text-2">{last.kb_context_used
-              ? t('crm.assistant.try.used_line', 'The assistant found answers of yours that fit the question.')
-              : t('crm.assistant.try.no_line', 'Add an answer in Knowledge if this question comes up often.')}</p>
+            {!last.kb_context_used && <p className="text-sm text-a-text-2">{t('crm.assistant.try.no_line', 'Add an answer in Knowledge if this question comes up often.')}</p>}
             <details>
               <summary className="cursor-pointer text-xs font-medium text-a-accent-text">{t('crm.assistant.try.prompt', 'What the assistant was told')}</summary>
               <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-a-surface-2 p-3 text-xs text-a-text-2">{last.system_prompt}</pre>
             </details>
           </div>
         ) : (
-          <p className="text-sm text-a-text-2">{t('crm.assistant.try.behind_line', 'After an answer, see whether it came from your knowledge and what the assistant was told.')}</p>
+          <p className="text-sm text-a-text-2">{t('crm.assistant.try.behind_empty', 'Nothing asked yet.')}</p>
         )}
       </Card>
     </div>

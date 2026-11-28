@@ -1,5 +1,7 @@
 import { useState, type KeyboardEvent } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { resolveImage } from '../../lib/api'
+import { useRetainedState } from '../drafts/useRetainedState'
 import { useTranslation } from 'react-i18next'
 import { formatInstant } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
@@ -40,9 +42,9 @@ function CommentItem({ item, name, when, manager, onSave, onDelete }: {
   const { t } = useTranslation()
   const rights = commentRights(item, manager)
   // The words being edited; null while the comment is shown.
-  const [text, setText] = useState<string | null>(null)
+  const [text, setText] = useRetainedState<string | null>(`comment-edit:${item.id}`, null)
   const [confirming, setConfirming] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useRetainedState(`comment-edit-busy:${item.id}`, false, false)
   const save = async () => {
     if (text === null || busy) return
     setBusy(true)
@@ -77,13 +79,18 @@ function CommentItem({ item, name, when, manager, onSave, onDelete }: {
         ? <p className="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-a-text">{item.body}</p>
         : (
           <div className="mt-1 space-y-2">
-            <textarea value={text} rows={3} onChange={(e) => setText(e.target.value)} aria-label={t('content.timeline.edit', 'Edit')} className={BOX} />
+            <textarea disabled={busy} value={text} rows={3} onChange={(e) => setText(e.target.value)} aria-label={t('content.timeline.edit', 'Edit')} className={BOX} />
             <div className="flex gap-2">
               <Button size="sm" loading={busy} onClick={() => { void save() }}>{t('content.timeline.save', 'Save')}</Button>
               <Button size="sm" variant="secondary" disabled={busy} onClick={() => setText(null)}>{t('content.common.cancel', 'Cancel')}</Button>
             </div>
           </div>
         )}
+      {item.media && <a href={resolveImage(item.media.url) ?? ''} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-2 rounded-lg text-sm text-a-accent-text">
+        {item.media.mime.startsWith('image/') && <img src={resolveImage(item.media.url) ?? ''} alt="" className="h-10 w-10 rounded object-cover" />}
+        <span className="min-w-0 break-all">{t('content.collaboration.asset', 'Attachment')}: {item.media.name}</span>
+      </a>}
+      {!!item.mentions?.length && <p className="mt-2 wrap-break-word text-xs text-a-text-2">{t('content.collaboration.mentions', 'Mentioned')}: {item.mentions.map(person => person.name).join(', ')}</p>}
       {confirming && (
         <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-sm text-a-text">
           <span>{t('content.timeline.delete_confirm', 'Delete this comment?')}</span>
@@ -108,9 +115,13 @@ export function Timeline({ post, items }: { post: PostDetail; items: TimelineIte
   const api = useApi()
   const brand = useBrandId()
   const queryClient = useQueryClient()
-  const [text, setText] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [draft, setDraft, retained] = useRetainedState(`comment-new:${post.id}`, { text: '', media_id: null as number | null, mentioned_user_ids: [] as number[] })
+  const { text } = draft
+  const [busy, setBusy] = useRetainedState(`comment-new-busy:${post.id}`, false, false)
+  const [error, setError] = useRetainedState<string | null>(`comment-error:${post.id}`, null, false)
+  const team = useQuery({ queryKey: ['content', brand, 'team'], queryFn: api.team })
+  const media = post.media ?? []
+  const missingMedia = draft.media_id !== null && !media.some(asset => asset.id === draft.media_id)
   const update = (change: (p: PostDetail) => PostDetail) =>
     queryClient.setQueryData<PostDetail>(['content', brand, 'post', post.id], old => (old ? change(old) : old))
   const say = (code: string) => {
@@ -124,16 +135,21 @@ export function Timeline({ post, items }: { post: PostDetail; items: TimelineIte
 
   const send = async () => {
     // Nothing written, or too long (the line under the box says so): nothing goes.
-    if (commentProblem(text) !== null || busy) return
+    if (commentProblem(text) !== null || busy || missingMedia) return
     setBusy(true)
     setError(null)
     try {
-      const { comment, comments_count } = await api.addComment(post.id, text.trim())
+      const { comment, comments_count } = await api.addComment(post.id, text.trim(), { media_id: draft.media_id, mentioned_user_ids: draft.mentioned_user_ids })
       update(p => withComment(p, comment, comments_count))
-      setText('')
+      retained.clear()
       void refreshLists(queryClient, brand)
     } catch (e) {
-      say(failureOf(e).code)
+      const fields = (e as { response?: { data?: { errors?: Record<string, unknown> } } })?.response?.data?.errors
+      if (fields?.media_id || fields?.mentioned_user_ids) {
+        setError(t('content.collaboration.selection_failed', 'The attachment or team selection changed. Choose again below; your comment is kept.'))
+        void team.refetch()
+        void queryClient.invalidateQueries({ queryKey: ['content', brand, 'post', post.id] })
+      } else say(failureOf(e).code)
     } finally {
       setBusy(false)
     }
@@ -186,13 +202,28 @@ export function Timeline({ post, items }: { post: PostDetail; items: TimelineIte
           )}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-a-text-2">{t('content.timeline.box', 'Write a comment')}</span>
-        <textarea value={text} rows={2} onChange={(e) => setText(e.target.value)} onKeyDown={onKeyDown}
+        <textarea aria-label={t('content.timeline.box', 'Write a comment')} disabled={busy} value={text} rows={2} onChange={(e) => setDraft({ ...draft, text: e.target.value })} onKeyDown={onKeyDown}
           aria-invalid={tooLong || undefined} aria-describedby="content-timeline-hint" className={BOX} />
       </label>
+      <label className="block text-xs text-a-text-2">{t('content.collaboration.media_select', 'Discuss an attachment')}
+        <select aria-label={t('content.collaboration.media_select', 'Discuss an attachment')} className={`${BOX} mt-1`} disabled={busy} value={draft.media_id ?? ''} onChange={e => setDraft({ ...draft, media_id: e.target.value ? Number(e.target.value) : null })}>
+          <option value="">{t('content.collaboration.whole_post', 'Whole post')}</option>
+          {missingMedia && <option value={draft.media_id!}>{t('content.collaboration.detached', 'Attachment no longer attached — choose again')}</option>}
+          {media.map(asset => <option key={asset.id} value={asset.id}>{asset.name}</option>)}
+        </select>
+      </label>
+      <fieldset disabled={busy} className="space-y-2"><legend className="text-xs text-a-text-2">{t('content.collaboration.mention_select', 'Mention teammates')}</legend>
+        <div className="flex max-h-32 flex-wrap gap-x-4 gap-y-2 overflow-y-auto">
+          {team.data?.team.filter(person => person.id !== boot.staff.id).map(person => <label key={person.id} className="flex items-center gap-2 text-xs text-a-text"><input type="checkbox" checked={draft.mentioned_user_ids.includes(person.id)} onChange={e => setDraft({ ...draft, mentioned_user_ids: e.target.checked ? [...draft.mentioned_user_ids, person.id] : draft.mentioned_user_ids.filter(id => id !== person.id) })} />{person.name}</label>)}
+        </div>
+        {team.isLoading && <p role="status" className="text-xs text-a-text-2">{t('content.common.loading', 'Loading…')}</p>}
+        {team.isError && <Button size="sm" variant="secondary" onClick={() => { void team.refetch() }}>{t('content.common.retry', 'Try again')}</Button>}
+        {draft.mentioned_user_ids.length > 0 && <button type="button" disabled={busy} className={SMALL} onClick={() => setDraft({ ...draft, mentioned_user_ids: [] })}>{t('content.collaboration.clear_mentions', 'Clear selected mentions')}</button>}
+      </fieldset>
       {tooLong && <p className="text-xs text-a-danger">{t(tooLongKey, tooLongWords)}</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p id="content-timeline-hint" className="text-xs text-a-text-2">{t('content.timeline.hint', 'Enter sends · Shift + Enter adds a line')}</p>
-        <Button size="sm" variant="secondary" loading={busy} disabled={text.trim() === '' || tooLong} onClick={() => { void send() }}>
+        <Button size="sm" variant="secondary" loading={busy} disabled={text.trim() === '' || tooLong || missingMedia} onClick={() => { void send() }}>
           {t('content.timeline.send', 'Comment')}
         </Button>
       </div>

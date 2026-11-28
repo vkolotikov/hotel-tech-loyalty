@@ -17,6 +17,7 @@ use Tests\TestCase;
 class OptionsTest extends TestCase
 {
     use DatabaseTransactions, SetsUpLoyaltyWorkspace;
+    use \Tests\Concerns\LoyaltyWorkspace\AccessSchema;
 
     protected function setUp(): void
     {
@@ -26,6 +27,20 @@ class OptionsTest extends TestCase
         $this->buildProgrammeAdviceSchema();
         // LoyaltyPresetService::listPresets() reads the preset stamp from crm_settings.
         $this->setUpLoyaltyPresetSchema();
+    }
+
+    public function test_spending_points_can_be_disabled_without_losing_the_saved_rate(): void
+    {
+        $this->buildAccessSchema();
+        $this->asManager()->putJson($this->api('options'), ['options' => ['points_per_currency' => 3, 'spend_points_enabled' => false]])
+            ->assertOk()->assertJsonPath('options.spend_points_enabled', false)->assertJsonPath('options.points_per_currency', 3)
+            ->assertJsonPath('ways.0.switch', 'spend_points_enabled');
+        $earning = app(\App\Services\Portal\MemberProgramme::class)->for($this->grace)['earning'];
+        $this->assertSame(0, $earning['base_rate']);
+        $this->assertFalse($earning['bookings']);
+        $this->assertFalse($earning['desk']);
+        $this->asManager()->putJson($this->api('options'), ['options' => ['spend_points_enabled' => true]])
+            ->assertOk()->assertJsonPath('options.points_per_currency', 3)->assertJsonPath('options.spend_points_enabled', true);
     }
 
     public function test_it_answers_the_options_with_their_cards_rules_catalogue_presets_and_the_callers_right(): void
@@ -53,12 +68,11 @@ class OptionsTest extends TestCase
             ->assertJsonPath('options.programme_setup_completed_at', null);
 
         $this->assertSame(
-            // Release 8: "How members move up" (tier_progress), a card that is always on. Owner 2026-10-26: the earn rate is
-            // a card of its own, always on — it serves bookings and the desk alike; points on bookings is only the switch.
+            // Tier progression is a required programme rule; spending points has its own optional shared switch.
             ['earn_rate', 'points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card', 'check_in', 'desk_earn', 'cashback', 'tier_progress'],
             array_column($response->json('ways'), 'key'),
         );
-        $response->assertJsonPath('ways.0', ['key' => 'earn_rate', 'switch' => null, 'zero_off' => null, 'fields' => ['points_per_currency']])
+        $response->assertJsonPath('ways.0', ['key' => 'earn_rate', 'switch' => 'spend_points_enabled', 'zero_off' => null, 'fields' => ['points_per_currency']])
             ->assertJsonPath('ways.1', ['key' => 'points_on_spend', 'switch' => 'points_on_bookings', 'zero_off' => null, 'fields' => []])
             ->assertJsonPath('ways.2', ['key' => 'points_expiry', 'switch' => null, 'zero_off' => 'points_expiry_months', 'fields' => ['points_expiry_months']]);
         // The checks (ProgrammeAdvice): this salon takes no bookings yet, so points on bookings does nothing and nothing
@@ -75,8 +89,8 @@ class OptionsTest extends TestCase
         $response->assertJsonPath('catalogue', [
             'tiers'   => 3,
             'rewards' => [
-                ['id' => $cheap->id, 'name' => 'Free coffee', 'points_cost' => 100],
-                ['id' => $dear->id, 'name' => 'Spa ritual', 'points_cost' => 2500],
+                ['id' => $cheap->id, 'name' => 'Free coffee', 'points_cost' => 100, 'is_redeemable' => true],
+                ['id' => $dear->id, 'name' => 'Spa ritual', 'points_cost' => 2500, 'is_redeemable' => true],
             ],
             'offers'  => 1,
             'boosts'  => 1,

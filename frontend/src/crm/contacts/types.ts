@@ -31,6 +31,10 @@ export interface Guest {
   postal_code?: string | null
   nationality?: string | null
   preferred_language?: string | null
+  guest_type?: string | null
+  vip_level?: string | null
+  /** The organisation's own fields (Settings → Fields), by key. */
+  custom_data?: Record<string, unknown> | null
   lead_source: string | null
   owner_name: string | null
   lifecycle_status: string | null
@@ -49,6 +53,8 @@ export interface Facets {
   lead_source: string[]
   owner_name: string[]
   loyalty_tier: string[]
+  /** Round 5: the guest types the contacts hold (older servers leave it out). */
+  guest_type?: string[]
 }
 
 /** GET guests/tags. */
@@ -142,17 +148,27 @@ export interface Company {
   contract_end: string | null
   payment_terms: string | null
   credit_limit: string | number | null
+  discount_percentage?: string | number | null
+  /** A hotel's: the negotiated room rate, its kind, and the room nights a year it aims for. */
+  negotiated_rate?: string | number | null
+  rate_type?: string | null
+  annual_room_nights_target?: number | null
   status: string | null
   notes: string | null
+  custom_data?: Record<string, unknown> | null
   created_at?: string | null
 }
 
 /** GET corporate-accounts/{id}: the row with its vitals and latest leads. */
 export interface CompanyDetail extends Company {
   inquiries_count?: number
+  reservations_count?: number
   ltv?: {
+    confirmed_revenue?: number
     open_pipeline_value: number
     open_pipeline_count: number
+    outstanding?: number
+    credit_pct?: number | null
     last_contact_at: string | null
     renewal_soon: boolean
   }

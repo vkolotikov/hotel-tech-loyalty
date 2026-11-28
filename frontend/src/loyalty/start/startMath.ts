@@ -23,7 +23,7 @@ export const START_KEY = ['loyalty', 'start'] as const
 
 /** The page that does each step. */
 export const STEP_TO: Record<string, string> = {
-  programme: '/loyalty/options/setup',
+  programme: '/loyalty/program/setup',
   tiers: '/loyalty/program',
   ways: '/loyalty/options',
   rewards: '/loyalty/rewards',

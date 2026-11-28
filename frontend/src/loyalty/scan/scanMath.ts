@@ -24,19 +24,21 @@ export interface ScanEnv {
   camera: boolean
   webNfc: boolean
   webHid: boolean
+  windows: boolean
 }
 
 export function detectEnv(): ScanEnv {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return { secure: false, camera: false, webNfc: false, webHid: false }
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return { secure: false, camera: false, webNfc: false, webHid: false, windows: false }
   return {
     secure: window.isSecureContext === true,
     camera: typeof navigator.mediaDevices?.getUserMedia === 'function',
     webNfc: 'NDEFReader' in window,
     webHid: 'hid' in navigator,
+    windows: /\bWindows NT\b/i.test(navigator.userAgent),
   }
 }
 
-export type ScanMode = 'camera' | 'nfc' | 'usb'
+export type ScanMode = 'camera' | 'nfc' | 'usb' | 'windows'
 
 /** Whether a way of scanning can start here: ready, not in this browser, or only over https (the camera). */
 export type ModeState = 'ready' | 'unsupported' | 'insecure'
@@ -44,6 +46,7 @@ export type ModeState = 'ready' | 'unsupported' | 'insecure'
 export function modeState(mode: ScanMode, env: ScanEnv): ModeState {
   if (mode === 'camera') return !env.secure ? 'insecure' : env.camera ? 'ready' : 'unsupported'
   if (mode === 'nfc') return env.webNfc ? 'ready' : 'unsupported'
+  if (mode === 'windows') return !env.secure ? 'insecure' : env.windows ? 'ready' : 'unsupported'
   return env.webHid ? 'ready' : 'unsupported'
 }
 
@@ -163,10 +166,10 @@ export function nfcAttempt(serialNumber: string | undefined | null, records: Nde
   return card ? { code: card, source: 'nfc', card } : null
 }
 
-/** A USB reader's ID (hex), sent and linked as `04:A2:B3:C4`. */
+/** A reader's UID identifies a physical card, even if a personal token uses the same bytes. */
 export function usbAttempt(uid: string): Attempt {
-  const code = hexWithColons(uid)
-  return { code, source: 'usb', card: code }
+  const card = hexWithColons(uid)
+  return { code: `HTCARD:${card}`, source: 'usb', card }
 }
 
 export function cameraAttempt(text: string): Attempt {

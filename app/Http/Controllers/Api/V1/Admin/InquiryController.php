@@ -3,23 +3,37 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Crm\DealListQuery;
+use App\Services\Crm\SalesRecordSearch;
+use App\Exceptions\AiHelperRefused;
 use App\Models\Activity;
 use App\Models\AuditLog;
+use App\Models\CrmLeadAssistant;
 use App\Models\Inquiry;
 use App\Models\InquiryAttachment;
 use App\Models\InquiryLostReason;
+use App\Models\Organization;
 use App\Models\CustomField;
 use App\Models\PipelineStage;
 use App\Models\Reservation;
 use App\Models\Task;
 use App\Services\CustomFieldService;
+use App\Services\Crm\LeadAssistant;
+use App\Services\Crm\LeadAssistantWriter;
+use App\Services\Crm\EmailDraftRevision;
+use App\Services\Crm\LeadEmailEvidence;
+use App\Services\Crm\LeadReplyBadges;
+use App\Services\Crm\OpenLeadValue;
+use App\Services\Crm\SalesBrand;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -49,31 +63,18 @@ class InquiryController extends Controller
             'pipelineStage:id,name,color,kind',
         ]);
 
-        if ($s = $request->get('search')) {
-            // Search covers what staff actually paste into the box: a name,
-            // a company, an email, or a phone number. Email/phone were
-            // missing, so looking up a lead by the address it was captured
-            // with returned "No leads match these filters" even though the
-            // row was right there. Phone is matched on digits only, so
-            // "26123456" still finds a number stored as "26 123 456" or
-            // "+371 26 123 456".
-            $digits = preg_replace('/\D/', '', $s);
-            $query->where(function ($q) use ($s, $digits) {
-                $q->where('event_name', 'ilike', "%$s%")
-                  ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', function ($q2) use ($s, $digits) {
-                      $q2->where('full_name', 'ilike', "%$s%")
-                         ->orWhere('company', 'ilike', "%$s%")
-                         ->orWhere('email', 'ilike', "%$s%")
-                         ->orWhere('phone', 'ilike', "%$s%")
-                         ->orWhere('mobile', 'ilike', "%$s%");
-                      if (strlen((string) $digits) >= 4) {
-                          $q2->orWhereRaw("regexp_replace(coalesce(phone, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"])
-                             ->orWhereRaw("regexp_replace(coalesce(mobile, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"]);
-                      }
-                  });
-            });
-        }
+        $this->applyLeadList($query, $request);
+        $page = $query->paginate($request->get('per_page', 25));
+        LeadReplyBadges::attach($page->getCollection(), $request->user());
+
+        return response()->json($page);
+    }
+
+    /** @param Builder<Inquiry> $query */
+    private function applyLeadList(Builder $query, Request $request): void
+    {
+        $search = trim($request->string('search')->toString());
+        if ($search !== '') SalesRecordSearch::inquiries($query, $search);
         if ($v = $request->get('status'))        $query->where('status', $v);
         if ($v = $request->get('priority'))      $query->where('priority', $v);
         if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
@@ -82,6 +83,7 @@ class InquiryController extends Controller
         // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
         if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
+        if ($request->boolean('missing_currency')) $query->missingValueCurrency();
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
         if ($v = $request->get('has_phone')) {
@@ -98,6 +100,7 @@ class InquiryController extends Controller
             // `next_task_due` is a calendar day: "today" is the venue's (2026-11-08), not the server's UTC day.
             $today = $this->venueToday();
             match ($v) {
+                'now'     => $query->where('next_task_due', '<=', $today)->where('next_task_completed', false),
                 'today'   => $query->where('next_task_due', $today)->where('next_task_completed', false),
                 'overdue' => $query->where('next_task_due', '<', $today)->where('next_task_completed', false),
                 'soon'    => $query->whereBetween('next_task_due', [$today, self::dayAfter($today, 3)])->where('next_task_completed', false),
@@ -110,20 +113,26 @@ class InquiryController extends Controller
         // Only real `inquiries` columns (2026-11-08): `guest_name`, `value_estimated` and `win_probability` were not
         // and answered a database error; the list's Value and AI-signal headers sort by these.
         $allowedSorts = ['created_at','updated_at','check_in','check_out','status','priority','total_value','ai_win_probability','next_task_due','assigned_to','last_contacted_at'];
-        $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
+        $requested = $request->get('sort');
+        $sort = match ($requested) {
+            'lead_name' => "(SELECT LOWER(COALESCE(NULLIF(TRIM(g.full_name), ''), NULLIF(TRIM(g.email), ''))) FROM guests g WHERE g.id = inquiries.guest_id AND g.organization_id = inquiries.organization_id)",
+            'stage_name' => "LOWER(COALESCE((SELECT s.name FROM pipeline_stages s WHERE s.id = inquiries.pipeline_stage_id AND s.organization_id = inquiries.organization_id), inquiries.status))",
+            'touch_count' => '(COALESCE(phone_calls_made, 0) + COALESCE(emails_sent, 0))',
+            'assigned_to' => "LOWER(NULLIF(TRIM(assigned_to), ''))",
+            default => in_array($requested, $allowedSorts, true) ? $requested : 'created_at',
+        };
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
         // Empty values last in either direction, on PostgreSQL (which puts NULLs first when descending) and SQLite
         // alike (2026-11-08: "largest value first" listed every lead without a value at the top); the id keeps pages
         // stable among equal values. `$sort` is one of the names above.
-        $query->orderByRaw("{$sort} IS NULL")->orderBy($sort, $dir)->orderBy('id', $dir);
-
-        return response()->json($query->paginate($request->get('per_page', 25)));
+        $query->orderByRaw("{$sort} IS NULL")->orderByRaw("{$sort} {$dir}")->orderBy('id', $dir);
     }
 
     public function store(Request $request): JsonResponse
     {
         $v = $request->validate([
             'guest_id'             => ['required', 'integer', OwnRows::rule('guests')],
+            'currency'             => ['sometimes', 'required', \Illuminate\Validation\Rule::in(\App\Services\Crm\EmailPriceCheck::currencyCodes())],
             'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
             'property_id'          => ['nullable', 'integer', OwnRows::rule('properties')],
             'inquiry_type'         => 'nullable|string|max:50',
@@ -160,9 +169,12 @@ class InquiryController extends Controller
         // CRM Phase 7 — sanitize custom fields against the active schema.
         $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data'] ?? null);
 
-        $inquiry = DB::transaction(function () use ($v) {
+        $inquiry = DB::transaction(function () use ($v, $request) {
             $inquiry = Inquiry::create($v);
             $this->placeInDefaultPipeline($inquiry, $v['status'] ?? null);
+            if ($this->isWon($inquiry)) {
+                $this->recordWin($inquiry, 'New', null, $request->user()?->id);
+            }
 
             return $inquiry;
         });
@@ -293,6 +305,8 @@ class InquiryController extends Controller
                 ->limit(50),
             'openTasks'  => fn($q) => $q->with('assignee:id,name'),
         ]);
+        LeadReplyBadges::attach(collect([$inquiry]), request()->user());
+
         return response()->json($inquiry);
     }
 
@@ -401,6 +415,12 @@ class InquiryController extends Controller
             'custom_data'          => 'nullable|array',
         ]);
 
+        if ($request->has('currency')) {
+            $currency = $request->validate(['currency' => ['required', \Illuminate\Validation\Rule::in(\App\Services\Crm\EmailPriceCheck::currencyCodes())],
+                'total_value' => 'present|nullable|numeric|min:0'])['currency'];
+            abort_if($inquiry->currency && $inquiry->value_currency !== 'XXX' && ($inquiry->paid_amount > 0 || $inquiry->rate_offered !== null) && $currency !== $inquiry->currency, 422);
+            $v['currency'] = $currency;
+        }
         $checkIn  = $v['check_in'] ?? $inquiry->check_in?->toDateString();
         $checkOut = $v['check_out'] ?? $inquiry->check_out?->toDateString();
         if ($checkIn && $checkOut) {
@@ -411,25 +431,25 @@ class InquiryController extends Controller
             $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data']);
         }
 
-        $inquiry->update($v);
+        $previous = $inquiry->status;
+        $wasWon = !isset($v['status']) || $this->isWon($inquiry);
+        $syncedStage = DB::transaction(function () use ($inquiry, $v, $wasWon, $previous, $request) {
+            $inquiry->update($v);
 
-        // Keep pipeline_stage_id in lockstep with the status the UI writes.
-        // The leads list + kanban + detail all set `status` to the chosen
-        // stage's NAME; without this resync, the stage pill + colour (which
-        // read `pipeline_stage`) show the OLD stage while the dropdown shows
-        // the new one — the "status changes but the card doesn't" bug.
-        // Resolve the stage by name within the inquiry's pipeline, falling
-        // back to the won/lost stage by kind for the terminal statuses.
-        $syncedStage = null;
-        if (array_key_exists('status', $v) && $v['status'] !== null && $inquiry->pipeline_id) {
-            $stage = $this->stageForStatus($inquiry->pipeline_id, $v['status']);
-            if ($stage && $stage->id !== $inquiry->pipeline_stage_id) {
-                $inquiry->pipeline_stage_id = $stage->id;
-                $inquiry->save();
+            // The full admin and CRM can move a lead by the stage's name as well as the dedicated Won action.
+            $stage = null;
+            if (isset($v['status']) && $inquiry->pipeline_id) {
+                $stage = $this->stageForStatus($inquiry->pipeline_id, $v['status']);
+                if ($stage && $stage->id !== $inquiry->pipeline_stage_id) {
+                    $inquiry->pipeline_stage_id = $stage->id;
+                    $inquiry->save();
+                }
             }
-            $syncedStage = $stage;
-        }
-
+            if (!$wasWon && ($inquiry->status === 'Confirmed' || $stage?->kind === 'won')) {
+                $this->recordWin($inquiry, $previous, null, $request->user()?->id);
+            }
+            return $stage;
+        });
         // Auto-create reservation when the deal is won. Keyed on the resolved
         // stage's `kind` (not just the literal "Confirmed") so orgs that
         // renamed their won stage — or any non-hotel preset whose won stage
@@ -580,12 +600,12 @@ class InquiryController extends Controller
      *   - total          : total open inquiries (everything not Confirmed/Lost)
      *   - due_today      : open inquiries with next_task_due == today and not done
      *   - overdue        : open inquiries with next_task_due < today and not done
-     *   - estimated_value: sum(total_value) over open inquiries
+     *   - estimated_value: known open value in the reporting currency (open_value includes coverage and rates)
      *   - new_this_week  : inquiries created in last 7 days
      *
      * Deltas are vs prior period (last 7 days for "new", last 30 days for "total").
      */
-    public function kpis(): JsonResponse
+    public function kpis(OpenLeadValue $valuation): JsonResponse
     {
         // Follow-up days are the venue's calendar days (2026-11-08); the periods below are instants.
         $todayStr     = $this->venueToday();
@@ -618,9 +638,8 @@ class InquiryController extends Controller
             ->where('next_task_due', '<', $todayStr)
             ->count();
 
-        $estimatedValue = (float) Inquiry::where($openScope)
-            ->whereNotNull('total_value')
-            ->sum('total_value');
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : auth()->user()?->organization_id;
+        $openValue = $valuation->summary(Inquiry::where($openScope), Organization::findOrFail($orgId));
 
         $newThisWeek = Inquiry::where('created_at', '>=', $weekAgo)->count();
         $newLastWeek = Inquiry::whereBetween('created_at', [$twoWeeksAgo, $weekAgo])->count();
@@ -633,7 +652,9 @@ class InquiryController extends Controller
             'total_delta_pct' => $totalPct,
             'due_today'       => $dueToday,
             'overdue'         => $overdue,
-            'estimated_value' => round($estimatedValue, 2),
+            'estimated_value' => (float) $openValue['amount'],
+            'values_by_currency' => $openValue['groups'],
+            'open_value'      => $openValue,
             'new_this_week'   => $newThisWeek,
             'new_delta_pct'   => $newPct,
         ]);
@@ -880,7 +901,12 @@ class InquiryController extends Controller
                 }
                 // update() (not raw query) so the model's saving hook
                 // still creates a reservation when status flips to Confirmed.
+                $wasWon = !isset($patch['status']) || $this->isWon($r);
+                $previous = $r->status;
                 $r->update($patch);
+                if (!$wasWon && $this->isWon($r)) {
+                    $this->recordWin($r, $previous, null, $request->user()?->id);
+                }
                 $updated++;
             }
         });
@@ -942,59 +968,12 @@ class InquiryController extends Controller
             'lostReason:id,label',
         ]);
 
-        if ($s = $request->get('search')) {
-            // Search covers what staff actually paste into the box: a name,
-            // a company, an email, or a phone number. Email/phone were
-            // missing, so looking up a lead by the address it was captured
-            // with returned "No leads match these filters" even though the
-            // row was right there. Phone is matched on digits only, so
-            // "26123456" still finds a number stored as "26 123 456" or
-            // "+371 26 123 456".
-            $digits = preg_replace('/\D/', '', $s);
-            $query->where(function ($q) use ($s, $digits) {
-                $q->where('event_name', 'ilike', "%$s%")
-                  ->orWhere('room_type_requested', 'ilike', "%$s%")
-                  ->orWhereHas('guest', function ($q2) use ($s, $digits) {
-                      $q2->where('full_name', 'ilike', "%$s%")
-                         ->orWhere('company', 'ilike', "%$s%")
-                         ->orWhere('email', 'ilike', "%$s%")
-                         ->orWhere('phone', 'ilike', "%$s%")
-                         ->orWhere('mobile', 'ilike', "%$s%");
-                      if (strlen((string) $digits) >= 4) {
-                          $q2->orWhereRaw("regexp_replace(coalesce(phone, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"])
-                             ->orWhereRaw("regexp_replace(coalesce(mobile, ''), '\D', '', 'g') LIKE ?", ["%{$digits}%"]);
-                      }
-                  });
-            });
+        if ($request->input('list') === 'deals') {
+            DealListQuery::apply($query, $request);
+        } else {
+            $this->applyLeadList($query, $request);
         }
-        if ($v = $request->get('status'))        $query->where('status', $v);
-        if ($v = $request->get('priority'))      $query->where('priority', $v);
-        if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
-        if ($v = $request->get('property_id'))   $query->where('property_id', $v);
-        if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
-        // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
-        if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
-        if ($v = $request->get('source'))        $query->where('source', $v);
-        if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
-        // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
-        if ($v = $request->get('has_phone')) {
-            $has = fn ($g) => $g->where(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', '')
-                ->orWhere(fn ($q3) => $q3->whereNotNull('mobile')->where('mobile', '!=', '')));
-            if ($v === 'yes') $query->whereHas('guest', $has);
-            elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
-        }
-        $this->createdOnVenueDays($query, $request);
-        if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
-        if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
-        if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);
-        if ($v = $request->get('task_due')) {
-            match ($v) {
-                'today'   => $query->where('next_task_due', now()->toDateString())->where('next_task_completed', false),
-                'overdue' => $query->where('next_task_due', '<', now()->toDateString())->where('next_task_completed', false),
-                'soon'    => $query->whereBetween('next_task_due', [now()->toDateString(), now()->addDays(3)->toDateString()])->where('next_task_completed', false),
-                default   => null,
-            };
-        }
+
         // `ids` filter — bulk export of checked rows only. Accepts an
         // array or a comma-separated list (parity with guests/export).
         if ($v = $request->get('ids')) {
@@ -1159,21 +1138,7 @@ class InquiryController extends Controller
                 'lost_reason_id'    => null, // Clear any prior Lost selection.
             ])->save();
 
-            // Log the transition on the timeline.
-            Activity::create([
-                'inquiry_id' => $inquiry->id,
-                'guest_id'   => $inquiry->guest_id,
-                'type'       => 'status_change',
-                'subject'    => 'Marked Won',
-                'body'       => trim(
-                    "Stage: {$previousStage} → " . ($wonStage?->name ?? 'Confirmed')
-                    . ($note ? "\n\n{$note}" : '')
-                ),
-                'created_by' => $userId,
-                'occurred_at' => now(),
-                'metadata'   => ['kind' => 'won'],
-            ]);
-
+            $this->recordWin($inquiry, $previousStage, $note, $userId, $wonStage?->name ?? 'Confirmed');
             // Auto-create a draft reservation if one isn't already linked
             // and we have enough info to seed it (property + dates).
             $reservation = $inquiry->reservations()->first();
@@ -1289,9 +1254,62 @@ class InquiryController extends Controller
      * subject + body the agent can paste into an email composer or
      * the activity timeline. CRM Phase 5.
      */
-    public function draftProposal(int $id): JsonResponse
+    public function draftProposal(Request $request, int $id, SalesBrand $scope, LeadAssistant $assistant, LeadAssistantWriter $writer): JsonResponse
     {
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
-        return response()->json($this->ai->draftProposal($inquiry));
+        $user = $request->user();
+        $brand = $scope->forLead($user, $inquiry);
+        $org = Organization::findOrFail($inquiry->organization_id);
+        $input = $request->validate(['language' => 'sometimes|in:en,de,fr,es,ru', ...EmailDraftRevision::rules(false)]);
+        $run = ['mode' => 'proposal', 'language' => $input['language'] ?? app()->getLocale(), 'focus' => $input['focus'] ?? ''];
+        if (isset($input['revise'])) {
+            $state = CrmLeadAssistant::query()->whereKey($id)->where('brand_id', $brand->id)->first();
+            $stamp = LeadEmailEvidence::quoteStamp(LeadEmailEvidence::currentQuote($state, $inquiry), (int) $org->id);
+            $prior = EmailDraftRevision::guidance($input['revise']['source_id'], $inquiry, $brand, $stamp);
+            $run += ['revise' => $input['revise'], 'contact_id' => $inquiry->guest_id, 'quote_stamp' => $stamp, 'prior_guidance' => $prior];
+        }
+        try {
+            $draft = $writer->generate($inquiry, $brand, $org, $user, $run,
+                (array) $assistant->data($inquiry, $brand)['strategies'], 'inquiry_proposal_draft');
+        } catch (AiHelperRefused $error) {
+            throw $error;
+        } catch (\Throwable $error) {
+            \Illuminate\Support\Facades\Log::warning('CRM proposal failed', ['inquiry_id' => $id, 'exception' => $error::class]);
+
+            throw AiHelperRefused::failed();
+        }
+
+        $current = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
+        abort_unless($current->guest_id === $inquiry->guest_id && $scope->forLead($user, $current)->is($brand), 409);
+        $state = CrmLeadAssistant::query()->whereKey($current->id)->where('brand_id', $brand->id)->first();
+        $quote = LeadEmailEvidence::currentQuote($state, $current);
+        if ($reason = LeadEmailEvidence::recheck(LeadEmailEvidence::policy($current), 'proposal', $quote, (int) $org->id, $draft)) {
+            $draft = LeadEmailEvidence::hold($reason, $run['language']);
+        }
+
+        $response = Arr::only($draft, ['subject', 'body', 'decision', 'reason', 'review_notes']);
+        if (! empty($draft['body'])) {
+            $response['source_id'] = EmailDraftRevision::token($current, $brand, $draft['quote_stamp'], $draft['manager_guidance'] ?? []);
+        }
+
+        return response()->json($response)
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    /** @phpstan-impure The lead and its pipeline stage can change inside this transaction. */
+    private function isWon(Inquiry $inquiry): bool
+    {
+        return $inquiry->status === 'Confirmed' || ($inquiry->pipeline_stage_id && $inquiry->pipelineStage()->value('kind') === 'won');
+    }
+
+    private function recordWin(Inquiry $inquiry, ?string $previous, ?string $note, ?int $userId, ?string $stage = null): void
+    {
+        $stage ??= $inquiry->pipeline_stage_id ? $inquiry->pipelineStage()->value('name') : null;
+        Activity::create([
+            'organization_id' => $inquiry->organization_id, 'brand_id' => $inquiry->brand_id,
+            'inquiry_id' => $inquiry->id, 'guest_id' => $inquiry->guest_id, 'type' => 'status_change', 'subject' => 'Marked Won',
+            'body' => trim("Stage: {$previous} → ".($stage ?? 'Confirmed').($note ? "\n\n{$note}" : '')),
+            'created_by' => $userId, 'occurred_at' => now(), 'metadata' => ['kind' => 'won'],
+        ]);
     }
 }

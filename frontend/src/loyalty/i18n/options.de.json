@@ -156,7 +156,8 @@
     "tier_progress_visits": "Mitglieder steigen danach auf, wie oft sie kommen: Ein Besuch pro Tag zählt, egal was sie ausgeben. Sie sehen „Noch 3 Besuche bis Gold“.",
     "tier_progress_spend": "Mitglieder steigen nach ihren Ausgaben bei Besuchen auf. Sie sehen „Noch 120 € bis Gold“.",
     "earn_rate": "Mitglieder erhalten {{points}} je {{money}} Umsatz.",
-    "earn_rate_none": "Umsatz bringt noch nichts: Schalten Sie „Punkte für Buchungen“ oder „Sammeln an der Theke“ ein."
+    "earn_rate_none": "Umsatz bringt noch nichts: Schalten Sie „Punkte für Buchungen“ oder „Sammeln an der Theke“ ein.",
+    "earn_rate_off": "Ausgaben bringen keine Punkte. Besuche und Boni können Mitglieder weiterhin belohnen."
   },
   "setup": {
     "error": {
@@ -252,7 +253,15 @@
     "title": "Programm einrichten",
     "to_configure": "Zurück zum Einstellen",
     "to_members": "Zu den Mitgliedern",
-    "to_options": "Zu „Sammeln & Prämien“"
+    "to_options": "Zu „Sammeln & Prämien“",
+    "programme_rule": "Programmregel",
+    "programme_rule_line": "Konfigurieren Sie diese Programmregel im nächsten Schritt.",
+    "suggested_rewards": "Vorgeschlagene Prämien für {{preset}}",
+    "suggested_rewards_line": "Wählen Sie eine Prämie für die Stempelkarte. Sie wird beim Anwenden hinzugefügt. Ihre bisherigen Prämien bleiben verfügbar.",
+    "saved_rewards": "Ihre gespeicherten Prämien",
+    "template_reward_added": "Ihre Sammelregeln sind gespeichert. Die gewählte Prämie ist für die Stempelkarte bereit.",
+    "current_catalogue": "Aktueller Katalog",
+    "reward_unavailable": "Nicht verfügbar"
   },
   "group": {
     "earn": "Punkte sammeln",
@@ -313,5 +322,24 @@
     "bonus": "Geschenke zum Start, zum Geburtstag und für Empfehlungen",
     "rule": "Wie Mitglieder aufsteigen und wann Punkte verfallen",
     "more": "Weitere Wege in Ihrem Programm"
+  },
+  "preview": {
+    "title": "Ihr Programm auf einen Blick",
+    "template": "Branchenvorlage",
+    "current": "Ihr aktuelles Programm",
+    "currentLine": "Ihre gespeicherten Mitgliedsstufen, Prämien und Sammelregeln.",
+    "catalogue": "Mitgliedschaft & Prämien",
+    "kept": "Ihre bestehenden Stufen und Prämien bleiben erhalten.",
+    "starting": "Vorgeschlagene Stufen und Prämienideen. Sie können sie später ändern.",
+    "levels": "{{n}} Mitgliedsstufen",
+    "rewards": "{{n}} Prämien",
+    "rewardExamples": "Prämienbeispiele:",
+    "noRewards": "Fügen Sie Ihre erste Prämie unter Prämien & Vorteile hinzu.",
+    "journey": "Der Weg Ihrer Mitglieder",
+    "join": "Beitreten",
+    "earn": "Punkte sammeln",
+    "use": "Prämien nutzen",
+    "off": "Nicht aktiviert: {{ways}}.",
+    "templateLine": "Vorgeschlagene Sammelregeln. Wählen Sie im nächsten Schritt, was Sie nutzen möchten."
   }
 }

@@ -1,6 +1,7 @@
 {
   "nav": { "plan": "Plan", "posts": "Beiträge", "strategy": "Strategie", "brand": "Marke", "ideas": "Ideen", "promote": "Werbung" },
   "common": {
+    "discard_drafts": "Nicht gespeicherte Änderungen verwerfen?",
     "page_failed": "Diese Seite konnte nicht angezeigt werden. Was Sie gespeichert haben, ist sicher.",
     "reload": "Seite neu laden",
     "loading": "Wird geladen…",
@@ -14,7 +15,7 @@
     "copy_failed": "Kopieren hat nicht geklappt. Markieren Sie den Text und kopieren Sie ihn selbst."
   },
   "shell": {
-    "new_post": "Neuer Beitrag",
+      "new_post": "Neuer Beitrag",
     "find": "Beitrag oder Aktion finden",
     "brand": "Marke",
     "switched_off": "HexaTech Content wurde für Ihre Organisation ausgeschaltet. Ihre Beiträge sind unverändert.",
@@ -75,6 +76,7 @@
     "promoting": "Die KI schreibt Werbebeiträge…",
     "line": "Ein klarer Blick auf das, was als Nächstes kommt.",
     "numbers": "Geplant: {{planned}} · Bereit: {{ready}} · Veröffentlicht: {{published}} · Freie Plätze: {{open}}",
+    "number_labels": { "planned": "Geplant", "ready": "Bereit", "published": "Veröffentlicht", "open_slots": "Freie Plätze" },
     "status_chip": "Status: {{name}}",
     "unscheduled_chip": "Ohne Datum ({{count}})",
     "legend_draft": "Entwurf",
@@ -93,6 +95,7 @@
   },
   "fill": {
     "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.",
       "slot_not_open": "Dieser Slot hat bereits einen Beitrag.",
       "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.",
       "already_generating": "Die KI schreibt bereits für diese Marke. Versuchen Sie es gleich noch einmal.",
@@ -123,6 +126,7 @@
       "past": "Diese Tage sind schon vorbei."
     },
     "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.",
       "range_in_past": "Diese Tage sind schon vorbei.",
       "no_channels": "Diese Marke hat keinen aktiven Kanal zum Planen.",
       "already_generating": "Die KI schreibt bereits für diese Marke. Versuchen Sie es gleich noch einmal.",
@@ -251,6 +255,7 @@
   },
   "ai": {
     "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.",
       "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht. Von Hand schreiben geht weiterhin.",
       "ai_failed": "Die KI konnte das nicht abschließen. Bitte versuchen Sie es erneut.",
       "not_found": "Diesen Beitrag gibt es nicht mehr.",
@@ -418,17 +423,20 @@
     "section": { "company": "Unternehmen und Marke", "knowledge": "Wissen", "audience": "Zielgruppen", "voice": "Tonalität", "channels": "Kanäle", "strategy_inputs": "Grundlagen der Strategie" },
     "gap": { "company_name": "Die Organisation hat noch keinen Namen (volle Verwaltung, Einstellungen).", "company_industry": "Die Organisation hat noch keine Branche (volle Verwaltung, Einstellungen).", "company_website": "Die Organisation hat noch keine Website (volle Verwaltung, Einstellungen).", "brand_summary": "Fügen Sie eine Kurzbeschreibung hinzu (Marken-DNA).", "usp": "Sagen Sie, was die Marke besonders macht (Marken-DNA).", "mission": "Fügen Sie die Mission hinzu (Marken-DNA).", "faq_none": "Fügen Sie der Wissensbasis des KI-Chats Fragen und Antworten hinzu.", "faq_more": "Fügen Sie weitere Fragen und Antworten hinzu: bisher {{count}}, ab 5 klappt es am besten.", "services": "Fügen Sie Ihre Leistungen oder Produkte in der vollen Verwaltung hinzu.", "audience_none": "Legen Sie mindestens eine Zielgruppe an (Zielgruppen).", "audience_pains": "Geben Sie jeder Zielgruppe ihre Probleme.", "audience_goals": "Geben Sie jeder Zielgruppe ihre Ziele.", "voice_none": "Beschreiben Sie die Tonalität der Marke (Tonalität).", "voice_tone": "Wählen Sie einen Ton (Tonalität).", "voice_emoji": "Legen Sie fest, wie viele Emojis (Tonalität).", "voice_hashtag": "Legen Sie fest, wie viele Hashtags (Tonalität).", "channels_none": "Schalten Sie mindestens einen Kanal ein (Kanäle).", "channels_days": "Wählen Sie Veröffentlichungstage für Ihre Kanäle.", "channels_per_week": "Legen Sie Beiträge pro Woche für Ihre Kanäle fest.", "content_mix": "Legen Sie den Content-Mix fest (Rhythmus und Ziele).", "weekly_rhythm": "Legen Sie den Wochenrhythmus fest (Rhythmus und Ziele).", "engagement_goals": "Wählen Sie Interaktionsziele (Rhythmus und Ziele)." },
     "dna": { "title": "Marken-DNA", "intro": "Wer die Marke ist, in ihren eigenen Worten. Die KI schreibt danach.", "name": "Markenname", "language": "Sprache der Beiträge", "language_none": "Sprache wählen", "goal": "Hauptziel", "summary": "Kurzbeschreibung", "usp": "Was sie besonders macht", "mission": "Mission", "promise": "Markenversprechen", "differentiators": "Unterscheidungsmerkmale", "values": "Werte", "proof": "Belege", "price": "Preislage", "cta": "Wichtigster Handlungsaufruf", "links": "Wichtige Links" },
-    "error": { "manager_only": "Nur Inhaber oder Manager können die Marke ändern.", "invalid": "Einige Felder müssen geprüft werden.", "not_found": "Diesen Eintrag gibt es nicht mehr. Die Seite zeigt die Marke, wie sie jetzt ist.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "already_set_up": "Diese Marke ist bereits eingerichtet.", "already_generating": "Die Marke wird bereits eingerichtet. Bitte warten Sie einen Moment.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "ai_failed": "Die KI konnte nicht fertig werden. Bitte versuchen Sie es erneut.", "unknown": "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." },
+    "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.", "manager_only": "Nur Inhaber oder Manager können die Marke ändern.", "invalid": "Einige Felder müssen geprüft werden.", "not_found": "Diesen Eintrag gibt es nicht mehr. Die Seite zeigt die Marke, wie sie jetzt ist.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "already_set_up": "Diese Marke ist bereits eingerichtet.", "already_generating": "Die Marke wird bereits eingerichtet. Bitte warten Sie einen Moment.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "ai_failed": "Die KI konnte nicht fertig werden. Bitte versuchen Sie es erneut.", "unknown": "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." },
     "snippets": { "title": "Hashtags und Textbausteine", "intro": "Hashtag-Gruppen und Zeilen, die Sie oft verwenden – ein Aufruf zum Handeln, ein Gruß, eine Adresse. Das Beitragsfenster fügt sie mit einem Klick ein.", "groups": "Hashtag-Gruppen", "texts": "Textbausteine", "add_group": "Hashtag-Gruppe hinzufügen", "add_text": "Textbaustein hinzufügen", "name": "Name", "tags": "Hashtags", "tags_hint": "Trennen Sie sie mit Leerzeichen.", "text": "Text", "remove": "Entfernen", "remove_confirm": "„{{name}}“ entfernen?", "none_groups": "Noch keine Hashtag-Gruppen.", "none_texts": "Noch keine Textbausteine.", "suggest": "Hashtag-Gruppen mit KI vorschlagen", "no_suggestions": "Keine weiteren Vorschläge. Fragen Sie erneut nach neuen.", "add_suggestion": "Hinzufügen" },
     "keydates": { "title": "Wichtige Termine", "intro": "Die Feiertage und besonderen Tage, die der Plan zeigt. Eigene Ereignisse und Notizen fügt das Team direkt im Plan hinzu.", "country": "Feiertage von", "auto": "Automatisch: {{country}}", "auto_none": "Automatisch: nicht gefunden", "none": "Keine Feiertage", "none_line": "Es werden keine Feiertage gezeigt.", "no_guess": "Keine Feiertage, bis ein Land gewählt ist.", "guessed": "{{country}} (aus der Zeitzone des Standorts abgeleitet)", "marketing": "Aktions- und internationale Tage" },
     "templates": { "title": "Vorlagen", "intro": "Beiträge, die Ihr Team immer wieder schreibt, mit [Lücken] zum Ausfüllen. Nutzen Sie eine Vorlage über das +-Menü eines Tages oder im Beitragsbereich.", "name": "Name", "platform": "Plattform", "any_platform": "Jede Plattform", "pillar": "Säule", "blanks_hint": "Wörter in [eckigen Klammern] sind Lücken zum Ausfüllen, etwa [Behandlung] oder [Datum].", "add": "Vorlage hinzufügen", "none": "Noch keine Vorlagen.", "remove": "Entfernen", "remove_confirm": "„{{name}}“ entfernen?", "suggest": "Vorlagen mit KI vorschlagen", "no_suggestions": "Keine weiteren Vorschläge. Fragen Sie erneut nach neuen.", "add_suggestion": "Hinzufügen" },
     "approvals": { "title": "Freigaben", "intro": "Ob Beiträge auf die Freigabe eines Managers warten, bevor sie bereit sind.", "switch": "Beiträge brauchen die Freigabe eines Managers", "on_line": "An: Mitarbeitende schreiben, bearbeiten und senden Beiträge zur Freigabe; nur Manager geben frei, markieren als bereit und veröffentlichen.", "off_line": "Aus: Alle können Beiträge als bereit und veröffentlicht markieren." }
   },
   "repeat": { "error": { "already_repeating": "Dieser Beitrag wiederholt sich bereits.", "no_day": "Geben Sie dem Beitrag zuerst einen Tag: Ein Beitrag wiederholt sich ab seinem Tag.", "no_dates": "Vor diesem Datum gibt es keinen Tag für eine Wiederholung.", "too_many_copies": "Ein Beitrag wiederholt sich höchstens 26-mal. Wählen Sie ein früheres Enddatum.", "until_too_far": "Ein Beitrag wiederholt sich höchstens 12 Monate nach seinem Tag.", "too_many_ai": "Die KI schreibt höchstens 12 Kopien neu. Wählen Sie ein früheres Enddatum oder wiederholen Sie die Kopien unverändert.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht. Die Kopien können sich trotzdem unverändert wiederholen.", "not_found": "Diesen Beitrag gibt es nicht mehr.", "invalid": "Prüfen Sie die Wiederholung: wie oft und bis wann.", "unknown": "Der Beitrag konnte nicht wiederholt werden. Bitte versuchen Sie es erneut." } },
-  "snippet": { "error": { "manager_only": "Nur Inhaber oder Manager können Hashtags und Textbausteine ändern.", "too_many_snippets": "Eine Marke hat höchstens 50 von jeder Art. Entfernen Sie zuerst einen.", "invalid": "Geben Sie einen Namen und einen Text ein.", "not_found": "Diesen Eintrag gibt es nicht mehr. Die Seite zeigt die Marke, wie sie jetzt ist.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "ai_failed": "Die KI konnte keine Hashtags vorschlagen. Bitte versuchen Sie es erneut.", "unknown": "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
+  "snippet": { "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.", "manager_only": "Nur Inhaber oder Manager können Hashtags und Textbausteine ändern.", "too_many_snippets": "Eine Marke hat höchstens 50 von jeder Art. Entfernen Sie zuerst einen.", "invalid": "Geben Sie einen Namen und einen Text ein.", "not_found": "Diesen Eintrag gibt es nicht mehr. Die Seite zeigt die Marke, wie sie jetzt ist.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "ai_failed": "Die KI konnte keine Hashtags vorschlagen. Bitte versuchen Sie es erneut.", "unknown": "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
   "keydate": { "error": { "invalid": "Geben Sie einen Titel und einen ersten Tag an.", "end_before_start": "Der letzte Tag kann nicht vor dem ersten liegen.", "too_long": "Ein Ereignis dauert höchstens 31 Tage.", "too_many_key_dates": "Eine Marke hat höchstens 1.000 Ereignisse und Notizen. Entfernen Sie zuerst eines.", "not_found": "Dieser Termin existiert nicht mehr.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "unknown": "Der Termin konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
   "idea": { "error": { "invalid": "Schreiben Sie zuerst die Idee.", "changed_elsewhere": "Jemand anderes hat diesen Beitrag geändert. Die Tafel zeigt jetzt diese Fassung.", "not_found": "Dieser Beitrag existiert nicht mehr.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "unknown": "Die Idee konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.", "needs_approval": "Solange für diese Marke Freigaben aktiv sind, kann nur ein Manager Beiträge freigeben." } },
-  "template": { "error": { "manager_only": "Nur Inhaber oder Manager können Vorlagen ändern.", "invalid": "Geben Sie der Vorlage einen Namen.", "too_many_tags": "Eine Vorlage hat höchstens 30 Hashtags.", "too_many_templates": "Eine Marke hat höchstens 100 Vorlagen. Entfernen Sie zuerst eine.", "not_found": "Diese Vorlage existiert nicht mehr.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "ai_failed": "Die KI konnte keine Vorlagen vorschlagen. Bitte versuchen Sie es erneut.", "unknown": "Die Vorlage konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
+  "template": { "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.", "manager_only": "Nur Inhaber oder Manager können Vorlagen ändern.", "invalid": "Geben Sie der Vorlage einen Namen.", "too_many_tags": "Eine Vorlage hat höchstens 30 Hashtags.", "too_many_templates": "Eine Marke hat höchstens 100 Vorlagen. Entfernen Sie zuerst eine.", "not_found": "Diese Vorlage existiert nicht mehr.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "ai_failed": "Die KI konnte keine Vorlagen vorschlagen. Bitte versuchen Sie es erneut.", "unknown": "Die Vorlage konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
   "keydates": { "kind": { "holiday": "Feiertag", "marketing": "Aktionstag", "industry": "Internationaler Tag", "event": "Ereignis", "note": "Notiz" }, "substitute": "{{name}} (Ersatzfeiertag)", "observed": "{{name}} (verlegter Feiertag)", "day": { "new_year": "Neujahr", "good_friday": "Karfreitag", "easter_sunday": "Ostersonntag", "easter_monday": "Ostermontag", "labour_day": "Tag der Arbeit", "ascension": "Christi Himmelfahrt", "whit_monday": "Pfingstmontag", "pentecost": "Pfingstsonntag", "assumption": "Mariä Himmelfahrt", "all_saints": "Allerheiligen", "all_souls": "Allerseelen", "midsummer": "Mittsommertag", "christmas_eve": "Heiligabend", "christmas": "1. Weihnachtstag", "christmas_second": "2. Weihnachtstag", "new_years_eve": "Silvester", "mothers_day": "Muttertag", "fathers_day": "Vatertag", "gb": { "early_may": "Feiertag Anfang Mai", "spring": "Frühlingsfeiertag", "summer": "Sommerfeiertag", "boxing_day": "Boxing Day" }, "ie": { "st_brigid": "St.-Brigid’s-Tag", "st_patrick": "St. Patrick’s Day", "may": "Feiertag im Mai", "june": "Feiertag im Juni", "august": "Feiertag im August", "october": "Feiertag im Oktober", "st_stephen": "Stephanstag" }, "de": { "unity": "Tag der Deutschen Einheit" }, "fr": { "victory": "Tag des Sieges", "bastille": "Französischer Nationalfeiertag", "armistice": "Waffenstillstandstag" }, "es": { "epiphany": "Heilige Drei Könige", "national": "Spanischer Nationalfeiertag", "constitution": "Tag der Verfassung", "immaculate": "Mariä Empfängnis" }, "lv": { "independence": "Tag der Wiederherstellung der Unabhängigkeit", "ligo": "Mittsommerabend (Līgo)", "proclamation": "Tag der Ausrufung der Republik Lettland" }, "lt": { "state": "Tag der Wiederherstellung des Staates", "independence": "Tag der Wiederherstellung der Unabhängigkeit", "st_johns": "Johannistag", "statehood": "Tag der Staatlichkeit" }, "ee": { "independence": "Unabhängigkeitstag", "spring_day": "Frühlingstag", "victory": "Siegestag", "restoration": "Tag der Wiederherstellung der Unabhängigkeit" }, "us": { "mlk": "Martin Luther King Day", "washington": "Washingtons Geburtstag", "memorial": "Memorial Day", "juneteenth": "Juneteenth", "independence": "Unabhängigkeitstag", "labor": "Tag der Arbeit (USA)", "columbus": "Columbus Day", "veterans": "Veterans Day", "thanksgiving": "Thanksgiving" }, "valentines": "Valentinstag", "womens_day": "Internationaler Frauentag", "halloween": "Halloween", "black_friday": "Black Friday", "world_health": "Weltgesundheitstag", "world_heart": "Weltherztag", "world_mental_health": "Welttag der psychischen Gesundheit", "yoga": "Internationaler Yogatag", "global_wellness": "Global Wellness Day", "global_running": "Global Running Day", "world_tourism": "Welttourismustag", "world_food": "Welternährungstag", "world_book": "Welttag des Buches", "literacy": "Weltalphabetisierungstag", "teachers": "Weltlehrertag", "world_ip": "Welttag des geistigen Eigentums", "human_rights": "Tag der Menschenrechte", "world_habitat": "Welt-Habitat-Tag", "msme": "Tag der Kleinst-, Klein- und Mittelunternehmen" }, "write_for": "Einen Beitrag dazu schreiben", "gone": "Dieser Tag ist vorbei; neue Beiträge beginnen ab heute.", "new_event": "Neues Ereignis", "new_note": "Neue Notiz", "edit_event": "Ereignis", "edit_note": "Notiz", "title_field": "Titel", "details": "Details (optional)", "first_day": "Erster Tag", "on_day": "Tag", "last_day": "Letzter Tag (optional)", "note_hint": "Notizen sind für das Team: Die KI sieht sie nie.", "delete": "Löschen", "delete_confirm": "Für das ganze Team löschen?", "delete_yes": "Löschen" },
   "ideas": { "title": "Ideen", "intro": "Beiträge ohne Tag, nach Phase. Verschieben Sie eine Karte in eine andere Phase oder planen Sie sie ein.", "column": { "idea": "Idee", "draft": "Entwurf", "review": "In Prüfung", "ready": "Bereit" }, "empty": "Hier ist noch nichts.", "see_all": "Alle anzeigen: {{count}}", "schedule": "Einplanen", "move_to": "Verschieben nach…", "move_hint": "Umschalt + ← oder → verschiebt die Karte in die Nachbarphase.", "stage": "Phase", "scheduled": "Eingeplant für {{day}}.", "undo": "Rückgängig", "schedule_title": "Beitrag einplanen", "day": "Tag", "time": "Uhrzeit", "schedule_yes": "Einplanen", "capture": "Idee hinzufügen…", "added": "Idee hinzugefügt.", "capture_title": "Idee hinzufügen", "capture_hint": "Drücken Sie die Eingabetaste, um sie zu den Ideen hinzuzufügen. Fügen Sie so viele hinzu, wie Sie möchten." },
   "templates": { "pick_title": "Vorlage wählen", "use": "Verwenden", "write_ai": "Mit KI schreiben" },
@@ -439,7 +447,7 @@
   "flags": { "waiting": "Wartet auf Freigabe", "sent_back": "Zurückgeschickt", "comments": "Kommentare: {{count}}", "versions": "Versionen: {{count}}", "clicks": "Klicks: {{count}}" },
   "timeline": { "title": "Kommentare und Verlauf", "empty": "Noch keine Kommentare.", "box": "Kommentar schreiben", "hint": "Enter sendet · Umschalt + Enter fügt eine Zeile ein", "send": "Kommentieren", "edited": "bearbeitet", "edit": "Bearbeiten", "save": "Speichern", "delete": "Löschen", "delete_confirm": "Diesen Kommentar löschen?", "delete_yes": "Kommentar löschen", "event": { "sent_for_approval": "Zur Freigabe gesendet von {{name}}", "approved": "Freigegeben von {{name}}", "sent_back": "Zurückgeschickt von {{name}}", "changed_after_approval": "Nach der Freigabe geändert von {{name}} – braucht erneut eine Freigabe" } },
   "people": { "former": "Ehemaliges Teammitglied" },
-  "bell": { "label": "Für Sie", "label_count": "Für Sie ({{count}})", "empty": "Nichts Neues für Sie.", "new": "Neu", "kind": { "waiting": "Wartet auf Freigabe: {{post}}", "approved": "Freigegeben von {{name}}: {{post}}", "sent_back": "Zurückgeschickt von {{name}}: {{post}}", "comment": "Kommentar von {{name}}: {{post}}", "to_post": "Heute veröffentlichen: {{post}}", "not_posted": "Nicht als veröffentlicht markiert: {{post}}" }, "at": "um {{time}}", "due": "Fällig: {{day}}", "morning": "Morgen-E-Mail: heutige Beiträge", "morning_hint": "Um 8 Uhr die Beiträge, die Sie heute veröffentlichen.", "morning_failed": "Die Einstellung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.", "morning_hint_manager": "Um 8 Uhr die Beiträge, die Sie heute veröffentlichen, und die, für die noch niemand festgelegt ist." },
+  "bell": { "label": "Für Sie", "label_count": "Für Sie ({{count}})", "empty": "Nichts Neues für Sie.", "new": "Neu", "kind": { "waiting": "Wartet auf Freigabe: {{post}}", "approved": "Freigegeben von {{name}}: {{post}}", "sent_back": "Zurückgeschickt von {{name}}: {{post}}", "comment": "Kommentar von {{name}}: {{post}}", "mention": "{{name}} hat Sie erwähnt: {{post}}", "to_post": "Heute veröffentlichen: {{post}}", "not_posted": "Nicht als veröffentlicht markiert: {{post}}" }, "at": "um {{time}}", "due": "Fällig: {{day}}", "morning": "Morgen-E-Mail: heutige Beiträge", "morning_hint": "Um 8 Uhr die Beiträge, die Sie heute veröffentlichen.", "morning_failed": "Die Einstellung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.", "morning_hint_manager": "Um 8 Uhr die Beiträge, die Sie heute veröffentlichen, und die, für die noch niemand festgelegt ist." },
   "version": { "error": { "version_exists": "Für diese Plattform gibt es schon eine Version dieses Beitrags.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht. Wählen Sie „Unverändert kopieren“.", "invalid": "Wählen Sie mindestens eine Plattform.", "not_found": "Diesen Beitrag gibt es nicht mehr.", "unknown": "Die Versionen konnten nicht erstellt werden. Bitte versuchen Sie es erneut." } },
   "versions": { "title": "Versionen", "intro": "Derselbe Beitrag für andere Plattformen. Jede Version ist ein eigener Beitrag.", "make": "Versionen erstellen…", "platforms": "Für welche Plattformen", "how": "Wie", "ai": "Mit KI anpassen", "copy": "Unverändert kopieren", "ai_paused": "Das KI-Budget dieses Monats ist aufgebraucht: Die Versionen übernehmen den Text unverändert.", "submit": "Versionen erstellen", "none_left": "Dieser Beitrag hat für jede Plattform eine Version.", "this_one": "Dieser Beitrag", "no_day": "Ohne Tag", "unlink": "Diesen Beitrag aus der Gruppe lösen", "adapting": "Wird für {{platform}} angepasst…", "adapting_others": "Die KI passt die Versionen an…", "kept_budget": "Das KI-Budget ist aufgebraucht; diese Version behält den ursprünglichen Text.", "kept_failed": "Die KI konnte diese Version nicht anpassen; sie behält den ursprünglichen Text.", "made": "Erstellte Versionen: {{count}}" },
   "link": { "error": { "bad_link": "Der Link muss eine Webadresse sein, die mit http:// oder https:// beginnt.", "unknown": "Der Link konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
@@ -449,7 +457,211 @@
   "unlink": { "error": { "not_found": "Diesen Beitrag gibt es nicht mehr.", "unknown": "Der Beitrag konnte nicht aus der Gruppe gelöst werden. Bitte versuchen Sie es erneut." } },
   "site": { "error": { "bad_address": "Geben Sie die Adresse der Website ein, beginnend mit https:// — eine öffentliche Website.", "already_scanning": "Die Website wird bereits gelesen.", "too_many_scans": "Eine Website kann höchstens 20-mal am Tag gelesen werden. Versuchen Sie es morgen wieder.", "scan_running": "Die Website wird gerade gelesen. Versuchen Sie es, wenn das fertig ist.", "site_unreachable": "Die Website war nicht erreichbar. Prüfen Sie die Adresse und versuchen Sie es noch einmal.", "site_blocked": "Die robots.txt der Website erlaubt Content nicht, sie zu lesen.", "nothing_found": "Auf dieser Website ließ sich nichts lesen. Prüfen Sie die Adresse und versuchen Sie es noch einmal.", "scan_failed": "Das Lesen der Website wurde unerwartet abgebrochen. Bitte versuchen Sie es noch einmal.", "manager_only": "Nur Inhaber oder Manager können die Website ändern.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "invalid": "Einige Felder müssen geprüft werden.", "unknown": "Das hat nicht geklappt. Bitte versuchen Sie es noch einmal.", "robots_unreachable": "Die robots.txt der Website konnte nicht gelesen werden (Fehler oder keine Antwort), daher hat Content nichts gelesen. Versuchen Sie es später noch einmal." }, "scanned": "Gelesen am {{date}}. Artikel: {{articles}} · Seiten: {{pages}}", "scanning": "Ihre Website wird gelesen… Das dauert ein, zwei Minuten. Sie können diese Seite verlassen.", "title": "Website", "intro": "Content liest Ihre Website, um das Unternehmen kennenzulernen und Artikel und Seiten zum Bewerben zu finden.", "address": "Adresse der Website", "address_hint": "Zum Beispiel https://example.com. Ein Blog mit eigener Adresse kann so eingegeben werden, zum Beispiel https://example.com/blog.", "scan": "Website lesen", "scan_again": "Erneut lesen", "update_summary": "Firmenbeschreibung aktualisieren", "replaces": "Erneutes Lesen ersetzt die Firmenbeschreibung.", "none_staff": "Ihr Manager hat die Website noch nicht eingetragen.", "empty": "Geben Sie die Adresse Ihrer Website ein, um Ihre Blogartikel und Seiten zu finden.", "open_promote": "Artikel und Seiten bewerben", "summary_title": "Firmenbeschreibung", "summary_intro": "Was die KI aus Ihrer Website über Ihr Unternehmen weiß. Die KI liest es für jeden Beitrag, den sie schreibt.", "summary_none": "Noch keine Beschreibung. Lesen Sie die Website, um eine zu schreiben.", "summary_edited": "Von Hand bearbeitet", "summary_edit": "Beschreibung bearbeiten", "summary_save": "Beschreibung speichern" },
   "promote": { "error": { "already_promoting": "Für diese Marke wird bereits eine Werbeaktion geschrieben.", "period_too_short": "Nicht alle Beiträge passen in diese Tage: Wählen Sie einen längeren Zeitraum, ein höheres Tempo oder weniger Beiträge.", "too_many_posts": "Eine Werbeaktion schreibt höchstens 200 Beiträge.", "no_channels": "Keiner dieser Kanäle ist für diese Marke aktiv.", "page_not_found": "Eine dieser Seiten ist nicht mehr in der Liste. Laden Sie die Seite neu.", "scan_running": "Die Website wird gerade gelesen. Starten Sie die Werbeaktion, wenn das fertig ist.", "range_in_past": "Diese Tage sind schon vorbei.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht.", "promotion_failed": "Die Werbeaktion konnte nicht starten. Bitte versuchen Sie es noch einmal.", "manager_only": "Nur Inhaber oder Manager können Seiten bewerben.", "no_profile": "Diese Marke ist noch nicht eingerichtet.", "invalid": "Prüfen Sie Seiten, Kanäle, Tage und Zahlen.", "unknown": "Die Werbeaktion konnte nicht starten. Bitte versuchen Sie es noch einmal." }, "dialog": { "fits": "Beiträge: {{count}} · {{from}} – {{to}}", "short": "Beiträge, die in diese Tage passen: {{fit}} von {{wanted}}. Wählen Sie einen längeren Zeitraum, ein höheres Tempo oder weniger Beiträge.", "title": "Seiten bewerben", "pages": "Ausgewählte Seiten: {{count}}", "more": "Weitere: {{count}}", "per_page": "Beiträge pro Seite", "channels": "Kanäle", "no_channels": "Diese Marke hat keinen aktiven Kanal zum Posten. Fügen Sie auf der Seite „Marke“ einen hinzu.", "from": "Von", "to": "Bis", "per_week": "Höchstens pro Woche", "picture": "Das Bild der Seite verwenden", "instructions": "Hinweise für die KI (optional)", "checking": "Die Tage werden geprüft…", "drafts_note": "Die Beiträge landen als Entwürfe in Ihrem Plan. Sie können jeden ändern, verschieben oder löschen.", "submit": "Werbung starten", "problem": { "no_pages": "Wählen Sie mindestens eine Seite.", "too_many_pages": "Wählen Sie höchstens 20 Seiten.", "no_channels": "Wählen Sie mindestens einen Kanal.", "per_page": "Beiträge pro Seite: von 1 bis 15.", "per_week": "Höchstens pro Woche: von 1 bis 21.", "too_many_posts": "Eine Werbeaktion schreibt höchstens 200 Beiträge.", "order": "Der letzte Tag kann nicht vor dem ersten liegen.", "too_long": "Der Zeitraum darf höchstens 183 Tage lang sein.", "past": "Diese Tage sind schon vorbei." }, "bio_note": "Instagram und TikTok öffnen keine Links in Beiträgen, daher steht in diesen Beiträgen „Link in Bio“. Schalten Sie auf der Seite „Marke“ „Link in Bio“ mit „Die neuesten Beiträge mit Link zeigen“ ein: Der Link jedes Beitrags erscheint dort, sobald er veröffentlicht ist." }, "not_promoted": "Noch nicht beworben", "numbers": "Beiträge: {{posts}} · Veröffentlicht: {{published}} · Klicks: {{clicks}}", "run": { "done": "Werbebeiträge als Entwürfe zu Ihrem Plan hinzugefügt: {{count}}", "none": "Es wurden keine Werbebeiträge geschrieben.", "page_failed": "{{title}}: {{reason}}", "stopped": "Nach dem Stopp nicht geschriebene Seiten: {{count}}", "writing": "Die KI schreibt Werbebeiträge. Fertige Seiten: {{done}} von {{count}}", "stop": "Stoppen", "open_plan": "Plan öffnen" }, "title": "Werbung", "intro": "Machen Sie aus Ihren Blogartikeln und Seiten Beiträge, die auf sie verlinken.", "staff_note": "Nur Inhaber oder Manager können die Website lesen oder Seiten bewerben.", "tabs": "Arten von Seiten", "tab_articles": "Blogartikel ({{count}})", "tab_pages": "Andere Seiten ({{count}})", "no_articles": "Es wurden keine Blogartikel gefunden. Hat Ihr Blog eine eigene Adresse, geben Sie sie ein — zum Beispiel https://example.com/blog — und lesen Sie erneut.", "no_pages": "Es wurden keine anderen Seiten gefunden.", "choose": "{{title}} auswählen", "not_seen": "Beim letzten Lesen nicht gefunden", "show_posts": "Beiträge zeigen", "hide_posts": "Beiträge ausblenden", "no_posts": "Für diese Seite sind keine Beiträge mehr da.", "remove": "Entwürfe entfernen", "remove_confirm": "Die Beiträge dieser Seite entfernen, die noch Entwürfe sind? Freigegebene und veröffentlichte Beiträge bleiben.", "remove_yes": "Entfernen", "removed": "Entfernte Entwürfe: {{count}}", "selected": "Ausgewählt: {{count}}", "clear": "Leeren", "start": "Werbung starten…", "limit": "Sie können bis zu 20 Seiten auf einmal auswählen." },
-  "promotion": { "error": { "ai_failed": "Die KI konnte diese Beiträge nicht schreiben.", "ai_incomplete": "Die KI hat weniger Beiträge geschrieben als gewünscht.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist ausgegangen.", "page_gone": "Diese Seite ist nicht mehr in der Liste.", "promotion_failed": "Das Schreiben wurde unerwartet abgebrochen.", "unknown": "Diese Beiträge konnten nicht geschrieben werden." } },
-  "summary": { "error": { "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht, daher wurde die Firmenbeschreibung nicht aktualisiert.", "ai_failed": "Die KI konnte die Firmenbeschreibung diesmal nicht schreiben; die Liste der Seiten ist aktuell.", "unknown": "Die Firmenbeschreibung wurde nicht aktualisiert." } },
-  "drafts": { "error": { "already_promoting": "Warten Sie, bis die laufende Werbeaktion fertig ist.", "not_found": "Diese Seite ist nicht mehr in der Liste.", "manager_only": "Nur Inhaber oder Manager können Beiträge entfernen.", "unknown": "Die Beiträge konnten nicht entfernt werden. Bitte versuchen Sie es noch einmal.", "no_profile": "Diese Marke ist noch nicht eingerichtet." } }
+  "promotion": { "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.", "ai_failed": "Die KI konnte diese Beiträge nicht schreiben.", "ai_incomplete": "Die KI hat weniger Beiträge geschrieben als gewünscht.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist ausgegangen.", "page_gone": "Diese Seite ist nicht mehr in der Liste.", "promotion_failed": "Das Schreiben wurde unerwartet abgebrochen.", "unknown": "Diese Beiträge konnten nicht geschrieben werden." } },
+  "summary": { "error": {
+      "ai_model_unpriced": "Bitten Sie einen Administrator, die KI-Einrichtung vor einem erneuten Versuch zu prüfen.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht, daher wurde die Firmenbeschreibung nicht aktualisiert.", "ai_failed": "Die KI konnte die Firmenbeschreibung diesmal nicht schreiben; die Liste der Seiten ist aktuell.", "unknown": "Die Firmenbeschreibung wurde nicht aktualisiert." } },
+  "drafts": { "error": { "already_promoting": "Warten Sie, bis die laufende Werbeaktion fertig ist.", "not_found": "Diese Seite ist nicht mehr in der Liste.", "manager_only": "Nur Inhaber oder Manager können Beiträge entfernen.", "unknown": "Die Beiträge konnten nicht entfernt werden. Bitte versuchen Sie es noch einmal.", "no_profile": "Diese Marke ist noch nicht eingerichtet." } },
+  "launch": {
+    "manual_handoff": "Veröffentlichen Sie diesen Beitrag manuell auf Ihrem Kanal. Kopieren Sie die Bildunterschrift und öffnen Sie die Medien, wenn Sie bereit sind.",
+    "publishing_details": "Veröffentlichungsdetails",
+  "save_published": "Speichern und als veröffentlicht markieren",
+  "manual_record": "Dies erfasst Ihre manuelle Veröffentlichung. HexaTech sendet diesen Beitrag nicht an ein soziales Netzwerk.",
+  "media": "Mediathek",
+  "search_media": "Medien suchen",
+  "archived": "Archiviert",
+  "upload": "Datei hochladen",
+  "upload_limit": "JPEG, PNG, WebP, MP4, WebM oder PDF. Bis zu {{mb}} MB pro Datei.",
+  "media_failed": "Die Datei konnte nicht geladen oder gespeichert werden. Prüfen Sie Format und Größe und versuchen Sie es erneut.",
+  "media_usage": "In {{count}} Beiträgen verwendet",
+  "detach": "Entfernen",
+  "attach": "Anhängen",
+  "open_asset": "Datei öffnen",
+  "restore": "Wiederherstellen",
+  "archive": "Archivieren",
+  "no_media": "Noch keine Dateien. Laden Sie eine Datei zur Verwendung in Beiträgen hoch.",
+  "attachments": "Beitragsdateien",
+  "choose_media": "Medien auswählen",
+  "move_up": "Nach oben",
+  "move_down": "Nach unten",
+  "full_editor": "Vollständiger Editor",
+  "open_panel": "Im Seitenbereich öffnen",
+  "editor_view": "Editoransicht",
+  "preview": "Vorschau",
+  "preview_empty": "Ihr Beitragstext erscheint hier.",
+  "characters": "{{count}} Zeichen",
+  "caption_long": "Der Text überschreitet das Plattformlimit. Sie können den Entwurf trotzdem speichern.",
+  "include_destination": "Ziel-URL einfügen",
+  "bio_hint": "Für Instagram und TikTok hinterlegen Sie das Ziel auf Ihrer Link-in-Bio-Seite.",
+  "copy_caption": "Fertigen Text kopieren",
+  "open_channel": "Kanal öffnen",
+  "settings": "Content-Einstellungen",
+  "planning_zone": "Planungszeitzone",
+  "zone_consequence": "Dies ist die gemeinsame Kontouhr für Content-Pläne, Erinnerungen und Morgen-E-Mails, Termine, Mitgliederportal und Übersichten. Gespeicherte Datums- und Uhrzeitwerte bleiben unverändert.",
+  "zone_unset": "Die Planung verwendet UTC. Wählen Sie eine Zeitzone für Ihr Konto.",
+  "choose_zone": "Zeitzone auswählen",
+  "save_zone": "Kontozeitzone speichern",
+  "planning_clock": "Planungszeit: {{zone}}",
+  "locations": "Standorte",
+  "add_location": "Standort hinzufügen",
+  "location_count": "{{used}} Standorte in diesem Konto",
+  "location_name": "Name",
+  "location_address": "Adresse",
+  "location_city": "Stadt",
+  "location_country": "Land",
+  "location_email": "E-Mail",
+  "location_phone": "Telefon",
+  "location_website": "Website",
+  "location_zone": "Zeitzone des Standorts",
+  "location_clock": "Standortänderungen ändern die Kontoplanungszeit nicht. Inaktive Standorte zählen weiterhin zum Tariflimit.",
+  "location_failed": "Der Standort konnte nicht gespeichert werden. Prüfen Sie die Felder und Ihr Standortlimit.",
+  "active": "Aktiv",
+  "inactive": "Inaktiv",
+  "sections": "Abschnitte",
+  "section_overview": "Übersicht",
+  "section_website": "Website",
+  "section_identity": "Identität",
+  "section_audiences": "Zielgruppen",
+  "section_voice": "Markenstimme",
+  "section_positioning": "Positionierung",
+  "section_channels": "Kanäle",
+  "section_locations": "Standorte",
+  "section_links": "Links",
+  "section_dates": "Termine & Freigaben",
+  "section_reusable": "Wiederverwendbare Inhalte",
+  "section_rhythm": "Rhythmus",
+  "work_running": "Die KI arbeitet. Sie können die Seite verlassen und zurückkehren.",
+  "work_cancelled": "KI-Arbeit abgebrochen. Bereits gespeicherte Änderungen bleiben erhalten.",
+  "work_uncertain": "Die Startantwort wurde unterbrochen. Verbinden Sie sich erneut mit dieser Anfrage, bevor Sie eine neue starten.",
+  "reconnect": "Erneut verbinden",
+  "cancel_work": "KI-Arbeit abbrechen"
+},
+  "collaboration": {
+    "asset": "Anhang",
+    "mentions": "Erwähnt",
+    "media_select": "Einen Anhang besprechen",
+    "whole_post": "Gesamter Beitrag",
+    "detached": "Anhang nicht mehr angehängt — neu wählen",
+    "mention_select": "Teammitglieder erwähnen",
+    "clear_mentions": "Ausgewählte Erwähnungen löschen",
+    "selection_failed": "Anhang oder Teamauswahl hat sich geändert. Wählen Sie unten erneut; Ihr Kommentar bleibt erhalten.",
+    "email": "E-Mails zu Prüfungen und Erwähnungen",
+    "email_hint": "Aus, bis Sie zustimmen. Informiert über Prüfungen und ausdrückliche Erwähnungen in Content. Die Morgen-E-Mail wird separat eingestellt."
+  },
+  "guide": {
+    "title": "Content-Leitfaden",
+    "heading": "Von der ersten Idee zum veröffentlichten Beitrag",
+    "intro": "Wählen Sie eine Aufgabe für eine kurze Anleitung und arbeiten Sie danach im Arbeitsbereich weiter. Der Leitfaden startet weder KI-Aufgaben noch Website-Scans.",
+    "search": "Aufgabe finden",
+    "filter": "Aufgaben filtern",
+    "empty": "Keine passenden Aufgaben. Versuchen Sie ein anderes Wort oder wählen Sie Alle.",
+    "setup_manager": "Beginnen Sie mit der Marke, dann wählen Sie die Kontozeitzone und den Kanalrhythmus.",
+    "setup_staff": "Bitten Sie eine Führungskraft, das Markenprofil, die Planungszeitzone und Ihre Kanäle einzurichten.",
+    "media_limit": "Der Upload zeigt vor der Dateiauswahl die aktuelle Servergrenze.",
+    "groups": {
+      "all": "Alle",
+      "start": "Einstieg",
+      "create": "Erstellen",
+      "collaborate": "Zusammenarbeit",
+      "share": "Teilen"
+    },
+    "actions": {
+      "brand": "Marke einrichten",
+      "settings": "Content-Einstellungen",
+      "channels": "Kanäle",
+      "rhythm": "Rhythmus",
+      "write": "Beitrag schreiben",
+      "plan": "Plan öffnen",
+      "review": "Beiträge zur Prüfung",
+      "approval_settings": "Freigaben einstellen",
+      "media": "Mediathek",
+      "posts": "Beiträge öffnen",
+      "website": "Website einrichten",
+      "promote": "Seiten bewerben",
+      "links": "Link-in-Bio",
+      "ready": "Fertige Beiträge"
+    },
+    "tasks": {
+      "setup": {
+        "title": "Marke und Planungszeitzone einrichten",
+        "body": "Ergänzen Sie unter Marke Identität, Zielgruppe und Stimme. Die geführte Einrichtung speichert jeden Schritt; prüfen Sie KI-Vorschläge vor der Übernahme.\nWählen Sie in den Content-Einstellungen ausdrücklich die Kontozeitzone. Sie gilt auch für Erinnerungen, Termine, Mitgliederportal und Dashboards; gespeicherte Datums- und Uhrzeitwerte bleiben unverändert. Standorte und Wetter bestimmen die Planungszeitzone nicht.\nAktivieren Sie Kanäle und wählen Sie Wochentage und übliche Zeiten. Wochenziele legen Sie unter Rhythmus fest."
+      },
+      "week": {
+        "title": "Die erste Woche planen",
+        "body": "Öffnen Sie den Plan und wählen Sie eine Woche. Freie Plätze folgen den aktiven Kanälen; fehlen sie, lassen Sie die Kanäle einrichten.\nSchreiben Sie selbst oder füllen Sie einen Platz mit KI. Führungskräfte können eine Woche generieren. Verfolgen Sie den Fortschritt, prüfen Sie jeden Entwurf und bestimmen Sie Person und Zeitpunkt. Es wird nichts automatisch veröffentlicht."
+      },
+      "approvals": {
+        "title": "Prüfen, kommentieren und Teammitglieder erwähnen",
+        "body": "Führungskräfte aktivieren Freigaben unter Marke → Termine & Freigaben. Mitarbeitende reichen Entwürfe ein; Führungskräfte geben sie frei oder senden sie mit Hinweis zurück. Änderungen am freigegebenen Text oder an Anhängen durch Mitarbeitende erfordern eine neue Prüfung.\nWählen Sie in Kommentare und Verlauf die erwähnten Personen ausdrücklich aus. Ein getipptes @Name allein benachrichtigt niemanden. Wählen Sie einen gespeicherten Anhang; sein Kontext bleibt nach Entfernen oder Archivieren erhalten. Bearbeiten ändert nur den Kommentartext.\nDie Glocke zeigt Neuigkeiten. E-Mails zu Prüfungen und Erwähnungen bleiben bis zur Zustimmung in den Content-Einstellungen aus; die Morgen-E-Mail ist separat."
+      },
+      "media": {
+        "title": "Medien hochladen, wiederverwenden und besprechen",
+        "body": "Laden Sie geprüfte JPEG-, PNG-, WebP-, MP4-, WebM- oder PDF-Dateien in die Mediathek. Beachten Sie vor der Dateiauswahl die angezeigte aktuelle Servergrenze.\nHängen Sie im Editor bis zu zehn gespeicherte Dateien an, sortieren und speichern Sie sie. Datei öffnen zeigt die gespeicherte Datei; Video- und PDF-Unterstützung hängt vom Browser ab. Führungskräfte können Dateien ohne Löschen der Dateien oder früherer Diskussionen archivieren und wiederherstellen.\nSpeichern Sie einen Anhang zuerst, bevor Sie ihn für einen Kommentar auswählen."
+      },
+      "versions": {
+        "title": "Plattformversionen und Wiederholungen erstellen",
+        "body": "Öffnen Sie einen gespeicherten Beitrag und erstellen Sie Versionen für andere Plattformen. Kopieren Sie unverändert oder fordern Sie bewusst eine KI-Anpassung an. Prüfen Sie das Ergebnis. Kann KI nicht abschließen, bleiben die Originalworte mit einer Erklärung erhalten.\nDatierte Beiträge können innerhalb der Formulargrenzen wöchentlich oder monatlich wiederholt werden. Prüfen Sie jede Kopie und ihr Datum. Das Stoppen einer Serie entfernt zukünftige unveröffentlichte Kopien; veröffentlichte bleiben erhalten."
+      },
+      "links": {
+        "title": "Website bewerben und Links verfolgen",
+        "body": "Eine Führungskraft trägt die Website unter Marke → Website ein und startet ausdrücklich einen Scan. Gibt es noch keine erfassten Seiten, scannen Sie zuerst und prüfen Sie Ergebnisse und Fehler.\nWählen Sie unter Bewerben Seiten, Kanäle und Daten, prüfen Sie die Vorschau und starten Sie. Sie können stoppen; bereits erstellte Entwürfe bleiben.\nTragen Sie ein Ziel im Link-Feld eines Beitrags ein und speichern Sie, um einen messbaren Kurzlink zu erhalten. Führungskräfte richten Link-in-Bio unter Marke → Links ein. Prüfen Sie Ziele vor dem Teilen."
+      },
+      "publish": {
+        "title": "Manuell veröffentlichen und danach vermerken",
+        "body": "Speichern Sie den Beitrag und prüfen Sie den endgültigen Text und die Medien in der Vorschau. Kopieren Sie den Text, öffnen Sie Dateien und Kanal. Fügen Sie alles auf der sozialen Plattform selbst ein und veröffentlichen Sie es dort.\nKehren Sie zu Content zurück und markieren Sie den Beitrag als veröffentlicht, optional mit öffentlicher URL. Speichern und als veröffentlicht markieren hält Ihre bewusste Entscheidung fest; Kopieren, Vorschau und normales Speichern veröffentlichen nichts im Netzwerk.\nBei aktiven Freigaben dürfen nur berechtigte Personen die Veröffentlichung vermerken; die zugewiesene Person darf einen freigegebenen oder fertigen Beitrag markieren."
+      },
+      "ai": {
+        "title": "KI-Limits, Fehler und Abbruch verstehen",
+        "body": "KI nutzt das gemeinsame Monatsbudget der Organisation. Am Limit pausiert KI; manuelles Schreiben bleibt möglich. Bitten Sie einen Administrator, die Konfiguration zu prüfen, wenn ein Modell nicht verfügbar oder nicht bepreist ist.\nAufträge zeigen ihren Fortschritt. Brechen Sie ab, solange die Schaltfläche verfügbar ist; bereits gespeicherte Änderungen bleiben. Nach Verbindungsabbruch verbinden Sie sich mit derselben Anfrage. Lesen Sie bei einem bestätigten Fehler die Erklärung vor einem bewussten erneuten Versuch.\nEine neuere menschliche Änderung hat Vorrang vor einem älteren KI-Ergebnis. Umschreibungen ersetzen den Entwurf erst nach Diesen Text verwenden."
+      },
+      "exports": {
+        "title": "Den Plan exportieren",
+        "body": "Wählen Sie unter Beiträge die Exportfilter. CSV enthält passende undatierte Beiträge mit leeren Datums- und Zeitfeldern. Kalenderdateien (ICS) enthalten nur geplante Beiträge; ein Datum ohne Uhrzeit wird zum ganztägigen Ereignis.\nZeitgebundene Einträge nutzen Ihre gespeicherte Planungszeitzone. Grenzen Sie leere Auswahlen oder mehr als 5.000 Beiträge ein; Exporte kürzen Ergebnisse nie stillschweigend."
+      }
+    },
+    "next_channels": "Keine aktiven Kanäle? Rhythmus einrichten",
+    "next_manual": "Keine aktiven Kanäle? Manuell schreiben",
+    "next_scan": "Keine erfassten Seiten? Website einrichten"
+  },
+  "campaigns": {
+    "title": "Kampagnen",
+    "campaign": "Kampagne",
+    "all": "Alle Kampagnen",
+    "none": "Keine Kampagne",
+    "unavailable": "Gespeicherte Kampagne",
+    "add": "Kampagne hinzufügen",
+    "edit": "Kampagne bearbeiten",
+    "name": "Name",
+    "goal": "Ziel",
+    "brief": "Briefing",
+    "start_date": "Startdatum",
+    "end_date": "Enddatum",
+    "draft": "Entwurf",
+    "active": "Aktiv",
+    "paused": "Pausiert",
+    "completed": "Abgeschlossen",
+    "archived": "Archiviert",
+    "history": "Beim Archivieren bleiben zugeordnete Beiträge und vorhandene Trackinglinks erhalten. Die Daten erläutern das Briefing; sie verschieben keine Beiträge.",
+    "save_failed": "Die Kampagne konnte nicht gespeichert werden. Prüfen Sie den Namen und den Zeitraum und versuchen Sie es erneut.",
+    "intro": "Halten Sie Ziel, Zeitraum und Briefing zusammen. Ordnen Sie dann Beiträge zu oder wählen Sie die Kampagne beim Generieren von Entwürfen.",
+    "setup": "Richten Sie diese Marke ein, bevor Sie eine Kampagne erstellen.",
+    "no_match": "Keine Kampagnen mit diesem Status.",
+    "empty": "Noch keine Kampagnen. Ein Manager kann das erste Briefing hinzufügen.",
+    "posts": "Beiträge ansehen"
+  },
+  "exports": {
+    "title": "Gefilterte Beiträge exportieren",
+    "plan": "Exportiert den angezeigten Zeitraum und die gewählten Plattformen und Status. Undatierte Beiträge sind separat; exportieren Sie diese unter Beiträge.",
+    "selection": "Exportiert alle passenden Beiträge über sämtliche Seiten, höchstens 5.000. Grenzen Sie größere Auswahlen mit Filtern ein.",
+    "schedule": "CSV kann undatierte Beiträge enthalten. ICS enthält nur geplante Beiträge; Daten ohne Uhrzeit werden zu ganztägigen Terminen. Termine mit Uhrzeit verwenden die gespeicherte Planungszeitzone.",
+    "csv_note": "Für die Tabellenansicht erhalten formelähnliche Zellen einen führenden Tabulator. Dieser kann beim programmgesteuerten Import erhalten bleiben; nach Speichern und erneutem Import in einer Tabelle kann sich die Sicherheit ändern.",
+    "csv": "CSV herunterladen",
+    "ics": "Kalender herunterladen (ICS)",
+    "preparing": "Download wird vorbereitet…",
+    "done": "Download vorbereitet.",
+    "empty": "Keine passenden Beiträge für den Export. ICS benötigt ein Datum; ändern Sie die Filter oder wählen Sie CSV.",
+    "too_many": "Mehr als 5.000 Beiträge passen. Grenzen Sie die Filter ein und exportieren Sie erneut.",
+    "failed": "Der Export konnte nicht vorbereitet werden. Versuchen Sie es erneut."
+  }
+
 }

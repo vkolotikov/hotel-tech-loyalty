@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 
+/** @property int|null $organization_id The persisted tenant column, nullable for legacy global settings. */
 class HotelSetting extends Model
 {
     use BelongsToOrganization;
@@ -36,6 +37,7 @@ class HotelSetting extends Model
         // reason. Legacy plaintext rows are transparently decrypted via
         // the try/catch in getValueAttribute and re-encrypted on next save.
         'booking_smoobu_api_key',
+        'booking_smoobu_api_secret',
         'booking_smoobu_webhook_secret',
         // SMTP password for a tenant's own mail server. Previously plaintext
         // in the settings table AND — because only ENCRYPTED_KEYS are excluded

@@ -80,7 +80,8 @@
       "bookings": "Buchungen",
       "crm_marketing": "CRM & Marketing",
       "operations": "Betrieb",
-      "system": "System"
+      "system": "System",
+      "workspaces": "Arbeitsbereiche"
     },
     "items": {
       "dashboard": "Übersicht",
@@ -120,7 +121,18 @@
       "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Hervorgehobene Bewertungen"
-    }
+    },
+    "apps": {
+      "loyalty": "Loyalty",
+      "appointments": "Termine",
+      "crm": "CRM",
+      "content": "Content",
+      "time": "Zeitplaner"
+    },
+    "menu_label": "Hauptmenü",
+    "find_placeholder": "Im Menü suchen",
+    "find_label": "Eine Seite im Menü suchen",
+    "find_none": "Keine Seite passt zu „{{query}}“."
   },
   "topbar": {
     "search_placeholder": "Mitglieder, Gäste, Buchungen suchen…",
@@ -426,16 +438,10 @@
   },
   "dashboard": {
     "title": "Übersicht",
-    "greeting": {
-      "morning": "Guten Morgen",
-      "afternoon": "Guten Tag",
-      "evening": "Guten Abend"
-    },
     "actions": {
       "scan_card": "Karte scannen",
       "send_campaign": "Kampagne senden"
     },
-    "needs_attention": "Benötigt Ihre Aufmerksamkeit",
     "all_clear": "Alles klar.",
     "all_clear_sub": "Im Moment wartet nichts auf Sie.",
     "alerts": {
@@ -456,7 +462,9 @@
       "services": "Dienstleistungen",
       "none_today": "Heute keine.",
       "with": "bei {{name}}",
-      "more": "{{count}} weitere"
+      "more": "{{count}} weitere",
+      "guest": "Gast",
+      "events": "{{count}} Ereignisse"
     },
     "kpis": {
       "active_members": "Aktive Mitglieder",
@@ -468,20 +476,157 @@
       "pipeline": "Pipeline",
       "open_count": "{{count}} offen"
     },
-    "quick_access": "Schnellzugriff",
-    "quick": {
-      "members": "Mitglieder",
-      "bookings": "Buchungen",
-      "calendar": "Kalender",
-      "services": "Dienste",
-      "inbox": "Posteingang",
-      "offers": "Angebote",
-      "analytics": "Analyse",
-      "ai_insights": "KI-Insights"
-    },
     "recent_activity": "Letzte Aktivität",
     "view_all": "Alle anzeigen",
-    "no_activity": "Noch keine aktuelle Aktivität."
+    "no_activity": "Noch keine aktuelle Aktivität.",
+    "apps": {
+      "title": "Ihre Arbeitsbereiche",
+      "loyalty_line": "Mitglieder, Punkte, Prämien und Kampagnen",
+      "appointments_line": "Kalender, Kunden und Einnahmen",
+      "crm_line": "Website-Chat, Leads und die Pipeline",
+      "content_line": "Beiträge, mit KI geplant und geschrieben",
+      "time_line": "Der Tag des Teams, mit KI geplant"
+    },
+    "chart": {
+      "title": "Tag für Tag",
+      "sub": "{{from}} – {{to}}",
+      "revenue": "Umsatz",
+      "bookings": "Buchungen",
+      "points": "Punkte",
+      "leads": "Leads & Chats",
+      "leads_line": "Leads",
+      "chats": "Chats",
+      "stays": "Aufenthalte",
+      "services": "Leistungen",
+      "appointments": "Termine",
+      "earned": "Gesammelt",
+      "redeemed": "Eingelöst",
+      "empty": "In diesen Tagen noch nichts."
+    },
+    "customize": {
+      "button": "Anpassen",
+      "title": "Dashboard anpassen",
+      "sub": "Widgets ein- und ausblenden und ordnen. Für Sie in diesem Browser gespeichert.",
+      "reset": "Zurücksetzen",
+      "close": "Schließen",
+      "up": "{{name}} nach oben",
+      "down": "{{name}} nach unten",
+      "none": "Alle Widgets sind ausgeblendet. „Anpassen“ holt sie zurück."
+    },
+    "hero": {
+      "label": "Jetzt vor Ort",
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend",
+      "night": "Gute Nacht",
+      "hello_name": "{{greeting}}, {{name}}",
+      "place_time": "{{place}} · Ortszeit ({{zone}})",
+      "zone_time": "Ortszeit ({{zone}})",
+      "local_time": "Ortszeit",
+      "feels_like": "Gefühlt {{temp}}",
+      "high_low": "H {{max}} T {{min}}",
+      "humidity": "{{value}} % Luftfeuchte",
+      "next_hours": "Die nächsten Stunden",
+      "now": "Jetzt",
+      "sun": "Sonnenaufgang {{rise}}, Sonnenuntergang {{set}}",
+      "no_place": "Tragen Sie bei einem Standort die Stadt ein, um hier das Wetter zu sehen.",
+      "add_city": "Stadt eintragen",
+      "no_place_staff": "Das Wetter erscheint hier, sobald ein Standort seine Stadt hat.",
+      "no_weather": "Das Wetter ist gerade nicht verfügbar.",
+      "not_found": "„{{city}}“ wurde auf der Karte nicht gefunden. Wählen Sie die Stadt unter Standorte aus der Liste.",
+      "not_found_staff": "Das Wetter erscheint hier, sobald die Stadt des Standorts auf der Karte gefunden ist.",
+      "open_locations": "Standorte öffnen"
+    },
+    "kpi": {
+      "title": "Die letzten {{days}} Tage",
+      "was": "vorher {{value}}",
+      "new": "Neu",
+      "revenue": "Umsatz",
+      "revenue_sub": "Aufenthalte und Leistungen",
+      "bookings": "Buchungen",
+      "bookings_sub": "Gebuchte Aufenthalte",
+      "services": "Termine",
+      "services_sub": "Im Kalender",
+      "members": "Neue Mitglieder",
+      "members_sub": "Beigetreten",
+      "points": "Gesammelte Punkte",
+      "points_sub": "Von Mitgliedern",
+      "leads": "Neue Leads",
+      "leads_sub": "Eingegangene Anfragen",
+      "chats": "Website-Chats",
+      "chats_sub": "Gespräche"
+    },
+    "live": {
+      "title": "Jetzt live",
+      "sub": "Aktualisiert alle 30 Sekunden",
+      "online": "{{count}} jetzt auf der Website",
+      "online_one": "{{count}} jetzt auf der Website",
+      "online_other": "{{count}} jetzt auf der Website"
+    },
+    "live_label": "Live",
+    "loyalty": {
+      "title": "Mitglieder & Stufen",
+      "birthdays": "Geburtstage heute",
+      "no_birthdays": "Heute keine Geburtstage.",
+      "close": "Kurz vor der nächsten Stufe",
+      "to_go": "noch {{points}} Pkt. bis {{tier}}",
+      "sub": "{{count}} aktive Mitglieder",
+      "sub_one": "{{count}} aktives Mitglied",
+      "sub_other": "{{count}} aktive Mitglieder"
+    },
+    "period": {
+      "label": "Zeitraum",
+      "days": "{{count}} T.",
+      "days_one": "{{count}} T.",
+      "days_other": "{{count}} T."
+    },
+    "pipeline": {
+      "title": "Pipeline",
+      "value": "Wert",
+      "empty": "Noch keine Leads.",
+      "sub": "{{count}} Leads nach Phase",
+      "sub_one": "{{count}} Lead nach Phase",
+      "sub_other": "{{count}} Leads nach Phase"
+    },
+    "tasks": {
+      "title": "Fällige Nachfassaktionen",
+      "sub": "Die nächsten drei Tage",
+      "empty": "In den nächsten drei Tagen ist nichts fällig.",
+      "late": "Überfällig",
+      "today": "Heute",
+      "overdue": "{{count}} überfällig",
+      "overdue_one": "{{count}} überfällig",
+      "overdue_other": "{{count}} überfällig"
+    },
+    "widgets": {
+      "now": "Uhr & Wetter",
+      "live": "Jetzt live",
+      "kpis": "Kennzahlen",
+      "trend": "Hauptdiagramm",
+      "pipeline": "Pipeline",
+      "schedule": "Heutiger Ablauf",
+      "loyalty": "Mitglieder & Stufen",
+      "workspaces": "Ihre Arbeitsbereiche",
+      "tasks": "Fällige Nachfassaktionen",
+      "activity": "Letzte Aktivitäten"
+    },
+    "weather": {
+      "clear": "Klarer Himmel",
+      "mainly_clear": "Überwiegend klar",
+      "partly_cloudy": "Teilweise bewölkt",
+      "overcast": "Bedeckt",
+      "fog": "Nebel",
+      "drizzle": "Nieselregen",
+      "freezing_drizzle": "Gefrierender Nieselregen",
+      "rain": "Regen",
+      "freezing_rain": "Gefrierender Regen",
+      "snow": "Schnee",
+      "showers": "Regenschauer",
+      "snow_showers": "Schneeschauer",
+      "thunderstorm": "Gewitter",
+      "thunder_hail": "Gewitter mit Hagel",
+      "unknown": "Wetter"
+    }
   },
   "notifications": {
     "title": "Benachrichtigungskampagnen",
@@ -762,7 +907,13 @@
       "send_proposal": "Angebot senden",
       "follow_up": "Nachfassen",
       "site_visit": "Vor-Ort-Besuch",
-      "custom": "Eigene"
+      "custom": "Eigene",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "video_call": "Videoanruf",
+      "demo": "Demo",
+      "contract": "Vertrag",
+      "discovery": "Bedarfsanalyse"
     },
     "tooltips": {
       "reopen": "Wieder öffnen",
@@ -800,7 +951,13 @@
       "type": "Typ",
       "title": "Titel",
       "notes": "Notizen (optional)",
-      "due": "Fällig"
+      "due": "Fällig",
+      "assignee": "Wer erledigt sie",
+      "date": "Datum",
+      "duration": "Dauer",
+      "priority": "Priorität",
+      "repeat": "Wiederholen",
+      "start_time": "Beginn"
     },
     "placeholders": {
       "title": "Angebot senden · Nach Vor-Ort-Besuch nachfassen · …",
@@ -825,6 +982,71 @@
       "updated": "Aufgabe aktualisiert",
       "title_required": "Titel ist erforderlich",
       "save_failed": "Speichern fehlgeschlagen"
+    },
+    "any_time": "Jederzeit",
+    "assignee_me": "Ich",
+    "ends_at": "Endet um {{time}}",
+    "ends_next_day": "Endet am nächsten Tag um {{time}}",
+    "length_needs_time": "Wählen Sie einen Beginn, um die Dauer festzulegen.",
+    "length_open": "Keine feste Dauer.",
+    "no_inquiry": "Mit keiner Anfrage verknüpft.",
+    "other_time": "Andere Uhrzeit",
+    "repeat_line": "Wenn sie erledigt ist, wird die nächste zur gleichen Uhrzeit angelegt.",
+    "repeat_needs_day": "Wählen Sie einen Tag, um sie zu wiederholen.",
+    "repeat_once": "Einmalig.",
+    "start_needs_day": "Wählen Sie einen Tag, um eine Uhrzeit zu wählen.",
+    "title_hint": "Leer lassen, um „{{title}}“ zu verwenden.",
+    "date_quick": {
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "in_2_days": "In 2 Tagen",
+      "next_monday": "Nächsten Montag",
+      "none": "Kein Datum",
+      "other": "Anderer Tag"
+    },
+    "groups": {
+      "talk": "Kontakt aufnehmen",
+      "meet": "Treffen",
+      "sell": "Verkauf abschließen",
+      "other": "Sonstiges"
+    },
+    "length": {
+      "minutes": "{{count}} Min.",
+      "hours": "{{count}} Std.",
+      "hours_minutes": "{{hours}} Std. {{minutes}}"
+    },
+    "parts": {
+      "morning": "Vormittag",
+      "afternoon": "Nachmittag",
+      "evening": "Abend"
+    },
+    "priority": {
+      "low": "Niedrig",
+      "normal": "Normal",
+      "high": "Hoch"
+    },
+    "problems": {
+      "title_required": "Geben Sie der Aufgabe einen Titel.",
+      "too_long": "Das ist zu lang."
+    },
+    "repeat": {
+      "none": "Keine Wiederholung",
+      "daily": "Jeden Tag",
+      "weekly": "Jede Woche",
+      "monthly": "Jeden Monat"
+    },
+    "steps": {
+      "what": "Was",
+      "what_line": "Die Art der Aufgabe, ihr Titel und wie dringend sie ist.",
+      "when": "Wann",
+      "when_line": "Nach Ihrer eigenen Uhr.",
+      "who": "Wer und für welchen Lead",
+      "notes": "Notizen"
+    },
+    "summary": {
+      "no_day": "Noch kein Datum",
+      "at": "{{day}}, {{time}}",
+      "range": "{{day}}, {{start}}–{{end}}"
     }
   },
   "planner": {
@@ -1330,12 +1552,18 @@
     },
     "proposal": {
       "title": "KI-Angebotsentwurf",
-      "subtitle": "Erstellt aus den Aufenthaltsdetails und Sonderwünschen dieser Anfrage. Vor dem Senden überprüfen — das Modell hilft, ist aber nicht magisch.",
+      "subtitle": "Prüfen Sie vor dem Senden, ob das Angebot zur Kundenanfrage passt.",
+      "review": "Zu prüfen",
       "drafting": "Entwurf wird erstellt…",
       "subject": "Betreff",
       "body": "Inhalt",
       "regenerate": "Neu erzeugen",
-      "regenerate_tooltip": "Anderen Entwurf versuchen"
+      "regenerate_tooltip": "Anderen Entwurf versuchen",
+      "comment": "Kommentar für die KI",
+      "comment_hint": "Zum Beispiel: Kürzen Sie die Einleitung und erläutern Sie die Musteroptionen.",
+      "revise": "Diesen Entwurf überarbeiten",
+      "fresh": "Neuen Entwurf erstellen",
+      "evidence": "Fragen und Quellen ansehen"
     }
   },
   "inquiries": {
@@ -3624,6 +3852,8 @@
       "over_limit_booking": "Dieses Paket erlaubt {{limit}} buchbare Teammitglieder, und Sie haben {{count}} aktive. Wählen Sie ein größeres Paket oder schalten Sie zuerst einige im Setup aus."
     },
     "team": {
+      "manage_partner": "Partnerzugang verwalten",
+      "partner": "Partner nur zum Scannen",
       "title": "Team",
       "subtitle": "Wer sich in Ihren Arbeitsbereichen anmelden kann.",
       "invite_title": "Kollegin oder Kollegen einladen",

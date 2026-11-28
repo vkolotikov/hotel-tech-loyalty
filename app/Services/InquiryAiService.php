@@ -431,35 +431,6 @@ PROMPT;
         }
     }
 
-    /**
-     * Draft an outbound proposal email for an inquiry. Returns subject
-     * + body the agent edits before sending. The model is told to
-     * stay specific to the actual stay details so we don't ship
-     * generic spam.
-     */
-    public function draftProposal(Inquiry $inquiry): array
-    {
-        $context = $this->gatherContext($inquiry);
-
-        try {
-            $payload = $this->callOpenAiForProposal($context);
-
-            return [
-                'subject' => trim((string) ($payload['subject'] ?? '')),
-                'body'    => trim((string) ($payload['body'] ?? '')),
-            ];
-        } catch (\Throwable $e) {
-            Log::warning('InquiryAiService draftProposal failed: ' . $e->getMessage(), [
-                'inquiry_id' => $inquiry->id,
-            ]);
-            return [
-                'subject' => '',
-                'body'    => '',
-                'error'   => 'Could not draft proposal — try again in a moment.',
-            ];
-        }
-    }
-
     /* ─── internals (Phase 5) ───────────────────────────────────── */
 
     private function callOpenAiForLostReason(array $ctx, array $allowedLabels): array
@@ -516,78 +487,6 @@ PROMPT;
         ]);
 
         $this->recordUsage($response, 'inquiry_lost_reason');
-
-        $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            throw new \RuntimeException('OpenAI returned non-JSON: ' . substr($raw, 0, 200));
-        }
-        return $decoded;
-    }
-
-    private function callOpenAiForProposal(array $ctx): array
-    {
-        $stayBits = array_filter([
-            $ctx['guest_name']        ? "Guest: {$ctx['guest_name']}" : null,
-            $ctx['company']           ? "Company: {$ctx['company']}" : null,
-            $ctx['inquiry_type']      ? "Inquiry type: {$ctx['inquiry_type']}" : null,
-            $ctx['check_in']          ? "Check-in: {$ctx['check_in']}" : null,
-            $ctx['check_out']         ? "Check-out: {$ctx['check_out']}" : null,
-            $ctx['num_nights']        ? "Nights: {$ctx['num_nights']}" : null,
-            $ctx['num_rooms']         ? "Rooms: {$ctx['num_rooms']}" : null,
-            ($ctx['num_adults'] || $ctx['num_children'])
-                ? 'Pax: ' . (int) $ctx['num_adults'] . 'A / ' . (int) $ctx['num_children'] . 'C'
-                : null,
-            $ctx['room_type']         ? "Room preference: {$ctx['room_type']}" : null,
-            $ctx['total_value']       ? 'Quoted total: €' . number_format((float) $ctx['total_value']) : null,
-            $ctx['rate_offered']      ? 'Rate offered: €' . number_format((float) $ctx['rate_offered']) . '/night' : null,
-            $ctx['property']          ? "Property: {$ctx['property']}" : null,
-            $ctx['event_type']        ? "Event: {$ctx['event_type']}" . ($ctx['event_pax'] ? " ({$ctx['event_pax']} pax)" : '') : null,
-        ]);
-        $stay = $stayBits ? implode("\n", $stayBits) : '(stay details TBD)';
-
-        $specials = $ctx['special_requests']
-            ? "Special requests from the guest:\n{$ctx['special_requests']}"
-            : '';
-
-        $prompt = <<<PROMPT
-You are drafting a professional, warm proposal email from the hotel
-sales team to the guest. The agent will review and edit before sending,
-so you must stay tight and SPECIFIC to the stay details below — no
-generic boilerplate, no placeholders like "[insert here]".
-
-Strict rules:
-- subject: ≤ 70 chars, mentions the dates if known (e.g. "Your stay
-  with us — Jun 12-15"). No emojis.
-- body: 4-6 short paragraphs, plain text, no markdown headings, no
-  bullet lists. Open with a warm, specific greeting using the guest's
-  first name if known. Acknowledge the dates / pax / room preference.
-  Address every special request explicitly. State the proposed total
-  (if known). Close with a clear call-to-action ("Confirm by reply"
-  or "Reply with any questions").
-- Sign off with "Warm regards, The Sales Team" — the agent edits
-  their own signature before sending.
-- If a detail is missing, write around it ("we'll confirm room types
-  shortly") rather than leaving a placeholder.
-
-Return STRICT JSON ONLY:
-{ "subject": "<≤70 chars>", "body": "<4-6 paragraphs>" }
-
-STAY DETAILS:
-{$stay}
-
-{$specials}
-PROMPT;
-
-        $response = OpenAI::chat()->create([
-            'model'           => self::MODEL,
-            'messages'        => [['role' => 'user', 'content' => $prompt]],
-            'max_tokens'      => 800,
-            'temperature'     => 0.5, // a bit of warmth, still grounded
-            'response_format' => ['type' => 'json_object'],
-        ]);
-
-        $this->recordUsage($response, 'inquiry_proposal_draft');
 
         $raw = trim((string) ($response->choices[0]->message->content ?? '{}'));
         $decoded = json_decode($raw, true);

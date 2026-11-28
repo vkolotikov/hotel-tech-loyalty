@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Crm\SalesRecordSearch;
 use App\Models\AuditLog;
 use App\Models\CustomField;
 use App\Models\Guest;
@@ -31,6 +32,13 @@ class GuestController extends Controller
         $query = Guest::query();
         $this->applyFilters($query, $request);
 
+        $this->orderList($query, $request);
+
+        return response()->json($query->paginate($request->get('per_page', 25)));
+    }
+
+    private function orderList(\Illuminate\Database\Eloquent\Builder $query, Request $request): void
+    {
         // Whitelist sort + dir — Eloquent's orderBy() does NOT parameter-bind
         // the column name. Without an allowlist, attacker can sort by columns
         // the UI never exposes (passport_no, id_number, custom_data) and use
@@ -41,12 +49,16 @@ class GuestController extends Controller
         // `total_revenue` (the CRM's contact list) are allowed.
         $aliases = ['stays_count' => 'total_stays', 'last_check_in' => 'last_stay_date'];
         $allowedSorts = ['created_at','updated_at','first_name','last_name','full_name','email','phone','country','lifecycle_status','importance','total_stays','last_stay_date','last_activity_at','total_revenue','loyalty_tier','owner_name'];
-        $asked = $aliases[$request->get('sort')] ?? $request->get('sort');
+        $asked = $aliases[$request->string('sort')->toString()] ?? $request->string('sort')->toString();
         $sort = in_array($asked, $allowedSorts, true) ? $asked : 'created_at';
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
-        $query->orderBy($sort, $dir);
-
-        return response()->json($query->paginate($request->get('per_page', 25)));
+        if ($sort === 'full_name') {
+            $name = "LOWER(NULLIF(TRIM(full_name), ''))";
+            $query->orderByRaw("{$name} IS NULL")->orderByRaw("{$name} {$dir}");
+        } else {
+            $query->orderBy($sort, $dir);
+        }
+        $query->orderBy('id', $dir);
     }
 
     /**
@@ -79,6 +91,8 @@ class GuestController extends Controller
             'lead_source'  => $extract('lead_source'),
             'owner_name'   => $extract('owner_name'),
             'loyalty_tier' => $extract('loyalty_tier'),
+            // CRM round 5 (2026-11-12): the guest types the contacts hold, for the CRM's Type filter.
+            'guest_type'   => $extract('guest_type'),
         ]);
     }
 
@@ -282,7 +296,10 @@ class GuestController extends Controller
         // so an explicit empty/null custom_data still goes through the
         // validator (allows the user to clear all custom values).
         $hasCustom = array_key_exists('custom_data', $v);
-        $custom = $hasCustom ? $this->customFields->validate('guest', $v['custom_data']) : null;
+        // A value of a field the organisation switched off or deleted is kept (2026-11-12): it comes back with the field.
+        $custom = $hasCustom
+            ? $this->customFields->keepUnlisted('guest', $guest->getAttribute('custom_data'), $this->customFields->validate('guest', $v['custom_data']))
+            : null;
 
         // Strip nulls so DB column defaults (guest_type, vip_level,
         // lifecycle_status, importance, etc.) aren't violated and existing
@@ -600,7 +617,11 @@ class GuestController extends Controller
     {
         $query = Guest::query();
         $this->applyFilters($query, $request);
-        $query->orderBy('full_name');
+        if ($request->filled('sort')) {
+            $this->orderList($query, $request);
+        } else {
+            $query->orderBy('full_name')->orderBy('id');
+        }
 
         $customFields = CustomField::where('entity', 'guest')
             ->where('is_active', true)
@@ -695,17 +716,35 @@ class GuestController extends Controller
         ])->deleteFileAfterSend(true);
     }
 
+    /**
+     * `date_from` / `date_to` are the venue's calendar days (2026-11-12, as the leads' since 2026-11-08; before, UTC's): a
+     * contact added at 00:30 in Riga on the 8th is the 8th's, and `date_to` takes the whole of its day. A value that is
+     * not a `Y-m-d` day is ignored.
+     */
+    private function addedOnVenueDays($query, Request $request): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : (int) $request->user()?->organization_id;
+        $zone = \App\Services\Appointments\VenueClock::zone($orgId);
+        $day = function ($value) use ($zone): ?\Carbon\CarbonImmutable {
+            if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                return null;
+            }
+            $at = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $value, $zone);
+
+            return $at && $at->format('Y-m-d') === $value ? $at : null;
+        };
+        if ($from = $day($request->get('date_from'))) {
+            $query->where('created_at', '>=', $from->utc());
+        }
+        if ($to = $day($request->get('date_to'))) {
+            $query->where('created_at', '<', $to->addDay()->utc());
+        }
+    }
+
     private function applyFilters($query, Request $request): void
     {
-        if ($s = $request->get('search')) {
-            $query->where(function ($q) use ($s) {
-                $q->where('full_name', 'ilike', "%$s%")
-                  ->orWhere('email', 'ilike', "%$s%")
-                  ->orWhere('phone', 'ilike', "%$s%")
-                  ->orWhere('company', 'ilike', "%$s%")
-                  ->orWhere('nationality', 'ilike', "%$s%");
-            });
-        }
+        $search = trim($request->string('search')->toString());
+        if ($search !== '') SalesRecordSearch::people($query, $search, includeNationality: true);
         if ($v = $request->get('country'))          $query->where('country', $v);
         if ($v = $request->get('nationality'))      $query->where('nationality', $v);
         if ($v = $request->get('guest_type'))        $query->where('guest_type', $v);
@@ -715,11 +754,15 @@ class GuestController extends Controller
         if ($v = $request->get('lead_source'))        $query->where('lead_source', $v);
         if ($v = $request->get('owner_name'))         $query->where('owner_name', $v);
         if ($v = $request->get('loyalty_tier'))       $query->where('loyalty_tier', $v);
-        if ($request->get('has_email'))               $query->whereNotNull('email');
-        if ($request->get('has_phone'))               $query->whereNotNull('phone');
+        // An email or a phone that is there (2026-11-12): an empty one is none, and a mobile is a phone too, as the leads'
+        // `has_phone` reads it.
+        if ($request->get('has_email'))               $query->whereNotNull('email')->where('email', '!=', '');
+        if ($request->get('has_phone')) {
+            $query->where(fn ($q) => $q->where(fn ($p) => $p->whereNotNull('phone')->where('phone', '!=', ''))
+                ->orWhere(fn ($m) => $m->whereNotNull('mobile')->where('mobile', '!=', '')));
+        }
         if ($v = $request->get('min_stays'))          $query->where('total_stays', '>=', $v);
-        if ($v = $request->get('date_from'))          $query->where('created_at', '>=', $v);
-        if ($v = $request->get('date_to'))            $query->where('created_at', '<=', $v . ' 23:59:59');
+        $this->addedOnVenueDays($query, $request);
         if ($v = $request->get('tag_ids')) {
             $ids = is_array($v) ? $v : explode(',', $v);
             $query->whereHas('tags', fn($q) => $q->whereIn('guest_tags.id', $ids));
@@ -728,8 +771,11 @@ class GuestController extends Controller
         // Companies cross-link banner on /customers?company=Acme%20Ltd
         // so admins can pivot from a company row into "all customers
         // who work there".
+        // 2026-11-12 (the CRM's company People): a lower-case LIKE, the same on PostgreSQL and SQLite, its own % and _ taken
+        // as written.
         if ($v = $request->get('company')) {
-            $query->where('company', 'ilike', "%{$v}%");
+            $needle = '%' . addcslashes(mb_strtolower((string) $v), '%_\\') . '%';
+            $query->whereRaw("LOWER(company) LIKE ? ESCAPE '\\'", [$needle]);
         }
         // `ids` filter — used by bulk export to write only the selected
         // rows to CSV. Accepts either an array or a comma-separated list.

@@ -24,7 +24,14 @@
     "this": "cette réponse",
     "count": "{{count}} sur {{max}}",
     "up": "Monter {{name}}",
-    "down": "Descendre {{name}}"
+    "down": "Descendre {{name}}",
+    "done": "Terminé",
+    "edit": "Modifier {{name}}",
+    "menu": "Plus pour {{name}}",
+    "move_down": "Descendre",
+    "move_up": "Monter",
+    "remove_short": "Retirer",
+    "untitled": "Sans nom"
   },
   "deleted": "Supprimé",
   "discard": "Annuler les changements",
@@ -228,7 +235,8 @@
     "canned": "Réponses types",
     "fields": "Champs personnalisés",
     "forms": "Formulaires de lead",
-    "pipelines": "Pipelines"
+    "pipelines": "Pipelines",
+    "templates": "Modèles"
   },
   "types": {
     "checkbox": "Oui ou non",
@@ -249,6 +257,36 @@
     "pipelines": "Les étapes d’un lead, et pourquoi des leads sont perdus.",
     "forms": "Des formulaires sur votre site qui vous envoient des leads.",
     "fields": "Vos propres champs sur les leads, contacts et tâches.",
-    "account": "Votre équipe et votre offre."
-  }
+    "account": "Votre équipe et votre offre.",
+    "templates": "Modèles d’e-mail que votre équipe envoie depuis un lead."
+  },
+  "form": {
+    "flagged": "à corriger",
+    "next": "Suite : {{part}}"
+  },
+  "presets": {
+    "added": "{{count}} champs ajoutés.",
+    "apply": "Ajouter les champs",
+    "count": "{{count}} champs",
+    "none_added": "Rien de nouveau : ces champs existent déjà.",
+    "open": "Depuis un modèle",
+    "title": "Des champs pour votre activité",
+    "beauty": "Beauté / Spa",
+    "beauty_line": "Type de peau, allergies, praticien préféré, préférences de soins. Ajoute des champs aux contacts et aux leads.",
+    "medical": "Médical / Santé",
+    "medical_line": "Date de naissance, groupe sanguin, allergies, traitements, assurance, contact d’urgence. Ajoute des champs aux contacts et aux leads.",
+    "legal": "Juridique / Cabinet d’avocats",
+    "legal_line": "Type de dossier, vérification des conflits, type d’affaire, échéances, provision, honoraires.",
+    "real_estate": "Immobilier",
+    "real_estate_line": "Acheteur ou vendeur, état du prêt, type de bien, budget, indispensables, calendrier de décision.",
+    "education": "Éducation / Soutien scolaire",
+    "education_line": "Date de naissance, contact des parents, parcours antérieur, programme souhaité, rentrée, format d’études.",
+    "fitness": "Fitness / Bien-être",
+    "fitness_line": "Objectif, niveau, blessures, coach préféré, formule d’abonnement, services souhaités.",
+    "restaurant": "Restaurant",
+    "restaurant_line": "Préférences alimentaires, allergies, table préférée, occasion, nombre de convives, placement souhaité.",
+    "services": "Services / Agence",
+    "services_line": "Fonction, décideur, type de projet, budget, échéance, quantité, lien vers le brief."
+  },
+  "read_only_short": "Lecture seule : un manager fait les modifications ici."
 }

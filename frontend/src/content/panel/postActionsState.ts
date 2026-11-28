@@ -88,7 +88,8 @@ export function usePostActions({ post, dirty, onPost, onDuplicated, onDeleted }:
     try {
       await call(post)
     } catch (e) {
-      const [key, text] = errorKey('action', failureOf(e).code)
+      const code = failureOf(e).code
+      const [key, text] = errorKey(code === 'changed_elsewhere' ? 'approval' : 'action', code)
       setError(t(key, text))
     } finally {
       setBusy(null)
@@ -98,8 +99,8 @@ export function usePostActions({ post, dirty, onPost, onDuplicated, onDeleted }:
   return {
     locked, publishable, waits, dirty, busy, error, copied, linkCopied, canManage: boot.staff.can_manage,
     publishing, setPublishing, url, setUrl, urlOk, confirmDelete, setConfirmDelete, templating, setTemplating,
-    markReady: () => { void act('ready', async (p) => { onPost((await api.markReady(p.id)).post) }) },
-    markPublished: () => { void act('published', async (p) => { onPost((await api.markPublished(p.id, url.trim() === '' ? null : url.trim())).post); setPublishing(false) }) },
+    markReady: () => { void act('ready', async (p) => { onPost((await api.markReady(p.id, p.updated_at)).post) }) },
+    markPublished: () => { void act('published', async (p) => { onPost((await api.markPublished(p.id, url.trim() === '' ? null : url.trim(), p.updated_at)).post); setPublishing(false) }) },
     duplicate: () => { void act('duplicate', async (p) => { onDuplicated((await api.duplicatePost(p.id)).post) }) },
     copy: () => { void act('copy', async (p) => { await navigator.clipboard.writeText(copyText(p)); setCopied(true) }) },
     // The post's own link with its brand, so a colleague on another brand opens this post.

@@ -71,5 +71,14 @@
   "pushLimit": "Push opens the member app. Test push and custom tap destinations are not available here.",
   "cost": "The provider bills SMS parts. A price estimate is not available here.",
   "email": "Email",
-  "push": "Push"
+  "push": "Push",
+  "platformEmail": "Platform email service",
+  "appRequired": "Member app required",
+  "ownTwilio": "Your organisation’s Twilio account",
+  "deliverySetup": "Delivery requirements",
+  "emailRequirements": "Email sending is built in. HexaTech must configure the platform mail provider and delivery workers. Your organisation uses this shared service; a campaign list does not confirm live delivery.",
+  "customSenderHold": "Own sending domain / SMTP · On hold",
+  "customSenderDetail": "Self-service domain and SMTP connections are not available yet. Sender name and reply-to can be configured; the sending address belongs to the platform.",
+  "smsRequirements": "Connect your organisation’s own Twilio account and a sender number or Messaging Service in Integrations. Twilio bills your account. Only eligible members with SMS consent can receive campaigns.",
+  "pushRequirements": "Push requires the member app, platform Apple/Google push credentials and members who allow notifications on registered devices. Browser push and custom app layouts are not available here."
 }

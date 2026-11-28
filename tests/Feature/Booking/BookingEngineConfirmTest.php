@@ -712,6 +712,100 @@ class BookingEngineConfirmTest extends TestCase
         $this->assertEquals([200.0, 160.0], $rows->pluck('price_paid')->map(fn ($p) => (float) $p)->all());
     }
 
+    private function reservationIdentityIndex(): void
+    {
+        $schema = \Illuminate\Support\Facades\Schema::getFacadeRoot();
+        if (!collect($schema->getIndexes('booking_mirror'))->contains('name', 'booking_mirror_organization_id_reservation_id_unique')) {
+            $schema->table('booking_mirror', fn ($table) => $table->unique(['organization_id', 'reservation_id']));
+        }
+    }
+
+    private function importedReservation(int $id, array $sent): BookingMirror
+    {
+        return $this->engine->upsertBookingFromData([
+            'id' => $id, 'reference-id' => 'IMPORT-' . $id, 'type' => 'reservation',
+            'apartment' => ['id' => $sent['apartmentId'], 'name' => 'Imported room'],
+            'channel' => ['id' => 7, 'name' => 'Direct booking'],
+            'arrival' => $sent['arrivalDate'], 'departure' => $sent['departureDate'],
+            'email' => $sent['email'], 'guest-name' => $sent['firstName'] . ' ' . $sent['lastName'],
+            'adults' => $sent['adults'], 'children' => $sent['children'],
+            'price' => $sent['price'], 'price-paid' => $sent['price'], 'currency' => 'EUR',
+        ]);
+    }
+
+    public function test_a_provider_import_during_single_room_create_keeps_one_complete_checkout(): void
+    {
+        $this->reservationIdentityIndex();
+        $this->smoobuAccepts();
+        $hold = $this->hold();
+        $importedId = null;
+        $this->smoobu->shouldReceive('createReservation')->once()->andReturnUsing(function (array $sent) use (&$importedId) {
+            $importedId = $this->importedReservation(555501, $sent)->id;
+            return ['id' => 555501, 'reference-id' => 'RACE-SINGLE'];
+        });
+
+        $result = $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_import_race', 'payment_method' => 'stripe', 'payment_status' => 'authorized']);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('consumed', $hold->fresh()->status);
+        $row = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->sole();
+        $this->assertSame($importedId, $row->id, 'the provider-imported row is completed, not duplicated');
+        $this->assertSame('pi_import_race', $row->stripe_payment_intent_id);
+        $this->assertSame('authorized', $row->payment_status);
+        $this->assertSame('Website', $row->channel_name);
+        $this->assertSame('RACE-SINGLE', $row->booking_reference);
+        $this->assertSame('quoted_snapshot', $row->currency_source);
+        $this->assertSame('200.00', $row->price_total);
+        $this->assertNotNull($row->guest_id);
+        $this->assertNotEmpty($row->priceElements);
+    }
+
+    public function test_a_provider_import_during_combination_create_keeps_its_group_and_one_payment(): void
+    {
+        $this->reservationIdentityIndex();
+        $this->smoobuAccepts();
+        $hold = $this->comboHold();
+        $next = 555601;
+        $this->smoobu->shouldReceive('createReservation')->twice()->andReturnUsing(function (array $sent) use (&$next) {
+            $id = $next++;
+            $this->importedReservation($id, $sent);
+            return ['id' => $id, 'reference-id' => 'RACE-' . $id];
+        });
+
+        $result = $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_combo_import_race', 'payment_method' => 'stripe', 'payment_status' => 'authorized']);
+
+        $this->assertTrue($result['is_combo']);
+        $this->assertCount(2, $result['rooms']);
+        $rows = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->orderBy('reservation_id')->get();
+        $this->assertCount(2, $rows);
+        $this->assertSame(['pi_combo_import_race', null], $rows->pluck('stripe_payment_intent_id')->all());
+        $this->assertNotEmpty($rows[0]->booking_group_id);
+        $this->assertSame($rows[0]->booking_group_id, $rows[1]->booking_group_id);
+        $this->assertSame(['authorized', 'authorized'], $rows->pluck('payment_status')->all());
+    }
+
+    public function test_an_existing_reservation_of_another_checkout_is_never_overwritten(): void
+    {
+        $this->reservationIdentityIndex();
+        $this->smoobuAccepts(['id' => 555701]);
+        $existing = BookingMirror::withoutGlobalScopes()->create([
+            'organization_id' => $this->org->id, 'reservation_id' => '555701',
+            'apartment_id' => '202', 'arrival_date' => $this->checkIn, 'departure_date' => $this->checkOut,
+            'guest_email' => 'other@example.test', 'price_total' => 300, 'payment_status' => 'paid',
+            'stripe_payment_intent_id' => 'pi_other_checkout', 'raw_json' => ['_currency_source' => 'provider_snapshot'],
+        ]);
+        $hold = $this->hold();
+        try {
+            $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest()]);
+            $this->fail('An unrelated reservation must never be adopted');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('The reservation is already linked to another booking. Please contact the venue.', $error->getMessage());
+        }
+        $this->assertSame('pi_other_checkout', $existing->fresh()->stripe_payment_intent_id);
+        $this->assertSame('300.00', $existing->fresh()->price_total);
+        $this->assertSame('active', $hold->fresh()->status);
+    }
+
     /** A retry with the same payment answers the lead room, with what the one payment paid for every room. */
     public function test_a_widget_retry_with_a_combinations_payment_answers_the_lead_room(): void
     {

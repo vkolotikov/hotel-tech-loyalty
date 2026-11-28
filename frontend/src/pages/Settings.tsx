@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
+import { syncPmsBookings } from '../lib/bookingSync'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readCachedTheme, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
 import { StylePicker } from '../components/settings/StylePicker'
@@ -62,7 +63,7 @@ const COLOR_KEYS = [
 
 const SECRET_KEYS = [
   'ai_openai_api_key', 'ai_anthropic_api_key',
-  'booking_smoobu_api_key', 'booking_smoobu_webhook_secret',
+  'booking_smoobu_api_key', 'booking_smoobu_api_secret', 'booking_smoobu_webhook_secret',
   'mail_password', 'expo_access_token',
   'stripe_secret_key', 'stripe_webhook_secret',
   'twilio_auth_token',
@@ -2184,7 +2185,7 @@ export function Settings() {
     // don't leave staff thinking they've connected something that
     // silently does nothing.
     const pmsSections: Section[] = [
-      { id: 'smoobu',           title: 'Smoobu',            subtitle: 'All-in-one vacation rental PMS & channel manager',    icon: Calendar,  keys: ['booking_smoobu_api_key', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'], testType: 'smoobu' },
+      { id: 'smoobu',           title: 'Smoobu',            subtitle: 'All-in-one vacation rental PMS & channel manager',    icon: Calendar,  keys: ['booking_smoobu_api_key', 'booking_smoobu_api_secret', 'booking_smoobu_channel_id', 'booking_smoobu_base_url', 'booking_smoobu_webhook_secret'], testType: 'smoobu' },
       { id: 'cloudbeds',        title: 'Cloudbeds',         subtitle: 'Hotel & hostel PMS with built-in booking engine',     icon: Calendar,  keys: ['cloudbeds_api_key', 'cloudbeds_property_id', 'cloudbeds_client_id', 'cloudbeds_client_secret'], comingSoon: true },
       { id: 'mews',             title: 'Mews',              subtitle: 'Modern cloud-native PMS for hotels & hostels',        icon: Calendar,  keys: ['mews_access_token', 'mews_client_token', 'mews_platform_url'], comingSoon: true },
       { id: 'guesty',           title: 'Guesty',            subtitle: 'Vacation rental & short-term property management',    icon: Calendar,  keys: ['guesty_api_key', 'guesty_api_secret', 'guesty_account_id'], comingSoon: true },
@@ -2465,13 +2466,10 @@ export function Settings() {
                       <button onClick={async () => {
                           setSyncingNow(section.id)
                           try {
-                            const { data: res } = await api.post('/v1/admin/bookings/sync')
-                            toast.success(res.message || 'Sync complete')
+                            await syncPmsBookings()
                             refetchSync()
                             qc.invalidateQueries({ queryKey: ['bookings-engine'] })
                             qc.invalidateQueries({ queryKey: ['bookings-today'] })
-                          } catch {
-                            toast.error('Sync failed')
                           } finally { setSyncingNow(null) }
                         }}
                         disabled={syncingNow === section.id}

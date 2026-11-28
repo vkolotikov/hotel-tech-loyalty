@@ -10,8 +10,9 @@ import { onColor } from '../theme/glass'
 import {
   Plus, Phone, Mail, Calendar as CalendarIcon, FileText,
   CheckCircle2, ChevronRight, Search, Building2, RotateCcw,
-  Trash2, AlertCircle, ListChecks,
+  Trash2, AlertCircle, ListChecks, Flag, Repeat as RepeatIcon,
 } from 'lucide-react'
+import { planOf } from '../lib/taskForm'
 import { TaskDrawer } from '../components/TaskDrawer'
 
 /**
@@ -37,6 +38,10 @@ interface Task {
   inquiry_id: number | null
   guest_id: number | null
   assignee?: { id: number; name: string }
+  /** The plan (2026-11-09): low / normal / high, the length, how often it repeats. */
+  priority?: string | null
+  duration_minutes?: number | null
+  recurring_rule?: { freq?: string | null } | null
   inquiry?: { id: number; guest_id: number; status: string }
 }
 
@@ -316,6 +321,18 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
             <>
               <span>·</span>
               <span>{task.assignee.name}</span>
+            </>
+          )}
+          {planOf(task).priority === 'high' && !completed && (
+            <>
+              <span>·</span>
+              <span className="inline-flex items-center gap-0.5 font-bold text-red-400"><Flag size={10} />{t('taskDrawer.priority.high', 'High')}</span>
+            </>
+          )}
+          {planOf(task).repeat !== 'none' && (
+            <>
+              <span>·</span>
+              <span className="inline-flex items-center gap-0.5"><RepeatIcon size={10} />{t(`taskDrawer.repeat.${planOf(task).repeat}`, planOf(task).repeat)}</span>
             </>
           )}
           {fieldCfg.inquiry_link && task.inquiry_id && (

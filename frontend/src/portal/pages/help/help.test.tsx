@@ -103,8 +103,8 @@ describe('Help (owner 2026-10-26)', () => {
     expect(fold('Réservation Ёлка')).toBe('reservation елка')
   })
 
-  it('the header and Profile lead to Help', () => {
-    expect(render(<PortalShell><p>page</p></PortalShell>)).toContain('href="/portal/help"')
+  it('Profile keeps a way to Help under account controls', () => {
+    expect(render(<PortalShell><p>page</p></PortalShell>)).toContain('href="/portal/profile"')
     const profile = fs.readFileSync(path.resolve(__dirname, '../Profile.tsx'), 'utf8')
     expect(profile).toContain('to="/portal/help"')
   })

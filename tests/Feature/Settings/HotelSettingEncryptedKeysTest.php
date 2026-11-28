@@ -85,6 +85,7 @@ class HotelSettingEncryptedKeysTest extends TestCase
                 'stripe_secret_key',
                 'stripe_webhook_secret',
                 'booking_smoobu_api_key',
+                'booking_smoobu_api_secret',
                 'booking_smoobu_webhook_secret',
                 'mail_password',
                 'twilio_auth_token',

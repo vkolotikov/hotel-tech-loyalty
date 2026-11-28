@@ -70,7 +70,7 @@ class RemindersTest extends TestCase
         $this->makePost(['scheduled_date' => '2026-10-05', 'poster_id' => $this->staffMember->id, 'status' => 'archived']);
         $moved = $this->makePost(['scheduled_date' => '2026-10-05', 'poster_id' => $this->staffMember->id]);
         $this->asStaffMember()->postJson($this->api("posts/{$moved->id}/move"), ['updated_at' => $moved->updated_at->toISOString(), 'scheduled_date' => '2026-10-08'])->assertOk();
-        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-published"))->assertOk();
+        $this->asManager()->postJson($this->api("posts/{$post->id}/mark-published"), ['updated_at' => $post->fresh()->updated_at->toISOString()])->assertOk();
         $this->assertSame([], $this->bell('staff'));
 
         $this->travelTo(CarbonImmutable::parse('2026-10-08 06:00:00'));

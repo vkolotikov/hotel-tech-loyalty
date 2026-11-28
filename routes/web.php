@@ -554,6 +554,11 @@ Route::get('/form/{embedKey}', function (string $embedKey) {
         ->first();
     if (!$form) abort(404, 'Form not found.');
 
+    if (app(\App\Services\LeadForms\AutoReply::class)->expired($form)) {
+        return response()->view('lead-forms.expired', [], 410)
+            ->header('X-Frame-Options', 'ALLOWALL')->header('Content-Security-Policy', 'frame-ancestors *');
+    }
+
     $design = $form->design ?: \App\Models\LeadForm::defaultDesign();
     $isDark = ($design['theme'] ?? 'light') === 'dark';
     $fields = $form->fields ?: \App\Models\LeadForm::defaultFields();

@@ -3,7 +3,7 @@
     "error": {
       "already_erased": "This member was deleted.",
       "bad_uid": "This is not a card ID. Tap or read the card, or type the ID printed on it.",
-      "card_elsewhere": "This card is in use elsewhere and cannot be linked here.",
+      "card_elsewhere": "This NFC tag is registered to another company. An owner or manager there can release it under Physical cards → Manage NFC tags.",
       "card_in_use": "This card is linked to another member. Switch it off on that member’s page first.",
       "invalid": "Type the card’s ID.",
       "network": "No connection: nothing was saved. Try again.",
@@ -194,6 +194,9 @@
     "decline_title": "Decline {{benefit}}",
     "done": "Mark done",
     "error": {
+      "member_inactive": "This membership is switched off. A manager can review it on the member’s page.",
+      "membership_expired": "This membership has ended. Renew it before using this benefit.",
+      "membership_not_started": "This membership has not started yet. Review its dates on the member’s page.",
       "invalid": "Say why the request is declined.",
       "network": "No connection: nothing was saved. Try again.",
       "not_found": "This request no longer exists.",
@@ -284,14 +287,10 @@
     "points": "points",
     "title": "Scan",
     "usb_connect": "Connect USB reader",
-    "usb_compatibility": "Compatible HID readers only. ACR122U needs the Windows helper below; direct browser connection is not supported.",
-    "pcsc_title": "ACR122U on Windows",
-    "pcsc_steps": "Open the helper, read the card, then copy its UID and paste it into the scan or link-card field.",
-    "pcsc_download": "Download Windows helper (preview)",
-    "pcsc_preview": "Unsigned Windows preview. Physical reader testing is still required. Follow your organisation’s software policy.",
+    "usb_compatibility": "Choose a compatible USB HID card reader. For ACR122U, use Windows NFC reader.",
     "usb_connecting": "Connecting to the reader…",
     "usb_disconnect": "Disconnect",
-    "usb_failed": "The reader could not be opened. Unplug it, plug it in again, then connect again.",
+    "usb_failed": "Choose the card reader in the device list. For ACR122U, use Windows NFC reader.",
     "usb_reading": "Reading the card…",
     "usb_unsupported": "A USB reader works in Chrome or Edge on a desk computer. A reader that types into the field works in any browser.",
     "usb_waiting": "Reader ready: put a card on it.",
@@ -312,5 +311,20 @@
     "help": "This list",
     "on_member": "On a member’s page",
     "scan": "Scan a card"
+  },
+  "launchpolish": {
+    "firstSteps": "First steps",
+    "setupSettingsLine": "Review your industry template, earning rules and programme setup at any time.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "deleteReward": "Delete reward",
+    "deleteBody": "Delete “{{name}}”? Only unused rewards can be deleted. Rewards with redemption history or a stamp-card link must be disabled instead.",
+    "confirmDelete": "Delete",
+    "rewardInUse": "This reward has redemption history or is linked to a stamp card. Disable it instead.",
+    "actionFailed": "The change could not be saved. Please try again.",
+    "templateKeepLine": "Choose an industry template for suggested earning rules. Your existing tiers, benefits and rewards stay as they are. Review every change before applying.",
+    "lastTemplate": "Last used template",
+    "templateReview": "Suggested earning rules: {{preset}}. Your tiers, benefits and rewards stay as they are.",
+    "keepRules": "Keep current earning rules"
   }
 }

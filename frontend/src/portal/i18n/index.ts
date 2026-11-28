@@ -24,6 +24,16 @@ import helpRu from './help.ru.json'
 import helpDe from './help.de.json'
 import helpFr from './help.fr.json'
 import helpEs from './help.es.json'
+import designEn from './design.en.json'
+import designRu from './design.ru.json'
+import designDe from './design.de.json'
+import designFr from './design.fr.json'
+import designEs from './design.es.json'
+import webHelpEn from './webHelp.en.json'
+import webHelpRu from './webHelp.ru.json'
+import webHelpDe from './webHelp.de.json'
+import webHelpFr from './webHelp.fr.json'
+import webHelpEs from './webHelp.es.json'
 
 /**
  * The member portal's strings, kept out of the admin's common.json so a
@@ -35,11 +45,11 @@ import helpEs from './help.es.json'
 // Release 7 (spec 2026-10-25): the stamp card's and cashback credit's words, in their own files, under
 // `portal.stamps` and `portal.credit`. The Help page (2026-10-26) under `portal.help`.
 export const PORTAL_LOCALE_FILES = {
-  en: { ...en, stamps: stampsEn, credit: creditEn, events: eventsEn, help: helpEn },
-  ru: { ...ru, stamps: stampsRu, credit: creditRu, events: eventsRu, help: helpRu },
-  de: { ...de, stamps: stampsDe, credit: creditDe, events: eventsDe, help: helpDe },
-  fr: { ...fr, stamps: stampsFr, credit: creditFr, events: eventsFr, help: helpFr },
-  es: { ...es, stamps: stampsEs, credit: creditEs, events: eventsEs, help: helpEs },
+  en: { ...en, stamps: stampsEn, credit: creditEn, events: eventsEn, help: helpEn, design: designEn, webHelp: webHelpEn },
+  ru: { ...ru, stamps: stampsRu, credit: creditRu, events: eventsRu, help: helpRu, design: designRu, webHelp: webHelpRu },
+  de: { ...de, stamps: stampsDe, credit: creditDe, events: eventsDe, help: helpDe, design: designDe, webHelp: webHelpDe },
+  fr: { ...fr, stamps: stampsFr, credit: creditFr, events: eventsFr, help: helpFr, design: designFr, webHelp: webHelpFr },
+  es: { ...es, stamps: stampsEs, credit: creditEs, events: eventsEs, help: helpEs, design: designEs, webHelp: webHelpEs },
 } as const
 
 let registered = false

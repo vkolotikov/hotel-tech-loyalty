@@ -1,0 +1,245 @@
+/* ════════════════════════════════════════════════════════════════════════
+   The full admin dashboard of 2026-11-09 (pages/Dashboard.tsx, pages/dashboard/*): cards rising in one after the other,
+   figures' lines drawing themselves, bars growing, rings sweeping round, the hero's sky following the venue's part of
+   the day, and gently moving weather. Everything stops for reduced motion. Data colours come in from the components
+   (hx(), registered hues); this file holds only the motion, the sky and the weather's own colours.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cards rise in, in turn ─────────────────────────────────────────────── */
+.dash .dash-card {
+  animation: dash-rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 55ms);
+}
+@keyframes dash-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.dash-lift {
+  transition: transform 200ms ease, box-shadow 220ms ease, border-color 200ms ease;
+}
+.dash-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px -16px var(--lift, rgb(0 0 0 / 0.4));
+}
+
+/* ── Charts ─────────────────────────────────────────────────────────────── */
+.dash-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: dash-draw 1200ms cubic-bezier(0.45, 0, 0.2, 1) 180ms forwards;
+}
+@keyframes dash-draw { to { stroke-dashoffset: 0; } }
+
+.dash-area {
+  opacity: 0;
+  animation: dash-fade 900ms ease 420ms forwards;
+}
+@keyframes dash-fade { to { opacity: 1; } }
+
+.dash-bar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: dash-bar 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: fill 150ms ease;
+}
+@keyframes dash-bar { from { transform: scaleY(0); } }
+
+.dash-ring {
+  animation: dash-ring 1000ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+@keyframes dash-ring { from { stroke-dasharray: 0 var(--ring-c, 400); } }
+
+.dash-grow {
+  transform-origin: 0 50%;
+  animation: dash-grow 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both;
+}
+@keyframes dash-grow { from { transform: scaleX(0); } }
+
+.dash-row {
+  animation: dash-row 420ms ease both;
+}
+@keyframes dash-row {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.dash-pop {
+  animation: dash-pop 380ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+@keyframes dash-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.dash-tip {
+  animation: dash-fade-in 140ms ease both;
+}
+@keyframes dash-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.dash-live-dot {
+  position: relative;
+  animation: dash-live 2s ease-out infinite;
+}
+@keyframes dash-live {
+  0% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.55); }
+  70% { box-shadow: 0 0 0 7px rgb(16 185 129 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0); }
+}
+
+.dash-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.dash-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 0.06) 50%, transparent 80%);
+  animation: dash-shimmer 1.4s linear infinite;
+}
+@keyframes dash-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* ── Workspace cards: a glow of the workspace's colour follows the hover ── */
+.dash-app-glow {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(closest-side, var(--app), transparent 70%);
+  opacity: 0;
+  transform: translate(30%, -30%);
+  transition: opacity 300ms ease, transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+.dash-app:hover .dash-app-glow,
+.dash-app:focus-visible .dash-app-glow {
+  opacity: 1;
+  transform: translate(20%, -20%);
+}
+
+/* ── The hero's sky ─────────────────────────────────────────────────────── */
+.dash-sky {
+  color: #ffffff;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #38bdf8 100%);
+  box-shadow: 0 18px 40px -24px rgb(15 23 42 / 0.8);
+}
+.dash-sky[data-phase="dawn"] { background: linear-gradient(135deg, #3b2a6b 0%, #b4507a 52%, #f6a96b 100%); }
+.dash-sky[data-phase="day"] { background: linear-gradient(135deg, #1d4ed8 0%, #2b7de9 50%, #4cc3f0 100%); }
+.dash-sky[data-phase="dusk"] { background: linear-gradient(135deg, #1e1b4b 0%, #7c3aed 50%, #f97362 100%); }
+.dash-sky[data-phase="night"] { background: linear-gradient(135deg, #050b1f 0%, #10183a 55%, #1f2a5c 100%); }
+
+.dash-sky-soft { opacity: 0.78; }
+.dash-sky-rain { color: #bae6fd; }
+.dash-sky-strip {
+  border-top-color: rgb(255 255 255 / 0.14);
+  background: rgb(0 0 0 / 0.12);
+}
+.dash-hour {
+  background: rgb(255 255 255 / 0.08);
+  animation: dash-row 420ms ease both;
+}
+.dash-hour:first-child { background: rgb(255 255 255 / 0.18); }
+
+.dash-sky-glow {
+  position: absolute;
+  width: 26rem;
+  height: 26rem;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+.dash-sky-glow-a {
+  top: -10rem;
+  right: -6rem;
+  background: rgb(255 255 255 / 0.35);
+  animation: dash-drift-a 18s ease-in-out infinite alternate;
+}
+.dash-sky-glow-b {
+  bottom: -14rem;
+  left: -8rem;
+  background: rgb(255 214 153 / 0.35);
+  animation: dash-drift-b 22s ease-in-out infinite alternate;
+}
+.dash-sky[data-phase="night"] .dash-sky-glow-a { background: rgb(129 140 248 / 0.35); }
+.dash-sky[data-phase="night"] .dash-sky-glow-b { background: rgb(56 189 248 / 0.18); }
+@keyframes dash-drift-a { to { transform: translate(-5rem, 3rem) scale(1.15); } }
+@keyframes dash-drift-b { to { transform: translate(6rem, -2rem) scale(1.1); } }
+
+.dash-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%, rgb(255 255 255 / 0.9), transparent 60%),
+    radial-gradient(1px 1px at 28% 68%, rgb(255 255 255 / 0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 46% 14%, rgb(255 255 255 / 0.8), transparent 60%),
+    radial-gradient(1px 1px at 63% 42%, rgb(255 255 255 / 0.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 79% 18%, rgb(255 255 255 / 0.9), transparent 60%),
+    radial-gradient(1px 1px at 88% 58%, rgb(255 255 255 / 0.7), transparent 60%),
+    radial-gradient(1px 1px at 36% 36%, rgb(255 255 255 / 0.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 55% 80%, rgb(255 255 255 / 0.6), transparent 60%);
+  animation: dash-twinkle 4s ease-in-out infinite alternate;
+}
+@keyframes dash-twinkle { from { opacity: 0.55; } to { opacity: 1; } }
+
+.dash-clock { text-shadow: 0 2px 18px rgb(0 0 0 / 0.18); }
+
+/* The sun's way across today's sky. */
+.dash-sun-path { fill: none; stroke: rgb(255 255 255 / 0.35); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.dash-sun-done { fill: none; stroke: #fde68a; stroke-width: 2; stroke-linecap: round; }
+.dash-sun-dot { fill: #fde047; filter: drop-shadow(0 0 6px rgb(253 224 71 / 0.9)); animation: dash-sun 3s ease-in-out infinite alternate; }
+.dash-sun-horizon { stroke: rgb(255 255 255 / 0.25); stroke-width: 1; }
+@keyframes dash-sun { to { filter: drop-shadow(0 0 11px rgb(253 224 71 / 1)); } }
+
+/* Clean light: the same sky, paler, with the ink for words. */
+:root[data-style="light"][data-shell="admin"] .dash-sky { color: #0f2230; box-shadow: 0 10px 30px -22px rgb(14 26 36 / 0.35); }
+:root[data-style="light"][data-shell="admin"] .dash-sky[data-phase="dawn"] { background: linear-gradient(135deg, #fde4d0 0%, #fbcfe8 55%, #e9d5ff 100%); }
+:root[data-style="light"][data-shell="admin"] .dash-sky[data-phase="day"] { background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 55%, #ccfbf1 100%); }
+:root[data-style="light"][data-shell="admin"] .dash-sky[data-phase="dusk"] { background: linear-gradient(135deg, #ede9fe 0%, #fce7f3 55%, #ffedd5 100%); }
+:root[data-style="light"][data-shell="admin"] .dash-sky[data-phase="night"] { background: linear-gradient(135deg, #1e293b 0%, #273449 55%, #334766 100%); color: #f8fafc; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sky-strip { border-top-color: rgb(15 34 48 / 0.1); background: rgb(255 255 255 / 0.45); }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-hour { background: rgb(255 255 255 / 0.6); }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-hour:first-child { background: rgb(255 255 255 / 0.95); }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sky-rain { color: #0369a1; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sun-path { stroke: rgb(15 34 48 / 0.25); }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sun-done { stroke: #d97706; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sun-dot { fill: #f59e0b; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sun-horizon { stroke: rgb(15 34 48 / 0.2); }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .dash-sky-glow { opacity: 0.6; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .hx-wx-cloud-light { fill: #cbd5e1; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .hx-wx-cloud-dark { fill: #64748b; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .hx-wx-drop { stroke: #0284c7; }
+:root[data-style="light"][data-shell="admin"] .dash-sky:not([data-phase="night"]) .hx-wx-flake { fill: #7dd3fc; }
+:root[data-style="light"][data-shell="admin"] .dash-shimmer::after { background: linear-gradient(100deg, transparent 20%, rgb(14 26 36 / 0.05) 50%, transparent 80%); }
+
+/* ── Less motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dash .dash-card,
+  .dash-line,
+  .dash-area,
+  .dash-bar,
+  .dash-ring,
+  .dash-grow,
+  .dash-row,
+  .dash-pop,
+  .dash-tip,
+  .dash-hour,
+  .dash-live-dot,
+  .dash-shimmer::after,
+  .dash-sky-glow,
+  .dash-stars,
+  .dash-sun-dot,
+  .hx-wx-sun,
+  .hx-wx-cloud,
+  .hx-wx-drop,
+  .hx-wx-flake,
+  .hx-wx-bolt,
+  .hx-wx-fogline {
+    animation: none !important;
+  }
+  .dash-line { stroke-dashoffset: 0; }
+  .dash-area { opacity: 1; }
+  .dash-lift,
+  .dash-app-glow { transition: none; }
+  .dash-lift:hover { transform: none; }
+}

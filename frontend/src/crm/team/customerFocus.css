@@ -1,0 +1,57 @@
+[data-crm] .crm-focus { --focus-gap: clamp(12px, 1.5vw, 24px); display: grid; gap: var(--focus-gap); }
+[data-crm] .crm-focus-signals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--team-rule); }
+[data-crm] .crm-focus-signals button { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 5px 12px; padding: 17px clamp(12px,1.7vw,28px); text-align: start; color: rgb(var(--a-text)); }
+[data-crm] .crm-focus-signals button + button { border-inline-start: 1px solid var(--team-rule); }
+[data-crm] .crm-focus-signal-label { grid-column: 1/-1; display: flex; gap: 8px; align-items: center; font-size: .91rem; font-weight: 600; }
+[data-crm] .crm-focus-signal-label svg { flex: none; color: rgb(var(--a-accent-text)); }
+[data-crm] [data-signal="waiting_week"][data-active=true] .crm-focus-signal-label svg, [data-crm] [data-signal="waiting_week"][data-active=true] strong { color: rgb(var(--a-danger)); }
+[data-crm] .crm-focus-signals strong { font: 400 clamp(2.25rem,3.2vw,3.8rem)/1.05 'A Display',Georgia,serif; font-variant-numeric: lining-nums tabular-nums; }
+[data-crm] .crm-focus-chevron { align-self: center; color: var(--team-muted); }
+[data-crm] .crm-focus-columns { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); align-items: start; gap: var(--focus-gap); }
+[data-crm] .crm-focus-ranking, [data-crm] .crm-focus-list { min-width: 0; border: 1px solid var(--team-rule); border-radius: 14px; background: rgb(var(--a-surface)); }
+[data-crm] .crm-focus-ranking header, [data-crm] .crm-focus-list header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--team-rule); }
+[data-crm] .crm-focus-ranking header p, [data-crm] .crm-focus small, [data-crm] .crm-focus-empty { color: var(--team-muted); font-size: .83rem; }
+[data-crm] .crm-focus-ranking .crm-team-switch button { padding: 5px 9px; font-size: .81rem; }
+[data-crm] .crm-focus ol, [data-crm] .crm-focus ul { margin: 0; padding: 0; list-style: none; }
+[data-crm] .crm-focus li + li { border-top: 1px solid var(--team-rule); }
+[data-crm] .crm-focus li a { color: inherit; text-decoration: none; }
+[data-crm] .crm-focus li a:hover { background: rgb(var(--a-surface-2)); }
+[data-crm] .crm-focus-customers a { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 21px 20px; }
+[data-crm] .crm-focus-rank { font: 400 1.35rem/1 'A Display',Georgia,serif; font-variant-numeric: tabular-nums; color: var(--team-muted); }
+[data-crm] .crm-focus-customers li:first-child .crm-focus-rank { color: rgb(var(--a-accent-text)); }
+[data-crm] .crm-focus-identity, [data-crm] .crm-focus-value, [data-crm] .crm-focus-list li a > div { display: grid; gap: 4px; min-width: 0; }
+[data-crm] .crm-focus-identity strong, [data-crm] .crm-focus-list li strong, [data-crm] .crm-focus small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-crm] .crm-focus-identity small svg { display: inline; vertical-align: -2px; margin-inline-end: 5px; }
+[data-crm] .crm-focus-value { text-align: end; font-variant-numeric: tabular-nums; }
+[data-crm] .crm-focus-value strong { font-size: 1.12rem; }
+[data-crm] .crm-focus-work { display: grid; gap: var(--focus-gap); }
+[data-crm] .crm-focus-list header { padding-block: 12px; }
+[data-crm] .crm-focus-list header button { display: inline-flex; align-items: center; gap: 6px; color: rgb(var(--a-accent-text)); padding: 4px; font-size: .83rem; }
+[data-crm] .crm-focus-list li a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 20px; }
+[data-crm] .crm-focus-age { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--team-muted); font-size: .83rem; font-variant-numeric: tabular-nums; }
+[data-crm] .crm-focus-age[data-long=true] { font-weight: 650; color: rgb(var(--a-text)); }
+[data-crm] .crm-focus-list li a[data-priority=urgent] { box-shadow: inset 3px 0 rgb(var(--a-danger) / .75); }
+[data-crm] .crm-focus-empty { padding: 22px 20px; }
+@media (min-width: 900px) and (min-height: 801px) {
+  [data-crm] .crm-team-tv .crm-focus { --focus-gap: 22px; }
+  [data-crm] .crm-team-tv .crm-focus-signals button { padding-block: 22px; }
+  [data-crm] .crm-team-tv .crm-focus h2 { font-size: 1.55rem; }
+  [data-crm] .crm-team-tv .crm-focus-identity strong, [data-crm] .crm-team-tv .crm-focus-list li strong, [data-crm] .crm-team-tv .crm-focus-value strong { font-size: 1.4rem; }
+  [data-crm] .crm-team-tv .crm-focus small, [data-crm] .crm-team-tv .crm-focus-age, [data-crm] .crm-team-tv .crm-focus-signal-label { font-size: 1.04rem; }
+  [data-crm] .crm-team-tv .crm-focus-customers a { padding-block: 26px; }
+  [data-crm] .crm-team-tv .crm-focus-list li a { padding-block: 13px; }
+}
+@media (max-width: 850px) {
+  [data-crm] .crm-focus-columns { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 560px) {
+  [data-crm] .crm-team-viewbar { flex-wrap: wrap; }
+  [data-crm] .crm-team-views { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; gap: 0 8px; }
+  [data-crm] .crm-team-views button { min-width: 0; }
+  [data-crm] .crm-focus-signals button { padding: 10px 7px; }
+  [data-crm] .crm-focus-signal-label { align-self: start; align-items: start; font-size: .75rem; gap: 4px; }
+  [data-crm] .crm-focus-signal-label svg, [data-crm] .crm-focus-chevron { display: none; }
+  [data-crm] .crm-focus-signals strong { font-size: 2rem; }
+  [data-crm] .crm-focus-customers a, [data-crm] .crm-focus-list li a, [data-crm] .crm-focus-ranking header, [data-crm] .crm-focus-list header { padding-inline: 12px; }
+  [data-crm] .crm-focus-customers a { gap: 8px; }
+}

@@ -45,6 +45,21 @@ class DeskVisitTest extends TestCase
         return $this->asStaffMember()->postJson($this->api("members/{$memberId}/check-in"), $body, $headers);
     }
 
+    public function test_a_purchase_without_spend_points_still_records_its_visit_stamp_cashback_and_bonus(): void
+    {
+        $this->setOptions(['spend_points_enabled' => false, 'points_per_currency' => 3, 'desk_earn_enabled' => true,
+            'checkin_enabled' => true, 'checkin_points' => 5, 'stamps_enabled' => true, 'cashback_enabled' => true, 'cashback_percent' => 5]);
+        $this->checkIn($this->grace->id, ['amount' => 100, 'idempotency_key' => 'no-spend-points'])
+            ->assertOk()->assertJsonPath('points.purchase', 0)->assertJsonPath('points.checkin', 5)
+            ->assertJsonPath('points.balance', 205)->assertJsonPath('stamp.added', true);
+        $this->assertSame(5.0, (float) $this->grace->fresh()->credit_balance);
+        $this->assertSame(0, PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->where('type', 'earn')->count());
+        $this->assertSame(1, Stamp::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
+        $this->setOptions(['spend_points_enabled' => true]);
+        $this->checkIn($this->grace->id, ['amount' => 50, 'idempotency_key' => 'spend-points-back'])
+            ->assertOk()->assertJsonPath('points.purchase', 150)->assertJsonPath('points.checkin', 0);
+    }
+
     public function test_the_options_decide_what_the_desk_may_do(): void
     {
         $this->checkIn($this->grace->id)->assertStatus(409)->assertJsonPath('error', 'option_off');
@@ -129,6 +144,16 @@ class DeskVisitTest extends TestCase
         $line = PointsTransaction::withoutGlobalScopes()->where('member_id', $this->ada->id)->where('type', 'earn')->firstOrFail();
         $this->assertSame([56, 56, '45.00', 'Purchase: Lunch for two'], [(int) $line->points, (int) $line->qualifying_points, (string) $line->amount_spent, $line->description]);
         $this->assertSame(1, Stamp::withoutGlobalScopes()->where('member_id', $this->ada->id)->count());
+    }
+
+    public function test_desk_purchases_inherit_a_changed_rate_with_the_booking_trigger_independently_off(): void
+    {
+        $this->setOptions(['points_per_currency' => 3, 'points_on_bookings' => false, 'desk_earn_enabled' => true]);
+        $this->checkIn($this->ada->id, ['amount' => 20, 'idempotency_key' => 'ux-shared-rate-1'])->assertOk()->assertJsonPath('points.purchase', 75);
+        $this->setOptions(['points_per_currency' => 4]);
+        $this->checkIn($this->ada->id, ['amount' => 20, 'idempotency_key' => 'ux-shared-rate-2'])->assertOk()->assertJsonPath('points.purchase', 100);
+        $this->setOptions(['desk_earn_enabled' => false, 'points_on_bookings' => true, 'checkin_enabled' => true]);
+        $this->checkIn($this->ada->id, ['amount' => 20])->assertStatus(409)->assertJsonPath('error', 'desk_earn_off');
     }
 
     public function test_a_purchase_alone_is_the_days_visit_when_check_in_is_off(): void

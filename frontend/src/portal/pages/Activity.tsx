@@ -66,7 +66,7 @@ export function Activity() {
   const tab: Tab = hasCredit && params.get('tab') === 'credit' ? 'credit' : 'points'
 
   return (
-    <div className="space-y-4">
+    <div className="p-panel-page space-y-4">
       <h1 className="font-p-display text-2xl">{t('portal.activity.title', 'Activity')}</h1>
       {hasCredit && (
         <Tabs

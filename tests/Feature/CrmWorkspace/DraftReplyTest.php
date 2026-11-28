@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\CrmWorkspace;
 
-use App\Models\KnowledgeItem;
+
 use App\Models\Organization;
-use App\Services\KnowledgeService;
-use Illuminate\Support\Collection;
+
+
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use OpenAI\Laravel\Facades\OpenAI;
@@ -23,20 +23,7 @@ class DraftReplyTest extends TestCase
     {
         parent::setUp();
         $this->setUpCrmWorkspace();
-        // The knowledge search is PostgreSQL SQL (ILIKE), the widget's own; on the tests' SQLite a stand-in reads the
-        // same active answers by word. Run on PostgreSQL (scripts/test-pg.sh), the real search answers.
-        if (DB::connection()->getDriverName() === 'sqlite') {
-            $this->app->instance(KnowledgeService::class, new class extends KnowledgeService {
-                public function searchRelevantItems(string $query, int $orgId, int $limit = 5): Collection
-                {
-                    $words = array_filter(preg_split('/\W+/u', mb_strtolower($query)), fn ($w) => mb_strlen($w) > 3);
 
-                    return KnowledgeItem::query()->where('is_active', true)->get()
-                        ->filter(fn (KnowledgeItem $i) => collect($words)->contains(fn ($w) => str_contains(mb_strtolower($i->question), $w)))
-                        ->take($limit)->values();
-                }
-            });
-        }
     }
 
     private function reply(string $text): CreateResponse

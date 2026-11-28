@@ -20,6 +20,7 @@ export interface PostForm {
   scheduled_time: string
   status: PostStatus
   pillar_id: string
+  campaign_id: string
   audience_id: string
   language: string
   topic: string
@@ -31,6 +32,7 @@ export interface PostForm {
   poster_id: string
   /** The Link (spec 2026-10-19 §5.1): the address its short link leads to, '' for none (or a short link switched off). */
   link: string
+  media_ids: string
 }
 
 const text = (value: string | null | undefined): string => value ?? ''
@@ -42,6 +44,7 @@ export function formOf(post: PostDetail): PostForm {
     scheduled_time: text(post.scheduled_time),
     status: post.status,
     pillar_id: post.pillar_id === null ? '' : String(post.pillar_id),
+    campaign_id: post.campaign_id == null ? '' : String(post.campaign_id),
     audience_id: post.audience_id === null ? '' : String(post.audience_id),
     language: text(post.language),
     topic: text(post.topic),
@@ -52,6 +55,7 @@ export function formOf(post: PostDetail): PostForm {
     // The effective poster: someone who left reads as nobody, and nothing is sent for them unless changed.
     poster_id: post.poster ? String(post.poster.id) : '',
     link: text(post.link?.destination),
+    media_ids: (post.media ?? []).map(m => m.id).join(','),
   }
 }
 
@@ -67,6 +71,7 @@ export function newForm(draft: NewDraft, platforms: readonly Platform[], channel
     scheduled_time: draft.time ?? (draft.platform === null ? times[platform] : undefined) ?? '',
     status: 'draft',
     pillar_id: '',
+    campaign_id: '',
     audience_id: '',
     language: '',
     topic: '',
@@ -76,6 +81,7 @@ export function newForm(draft: NewDraft, platforms: readonly Platform[], channel
     hashtags: '',
     poster_id: '',
     link: '',
+    media_ids: '',
     // The words it starts with (a key date's name, a template's fields) over the empty ones.
     ...draft.fields,
   }
@@ -91,6 +97,7 @@ function valuesOf(form: PostForm) {
     scheduled_time: orNull(form.scheduled_time),
     status: form.status,
     pillar_id: id(form.pillar_id),
+    campaign_id: id(form.campaign_id ?? ''),
     audience_id: id(form.audience_id),
     language: orNull(form.language),
     topic: orNull(form.topic),
@@ -100,6 +107,7 @@ function valuesOf(form: PostForm) {
     hashtags: parseHashtags(form.hashtags),
     poster_id: id(form.poster_id),
     link: orNull(form.link),
+    media_ids: (form.media_ids ?? '').split(',').filter(Boolean).map(Number),
   }
 }
 type Values = ReturnType<typeof valuesOf>
@@ -120,7 +128,7 @@ export function changes(base: PostForm, draft: PostForm): PostFields {
 export const isDirty = (base: PostForm, draft: PostForm): boolean => Object.keys(changes(base, draft)).length > 0
 
 /** The form as loaded (`base`), as edited (`draft`), and the post it belongs to (null until a new post is created). */
-export interface Editing { base: PostForm; draft: PostForm; post: PostDetail | null }
+export interface Editing { base: PostForm; draft: PostForm; post: PostDetail | null; pending?: PostForm | null }
 
 /**
  * A new post once the brand's channels are known (spec 2026-10-15 §4–§5): one started with no platform takes the
@@ -159,7 +167,21 @@ export function rebase(base: PostForm, draft: PostForm, fresh: PostForm): PostFo
 }
 
 /** Whether a post version (`updated_at`) was saved after another. */
-export const newer = (version: string, than: string): boolean => Date.parse(version) > Date.parse(than)
+export const newer = (version: string, than: string): boolean => {
+  const milliseconds = Date.parse(version)
+  const before = Date.parse(than)
+  if (!Number.isFinite(milliseconds) || !Number.isFinite(before)) return false
+  if (milliseconds !== before) return milliseconds > before
+  const remainder = (value: string): string => (value.match(/\.(\d+)(?:Z|[+-]\d{2}:?\d{2})$/i)?.[1] ?? '').padEnd(6, '0').slice(3, 6)
+  return remainder(version) > remainder(than)
+}
+
+/** Async metadata may have the same revision; an older snapshot can never replace a later saved baseline. */
+export function adoptedPost(editing: Editing | null, fresh: PostDetail): Editing {
+  if (editing?.post?.id === fresh.id && newer(editing.post.updated_at, fresh.updated_at)) return editing
+  const form = formOf(fresh)
+  return { base: form, draft: editing?.post?.id === fresh.id ? rebase(editing.base, editing.draft, form) : form, post: fresh }
+}
 
 /** A new post as the server takes it: every field that holds something (the server sets the language from the brand). */
 export function createBody(draft: PostForm): PostFields & { platform: Platform } {
@@ -171,7 +193,7 @@ export function createBody(draft: PostForm): PostFields & { platform: Platform }
   return { ...(out as PostFields), platform: draft.platform }
 }
 
-const FIELDS: readonly (keyof PostForm)[] = ['platform', 'scheduled_date', 'scheduled_time', 'status', 'pillar_id', 'audience_id', 'language', 'topic', 'hook', 'main_copy', 'cta', 'hashtags', 'poster_id', 'link']
+const FIELDS: readonly (keyof PostForm)[] = ['platform', 'scheduled_date', 'scheduled_time', 'status', 'pillar_id', 'campaign_id', 'audience_id', 'language', 'topic', 'hook', 'main_copy', 'cta', 'hashtags', 'poster_id', 'link', 'media_ids']
 
 /** "Who posts it"'s choices: the team, with the post's own poster kept while the team list loads (spec 2026-10-19 §4.1). */
 export function posterChoices(team: readonly TeamMember[], poster: Person | null | undefined): Person[] {

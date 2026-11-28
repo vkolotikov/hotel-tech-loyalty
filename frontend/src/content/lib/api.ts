@@ -1,4 +1,5 @@
 import { api } from '../../lib/api'
+import type { Campaign, CampaignFields } from '../campaigns/types'
 import type {
   Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, GenerateRun, Goals, IdeasPayload, KeyDateFields,
   OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
@@ -6,6 +7,8 @@ import type {
   TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember, BioBody, BioPayload,
   PromotionBody, PromotionPreview, PromotionRun, SitePage, SitePayload,
 } from './types'
+import type { Pulse } from '../../lib/venuePulse'
+import type { ContentLocation, ContentMedia, ContentWork, MediaLibrary, PlanningSettings, WorkInput } from './launchTypes'
 
 /**
  * Every call HexaTech Content makes, in one place, typed. All of them live
@@ -47,12 +50,15 @@ function watched<T>(request: Promise<{ data: T }>): Promise<T> {
 }
 
 /** The posts filters as `GET posts` takes them: only those that hold something, the page only after the first. */
-export function postsParams(filters: PostFilters): Record<string, string | number> {
-  const out: Record<string, string | number> = {}
+export function postsParams(filters: PostFilters): Record<string, string | number | string[]> {
+  const out: Record<string, string | number | string[]> = {}
   const q = filters.q.trim()
   if (q !== '') out.q = q
   if (filters.status !== '') out.status = filters.status
   if (filters.platform !== '') out.platform = filters.platform
+  if (filters.campaign_id != null) out.campaign_id = filters.campaign_id
+  if (filters.platforms?.length) out.platforms = filters.platforms
+  if (filters.exclude_archived) out.exclude_archived = 1
   if (filters.pillar_id !== null) out.pillar_id = filters.pillar_id
   if (filters.from !== '') out.from = filters.from
   if (filters.to !== '') out.to = filters.to
@@ -61,11 +67,34 @@ export function postsParams(filters: PostFilters): Record<string, string | numbe
   return out
 }
 
+export function exportParams(filters: PostFilters) { const out = postsParams(filters); delete out.page; return out }
+
 /** The calls for one brand (the bootstrap's brand; null before it is known). */
 export function contentApi(brand: number | null) {
   const url = (path: string) => contentUrl(path, brand)
   return {
+    campaigns: (): Promise<{ campaigns: Campaign[] }> => watched(api.get(url('campaigns'))),
+    saveCampaign: (id: number | null, body: CampaignFields): Promise<{ campaign: Campaign }> => watched(id === null ? api.post(url('campaigns'), body) : api.put(url(`campaigns/${id}`), body)),
+    exportSchedule: (format: 'csv' | 'ics', filters: PostFilters): Promise<Blob> =>
+      watched<Blob>(api.get(url(`exports/${format}`), { params: exportParams(filters), responseType: 'blob' }).catch(async (error: unknown) => {
+        const response = (error as { response?: { data?: unknown } }).response
+        if (response?.data instanceof Blob) { try { response.data = JSON.parse(await response.data.text()) } catch { /* network/server failure */ } }
+        throw error
+      })),
+    media: (): Promise<MediaLibrary> => watched(api.get(url('media'))),
+    uploadMedia: (file: File): Promise<{ media: ContentMedia }> => { const body = new FormData(); body.append('file', file); return watched(api.post(url('media'), body)) },
+    archiveMedia: (id: number, archived: boolean): Promise<{ media: ContentMedia }> => watched(api.put(url(`media/${id}`), { archived })),
+    settings: (): Promise<PlanningSettings> => watched(api.get(url('settings'))),
+    saveSettings: (timezone: string): Promise<PlanningSettings> => watched(api.put(url('settings'), { timezone })),
+    locations: (): Promise<{ locations: ContentLocation[] }> => watched(api.get(url('locations'))),
+    saveLocation: (id: number | null, body: Omit<ContentLocation, 'id'>): Promise<{ location: ContentLocation }> => watched(id === null ? api.post(url('locations'), body) : api.put(url(`locations/${id}`), body)),
+    startWork: (body: WorkInput): Promise<{ work: ContentWork }> => watched(api.post(url('work'), body)),
+    work: (id: number): Promise<{ work: ContentWork }> => watched(api.get(url(`work/${id}`))),
+    postWork: (postId: number): Promise<{ work: ContentWork | null }> => watched(api.get(url('work'), { params: { post_id: postId } })),
+    cancelWork: (id: number): Promise<{ work: ContentWork }> => watched(api.delete(url(`work/${id}`))),
     bootstrap: (): Promise<Bootstrap> => api.get(url('bootstrap')).then(r => r.data),
+    /** The venue's clock, place and weather (VenuePulse), for the plan's strip. */
+    pulse: (): Promise<Pulse> => watched(api.get(url('pulse'))),
 
     plan: (from: DateKey, to: DateKey): Promise<PlanPayload> => watched(api.get(url('plan'), { params: { from, to } })),
     find: (q: string): Promise<{ posts: PostCard[] }> => watched(api.get(url('find'), { params: { q } })),
@@ -77,9 +106,9 @@ export function contentApi(brand: number | null) {
     movePost: (id: number, body: { updated_at: string; scheduled_date: DateKey | null; scheduled_time?: string | null; poster_id?: number | null }): Promise<{ post: PostCard }> =>
       watched(api.post(url(`posts/${id}/move`), body)),
     duplicatePost: (id: number): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/duplicate`))),
-    markReady: (id: number): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/mark-ready`))),
-    markPublished: (id: number, publishedUrl: string | null): Promise<{ post: PostDetail }> =>
-      watched(api.post(url(`posts/${id}/mark-published`), { published_url: publishedUrl })),
+    markReady: (id: number, updatedAt: string): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/mark-ready`), { updated_at: updatedAt })),
+    markPublished: (id: number, publishedUrl: string | null, updatedAt: string): Promise<{ post: PostDetail }> =>
+      watched(api.post(url(`posts/${id}/mark-published`), { published_url: publishedUrl, updated_at: updatedAt })),
     deletePost: (id: number): Promise<{ deleted: boolean }> => watched(api.delete(url(`posts/${id}`))),
 
     /** "Write with AI" from a template sends its id (spec 2026-10-16 §5.3); any other write sends only the guidance. */
@@ -124,8 +153,8 @@ export function contentApi(brand: number | null) {
     approve: (id: number, updatedAt: string): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/approve`), { updated_at: updatedAt })),
     sendBack: (id: number, note: string): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/send-back`), { note })),
     /** Comments (spec §7.1): each answers the comment as the timeline shows it, and the post's comment count. */
-    addComment: (postId: number, body: string): Promise<{ comment: TimelineComment; comments_count: number }> =>
-      watched(api.post(url(`posts/${postId}/comments`), { body })),
+    addComment: (postId: number, body: string, extra?: { media_id: number | null; mentioned_user_ids: number[] }): Promise<{ comment: TimelineComment; comments_count: number }> =>
+      watched(api.post(url(`posts/${postId}/comments`), { body, ...extra })),
     editComment: (id: number, body: string): Promise<{ comment: TimelineComment }> => watched(api.put(url(`comments/${id}`), { body })),
     deleteComment: (id: number): Promise<{ deleted: boolean; comments_count: number }> => watched(api.delete(url(`comments/${id}`))),
     /** The "For you" bell (spec §8): its list with when it was read, its count, and "seen" up to that read (now when none). */
@@ -140,6 +169,7 @@ export function contentApi(brand: number | null) {
     team: (): Promise<{ team: TeamMember[] }> => watched(api.get(url('team'))),
     /** The morning email switch (spec §4.5): each person's own. */
     setMorningEmail: (on: boolean): Promise<{ on: boolean }> => watched(api.put(url('me/morning-email'), { on })),
+    setCollaborationEmail: (on: boolean): Promise<{ on: boolean }> => watched(api.put(url('me/collaboration-email'), { on })),
     /** The link-in-bio page (spec 2026-10-19 §6.4): everyone reads it; a manager saves the page and its buttons in one call. */
     bio: (): Promise<BioPayload> => watched(api.get(url('bio'))),
     saveBio: (body: BioBody): Promise<BioPayload> => watched(api.put(url('bio'), body)),

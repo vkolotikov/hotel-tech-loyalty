@@ -124,6 +124,7 @@ export function AccountTeam() {
                   <li key={member.id} data-member={member.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                     <div className="min-w-0">
                       <div className="font-medium wrap-break-word">{member.name ?? member.email}{member.is_me && <span className="ml-2 text-xs text-hx-54626e">{t('account.team.you', '(you)')}</span>}</div>
+                      {member.loyalty_scan_only && <div className="text-xs text-hx-54626e">{t('account.team.partner', 'Scan-only partner')}</div>}
                       <div className="text-sm text-hx-54626e wrap-break-word">{member.email} · {roleName(member.role)}{state === 'invited' ? ` · ${t('account.team.invited_state', 'invitation sent')}` : state === 'off' ? ` · ${t('account.team.off', 'switched off')}` : ''}</div>
                     </div>
                     {canManage && !member.is_me && member.role !== 'super_admin' && (
@@ -133,7 +134,8 @@ export function AccountTeam() {
                             <Mail size={14} aria-hidden="true" />{t('account.team.resend', 'Send again')}
                           </button>
                         )}
-                        {state !== 'off' && (
+                        {member.loyalty_scan_only && <Link to="/loyalty/partners" className={QUIET}>{t('account.team.manage_partner', 'Manage partner access')}</Link>}
+                        {state !== 'off' && !member.loyalty_scan_only && (
                           <button type="button" className={QUIET} disabled={busy !== null} onClick={() => run(`role:${member.id}`, () => api.put(`/v1/admin/team/${member.id}`, { role: member.role === 'manager' ? 'staff' : 'manager' }), t('account.team.role_changed', 'Role changed.'))}>
                             {member.role === 'manager' ? t('account.team.make_staff', 'Make staff') : t('account.team.make_manager', 'Make manager')}
                           </button>

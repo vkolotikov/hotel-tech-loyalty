@@ -11,6 +11,7 @@ interface User {
   name: string
   email: string
   user_type: string
+  loyalty_scan_only?: boolean
   language?: string | null
   /**
    * Industry Platform Plan Phase 1 — the org's resolved industry.
@@ -139,6 +140,7 @@ export const useAuthStore = create<AuthState>()(
             ...(fresh.industry !== undefined ? { industry: fresh.industry } : {}),
             ...(fresh.industry_explicit !== undefined ? { industry_explicit: fresh.industry_explicit } : {}),
             ...(fresh.is_platform_admin !== undefined ? { is_platform_admin: fresh.is_platform_admin } : {}),
+            ...(fresh.loyalty_scan_only !== undefined ? { loyalty_scan_only: fresh.loyalty_scan_only } : {}),
           },
         })
       },

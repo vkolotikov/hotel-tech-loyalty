@@ -4,11 +4,11 @@ import type { MemberFilters, MemberSort, MemberState } from '../lib/types'
  * What the list's Show offers: the members' own switch (active, switched off, all) and, since release 8 (spec
  * 2026-10-25 §3), the switched-on members whose membership is expiring soon or has expired (MemberDirectory::STATES).
  */
-export type ListState = MemberState | 'expiring' | 'expired'
+export type ListState = MemberState | 'expiring' | 'expired' | 'scheduled'
 export type ListFilters = Omit<MemberFilters, 'state'> & { state: ListState }
 
 const SORTS: MemberSort[] = ['recent', 'points', 'name', 'activity']
-export const LIST_STATES: ListState[] = ['active', 'inactive', 'all', 'expiring', 'expired']
+export const LIST_STATES: ListState[] = ['active', 'inactive', 'all', 'expiring', 'expired', 'scheduled']
 
 export const NO_FILTERS: MemberFilters = { q: '', tier_id: null, state: 'active', sort: 'recent', page: 1 }
 
@@ -62,7 +62,7 @@ export function toggleTier(filters: ListFilters, tierId: number): ListFilters {
 }
 
 /** Whether the list shows members by their membership's end date (release 8): the rows then say it. */
-export const byValidity = (state: ListState): boolean => state === 'expiring' || state === 'expired'
+export const byValidity = (state: ListState): boolean => state === 'expiring' || state === 'expired' || state === 'scheduled'
 
 /**
  * A name's initials for the list's avatar: the first letters of its first and last words ("Ada Lovelace" → "AL"); for a

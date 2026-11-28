@@ -1,15 +1,18 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
+import { physicalCardsKey } from '../physical-cards/api'
 import type { MemberFilters } from '../lib/types'
 import { exportParams } from './membershipMath'
 import type {
   CardData, DetailsBody, DuplicatePair, EnrolAnswer, EnrolBody, ImportBatch, ImportPreview, ImportsList, MemberAnswer, MergeBody, TierBody, ValidityAnswer,
 } from './types'
 import type { ValidityBody } from './validityMath'
+import type { AssignmentBody } from './types'
 
 /** The members area's calls (spec 2026-10-21 release 2 §4.2): a member's account, duplicates and merge, import, export. */
 export const membershipApi = {
+  assign: (id: number, body: AssignmentBody): Promise<MemberAnswer> => watched(api.put(loyaltyUrl(`members/${id}/membership`), body)),
   enrol: (body: EnrolBody): Promise<EnrolAnswer> => watched(api.post(loyaltyUrl('members'), body)),
   update: (id: number, body: DetailsBody): Promise<MemberAnswer> => watched(api.put(loyaltyUrl(`members/${id}`), body)),
   tier: (id: number, body: TierBody): Promise<MemberAnswer> => watched(api.put(loyaltyUrl(`members/${id}/tier`), body)),
@@ -66,5 +69,7 @@ export function afterMemberChange(client: QueryClient, memberId: number | null):
   }
   void client.invalidateQueries({ queryKey: ['loyalty', 'members'] })
   void client.invalidateQueries({ queryKey: duplicatesKey })
+  void client.invalidateQueries({ queryKey: physicalCardsKey })
   void client.invalidateQueries({ queryKey: ['loyalty', 'bootstrap'] })
+  void client.invalidateQueries({ queryKey: ['loyalty', 'overview'] })
 }

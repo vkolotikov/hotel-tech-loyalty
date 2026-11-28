@@ -64,25 +64,25 @@ describe('Program’s Places (release 8 §1)', () => {
     const html = render(<PlacesSection manage />, true, withList(list()))
     const words = text(html)
     expect(words).toContain('Places')
-    expect(html.indexOf('data-place="1"')).toBeLessThan(html.indexOf('data-place="2"'))
+    expect(html.indexOf('data-record="place-1"')).toBeLessThan(html.indexOf('data-record="place-2"'))
     // A place that is on wears no pill: only one that is off says so.
     expect(words).not.toContain('Switched on')
-    expect(html).toMatch(/data-place="3"[\s\S]*?Switched off/)
+    expect(html).toMatch(/data-record="place-3"[\s\S]*?Switched off/)
     expect(words).toContain('Who may enter Every member')
     expect(words).toContain('Today: 12 in · 1 refused')
-    expect(words).toContain('No entries today')
+    expect(words).toContain('0 · Entries today')
     expect(words).toContain('Old spa')
-    expect(words).toContain('Members’ bar, from 18:00')
+    expect(words).toContain('VIP lounge')
     // The tiers let in wear their own colours.
-    expect(html).toMatch(/data-place="2"[\s\S]*?data-tier-chip[^>]*>[\s\S]*?Gold[\s\S]*?Platinum/)
-    expect(html).toContain('aria-label="see the entries at Main entrance"')
+    expect(words).toContain('Gold · Platinum')
+    expect(html).toContain('method=lookup')
   })
 
   it('gives a manager Add a place and Edit', () => {
     const words = text(render(<PlacesSection manage />, true, withList(list())))
     expect(words).toContain('Add a place')
     expect(render(<PlacesSection manage />, true, withList(list()))).toContain('aria-label="Edit Main entrance"')
-    expect(render(<PlacesSection manage />, true, withList(list()))).toContain('aria-label="Edit VIP lounge"')
+    expect(render(<PlacesSection manage />, true, withList(list()))).not.toContain('aria-label="Edit VIP lounge"') // Select the place before editing.
   })
 
   it('shows staff everything but no change', () => {

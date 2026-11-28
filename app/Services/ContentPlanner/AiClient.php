@@ -33,6 +33,7 @@ final class AiClient
         // production — env() returns null outside config files once cached.
         $this->client = new Client(
             apiKey: (string) config('services.anthropic.api_key'),
+            requestOptions: ['maxRetries' => 0, 'transporter' => new CalendarAiTransport],
         );
         $this->model = (string) config('services.anthropic.content_planner_model', 'claude-sonnet-5');
     }
@@ -47,7 +48,7 @@ final class AiClient
      */
     public function generateJson(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens = 4000, ?CalendarGenerationBudget $calendarBudget = null): array
     {
-        $calendarBudget = $generationType === 'calendar' ? ($calendarBudget ?? new CalendarGenerationBudget) : null;
+        $calendarBudget = $generationType === 'calendar' ? ($calendarBudget ?? \App\Services\Content\ContentExecution::budget()) : null;
         $text = $this->call($profile, $generationType, $prompt, $maxTokens, $calendarBudget);
         $data = $this->extractJson($text);
 
@@ -92,6 +93,13 @@ final class AiClient
      */
     private function call(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens, ?CalendarGenerationBudget $calendarBudget = null): string
     {
+        ContentModels::assertText($this->model);
+        return app(\App\Services\Content\ContentAiGate::class)->attempt((int)$profile->organization_id,
+            fn () => $this->performCall($profile, $generationType, $prompt, $maxTokens, $calendarBudget));
+    }
+
+    private function performCall(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens, ?CalendarGenerationBudget $calendarBudget): string
+    {
         try {
             $response = $this->client->messages->create(
                 model: $this->model,
@@ -99,7 +107,7 @@ final class AiClient
                 messages: [
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                requestOptions: $calendarBudget === null ? null : [
+                requestOptions: $calendarBudget === null ? ['maxRetries' => 0] : [
                     'maxRetries' => 0,
                     'transporter' => new CalendarAiTransport($calendarBudget),
                 ],
@@ -245,7 +253,7 @@ final class AiClient
     }
 
     /**
-     * Estimate API cost based on tokens (claude-sonnet-5 pricing).
+     * Diagnostic USD estimate uses the same model/tier rates as the shared ledger.
      */
     private function estimateCost(?int $inputTokens, ?int $outputTokens): ?float
     {
@@ -253,9 +261,6 @@ final class AiClient
             return null;
         }
 
-        $inputCost = ($inputTokens ?? 0) * 0.003 / 1000;   // $3 per 1M input tokens
-        $outputCost = ($outputTokens ?? 0) * 0.015 / 1000; // $15 per 1M output tokens
-
-        return round($inputCost + $outputCost, 4);
+        return round(app(AiUsageService::class)->costUsd($this->model, $inputTokens ?? 0, $outputTokens ?? 0), 4);
     }
 }

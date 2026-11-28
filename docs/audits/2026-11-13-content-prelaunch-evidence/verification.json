@@ -1,0 +1,139 @@
+{
+  "date": "2026-11-13",
+  "target": "https://app.hexa-tech.uk/content",
+  "source": "d38eec69a33dd3cdaf472305ce68ffde54aaae8a",
+  "fetched_main": "99e004ee2a776cc191e6fba41813f0f15bb234c0",
+  "validation": {
+    "php": "8.5.12",
+    "sqlite": {
+      "tests": 541,
+      "assertions": 3524
+    },
+    "postgresql": {
+      "version": "18.3",
+      "full_migration_database": true,
+      "tests": 541,
+      "assertions": 3524
+    },
+    "postgresql_audit_and_inherited_module_cases": {
+      "tests": 34,
+      "assertions": 221,
+      "targeted_audit_cases": 12,
+      "inherited_module_cases": 22
+    },
+    "typescript_exit": 0,
+    "frontend": {
+      "files": 131,
+      "tests": 1284
+    },
+    "local_browser_reproductions": {
+      "checks": 7,
+      "all_reproduced": true,
+      "page_errors": 0
+    }
+  },
+  "live": {
+    "pages": [
+      "Plan",
+      "Ideas",
+      "Posts",
+      "Promote",
+      "Strategy",
+      "Brand"
+    ],
+    "desktop_width": 1440,
+    "phone_width": 390,
+    "unauthenticated": [
+      {
+        "path": "bootstrap",
+        "status": 401
+      },
+      {
+        "path": "posts",
+        "status": 401
+      },
+      {
+        "path": "brand",
+        "status": 401
+      },
+      {
+        "path": "../content-planner/profile",
+        "status": 404
+      }
+    ],
+    "timezone": {
+      "bootstrap": "UTC",
+      "bootstrap_timezone_named": false,
+      "pulse": "Europe/Riga",
+      "pulse_source": "place"
+    },
+    "mobile_page_heights": {
+      "brand": 10207,
+      "strategy": 19350
+    },
+    "strategy_lighthouse_snapshot": {
+      "accessibility": 100,
+      "best_practices": 100
+    },
+    "plan_performance": [
+      {
+        "lcp_ms": 928,
+        "ttfb_ms": 89,
+        "cls": 0.3
+      },
+      {
+        "lcp_ms": 881,
+        "ttfb_ms": 85,
+        "cls": 0.3
+      }
+    ],
+    "performance_conditions": "1440x1000, CPU 1x, network unthrottled, no CrUX field data",
+    "phone_focus": {
+      "role": "dialog",
+      "aria_modal": "false",
+      "focused": "Fill with AI",
+      "within_panel": false,
+      "covered_by_panel": true
+    },
+    "ui_language_check": [
+      {
+        "requested": "de",
+        "heading": "Ideen",
+        "html_lang": "en"
+      },
+      {
+        "requested": "fr",
+        "heading": "Idées",
+        "html_lang": "en"
+      },
+      {
+        "requested": "es",
+        "heading": "Ideas",
+        "html_lang": "en"
+      },
+      {
+        "requested": "ru",
+        "heading": "Идеи",
+        "html_lang": "en"
+      }
+    ],
+    "restored": {
+      "path": "/content",
+      "theme": "light",
+      "language": "en",
+      "view": "Week",
+      "open_panels": 0,
+      "brand": "FDS Cards"
+    }
+  },
+  "changes": {
+    "product_code": false,
+    "production_posts_written": 0,
+    "real_ai_provider_calls": 0,
+    "messages_sent": 0,
+    "deployment": false,
+    "private_fixture_root": "E:/Hexa-Tech-audit-content-20261113",
+    "postgresql_cluster_stopped": true,
+    "frontend_fixture_server_stopped": true
+  }
+}

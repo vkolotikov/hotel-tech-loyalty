@@ -77,7 +77,12 @@ function tryParseRawUid(data: DataView): string | null {
   return uidToHex(bytes)
 }
 
-export function useNfcReader(onUidRead: (uid: string) => void) {
+/** Names accepted by the workspace before probing an HID device or treating its reports as card UIDs. */
+export function isNfcHidDeviceName(name: string): boolean {
+  return !/acr122/i.test(name) && /nfc|rfid|mifare|contactless|card reader|smart.?card|pn532/i.test(name)
+}
+
+export function useNfcReader(onUidRead: (uid: string) => void, readersOnly = false) {
   const [state, setState] = useState<NfcReaderState>({
     status: 'disconnected',
     error: null,
@@ -200,6 +205,7 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
   }, [sendCommand])
 
   const startDevice = useCallback(async (device: HIDDevice) => {
+    if (readersOnly && !isNfcHidDeviceName(device.productName ?? '')) throw new Error('Select a compatible USB NFC reader')
     await device.open()
     device.addEventListener('inputreport', handleReport)
     deviceRef.current = device
@@ -239,7 +245,7 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
         deviceName: `${deviceName} (raw mode)`,
       }))
     }
-  }, [handleReport, sendCommand, pollCard])
+  }, [handleReport, sendCommand, pollCard, readersOnly])
 
   const connect = useCallback(async () => {
     if (!('hid' in navigator)) {
@@ -249,18 +255,18 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
     setState(s => ({ ...s, status: 'connecting', error: null }))
     try {
       // Empty filters → browser shows ALL HID devices for the user to pick
-      const devices = await (navigator as any).hid.requestDevice({ filters: [] })
-      const device = devices[0] as HIDDevice | undefined
+      const devices = await navigator.hid.requestDevice({ filters: [] })
+      const device = devices[0]
       if (!device) {
         setState(s => ({ ...s, status: 'disconnected', error: 'No reader selected' }))
         return
       }
       await startDevice(device)
-    } catch (e: any) {
+    } catch (error) {
       setState(s => ({
         ...s,
         status: 'error',
-        error: e.message || 'Failed to connect',
+        error: error instanceof Error ? error.message : 'Failed to connect',
       }))
     }
   }, [startDevice])
@@ -278,18 +284,18 @@ export function useNfcReader(onUidRead: (uid: string) => void) {
     setState({ status: 'disconnected', error: null, deviceName: null, lastUid: null })
   }, [handleReport])
 
-  // Auto-reconnect any previously paired HID device
+  // Reconnect a previously paired reader, never a receiver or keyboard the workspace has not verified.
   useEffect(() => {
     if (!('hid' in navigator)) return
-    ;(navigator as any).hid.getDevices().then((devices: HIDDevice[]) => {
-      // Try to reconnect the first available previously-paired device
-      const known = devices[0]
-      if (known && !deviceRef.current) {
+    let active = true
+    navigator.hid.getDevices().then(devices => {
+      const known = readersOnly ? devices.find(device => isNfcHidDeviceName(device.productName ?? '')) : devices[0]
+      if (active && known && !deviceRef.current) {
         startDevice(known).catch(() => { /* user will click Connect */ })
       }
-    })
-    return () => { disconnect() }
-  }, [])
+    }).catch(() => { /* user can click Connect */ })
+    return () => { active = false; void disconnect() }
+  }, [disconnect, readersOnly, startDevice])
 
   return { ...state, connect, disconnect, supported: 'hid' in navigator }
 }

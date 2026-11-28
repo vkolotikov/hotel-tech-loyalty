@@ -1,3 +1,5 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { PanelProvider } from './PanelProvider'
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ContentContext } from '../ContentProvider'
@@ -13,7 +15,7 @@ vi.mock('react-i18next', () => ({
     i18n: { language: 'en' },
   }),
 }))
-vi.mock('../../lib/api', () => ({ api: {} }))
+vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string) => url }))
 
 const boot = {
   brand: { id: 3, name: 'Lumière Salon' }, ai: { status: 'under', percent: 10 }, rewrites: ['shorter', 'longer', 'professional', 'friendly', 'alternative'],
@@ -26,9 +28,9 @@ const post = {
 
 function render(p: PostDetail, dirty = false, data: Bootstrap = boot) {
   return renderToStaticMarkup(
-    <ContentContext.Provider value={{ data, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
-      <AiTools post={p} dirty={dirty} onPost={() => {}} onUseCopy={() => {}} />
-    </ContentContext.Provider>,
+    <QueryClientProvider client={new QueryClient()}><ContentContext.Provider value={{ data, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+      <PanelProvider><AiTools post={p} dirty={dirty} onPost={() => {}} onUseCopy={() => {}} /></PanelProvider>
+    </ContentContext.Provider></QueryClientProvider>,
   )
 }
 // The attribute itself (disabled=""), not Tailwind's disabled: variant in every button's class.
@@ -56,13 +58,13 @@ describe('AiTools', () => {
     expect(html).toContain('Shorten the hook')
   })
 
-  it('shows the visual brief and the image, with a download and a new image', () => {
+  it('shows the visual brief and the image, with an honest open action and a new image', () => {
     const brief = { visual_type: 'Photo', aspect_ratio: '4:5', style: null, description: 'A warm still life', scene: null, mood: 'Calm', composition: null, text_overlay: null, avoid: null, image_url: '/storage/a.png', image_status: 'ready', image_error: null }
     const html = render({ ...post, visual_brief: brief })
     expect(html).toContain('A warm still life')
     expect(html).toContain('Calm')
     expect(html).toContain('src="/storage/a.png"')
-    expect(html).toMatch(/<a href="\/storage\/a.png" download=""/)
+    expect(html).toMatch(/<a href="\/storage\/a.png" target="_blank"/)
     expect(html).toContain('New image')
     expect(render({ ...post, visual_brief: { ...brief, image_status: 'failed', image_url: null } })).toContain('The image could not be created.')
   })
@@ -76,9 +78,9 @@ describe('AiTools', () => {
 
 describe('AiTools and a write from elsewhere (spec 2026-10-16 §5.3)', () => {
   const shown = (outside: { failed: string | null }) => renderToStaticMarkup(
-    <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
-      <AiTools post={post} dirty={false} onPost={() => {}} onUseCopy={() => {}} outside={outside} onOutsideSeen={() => {}} />
-    </ContentContext.Provider>,
+    <QueryClientProvider client={new QueryClient()}><ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+      <PanelProvider><AiTools post={post} dirty={false} onPost={() => {}} onUseCopy={() => {}} outside={outside} onOutsideSeen={() => {}} /></PanelProvider>
+    </ContentContext.Provider></QueryClientProvider>,
   )
 
   it('shows the AI working on a post a template is writing, its write tools waiting, and why it stopped', () => {

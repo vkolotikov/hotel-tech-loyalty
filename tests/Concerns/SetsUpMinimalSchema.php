@@ -222,12 +222,40 @@ trait SetsUpMinimalSchema
         }
     }
 
-    /**
-     * Knowledge service schema — opt-in extension for tests that
-     * exercise KnowledgeService::searchRelevantItems +
-     * tokeniseQuery. Adds knowledge_items table + brands (for
-     * BelongsToBrand) on top of setUpMinimalSchema.
-     */
+    /** Property fields the Content AI context and locations workflow read. */
+    protected function setUpPropertySchema(): void
+    {
+        if (!Schema::hasTable('properties')) {
+            Schema::create('properties', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('name');
+                $table->string('code')->unique(); // globally unique per CLAUDE.md
+                $table->string('property_type')->nullable();
+                $table->string('email')->nullable();
+                $table->string('phone')->nullable();
+                $table->string('website')->nullable();
+                $table->string('gm_name')->nullable();
+                $table->string('image_url')->nullable();
+                $table->string('address')->nullable();
+                $table->string('city')->nullable();
+                $table->string('country')->nullable();
+                $table->string('timezone')->nullable();
+                $table->string('currency', 8)->nullable();
+                $table->integer('star_rating')->nullable();
+                $table->integer('room_count')->nullable();
+                $table->string('pms_type')->nullable();
+                $table->string('pms_property_id')->nullable();
+                $table->text('settings')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+    }
+
+    /** Knowledge items and brands on top of the minimal tenant schema. */
     protected function setUpKnowledgeSchema(): void
     {
         $this->setUpMinimalSchema();
@@ -861,34 +889,7 @@ trait SetsUpMinimalSchema
     {
         $this->setUpLoyaltySchema();
 
-        if (!Schema::hasTable('properties')) {
-            Schema::create('properties', function ($table) {
-                $table->bigIncrements('id');
-                $table->unsignedBigInteger('organization_id');
-                $table->unsignedBigInteger('brand_id')->nullable();
-                $table->string('name');
-                $table->string('code')->unique(); // globally unique per CLAUDE.md
-                $table->string('property_type')->nullable();
-                $table->string('email')->nullable();
-                $table->string('phone')->nullable();
-                $table->string('website')->nullable();
-                $table->string('gm_name')->nullable();
-                $table->string('image_url')->nullable();
-                $table->string('address')->nullable();
-                $table->string('city')->nullable();
-                $table->string('country')->nullable();
-                $table->string('timezone')->nullable();
-                $table->string('currency', 8)->nullable();
-                $table->integer('star_rating')->nullable();
-                $table->integer('room_count')->nullable();
-                $table->string('pms_type')->nullable();
-                $table->string('pms_property_id')->nullable();
-                $table->text('settings')->nullable();
-                $table->boolean('is_active')->default(true);
-                $table->timestamps();
-                $table->index('organization_id');
-            });
-        }
+        $this->setUpPropertySchema();
 
         if (!Schema::hasTable('benefit_definitions')) {
             Schema::create('benefit_definitions', function ($table) {

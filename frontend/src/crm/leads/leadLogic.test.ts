@@ -23,12 +23,12 @@ const field = (key: string, type: CustomField['type'], extra: Partial<CustomFiel
 describe('the list filters in the address', () => {
   it('reads Today\'s "?due=1" as due now and leaves out what is not a filter value', () => {
     const f = readFilters(new URLSearchParams('due=1&sort=nope&page=-2&from=2026-13&q=ada'))
-    expect(f).toMatchObject({ due: 'now', sort: 'newest', page: 1, from: '', q: 'ada' })
+    expect(f).toMatchObject({ due: 'now', sort: 'follow_up', page: 1, from: '', q: 'ada' })
     expect(readFilters(new URLSearchParams('due=overdue&stage=New&owner=me&page=3')).due).toBe('overdue')
   })
 
   it('writes only what differs from the defaults and keeps ?new and ?guest', () => {
-    const sp = writeFilters({ ...NO_FILTERS, due: 'now', owner: 'me', page: 2 }, new URLSearchParams('new=1&guest=5&stage=Old'))
+    const sp = writeFilters({ ...NO_FILTERS, due: 'now', sort: 'follow_up', owner: 'me', page: 2 }, new URLSearchParams('new=1&guest=5&stage=Old'))
     expect(sp.get('due')).toBe('1')
     expect(sp.get('owner')).toBe('me')
     expect(sp.get('page')).toBe('2')
@@ -36,6 +36,7 @@ describe('the list filters in the address', () => {
     expect(sp.get('guest')).toBe('5')
     expect(sp.has('stage')).toBe(false)
     expect(sp.has('sort')).toBe(false)
+    expect(readFilters(writeFilters({ ...NO_FILTERS, due: 'now', sort: 'newest' })).sort).toBe('newest')
     expect(readFilters(sp)).toMatchObject({ due: 'now', owner: 'me', page: 2 })
   })
 
@@ -67,18 +68,23 @@ describe('what GET inquiries is asked', () => {
   })
 
   it('asks "due now" as overdue then today, soonest first, and nothing else as sections', () => {
-    const sections = dueSections({ ...NO_FILTERS, due: 'now', page: 3 }, 'Me')
+    const sections = dueSections(readFilters(new URLSearchParams('due=1&page=3')), 'Me')
+    expect(dueSections({ ...NO_FILTERS, due: 'now', sort: 'name_desc' }, 'Me')[0].query).toMatchObject({ sort: 'lead_name', dir: 'desc' })
     expect(sections.map(s => s.key)).toEqual(['overdue', 'today'])
     expect(sections[0].query).toMatchObject({ task_due: 'overdue', sort: 'next_task_due', page: 1, per_page: 100 })
     expect(dueSections({ ...NO_FILTERS, due: 'today' }, 'Me')).toEqual([])
-    expect(listQuery({ ...NO_FILTERS, due: 'now' }, 'Me').task_due).toBe('')
+    expect(listQuery({ ...NO_FILTERS, due: 'now' }, 'Me').task_due).toBe('now')
   })
 
-  it('exports the same filters as CSV, every page', () => {
+  it('exports the same filters, every page, as the full admin\'s workbook or as CSV (round 5)', () => {
     const q = exportQuery({ ...NO_FILTERS, source: 'chatbot', page: 4 }, 'Me')
-    expect(q).toMatchObject({ format: 'csv', source: 'chatbot', active_only: true })
+    expect(q).toMatchObject({ source: 'chatbot', active_only: true })
+    // The workbook is the export's default: the full admin's call names no format for it.
+    expect(q).not.toHaveProperty('format')
     expect(q).not.toHaveProperty('page')
     expect(q).not.toHaveProperty('per_page')
+    expect(exportQuery({ ...NO_FILTERS, owner: '_nobody' }, 'Me', 'csv')).toMatchObject({ format: 'csv', unassigned: 1, active_only: true })
+    expect(exportQuery({ ...NO_FILTERS, due: 'now' }, 'Me', 'csv').task_due).toBe('now')
   })
 })
 

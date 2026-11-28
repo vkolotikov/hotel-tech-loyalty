@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Outlet;
 use App\Models\Property;
+use App\Models\Organization;
 use App\Services\PlanLimitGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PropertyAdminController extends Controller
 {
@@ -35,6 +38,7 @@ class PropertyAdminController extends Controller
             'image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
+        // Refuse a known-full plan before uploading. The locked check below is authoritative.
         if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_PROPERTIES)) {
             return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
         }
@@ -43,15 +47,46 @@ class PropertyAdminController extends Controller
         $validated['timezone'] = $validated['timezone'] ?? 'UTC';
         $validated['currency'] = $validated['currency'] ?? 'USD';
 
-        // Handle image upload
+        $uploaded = null;
         if ($request->hasFile('image')) {
-            $validated['image_url'] = \App\Services\MediaService::upload($request->file('image'), 'properties');
+            $uploaded = \App\Services\MediaService::upload($request->file('image'), 'properties');
+            $validated['image_url'] = $uploaded;
         }
         unset($validated['image']);
 
-        $property = Property::create($validated);
+        try {
+            $response = DB::transaction(function () use ($validated) {
+                // Content locations consume the same quota. Never hold this lock across storage I/O.
+                Organization::withoutGlobalScopes()->whereKey(app('current_organization_id'))->lockForUpdate()->firstOrFail();
+                if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_PROPERTIES)) {
+                    return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
+                }
+                $property = Property::create($validated);
 
-        return response()->json(['message' => 'Property created', 'property' => $property], 201);
+                return response()->json(['message' => 'Property created', 'property' => $property], 201);
+            });
+        } catch (\Throwable $e) {
+            $this->retireFailedCreateUpload($uploaded);
+            throw $e;
+        }
+        if ($response->getStatusCode() >= 400) {
+            $this->retireFailedCreateUpload($uploaded);
+        }
+
+        return $response;
+    }
+
+    /** Only this request's newly generated URL; cleanup cannot replace the original save outcome. */
+    private function retireFailedCreateUpload(?string $uploaded): void
+    {
+        if ($uploaded === null) {
+            return;
+        }
+        try {
+            \App\Services\MediaService::delete($uploaded);
+        } catch (\Throwable $e) {
+            Log::warning('property.create.upload_cleanup_failed', ['error' => $e::class]);
+        }
     }
 
     public function show(int $id): JsonResponse

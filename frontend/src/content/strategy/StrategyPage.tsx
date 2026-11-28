@@ -1,3 +1,6 @@
+import { availableSections } from './strategySections'
+import { SectionNav } from '../ui/SectionNav'
+import { sectionOf } from '../ui/sectionState'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -63,6 +66,11 @@ export function StrategyPage({ actions }: { actions?: (shown: StrategySummary | 
     enabled: finished, staleTime: 300_000,
   })
   const strategy = detail.data?.strategy ?? null
+  const sectionItems = ['summary', 'positioning', 'audiences', 'pillars', 'mix', 'rhythm', 'platforms', 'engagement', 'conversion', 'visual', 'themes', 'examples', 'risks', 'opportunities', 'missing', 'next']
+  const sectionNames = ['Brand summary', 'Positioning', 'Audience map', 'Pillars', 'Content mix', 'Weekly rhythm', 'Platform playbooks', 'Engagement', 'Conversion', 'Visual direction', 'Themes and campaigns', 'Example posts', 'Risks', 'Opportunities', 'Missing information', 'Next actions']
+  const available = availableSections(strategy?.ai_output ?? null, strategy?.pillars ?? [])
+  if (strategy?.balance && !available.includes('pillars')) available.push('pillars')
+  const section = sectionOf(params.get('section'), available)
   const title = (shown && shown.status !== 'generating' && shown.status !== 'failed' && safeOutput(strategy?.ai_output).title) || (shown ? strategyTitle(shown, t) : '')
   // A new strategy that failed while the old one stays active (and on screen) is said, not just listed.
   const failure = freshFailure(strategies)
@@ -128,9 +136,10 @@ export function StrategyPage({ actions }: { actions?: (shown: StrategySummary | 
           <Button variant="secondary" onClick={() => { void detail.refetch() }}>{t('content.common.retry', 'Try again')}</Button>
         </div>
       )}
-      {strategy?.balance && <PillarBalance balance={strategy.balance} />}
+      {strategy && <SectionNav selected={section} items={sectionItems.map((key, i) => ({ key, label: t(`content.strategy.${key}`, sectionNames[i]) })).filter(item => available.includes(item.key))} />}
+      {section === 'pillars' && strategy?.balance && <PillarBalance balance={strategy.balance} />}
       {strategy && (strategy.ai_output || strategy.pillars.length > 0) && (
-        <StrategyDocument output={strategy.ai_output ?? {}} pillars={strategy.pillars} platforms={boot.platforms} locale={locale} />
+        <StrategyDocument section={section} output={strategy.ai_output ?? {}} pillars={strategy.pillars} platforms={boot.platforms} locale={locale} />
       )}
     </div>
   )

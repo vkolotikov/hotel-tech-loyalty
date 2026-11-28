@@ -36,7 +36,8 @@
     "rules_card_line": "Regeln, die er immer einhält, egal was ein Besucher fragt.",
     "help_line": "Wann eine Person übernimmt und was er sagt, wenn er nicht helfen kann.",
     "more_title": "Weitere Optionen",
-    "more_line": "Selten nötig: Anweisungen über die Felder oben hinaus."
+    "more_line": "Selten nötig: Anweisungen über die Felder oben hinaus.",
+    "parts": "Teile des Verhaltens"
   },
   "discard": "Verwerfen",
   "documents": {
@@ -141,7 +142,9 @@
     "col_used": "Genutzt",
     "col_actions": "Aktionen",
     "categories_line": "Tippen Sie eine an, um ihre Antworten zu sehen.",
-    "show_category": "Die Antworten in {{name}} zeigen"
+    "show_category": "Die Antworten in {{name}} zeigen",
+    "keywords_count": "Stichwörter:",
+    "parts": "Teile des Wissens"
   },
   "lengths": {
     "concise": "Kurz",
@@ -318,7 +321,10 @@
     "starter_hours": "Wann haben Sie geöffnet?",
     "starter_price": "Was kostet das?",
     "starter_book": "Kann ich für dieses Wochenende buchen?",
-    "starter_person": "Kann ich mit einer Person sprechen?"
+    "starter_person": "Kann ich mit einer Person sprechen?",
+    "behind_empty": "Noch nichts gefragt.",
+    "empty_short": "Fragen Sie wie ein Besucher.",
+    "subtitle_short": "Testchat: nicht gespeichert, für Besucher unsichtbar"
   },
   "unsaved": "Ungespeicherte Änderungen",
   "caption": {
@@ -330,5 +336,47 @@
   },
   "state_on": "Antwortet Besuchern",
   "state_off": "Ausgeschaltet",
-  "try_it": "Assistenten testen"
+  "try_it": "Assistenten testen",
+  "model": {
+    "blocked": "Ihr Tarif enthält {{model}} nicht, daher kann der Assistent damit nicht antworten: Jeder Chat wartet auf Ihr Team. Wählen Sie ein Modell aus Ihrem Tarif.",
+    "check": "Prüfen, ob das Modell antwortet",
+    "check_failed": "Die Prüfung bekam keine Antwort. Versuchen Sie es erneut.",
+    "checking": "Wird geprüft…",
+    "model": "Modell",
+    "not_in_plan": "Ihr Tarif enthält dieses Modell nicht. Wählen Sie ein anderes.",
+    "not_in_plan_short": "nicht im Tarif",
+    "older": "älter, funktioniert noch",
+    "plan_has": "Ihr Tarif enthält {{count}} Modelle.",
+    "provider": "Anbieter",
+    "ready": "Es antwortet über das KI-Konto.",
+    "reasoning": "Nachdenken vor der Antwort",
+    "reasoning_high": "Hoch, langsamer",
+    "reasoning_low": "Niedrig (am besten für Chats)",
+    "reasoning_medium": "Mittel",
+    "reasoning_none": "Keins, am schnellsten",
+    "reasoning_tip": "Mehr Nachdenken ist langsamer. Über „Keins“ legt das Modell seine Kreativität selbst fest.",
+    "reasoning_xhigh": "Am höchsten, am langsamsten",
+    "star": "★ empfehlen wir für den Website-Chat.",
+    "temperature": "Kreativität: {{n}}",
+    "temperature_own": "Dieses Modell legt seine Kreativität selbst fest.",
+    "temperature_tip": "Niedriger bleibt bei den Fakten, höher variiert mehr. 0,7 passt für die meisten Betriebe.",
+    "tokens": "Längste Antwort: {{n}} Tokens",
+    "tokens_tip": "1024 Tokens sind etwa 750 Wörter.",
+    "tuning": "Feinabstimmung",
+    "unavailable": "Es antwortet noch nicht über das KI-Konto. Wählen Sie ein anderes oder versuchen Sie es später.",
+    "verbosity": "Wie ausführlich",
+    "verbosity_high": "Ausführlich",
+    "verbosity_low": "Kurz (am besten für Chats)",
+    "verbosity_medium": "Ausgewogen"
+  },
+  "part": {
+    "basics": "Grundlagen",
+    "handover": "Übergabe",
+    "identity": "Wer er ist",
+    "model": "KI-Modell",
+    "more": "Mehr",
+    "rules": "Regeln",
+    "style": "Wie er spricht"
+  },
+  "read_only_short": "Nur lesen: Änderungen macht ein Manager."
 }

@@ -9,12 +9,13 @@ use App\Services\ContentQualityService;
 use App\Services\ContentVisualBriefService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\Concerns\SetsUpContentSchema;
+use Tests\Concerns\StubsContentPostProviders;
 use Tests\TestCase;
 
 /** The three approval steps (spec 2026-10-16 §6.2): only while the brand's switch is on. */
 class ApprovalActionsTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpContentSchema;
+    use DatabaseTransactions, SetsUpContentSchema, StubsContentPostProviders;
 
     protected function setUp(): void
     {
@@ -126,12 +127,10 @@ class ApprovalActionsTest extends TestCase
     // Final review: "sent back" ends when someone works on the post — a new picture or a new visual brief is work on it.
     public function test_a_new_picture_or_visual_brief_ends_sent_back(): void
     {
-        $this->mock(ImageGenerationService::class, fn ($images) => $images->shouldReceive('generateForPost')->once()
-            ->andReturnUsing(fn ($p) => ContentPlannerVisualBrief::create(['post_id' => $p->id, 'image_url' => '/storage/a.png', 'image_status' => 'ready'])));
-        $this->mock(ContentVisualBriefService::class, fn ($briefs) => $briefs->shouldReceive('generateFor')->once()
-            ->andReturnUsing(fn ($p) => ContentPlannerVisualBrief::create(['post_id' => $p->id, 'description' => 'A warm still life'])));
         foreach (['image', 'visual-brief'] as $action) {
             $post = $this->makePost(['status' => 'needs_review']);
+            ContentPlannerVisualBrief::create(['post_id' => $post->id, 'scene' => 'Old visual']);
+            if ($action === 'image') $this->stubContentImage(); else $this->stubContentAi(['scene' => 'New visual']);
             $this->asManager()->postJson($this->api("posts/{$post->id}/send-back"), ['note' => 'A warmer picture, please.'])->assertOk();
             $this->travel(5)->seconds();
             $this->asStaffMember()->postJson($this->api("posts/{$post->id}/{$action}"))->assertOk()->assertJsonPath('post.sent_back', false);

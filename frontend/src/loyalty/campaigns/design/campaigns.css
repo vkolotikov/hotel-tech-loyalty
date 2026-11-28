@@ -146,3 +146,8 @@
 [data-loyalty] .l-cm-tag-menu { position: relative; }
 [data-loyalty] .l-cm-tag-menu > summary { cursor: pointer; list-style: none; width: fit-content; min-width: 180px; }
 [data-loyalty] .l-cm-tag-menu > [data-tags] { margin-top: 12px; padding: 12px; border: 1px solid var(--l-rd-accent-border); border-radius: 12px; }
+[data-loyalty][data-overview] .l-cm-requirements{display:flex;align-items:flex-start;gap:12px;padding:16px 20px;border:1px solid var(--l-ov-border);border-radius:12px;background:var(--l-ov-recessed);font-size:14px;line-height:1.6}
+[data-loyalty][data-overview] .l-cm-requirements>svg{flex:none;color:var(--l-ov-cyan);margin-top:2px}
+[data-loyalty][data-overview] .l-cm-requirements p{color:var(--l-ov-secondary);max-width:90ch;margin-top:4px}
+[data-loyalty][data-overview] .l-cm-requirements summary{cursor:pointer;color:var(--l-ov-cyan);min-height:32px;padding-top:8px}
+[data-loyalty][data-overview] .l-cm-channel[data-channel=campaigns] strong,[data-loyalty][data-overview] .l-cm-channel[data-channel=push] strong{font-size:20px;line-height:28px}

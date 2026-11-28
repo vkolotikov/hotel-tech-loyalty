@@ -307,6 +307,7 @@ final class PortalBootstrap
 
         return [
             'loyalty'  => $loyalty,
+            'wallets'  => $this->wallets($org, $loyalty, $member),
             'services' => $member !== null && $this->capability->appointmentsBookable($org->id),
             'stays'    => $member !== null && $this->capability->staysBookableOnline($org->id),
             'chat'     => true,
@@ -320,12 +321,26 @@ final class PortalBootstrap
         ];
     }
 
+    /** Local setup flags only; issuance keeps the provider approval/signing checks. No credentials leave here. */
+    private function wallets(Organization $org, bool $loyalty, ?LoyaltyMember $member): array
+    {
+        $off = ['apple' => false, 'google' => false];
+        if (!$loyalty || !$member || !$org->hasFeature('wallet') || !app(\App\Services\Wallet\Passes::class)->eligible($member)) {
+            return $off;
+        }
+        $config = \App\Models\WalletConfig::withoutGlobalScope(TenantScope::class)
+            ->where('organization_id', $org->id)->first();
+
+        return ['apple' => $config?->appleReady() ?? false, 'google' => $config?->googleReady() ?? false];
+    }
+
     private function member(LoyaltyMember $member, bool $loyalty): array
     {
         $member->loadMissing(['tier', 'user']);
         $summary = $this->loyalty->getMemberSummary($member);
 
-        $summary['benefits'] = $loyalty
+        $summary['membership_mode'] = $member->membership_mode ?? 'earned';
+        $summary['benefits'] = ($loyalty || $summary['membership_mode'] === 'assigned')
             ? $this->discounts->benefitsFor($member)->map(fn ($tb) => [
                 'id'           => $tb->id,
                 'name'         => $tb->benefit->name,

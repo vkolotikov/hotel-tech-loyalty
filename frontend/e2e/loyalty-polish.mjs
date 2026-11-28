@@ -1,0 +1,131 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { chromium } from 'playwright'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { fileURLToPath } from 'node:url'
+
+// Real, isolated launch database only. Never point this write journey at a customer environment.
+const base = process.env.LAUNCH_BASE || 'http://127.0.0.1:5819'
+if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) throw Error('Loopback browser host required')
+if (process.env.DB_DATABASE !== 'loyalty_launch_demo' || process.env.DB_PORT !== '55459' || process.env.MAIL_MAILER !== 'log') throw Error('Isolated rehearsal environment required')
+// A frozen rehearsal clock keeps rate-limit windows open across repeat test runs.
+await promisify(execFile)(process.env.PHP || 'php8.5', [fileURLToPath(new URL('./launch-artisan.php', import.meta.url)), 'cache:clear', '--no-interaction'], { cwd: fileURLToPath(new URL('../../', import.meta.url)), env: process.env, timeout: 60000, windowsHide: true })
+const fixture = JSON.parse(await fs.readFile(process.env.LAUNCH_FIXTURE, 'utf8'))
+const out = path.resolve(process.env.LAUNCH_OUTPUT, '../polish')
+await fs.mkdir(out, { recursive: true })
+const result = { checks: [], errors: [] }, run = Date.now().toString(36)
+const check = (ok, name) => { if (!ok) throw Error(name); result.checks.push(name); console.log('PASS ' + name) }
+const browser = await chromium.launch({ channel: 'chrome', headless: true })
+let page
+try {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1050 } })
+  await ctx.route('**/*', route => ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort())
+  await ctx.addInitScript(() => { if (!localStorage.getItem('admin_lang')) localStorage.setItem('admin_lang', 'en'); if (!localStorage.getItem('loyalty:look')) localStorage.setItem('loyalty:look', JSON.stringify({ theme: 'dark', rail: 'full' })) })
+  page = await ctx.newPage()
+  page.on('pageerror', e => result.errors.push(e.message))
+  await page.goto(base + '/loyalty/login')
+  await page.getByLabel('Email', { exact: true }).fill(fixture.roles.manager.email)
+  await page.getByLabel('Password', { exact: true }).fill(fixture.roles.manager.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.waitForURL(url => url.pathname.startsWith('/loyalty') && !url.pathname.endsWith('/login'))
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+  async function api(endpoint, method = 'GET', data) {
+    const response = await ctx.request.fetch(base + '/api/v1/admin/loyalty/' + endpoint + '?brand_id=all', { method, headers: { Accept: 'application/json', Authorization: 'Bearer ' + token }, ...(data === undefined ? {} : { data }) })
+    check(response.ok(), method + ' ' + endpoint)
+    return response.json()
+  }
+  await page.goto(base + '/loyalty?add=1')
+  await page.getByRole('heading', { name: 'Add a member', exact: true }).waitFor()
+  const gaps = await page.locator('.l-mw-add-desktop-fields').evaluate(el => { const boxes = [...el.children].map(x => x.getBoundingClientRect()); return boxes.slice(1).map((b, i) => b.top - boxes[i].bottom) })
+  check(gaps.length >= 2 && gaps.every(g => g >= 16), 'Member field groups have real vertical spacing')
+  await page.screenshot({ path: path.join(out, 'member-desktop.png') })
+  await page.goto(base + '/loyalty/program?tab=places')
+  await page.getByRole('button', { name: /^(Add a place|Add place|Add the entrance)$/ }).click()
+  await page.getByRole('heading', { name: 'Add a place', exact: true }).waitFor()
+  const radios = page.locator('input[type=radio]')
+  for (const radio of await radios.all()) { const b = await radio.evaluate(el => ({ width: el.offsetWidth, height: el.offsetHeight })); check(Math.abs(b.width - b.height) <= 1 && b.width >= 16, 'Place radio is square and usable') }
+  await radios.nth(1).check()
+  check(await radios.nth(1).isChecked(), 'Place access choice responds to selection')
+  await page.screenshot({ path: path.join(out, 'place-desktop.png') })
+  await page.goto(base + '/loyalty/options/setup')
+  const choice = page.locator('[data-choice="restaurant"]')
+  await choice.click()
+  check(await choice.locator('input').isChecked(), 'Industry template is selectable for an existing programme')
+  await page.screenshot({ path: path.join(out, 'setup-desktop.png') })
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  check(await page.getByText('Ticked: what we suggest for Restaurants and cafés.', { exact: false }).count() > 0 || await page.locator('[data-tick]').count() > 0, 'Selected template proposes earning rules')
+  // Discard through the same leave guard a user sees.
+  await page.goto(base + '/loyalty/settings')
+  await page.getByRole('heading', { name: 'Guided setup', exact: true }).waitFor()
+  check(await page.locator('a[href="/loyalty/options/setup"]').count() > 0, 'Settings can reopen guided setup')
+  const reward = (await api('rewards', 'POST', { name: 'Polish reward ' + run, points_cost: 50, stock: 10, is_active: true })).reward
+  await page.goto(base + '/loyalty/rewards?selected=' + reward.id)
+  await page.getByRole('button', { name: 'Disable', exact: true }).click()
+  await page.getByRole('button', { name: 'Enable', exact: true }).waitFor()
+  check((await api('rewards')).rewards.find(r => r.id === reward.id)?.is_active === false, 'Reward disable persists without changing its other fields')
+  await page.getByRole('button', { name: 'Enable', exact: true }).click()
+  await page.getByRole('button', { name: 'Disable', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Delete reward', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+  await page.getByRole('dialog').waitFor({ state: 'hidden' })
+  check(!(await api('rewards')).rewards.some(r => r.id === reward.id), 'Unused reward deletion persists')
+  const offer = (await api('offers', 'POST', { title: 'Polish offer ' + run, description: 'Isolated local offer terms.', type: 'discount', value: 10, code: 'POL' + run.toUpperCase(), applies_to: 'all', start_date: '2026-11-01', end_date: '2026-12-31', is_active: true, is_featured: false })).offer
+  await page.goto(base + '/loyalty/rewards?tab=offers&status=all&selected=' + offer.id + '&q=' + encodeURIComponent(offer.title))
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(await page.locator('.l-rb-offer-editor').count() === 0, 'Offers open compactly with no expanded editor')
+  await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.locator('.l-rb-offer-editor').waitFor()
+  const name = page.locator('.l-rb-offer-editor input[maxlength="191"]')
+  await name.fill('Updated offer ' + run)
+  await page.getByRole('button', { name: 'Save offer', exact: true }).click()
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(await page.getByRole('heading', { name: 'Updated offer ' + run, exact: true }).count() > 0, 'Offer save returns to compact read view')
+  check(!new URL(page.url()).searchParams.has('q') && new URL(page.url()).searchParams.get('selected') === String(offer.id), 'Renaming outside the search keeps the saved offer selected')
+  await page.screenshot({ path: path.join(out, 'offer-desktop.png') })
+  await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.getByRole('button', { name: 'Cancel changes', exact: true }).click()
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(!new URL(page.url()).searchParams.has('edit'), 'Cancel exits an unchanged offer editor')
+  await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.locator('.l-rb-offer-editor input[maxlength="191"]').fill('Cancelled draft ' + run)
+  await page.getByRole('button', { name: 'Cancel changes', exact: true }).click()
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(await page.getByRole('heading', { name: 'Updated offer ' + run, exact: true }).count() > 0, 'Cancel discards the offer draft and exits editing')
+  await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.locator('.l-rb-offer-editor input[maxlength="191"]').fill('Unsaved draft ' + run)
+  await page.getByRole('button', { name: 'Close', exact: true }).click()
+  await page.getByRole('dialog').waitFor()
+  check(await page.getByRole('button', { name: 'Keep editing', exact: true }).count() > 0, 'Closing a dirty offer asks before discarding changes')
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click()
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(await page.getByRole('heading', { name: 'Updated offer ' + run, exact: true }).count() > 0, 'Discard leaves the saved offer intact')
+  await page.goto(base + '/loyalty/overview')
+  const summary = await api('overview/summary')
+  if (summary.data.setup.done < summary.data.setup.total) {
+    await page.locator('.l-setup-checklist').waitFor()
+    check(await page.locator('.l-setup-checklist a[href="/loyalty/options/setup"]').count() > 0, 'Overview exposes guided setup for the pre-seeded programme')
+    await page.screenshot({ path: path.join(out, 'overview-desktop.png') })
+  }
+  for (const width of [390, 1440]) for (const lang of ['en', 'ru', 'de', 'fr', 'es']) for (const theme of ['dark', 'light']) {
+    await page.setViewportSize({ width, height: 1050 })
+    await page.evaluate(({ lang, theme }) => { localStorage.setItem('admin_lang', lang); localStorage.setItem('loyalty:look', JSON.stringify({ theme, rail: 'full' })) }, { lang, theme })
+    await page.goto(base + '/loyalty/options/setup')
+    await page.locator('[data-choice="restaurant"]').waitFor()
+    check(await page.locator('[data-loyalty][data-overview]').getAttribute('data-theme') === theme, `Requested theme is active: ${theme}`)
+    const localeWords = JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/options.${lang}.json`, import.meta.url), 'utf8'))
+    check(await page.getByRole('heading', { name: localeWords.wizard.business_title, exact: true }).count() > 0, `Requested language is active: ${lang}`)
+    check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Setup fits ${width}/${lang}/${theme}`)
+    if (lang === 'en') await page.screenshot({ path: path.join(out, `setup-${width}-${theme}.png`) })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.evaluate(() => { localStorage.setItem('admin_lang', 'en'); localStorage.setItem('loyalty:look', JSON.stringify({ theme: 'dark', rail: 'full' })) })
+  await page.goto(base + '/loyalty?add=1')
+  await page.getByRole('heading', { name: 'Add a member', exact: true }).waitFor()
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Mobile member form stays within the viewport')
+  const mobileGaps = await page.locator('.l-mw-add-fields').evaluate(el => { const boxes = [...el.children].map(x => x.getBoundingClientRect()); return boxes.slice(1).map((b, i) => b.top - boxes[i].bottom) })
+  check(mobileGaps.length >= 2 && mobileGaps.every(gap => gap >= 16), 'Mobile member fields have clear separation')
+  await page.screenshot({ path: path.join(out, 'member-mobile.png'), animations: 'disabled' })
+  check(result.errors.length === 0, 'No browser runtime errors')
+} catch (error) { result.failure = error.message; result.location = page?.url(); await page?.screenshot({ path: path.join(out, 'failure.png') }); process.exitCode = 1 }
+finally { await browser.close(); await fs.writeFile(path.join(out, 'result.json'), JSON.stringify(result, null, 2)); console.log(JSON.stringify({ checks: result.checks.length, errors: result.errors.length, failure: result.failure ?? null })) }

@@ -15,7 +15,7 @@ export function EarnFields({ way, form, answer, problems, disabled, currency, on
   way: Way; form: WayForm; answer: OptionsAnswer; problems: Problems; disabled: boolean; currency: string;
   onChange: (key: string, value: string) => void; bonus?: boolean
 }) {
-  return <div className="l-earn-fields">{way.fields.filter(key => shown(key, form, answer.fields)).map(key => <EarnField key={key} field={key} way={way} form={form} answer={answer} problems={problems} disabled={disabled || !form.on} currency={currency} onChange={onChange} bonus={bonus} />)}</div>
+  return <div className={way.key === 'referrals' ? "l-earn-fields l-editor-referral-fields" : "l-earn-fields"}>{way.fields.filter(key => shown(key, form, answer.fields)).map(key => <EarnField key={key} field={key} way={way} form={form} answer={answer} problems={problems} disabled={disabled || !form.on} currency={currency} onChange={onChange} bonus={bonus} />)}</div>
 }
 
 function EarnField({ field, way, form, answer, problems, disabled, currency, onChange, bonus }: {
@@ -40,7 +40,7 @@ function EarnField({ field, way, form, answer, problems, disabled, currency, onC
   const choices = CHOICE_WORDS[field] ?? {}
   return <div data-field={field}><FormField label={label} problem={problem} hint={hint ?? undefined}>
     <select value={value} disabled={disabled} onChange={e => onChange(field, e.target.value)}>
-      {def.type === 'reward' ? <><option value="">{t('loyalty.options.choose_reward', 'Choose a reward…')}</option>{answer.catalogue.rewards.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</> : (def.choices ?? []).map(choice => <option key={choice} value={choice}>{t(`loyalty.options.choice.${field}.${choice}`, choices[choice] ?? choice)}</option>)}
+      {def.type === 'reward' ? <><option value="">{t('loyalty.options.choose_reward', 'Choose a reward…')}</option>{answer.catalogue.rewards.map(r => <option key={r.id} value={r.id} disabled={r.is_redeemable === false}>{r.name}{r.is_redeemable === false ? ` — ${t('loyalty.options.wizard.reward_unavailable', 'Unavailable')}` : ''}</option>)}</> : (def.choices ?? []).map(choice => <option key={choice} value={choice}>{t(`loyalty.options.choice.${field}.${choice}`, choices[choice] ?? choice)}</option>)}
     </select>
   </FormField>{def.type === 'reward' && !answer.catalogue.rewards.length && <p><Link className="l-ov-link" to="/loyalty/rewards">{t('loyalty.options.open_rewards', 'Open Rewards')}</Link></p>}</div>
 }

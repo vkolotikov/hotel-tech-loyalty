@@ -40,7 +40,7 @@ class OffersTest extends TestCase
         $response->assertJsonPath('offers.3', [
             // Made with no brand: every brand's (owner 2026-10-25), not the default's.
             'id' => $live->id, 'brand_id' => null, 'title' => 'Autumn spa', 'description' => '15% off treatments.', 'type' => 'discount', 'value' => 15,
-            'code' => 'AUTUMN15', 'applies_to' => 'services', 'tier_ids' => [$this->tiers['gold']->id], 'start_date' => '2026-10-05',
+            'code' => 'AUTUMN15', 'applies_to' => 'services', 'tier_ids' => [$this->tiers['gold']->id], 'audience' => 'programme', 'member_ids' => [], 'members' => [], 'attachment' => null, 'start_date' => '2026-10-05',
             'end_date' => '2026-10-31', 'usage_limit' => 100, 'times_used' => 7, 'per_member_limit' => 1, 'is_active' => true,
             'is_featured' => true, 'image_url' => null, 'state' => 'live',
         ])
@@ -74,7 +74,7 @@ class OffersTest extends TestCase
         $response->assertJsonPath('offer', [
             // Sent with no brand: every brand's (owner 2026-10-25), not the default's.
             'id' => $id, 'brand_id' => null, 'title' => 'Welcome', 'description' => 'Ten percent off the first visit.', 'type' => 'discount', 'value' => 10,
-            'code' => 'WELCOME10', 'applies_to' => 'all', 'tier_ids' => [$gold], 'start_date' => '2026-10-05', 'end_date' => '2026-11-05',
+            'code' => 'WELCOME10', 'applies_to' => 'all', 'tier_ids' => [$gold], 'audience' => 'programme', 'member_ids' => [], 'members' => [], 'attachment' => null, 'start_date' => '2026-10-05', 'end_date' => '2026-11-05',
             'usage_limit' => 50, 'times_used' => 0, 'per_member_limit' => null, 'is_active' => true, 'is_featured' => false, 'image_url' => null,
             'state' => 'live',
         ]);

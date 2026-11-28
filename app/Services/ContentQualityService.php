@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ContentPlannerPost;
 use App\Services\ContentPlanner\AiClient;
 use App\Services\ContentPlanner\ContextBuilder;
+use App\Services\Content\ContentPostWrites;
 
 /**
  * Strict content quality critic (spec §19).
@@ -47,13 +48,15 @@ class ContentQualityService
      */
     public static function saveScore(ContentPlannerPost $post, array $result): void
     {
-        $post->quality_score = $result;
-        $post->timestamps = false;
-        try {
-            $post->save();
-        } finally {
-            $post->timestamps = true;
-        }
+        app(ContentPostWrites::class)->apply($post, function (ContentPlannerPost $post) use ($result) {
+            $post->quality_score = $result;
+            $post->timestamps = false;
+            try {
+                $post->save();
+            } finally {
+                $post->timestamps = true;
+            }
+        });
     }
 
     /**

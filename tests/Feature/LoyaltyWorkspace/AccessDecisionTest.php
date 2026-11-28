@@ -43,6 +43,17 @@ class AccessDecisionTest extends TestCase
         return app(AccessDecision::class)->decide($member->fresh(), $place?->fresh(), $event?->fresh());
     }
 
+    public function test_a_future_membership_cannot_enter_until_its_first_day(): void
+    {
+        DB::table('loyalty_members')->where('id', $this->ada->id)->update(['membership_valid_from' => '2026-10-06']);
+        $verdict = $this->decide($this->ada, $this->place('Reception'));
+        $this->assertFalse($verdict->granted);
+        $this->assertSame('not_started', $verdict->reason);
+        $this->assertSame('2026-10-06', $verdict->toArray()['valid_from']);
+        DB::table('loyalty_members')->where('id', $this->ada->id)->update(['membership_valid_from' => '2026-10-05']);
+        $this->assertTrue($this->decide($this->ada, $this->place('First-day entrance'))->granted);
+    }
+
     /** @param list<string> $tiers names of the tiers it admits; none: every member */
     private function place(string $name, array $tiers = [], bool $active = true): AccessPlace
     {
@@ -94,6 +105,7 @@ class AccessDecisionTest extends TestCase
             'granted'         => true,
             'reason'          => 'welcome',
             'valid_until'     => null,
+            'valid_from'      => null,
             'expires_in_days' => null,
             'tier'            => ['id' => $this->tiers['gold']->id, 'name' => 'Gold', 'color' => '#d4a017'],
             'allowed_tiers'   => [],

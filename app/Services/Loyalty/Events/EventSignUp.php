@@ -168,6 +168,10 @@ final class EventSignUp
             return new LoyaltyRefused('inactive', 'This member’s account is switched off.', 409);
         }
         $validUntil = $member->membership_valid_until?->toDateString();
+        $validFrom = \App\Services\Loyalty\Members\MembershipValidity::startOf($member);
+        if ($validFrom !== null && $validFrom > EventClock::day($event)) {
+            return new LoyaltyRefused('membership_not_started', 'The membership starts after this event.', 409, ['valid_from' => $validFrom]);
+        }
         // Valid on the day the event begins — the day the door judges too (AccessDecision), so a sign-up accepted is a
         // member let in, however late the night runs.
         if ($validUntil !== null && $validUntil < EventClock::day($event)) {

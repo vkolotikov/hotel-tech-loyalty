@@ -54,12 +54,12 @@ final class Artwork
     {
         $url = self::logoUrl($org);
         if (!OwnMedia::isOurs($url, $org, 'logos')) return false;
-        $local = str_starts_with($url, '/storage/');
-        $prefix = $local ? '/storage/' : rtrim((string) config('filesystems.disks.do.url'), '/').'/';
-        $key = substr($url, strlen($prefix));
+        $where = \App\Services\Media\Location::resolve($url);
+        if (!$where) return false;
+        $key = $where['key'];
         if (preg_match('/[\\\\?#%\x00-\x1f]/', $key)) return false;
         try {
-            $disk = Storage::disk($local ? 'public' : 'do');
+            $disk = Storage::disk($where['disk']);
             if (!$disk->exists($key) || $disk->size($key) > 4 * 1024 * 1024) return false;
             $bytes = $disk->get($key);
             $size = @getimagesizefromstring($bytes);

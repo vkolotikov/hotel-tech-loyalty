@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CalendarDays } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { usePortal } from '../PortalProvider'
+import { UpcomingBooking } from '../design/UpcomingBooking'
 import { apiErrorCode, cancelErrorFallback, cancelErrorKey, portalApi } from '../lib/portalApi'
 import { useVocab } from '../lib/vocab'
 import type { BookingKind, CancelReply, PortalBooking } from '../lib/types'
-import { Tabs } from '../ui/Tabs'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { Notice } from '../ui/Notice'
@@ -25,6 +27,7 @@ export function Bookings() {
   const vocab = useVocab()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { data: boot } = usePortal()
   const { kind, id } = useParams<{ kind: BookingKind; id: string }>()
   const [params, setParams] = useSearchParams()
   const scope = params.get('scope') === 'past' ? 'past' : 'upcoming'
@@ -39,9 +42,12 @@ export function Bookings() {
     queryKey: ['portal-bookings', scope, page],
     queryFn: () => portalApi.bookings(scope, page),
     placeholderData: keepPreviousData,
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
   })
 
   const rows = data?.data ?? []
+  const past = useQuery({ queryKey: ['portal-bookings', 'past', 1], queryFn: () => portalApi.bookings('past', 1), enabled: scope === 'upcoming', staleTime: 10_000, refetchOnWindowFocus: true })
   const lastPage = data ? Math.max(1, Math.ceil(data.meta.total / data.meta.per_page)) : 1
 
   // The reference for the confirmation banner: the just-confirmed booking is usually already in this
@@ -67,7 +73,7 @@ export function Bookings() {
   // render caused by something unrelated (the mutation's own invalidations refetching `portal-bookings`,
   // say) must not make an announced notice vanish on its own — only `markShown` (the notice's own dismiss
   // button, or `BookingSheet` reporting it showed the result itself while mounted) removes it.
-  const watchingSince = useRef(Date.now()).current
+  const [watchingSince] = useState(() => Date.now())
   const [shown, setShown] = useState<Set<string>>(() => new Set())
   const markShown = (k: BookingKind, i: number) => setShown(prev => new Set(prev).add(`${k}:${i}`))
   const cancelMutations = useMutationState({
@@ -104,7 +110,7 @@ export function Bookings() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-p-display text-2xl">{t('portal.bookings.title', 'Bookings')}</h1>
+      <div className="p-page-heading"><h1>{t('portal.bookings.title', 'Bookings')}</h1>{(boot?.capabilities.services || boot?.capabilities.stays) && <Link to="/portal/book" className="p-home-action text-p-accent-deep py-2 text-xs"><CalendarDays size={16} aria-hidden />{t('portal.nav.book', 'Book')}</Link>}</div>
       {showConfirmedBanner && confirmedReference && (
         <Notice tone="success">
           <strong>{t('portal.book.confirmed_title', "You're booked")}</strong>{' '}
@@ -121,11 +127,8 @@ export function Bookings() {
           })()}
         </Notice>
       )}
-      <Tabs
-        value={scope}
-        onChange={key => { setPage(1); setParams({ scope: key }, { replace: true }) }}
-        items={[{ key: 'upcoming', label: t('portal.bookings.upcoming', 'Upcoming') }, { key: 'past', label: t('portal.bookings.past', 'Past') }]}
-      />
+      <div className={scope === 'upcoming' ? 'p-bookings-grid' : ''}><section>
+      <div className="p-section-heading"><h2>{scope === 'upcoming' ? t('portal.bookings.upcoming', 'Upcoming') : t('portal.bookings.past', 'Past')}</h2>{scope === 'past' && <Button variant="ghost" size="sm" onClick={() => { setPage(1); setParams({ scope: 'upcoming' }, { replace: true }) }}>{t('portal.bookings.upcoming', 'Upcoming')}</Button>}</div>
 
       {isLoading && <PageSkeleton />}
       {isError && <div className="space-y-3"><Notice tone="danger">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice><Button variant="secondary" onClick={() => { void refetch() }}>{t('portal.common.retry', 'Try again')}</Button></div>}
@@ -140,7 +143,7 @@ export function Bookings() {
       )}
 
       <div className="space-y-3">
-        {rows.map(b => <BookingRow key={`${b.kind}-${b.id}`} booking={b} onOpen={() => navigate(`/portal/bookings/${b.kind}/${b.id}?scope=${scope}`)} />)}
+        {rows.map(b => scope === 'upcoming' ? <UpcomingBooking key={`${b.kind}-${b.id}`} booking={b} onOpen={() => navigate(`/portal/bookings/${b.kind}/${b.id}?scope=${scope}`)} /> : <BookingRow key={`${b.kind}-${b.id}`} booking={b} onOpen={() => navigate(`/portal/bookings/${b.kind}/${b.id}?scope=${scope}`)} />)}
       </div>
 
       {lastPage > 1 && (
@@ -150,6 +153,14 @@ export function Bookings() {
           <Button variant="secondary" size="sm" disabled={page >= lastPage || isFetching} onClick={() => setPage(p => p + 1)}>{t('portal.common.next', 'Next')}</Button>
         </div>
       )}
+      </section>
+      {scope === 'upcoming' && <aside><div className="p-section-heading"><h2>{t('portal.bookings.past', 'Past')}</h2>{!!past.data?.meta.total && <Button variant="ghost" size="sm" onClick={() => { setPage(1); setParams({ scope: 'past' }, { replace: true }) }}>{t('portal.common.see_all', 'See all')}</Button>}</div>
+        {past.isPending && <PageSkeleton />}
+        {past.isError && <div className="space-y-2"><Notice tone="warning">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice><Button variant="secondary" size="sm" onClick={() => { void past.refetch() }}>{t('portal.common.retry', 'Try again')}</Button></div>}
+        {past.data?.data.length === 0 && <EmptyState title={t('portal.bookings.empty_past', 'No past {{noun}} yet.', { noun: vocab('booking_plural') })} />}
+        <div className="space-y-2">{past.data?.data.slice(0, 4).map(b => <BookingRow key={`${b.kind}-${b.id}`} booking={b} onOpen={() => navigate(`/portal/bookings/${b.kind}/${b.id}?scope=past`)} />)}</div>
+      </aside>}
+      </div>
 
       {kind && id && (kind === 'service' || kind === 'stay') && (
         <BookingSheet kind={kind} id={Number(id)} onClose={() => navigate(`/portal/bookings?scope=${scope}`, { replace: true })} onCancelSettled={markShown} />

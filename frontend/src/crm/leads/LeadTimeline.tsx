@@ -1,14 +1,14 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, CheckCircle2, FileText, History, Loader2, Mail, MessageSquare, Mic, Phone, Square, StickyNote, Tag } from 'lucide-react'
+import { CalendarDays, CheckCircle2, FileText, Loader2, Mail, MessageCircle, MessageSquare, Mic, Phone, Plus, Square, StickyNote, Tag } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
-import { get, params, send } from '../lib/api'
+import { send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { dateTime, dayLabel } from '../lib/format'
-import { Card } from '../ui/Card'
 import { TextArea, TextInput } from '../ui/inputs'
 import { Pager } from '../ui/Pager'
 import { QueryState } from '../ui/QueryState'
@@ -17,7 +17,8 @@ import { useToast } from '../ui/Toast'
 import { useLeadChanged } from './leadData'
 import { ACTIVITY_TYPES, activityBody, CONTACT_CHANNELS, dayOf, logContactBody, type ActivityType, type ContactChannel } from './leadLogic'
 import { minutesOf, TIMELINE_KINDS, type TimelineKind } from './listLogic'
-import type { Activity, LeadDetail, MetaList } from './leadTypes'
+import type { Activity, LeadDetail } from './leadTypes'
+import { useLeadActivities } from './recordData'
 import { canRecord, useVoiceNote } from './useVoiceNote'
 import { appendWords } from './voice'
 import { activityLabel, activityTypeLabel, channelLabel, timelineKindLabel } from './leadWords'
@@ -30,33 +31,38 @@ const ICON: Record<string, typeof StickyNote> = {
 }
 
 /**
- * The lead's timeline (`GET inquiries/{id}/activities`, newest first, filtered by kind as the full admin's lead page
- * filters it), a note, call, email or meeting added to it (`POST …/activities`, a call's or meeting's length, a voice
- * note written down, Ctrl or ⌘ + Enter to add), and a touch logged in one press (`POST …/log-contact`).
+ * The Activity tab (round 5; round 2's timeline): a note, call, email or meeting added (`POST …/activities`, a call's
+ * or meeting's length, a voice note written down, Ctrl or ⌘ + Enter to add), a touch logged in one press
+ * (`POST …/log-contact`), then the timeline (`GET inquiries/{id}/activities`, newest first, filtered by kind as the
+ * full admin's lead page filters it).
  */
-export function LeadTimeline({ lead, seed }: { lead: LeadDetail; seed: ComposerSeed | null }) {
+export function LeadTimeline({ lead, seed, onEmails }: { lead: LeadDetail; seed: ComposerSeed | null; onEmails: () => void }) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const lang = i18n.language
   const [page, setPage] = useState(1)
   const [kind, setKind] = useState<TimelineKind>('')
-  const activities = useQuery({
-    queryKey: ['crm', 'leads', 'activities', lead.id, kind, page],
-    queryFn: () => get<MetaList<Activity>>(`inquiries/${lead.id}/activities${params({ type: kind, page, per_page: 20 })}`),
-    placeholderData: previous => previous,
-  })
+  const [search, setSearch] = useSearchParams()
+  const selected = Number(search.get('lead')) === lead.id ? Number(search.get('activity')) : 0
+  const focused = Number.isSafeInteger(selected) && selected > 0 ? selected : undefined
+  const activities = useLeadActivities(lead.id, focused ? 'email' : kind, page, focused)
   const rows = activities.data?.data ?? []
+  const syncedEmail = !focused && (!kind || kind === 'email') && lead.latest_correspondence?.email
 
   return (
-    <Card title={t('crm.leads.timeline', 'Timeline')} description={t('crm.leads.timeline_line', 'Notes, calls, emails and stage changes, newest first.')} icon={History} tone="accent">
+    <section aria-label={t('crm.leads.timeline', 'Timeline')}>
       <div className="space-y-4">
         <Composer key={seed?.n ?? 0} leadId={lead.id} seed={seed} />
         <Touches lead={lead} />
-        <Tabs label={t('crm.leads.timeline_filter', 'Show')} value={kind} onChange={next => { setKind(next); setPage(1) }}
-          items={TIMELINE_KINDS.map(k => ({ key: k, label: timelineKindLabel(t, k) }))} />
+        {focused ? <button className="text-sm font-semibold text-a-accent-text underline" type="button" onClick={() => setSearch(old => { const next = new URLSearchParams(old); next.delete('activity'); return next })}>{t('crm.leads.timeline', 'Timeline')}</button>
+          : <Tabs label={t('crm.leads.timeline_filter', 'Show')} value={kind} onChange={next => { setKind(next); setPage(1) }}
+            items={TIMELINE_KINDS.map(k => ({ key: k, label: timelineKindLabel(t, k) }))} />}
         <QueryState loading={activities.isLoading} error={activities.error} onRetry={() => { void activities.refetch() }} rows={3}>
-          {rows.length === 0 ? (
-            <p className="py-4 text-center text-sm text-a-text-2">{kind ? t('crm.leads.timeline_none_kind', 'Nothing of this kind yet.') : t('crm.leads.timeline_empty', 'Nothing here yet. Notes, calls and stage changes show up as they happen.')}</p>
+          {syncedEmail && <button type="button" onClick={onEmails} className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-xl border border-a-border px-3 py-2 text-left text-sm text-a-accent-text hover:bg-a-surface-2">
+            <Mail size={16} aria-hidden />{t('crm.sales.email.synced_mail')} · {dateTime(syncedEmail.at, lang, boot.venue.timezone)}
+          </button>}
+          {rows.length === 0 && !syncedEmail ? (
+            <p className="py-4 text-center text-sm text-a-text-2">{kind ? t('crm.leads.timeline_none_kind', 'Nothing of this kind yet.') : t('crm.leads.timeline_empty_short', 'Nothing yet.')}</p>
           ) : (
             <ol className="space-y-4 border-l border-a-border pl-5">
               {rows.map(a => {
@@ -80,7 +86,7 @@ export function LeadTimeline({ lead, seed }: { lead: LeadDetail; seed: ComposerS
         </QueryState>
         {activities.data && <Pager page={activities.data.meta.current_page} last={activities.data.meta.last_page} total={activities.data.meta.total} onPage={setPage} />}
       </div>
-    </Card>
+    </section>
   )
 }
 
@@ -118,12 +124,15 @@ function Composer({ leadId, seed }: { leadId: number; seed: ComposerSeed | null 
   return (
     <form className="space-y-2 rounded-xl border border-a-border bg-a-surface-2/50 p-3" onSubmit={e => { e.preventDefault(); submit() }}>
       <div role="group" aria-label={t('crm.leads.timeline_kind', 'What to add')} className="flex flex-wrap gap-1.5">
-        {ACTIVITY_TYPES.map(k => (
-          <button key={k} type="button" aria-pressed={type === k} onClick={() => setType(k)}
-            className={`min-h-9 rounded-full border px-3 text-xs font-medium ${type === k ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
-            {activityTypeLabel(t, k)}
-          </button>
-        ))}
+        {ACTIVITY_TYPES.map(k => {
+          const Icon = ICON[k] ?? StickyNote
+          return (
+            <button key={k} type="button" aria-pressed={type === k} onClick={() => setType(k)}
+              className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium ${type === k ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
+              <Icon size={13} aria-hidden />{activityTypeLabel(t, k)}
+            </button>
+          )
+        })}
       </div>
       {type !== 'note' && (
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -147,7 +156,7 @@ function Composer({ leadId, seed }: { leadId: number; seed: ComposerSeed | null 
       </label>
       {add.isError && <Notice tone="danger">{errorText(t, add.error)}</Notice>}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="mr-auto hidden text-xs text-a-text-2 sm:inline">{mic.state === 'recording' ? t('crm.leads.voice_recording', 'Recording… press stop when you are done.') : mic.state === 'transcribing' ? t('crm.leads.voice_writing', 'Writing it down…') : t('crm.leads.timeline_keys', 'Ctrl or ⌘ + Enter adds it')}</span>
+        {mic.state !== 'idle' && <span className="mr-auto text-xs text-a-text-2" role="status">{mic.state === 'recording' ? t('crm.leads.voice_recording', 'Recording… press stop when you are done.') : t('crm.leads.voice_writing', 'Writing it down…')}</span>}
         {canRecord() && (
           <button type="button" onClick={mic.toggle} disabled={mic.state === 'transcribing'} aria-pressed={mic.state === 'recording'}
             aria-label={mic.state === 'recording' ? t('crm.leads.voice_stop', 'Stop the voice note') : t('crm.leads.voice_start', 'Speak a note')}
@@ -155,11 +164,13 @@ function Composer({ leadId, seed }: { leadId: number; seed: ComposerSeed | null 
             {mic.state === 'transcribing' ? <Loader2 size={15} aria-hidden className="animate-spin" /> : mic.state === 'recording' ? <Square size={14} aria-hidden /> : <Mic size={15} aria-hidden />}
           </button>
         )}
-        <Button type="submit" size="sm" loading={add.isPending} disabled={!payload}>{t('crm.leads.timeline_add', 'Add')}</Button>
+        <Button type="submit" size="sm" loading={add.isPending} disabled={!payload} title={t('crm.leads.timeline_keys', 'Ctrl or ⌘ + Enter adds it')}><Plus size={14} aria-hidden />{t('crm.leads.timeline_add', 'Add')}</Button>
       </div>
     </form>
   )
 }
+
+const CHANNEL_ICON: Record<ContactChannel, typeof Phone> = { call: Phone, email: Mail, whatsapp: MessageCircle, sms: MessageSquare }
 
 /** "Called", "Emailed"…: one press counts a touch and keeps the date of the last one. */
 function Touches({ lead }: { lead: LeadDetail }) {
@@ -178,13 +189,18 @@ function Touches({ lead }: { lead: LeadDetail }) {
         {t('crm.leads.touches', '{{calls}} calls · {{emails}} emails', { calls: lead.phone_calls_made ?? 0, emails: lead.emails_sent ?? 0 })}
         {last ? ` · ${t('crm.leads.last_touch', 'last {{day}}', { day: dayLabel(last, i18n.language) })}` : ''}
       </span>
-      <span className="flex flex-wrap gap-1.5 sm:ml-auto" role="group" aria-label={t('crm.leads.log_touch', 'Log a touch')}>
-        {CONTACT_CHANNELS.map(channel => (
-          <button key={channel} type="button" disabled={log.isPending} onClick={() => log.mutate(channel)}
-            className="min-h-9 rounded-full border border-a-border bg-a-surface px-3 font-medium text-a-text-2 hover:text-a-text disabled:opacity-50">
-            {channelLabel(t, channel)}
-          </button>
-        ))}
+      <span className="ml-auto flex flex-wrap items-center gap-1" role="group" aria-label={t('crm.leads.log_touch', 'Log a touch')}>
+        <span className="mr-1">{t('crm.leads.log_touch', 'Log a touch')}</span>
+        {CONTACT_CHANNELS.map(channel => {
+          const Icon = CHANNEL_ICON[channel]
+          const label = channelLabel(t, channel)
+          return (
+            <button key={channel} type="button" disabled={log.isPending} onClick={() => log.mutate(channel)} aria-label={label} title={label}
+              className="grid h-8 w-8 place-items-center rounded-full border border-a-border bg-a-surface text-a-text-2 hover:text-a-text disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent">
+              <Icon size={14} aria-hidden />
+            </button>
+          )
+        })}
       </span>
     </div>
   )

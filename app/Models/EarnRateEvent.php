@@ -72,6 +72,7 @@ class EarnRateEvent extends Model
 
         $tierIds = $this->tier_ids;
         if (is_array($tierIds) && !empty($tierIds)) {
+            if ($member !== null && !\App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($member)) return false;
             $memberTierId = $member?->tier_id;
             if ($memberTierId === null || !in_array((int) $memberTierId, array_map('intval', $tierIds), true)) {
                 return false;

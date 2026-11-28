@@ -19,6 +19,8 @@ export const HEADLINE_WORDS = {
 
 /** Why a member was not let in (AccessVerdict's reasons), and why a code named nobody. */
 export const REASON_WORDS = {
+  not_started: 'Membership starts on {{date}}.',
+  not_started_plain: 'This membership has not started yet.',
   member_erased: 'This member was deleted.',
   member_off: 'This membership is switched off.',
   expired: 'Membership expired on {{date}}.',

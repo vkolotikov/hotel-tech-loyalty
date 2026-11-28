@@ -9,6 +9,7 @@ import { usePortal } from '../../PortalProvider'
 import { Card } from '../../ui/Card'
 import { EmptyState } from '../../ui/EmptyState'
 import { INPUT_CLASS } from '../../ui/Field'
+import webHelp from '../../i18n/webHelp.en.json'
 import {
   STEPS, narrow, questionWords, questionsFor, showsSteps, stepWords, topicWord, topicsFor,
   type QuestionId, type Say, type StepId, type TopicId,
@@ -32,7 +33,11 @@ export function HelpPage() {
   const [topic, setTopic] = useState<TopicId | 'all'>('all')
   if (!data) return null
 
-  const say: Say = (key, fallback) => t(key, fallback)
+  // Web navigation changed; the native app keeps the shared Help words for its own screens.
+  const say: Say = (key, fallback) => {
+    const id = key.startsWith('portal.help.a.') ? key.slice('portal.help.a.'.length) : ''
+    return id in webHelp ? t(`portal.webHelp.${id}`, webHelp[id as keyof typeof webHelp]) : t(key, fallback)
+  }
   const questions = questionsFor(data)
   const topics = topicsFor(questions)
   const found = narrow(query, topic, questions, say)

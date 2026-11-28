@@ -30,7 +30,10 @@ import { NfcPanel } from './ScanPage'
 import { TodayCounts } from './TodayHere'
 import { useToday } from './useToday'
 import { UsbReader } from './UsbReader'
+import { WindowsReader } from './WindowsReader'
+import { useScanWords } from './design/words'
 import { useWebNfc } from './useWebNfc'
+import { physicalCardAttempt } from './preferredReader'
 import {
   answerVerdict, clearsAfter, failureVerdict, goneContext, isDuplicate, nextSeen, soundOf, takesKeyToField, type Seen, type VerdictFacts,
   type VerdictView,
@@ -213,6 +216,7 @@ interface Shown {
 /** The scanner at the door: one context, every way in, the verdict over everything, then ready again. */
 function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWall: string; onGone: (gone: 'place' | 'event') => void }) {
   const { t, i18n } = useTranslation()
+  const words = useScanWords()
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const client = useQueryClient()
@@ -229,6 +233,7 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
   const [leaving, setLeaving] = useState(false)
   const [code, setCode] = useState('')
   const field = useRef<HTMLInputElement>(null)
+  const lastWindowsPresentation = useRef<string | null>(null)
   const seen = useRef<Seen>({})
   const busy = useRef(false)
   const queued = useRef<Attempt | null>(null)
@@ -293,7 +298,7 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
     if (busy.current) { queued.current = attempt; return }
     scan.mutate(attempt)
   }
-  const nfc = useWebNfc(offer)
+  const nfc = useWebNfc(attempt => offer(physicalCardAttempt(attempt)))
 
   // The verdict clears after 4 seconds; its bar drains meanwhile (started a frame after it is drawn full).
   useEffect(() => {
@@ -366,9 +371,13 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
                   ? t('loyalty.scan.camera_insecure', 'The camera works only over a secure (https) connection.')
                   : t('loyalty.scan.camera_unsupported', 'This browser cannot use a camera here. Type the number, or use a reader.')}</WayTrouble>)}
             {way === 'nfc' && <NfcPanel state={nfcState(env, nfc.listening, nfc.trouble)} onStart={nfc.start} onStop={stopWay} />}
-            {way === 'usb' && (
+            {(way === 'usb' || way === 'windows') && (
               <div className="space-y-3">
-                <UsbReader onUid={(uid) => offer(usbAttempt(uid))} />
+                {way === 'usb' ? <UsbReader onUid={uid => offer(usbAttempt(uid))} />
+                  : <WindowsReader lastPresentation={lastWindowsPresentation} onUid={uid => {
+                    if (leaving) return false
+                    offer(usbAttempt(uid))
+                  }} />}
                 <Button variant="secondary" full className="py-3 text-base" onClick={stopWay}>{t('loyalty.door.other_way', 'Scan another way')}</Button>
               </div>
             )}
@@ -389,8 +398,9 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
           </div>
           {way === null && (
             <div role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')} className="flex flex-wrap justify-center gap-3">
-              <WayButton icon={<Camera size={30} aria-hidden />} title={t('loyalty.door.way_camera', 'Start the camera')} onClick={() => chooseWay('camera')} />
               {env.webNfc && <WayButton icon={<Nfc size={30} aria-hidden />} title={t('loyalty.door.way_nfc', 'Tap NFC cards')} onClick={() => chooseWay('nfc')} />}
+              <WayButton icon={<Camera size={30} aria-hidden />} title={t('loyalty.door.way_camera', 'Start the camera')} onClick={() => chooseWay('camera')} />
+              {modeState('windows', env) === 'ready' && <WayButton icon={<Usb size={30} aria-hidden />} title={words('windows')} onClick={() => chooseWay('windows')} />}
               {env.webHid && <WayButton icon={<Usb size={30} aria-hidden />} title={t('loyalty.door.way_usb', 'USB reader')} onClick={() => chooseWay('usb')} />}
             </div>
           )}

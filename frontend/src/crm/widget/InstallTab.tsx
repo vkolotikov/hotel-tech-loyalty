@@ -8,6 +8,7 @@ import { get, send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { Card } from '../ui/Card'
 import { Confirm } from '../ui/Confirm'
+import { InfoTip } from '../ui/InfoTip'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { Tabs } from '../ui/Tabs'
@@ -83,9 +84,10 @@ export function InstallTab({ active, canManage }: { active: boolean; canManage: 
           )}
           <div className="grid items-start gap-5 lg:grid-cols-5">
             <Card className="lg:col-span-3" title={t('crm.widget.install.code_title', 'Your code')} icon={Code2} tone="accent"
+              description={t('crm.widget.install.code_line', 'Paste this once into your website, just before </body>. The chat then shows on every page.')}
               action={<Button size="sm" onClick={() => copy('script', embed.data.embed_code)}>{copyIcon('script')}{t('crm.widget.install.copy_code', 'Copy the code')}</Button>}>
               <div className="space-y-3">
-                <p className="text-sm text-a-text-2">{t('crm.widget.install.code_line', 'Paste this once into your website, just before </body>. The chat then shows on every page.')}</p>
+                <p className="text-sm text-a-text-2">{t('crm.widget.install.code_short', 'Paste once, just before </body>.')}</p>
                 <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-xl border border-a-border bg-a-surface-2 p-3 font-a-mono text-xs text-a-text">{embed.data.embed_code}</pre>
                 <Disclosure label={t('crm.widget.install.iframe', 'Your site does not allow scripts? Use a frame instead')}>
                   <div className="space-y-2">
@@ -97,7 +99,7 @@ export function InstallTab({ active, canManage }: { active: boolean; canManage: 
             </Card>
 
             <Card className="lg:col-span-2" title={t('crm.widget.install.keys_title', 'Keys')} icon={KeyRound} tone="neutral"
-              description={t('crm.widget.install.keys_line', 'What the code uses to find your chat.')}>
+              description={`${t('crm.widget.install.keys_line', 'What the code uses to find your chat.')} ${t('crm.widget.install.key_line', 'The code contains this key. It stays the same unless you replace it.')}`}>
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-a-text-2">{t('crm.widget.install.widget_key', 'Widget key')}</span>
@@ -105,18 +107,16 @@ export function InstallTab({ active, canManage }: { active: boolean; canManage: 
                   <Button variant="ghost" size="sm" onClick={() => copy('key', embed.data.widget_key)} aria-label={t('crm.widget.install.copy_key', 'Copy the widget key')}>{copyIcon('key')}{t('crm.common.copy', 'Copy')}</Button>
                   <Pill tone={active ? 'success' : 'neutral'}>{active ? t('crm.widget.install.on', 'Chat on') : t('crm.widget.install.is_off', 'Chat off')}</Pill>
                 </div>
-                <p className="text-xs text-a-text-2">{t('crm.widget.install.key_line', 'The code contains this key. It stays the same unless you replace it.')}</p>
                 {canManage && (
                   <>
-                    <div className="space-y-2 rounded-xl border border-a-danger/30 bg-a-danger/5 p-3">
-                      <p className="text-sm font-medium text-a-text">{t('crm.widget.install.rotate_title', 'Key misused on another site?')}</p>
-                      <p className="text-xs text-a-text-2">{t('crm.widget.install.rotate_line', 'Replace it. The code on your website then stops working until you paste the new code.')}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 border-t border-a-border pt-3">
                       <Button variant="secondary" size="sm" onClick={() => setConfirming('widget')}><RefreshCw size={14} aria-hidden />{t('crm.widget.install.rotate', 'Replace the widget key')}</Button>
+                      <InfoTip text={`${t('crm.widget.install.rotate_title', 'Key misused on another site?')} ${t('crm.widget.install.rotate_line', 'Replace it. The code on your website then stops working until you paste the new code.')}`} />
                     </div>
-                    <Disclosure label={t('crm.widget.install.more', 'More options')} line={t('crm.widget.install.more_line', 'The API key for a custom integration.')}>
-                      <div className="space-y-2">
-                        <p className="text-sm text-a-text-2">{t('crm.widget.install.api_line', 'For a custom integration, you can replace the widget\'s API key. Your website code is not affected.')}</p>
+                    <Disclosure label={t('crm.widget.install.more', 'More options')}>
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <Button variant="secondary" size="sm" onClick={() => setConfirming('api')}><RefreshCw size={14} aria-hidden />{t('crm.widget.install.regenerate', 'Make a new API key')}</Button>
+                        <InfoTip text={t('crm.widget.install.api_line', 'For a custom integration, you can replace the widget\'s API key. Your website code is not affected.')} />
                       </div>
                     </Disclosure>
                   </>

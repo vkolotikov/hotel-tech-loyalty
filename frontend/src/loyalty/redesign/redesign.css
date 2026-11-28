@@ -19,8 +19,8 @@
 [data-loyalty][data-redesign] [aria-labelledby="cards-title"] .l-rd-card-heading button svg { display: none; }
 [data-loyalty][data-redesign] [aria-labelledby="cards-title"] > p { margin: 0; font-size: 12px; }
 
-[data-loyalty] .l-rd-page input:not([type="checkbox"]):not([type="color"]), [data-loyalty] .l-rd-page select, [data-loyalty] .l-rd-page textarea,
-[data-loyalty] .l-ov-dialog-form input:not([type="checkbox"]):not([type="color"]), [data-loyalty] .l-ov-dialog-form select, [data-loyalty] .l-ov-dialog-form textarea {
+[data-loyalty] .l-rd-page input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), [data-loyalty] .l-rd-page select, [data-loyalty] .l-rd-page textarea,
+[data-loyalty] .l-ov-dialog-form input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), [data-loyalty] .l-ov-dialog-form select, [data-loyalty] .l-ov-dialog-form textarea {
   background: var(--l-ov-recessed); box-shadow: var(--l-ov-inset); border: 1px solid var(--l-ov-border); border-radius: 10px; color: var(--l-ov-secondary); min-height: 44px; padding: 10px 12px; font: 400 14px/22px var(--a-font-text); max-width: 100%;
 }
 [data-loyalty] .l-rd-page select, [data-loyalty] .l-ov-dialog-form select { padding-right: 26px; }

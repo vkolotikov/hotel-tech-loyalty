@@ -43,6 +43,7 @@ trait SetsUpContentSchema
     protected function setUpContent(bool $withProfile = true): void
     {
         $this->setUpKnowledgeSchema();
+        $this->setUpPropertySchema();
         $this->setUpServiceCatalogSchema();
         $this->setUpAiUsageSchema();
         $columns = [
@@ -144,6 +145,13 @@ trait SetsUpContentSchema
         }
         if (!Schema::hasColumn('content_planner_posts', 'site_page_id')) {
             (require database_path('migrations/2026_10_20_100300_add_site_page_id_to_content_planner_posts.php'))->up();
+        }
+        (require database_path('migrations/2026_11_13_100000_precision_and_publication_for_content_posts.php'))->up();
+        if (!Schema::hasTable('content_media')) {
+            (require database_path('migrations/2026_11_13_120000_create_content_media.php'))->up();
+        }
+        if (!Schema::hasTable('content_notifications')) {
+            (require database_path('migrations/2026_11_13_130000_content_collaboration.php'))->up();
         }
         // The link-in-bio page's default name reads the brand's landing page (spec 2026-10-19 §6.1).
         if (!Schema::hasTable('landing_pages')) {

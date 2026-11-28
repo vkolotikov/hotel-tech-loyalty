@@ -20,6 +20,45 @@ class RewardsTest extends TestCase
         $this->setUpLoyaltyWorkspace();
     }
 
+    public function test_reward_state_is_explicit_and_does_not_overwrite_other_fields(): void
+    {
+        $reward = Reward::create(['name' => 'Keep this name', 'points_cost' => 75, 'stock' => 9]);
+        $url = $this->api("rewards/{$reward->id}/state?brand_id=all");
+        $this->asStaffMember()->putJson($url, ['is_active' => false])->assertForbidden();
+        $this->asManager()->putJson($url, ['is_active' => false])->assertOk()->assertJsonPath('reward.is_active', false);
+        $this->asManager()->putJson($url, ['is_active' => false])->assertOk()->assertJsonPath('reward.is_active', false);
+        $this->assertSame('Keep this name', $reward->fresh()->name);
+        $this->assertSame(9, $reward->fresh()->stock);
+        $this->asManager()->putJson($url, ['is_active' => true])->assertOk()->assertJsonPath('reward.is_active', true);
+    }
+
+    public function test_delete_preserves_every_redemption_status_and_stamp_references(): void
+    {
+        foreach (['pending', 'fulfilled', 'cancelled'] as $i => $status) {
+            $reward = Reward::create(['name' => $status, 'points_cost' => 50]);
+            $redemption = RewardRedemption::create(['member_id' => $this->ada->id, 'reward_id' => $reward->id, 'points_spent' => 50, 'code' => "KEEP-HISTORY-{$i}", 'status' => $status]);
+            $this->asManager()->deleteJson($this->api("rewards/{$reward->id}?brand_id=all"))->assertStatus(422)->assertJsonPath('error', 'reward_in_use');
+            $this->assertNotNull($redemption->fresh());
+            $this->assertNotNull($reward->fresh());
+        }
+        $reward = Reward::create(['name' => 'Stamp gift', 'points_cost' => 20]);
+        \App\Services\Loyalty\Programme\ProgrammeOptions::save($this->org->id, ['stamp_reward_id' => $reward->id], $this->manager);
+        $this->asManager()->deleteJson($this->api("rewards/{$reward->id}?brand_id=all"))->assertStatus(422)->assertJsonPath('error', 'reward_in_use');
+    }
+
+    public function test_delete_unused_reward_requires_permission_and_the_current_organisation(): void
+    {
+        $reward = Reward::create(['name' => 'Unused gift', 'points_cost' => 50]);
+        $this->asStaffMember()->deleteJson($this->api("rewards/{$reward->id}"))->assertForbidden();
+        $other = $this->otherOrganization();
+        $foreign = $this->inOrganization($other['org']->id, fn () => Reward::create(['name' => 'Other gift', 'points_cost' => 10]));
+        $this->asManager()->deleteJson($this->api("rewards/{$foreign->id}?brand_id=all"))->assertNotFound();
+        $this->asManager()->putJson($this->api("rewards/{$foreign->id}/state?brand_id=all"), ['is_active' => false])->assertNotFound();
+        $this->asManager()->deleteJson($this->api("rewards/{$reward->id}?brand_id=all"))->assertOk();
+        $this->assertNull($reward->fresh());
+        $this->assertNotNull($foreign->fresh());
+    }
+
     public function test_it_lists_the_catalogue_with_its_counts_and_the_options(): void
     {
         $other = $this->otherOrganization();

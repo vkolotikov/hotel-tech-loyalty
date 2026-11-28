@@ -17,6 +17,22 @@ export interface EnrolBody {
   email: string
   phone: string | null
   send_welcome: boolean
+  physical_card_id?: number
+  physical_card_uid?: string
+  physical_card_expected_uid?: string | null
+  membership_mode?: 'assigned' | 'earned'
+  tier_id?: number
+  valid_from?: string | null
+  valid_until?: string | null
+}
+
+export interface AssignmentBody {
+  membership_mode: 'assigned' | 'earned'
+  tier_id?: number
+  valid_from?: string | null
+  valid_until?: string | null
+  confirm_replace: boolean
+  idempotency_key: string
 }
 
 export interface EnrolAnswer extends MemberAnswer {
@@ -29,8 +45,9 @@ export interface EnrolAnswer extends MemberAnswer {
  * was a retry of an earlier press (`replayed`: the first answer, nothing written).
  */
 export interface ValidityAnswer extends MemberAnswer {
+  valid_from?: string | null
   valid_until: string | null
-  state: 'active' | 'expiring' | 'expired' | 'off'
+  state: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled'
   changed: boolean
   replayed: boolean
 }

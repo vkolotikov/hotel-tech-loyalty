@@ -297,6 +297,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // Throttle is generous on read (the iframe page hits config) but
     // strict on submit to keep spam in check. embed_key is the only
     // gate — admins regenerate it from the editor when leaked.
+    Route::match(['get', 'post'], 'public/lead-form-mail/unsubscribe/{token}', \App\Http\Controllers\LeadFormUnsubscribeController::class)
+        ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:60,1');
+
     Route::prefix('public/lead-forms')->middleware('throttle:200,1')->group(function () {
         Route::get('{embedKey}',         [LeadFormPublicController::class, 'show']);
         Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1,leadform-submit');
@@ -434,7 +437,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         // member.only refuses staff tokens at the door (several member routes
         // answer 500 to them) and honours the venue's portal_enabled switch.
         Route::prefix('member/portal')->middleware('member.only')->group(function () {
+            Route::get('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'member'])->whereNumber('id');
             Route::get('/', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'index']);
+            Route::get('programme', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'programme']);
             Route::get('bookings', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'index']);
             Route::get('bookings/{kind}/{id}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'show'])
                 ->whereIn('kind', ['service', 'stay'])
@@ -578,6 +583,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('dashboard/pending-submissions',     [DashboardController::class, 'pendingBookingSubmissions']);
             Route::get('dashboard/live-ops',                [DashboardController::class, 'liveOps']);
             Route::get('dashboard/recent-chats',            [DashboardController::class, 'recentChatActivity']);
+            // The venue's clock, place and weather for the dashboards (2026-11-09, VenuePulse); each workspace has its own `pulse`.
+            Route::get('dashboard/pulse',                   [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
+            // Day-by-day figures for every dashboard tile and chart, one request (2026-11-09, DashboardTrends).
+            Route::get('dashboard/trends',                  [DashboardController::class, 'trends']);
 
             Route::post('scan/qr',                [ScanController::class, 'scanQr']);
             Route::post('scan/nfc',               [ScanController::class, 'scanNfc']);
@@ -741,6 +750,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Properties & outlets
             Route::get('properties',                           [PropertyAdminController::class, 'index']);
             Route::post('properties',                          [PropertyAdminController::class, 'store']);
+            // The Locations form's city search (2026-11-09, VenuePulse::places): before properties/{id}, which it would match.
+            Route::get('properties/places',                    [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'places']);
             Route::get('properties/{id}',                      [PropertyAdminController::class, 'show']);
             Route::put('properties/{id}',                      [PropertyAdminController::class, 'update']);
             Route::delete('properties/{id}',                   [PropertyAdminController::class, 'destroy']);
@@ -1015,6 +1026,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Blast-radius preview for the confirm-delete modal. Declared
             // BEFORE the {guest} show binding so the static segment wins
             // the route-matcher race against numeric ids.
+            Route::get('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:60,1,crm-mail-read');
+            Route::post('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:10,1,crm-mail-refresh');
+            Route::get('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:60,1,crm-mail-read');
+            Route::post('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:10,1,crm-mail-refresh');
+            Route::get('guests/{guest}/whatsapp-history', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'guest'])->whereNumber('guest')->middleware('throttle:60,1,crm-whatsapp');
+            Route::get('inquiries/{inquiry}/whatsapp-history', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:60,1,crm-whatsapp');
+            Route::match(['get', 'put', 'post'], 'guests/{guest}/business-profile', [\App\Http\Controllers\Api\V1\Admin\BusinessProfileController::class, 'guest'])->whereNumber('guest')->middleware('throttle:30,1,crm-business-profile');
+            Route::match(['get', 'put', 'post'], 'inquiries/{inquiry}/business-profile', [\App\Http\Controllers\Api\V1\Admin\BusinessProfileController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:30,1,crm-business-profile');
             Route::get('guests/{id}/delete-impact',       [GuestController::class, 'deleteImpact']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update'])
@@ -1121,16 +1140,21 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('loyalty-presets/skip',         [LoyaltyPresetController::class, 'skip']);
 
             // ─── Team / staff management ─────────────────────────────────
-            Route::get('team',                            [TeamController::class, 'index']);
-            Route::post('team/invite',                    [TeamController::class, 'invite']);
-            Route::put('team/{id}',                       [TeamController::class, 'update']);
-            Route::patch('team/{id}/deactivate',          [TeamController::class, 'deactivate']);
-            Route::patch('team/{id}/reactivate',          [TeamController::class, 'reactivate']);
-            Route::post('team/{id}/resend',               [TeamController::class, 'resend']);
+            // Account recovery remains available after expiry; staff rights and seat quotas still apply.
+            Route::withoutMiddleware('check.subscription')->group(function () {
+                Route::get('team',                            [TeamController::class, 'index']);
+                Route::post('team/invite',                    [TeamController::class, 'invite']);
+                Route::put('team/{id}',                       [TeamController::class, 'update']);
+                Route::patch('team/{id}/deactivate',          [TeamController::class, 'deactivate']);
+                Route::patch('team/{id}/reactivate',          [TeamController::class, 'reactivate']);
+                Route::post('team/{id}/resend',               [TeamController::class, 'resend']);
+            });
 
             // ─── CRM Phase 10: Embeddable lead-capture forms ─────────────
             Route::get('lead-forms',                            [LeadFormController::class, 'index']);
             Route::post('lead-forms',                           [LeadFormController::class, 'store']);
+            Route::get('lead-forms/{leadForm}/auto-reply',      [LeadFormController::class, 'autoReply']);
+            Route::put('lead-forms/{leadForm}/auto-reply',      [LeadFormController::class, 'autoReply']);
             Route::get('lead-forms/{leadForm}',                 [LeadFormController::class, 'show']);
             Route::put('lead-forms/{leadForm}',                 [LeadFormController::class, 'update']);
             Route::delete('lead-forms/{leadForm}',              [LeadFormController::class, 'destroy']);
@@ -1246,6 +1270,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('booking-rooms/{id}/remove-gallery', [BookingRoomController::class, 'removeGallery']);
             Route::apiResource('booking-rooms',           BookingRoomController::class);
             Route::apiResource('booking-extras',          BookingExtraController::class);
+            Route::get('booking-promotions', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'index']);
+            Route::put('booking-promotions/settings', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'settings']);
+            Route::post('booking-promotions', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'store']);
+            Route::put('booking-promotions/{id}', [\App\Http\Controllers\Api\V1\Admin\BookingPromotionController::class, 'update'])->whereNumber('id');
 
             // ─── Services Reservation (Admin) ───────────────────────────────
             Route::post('service-categories/reorder',     [ServiceCategoryController::class, 'reorder']);
@@ -1281,6 +1309,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // <id> --off`); `workspace:appointments` then answers 403.
             Route::prefix('appointments')->middleware('workspace:appointments')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('calendar',  [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'calendar']);
                 Route::get('slots',     [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'slots']);
                 Route::get('clients',      [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'index']);
@@ -1319,7 +1348,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // `workspace:content` then answers 403, and `content.brand` pins
             // every call to exactly one brand.
             Route::prefix('content')->middleware(['workspace:content', 'content.brand'])->group(function () {
+                Route::get('media', [\App\Http\Controllers\Api\V1\Admin\Content\MediaController::class, 'index']);
+                Route::post('media', [\App\Http\Controllers\Api\V1\Admin\Content\MediaController::class, 'store']);
+                Route::put('media/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\MediaController::class, 'update'])->whereNumber('id');
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Content\BootstrapController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\Content\PulseController::class, 'show']);
+                Route::get('settings', [\App\Http\Controllers\Api\V1\Admin\Content\SettingsController::class, 'show']);
+                Route::put('settings', [\App\Http\Controllers\Api\V1\Admin\Content\SettingsController::class, 'update']);
+                Route::get('locations', [\App\Http\Controllers\Api\V1\Admin\Content\LocationsController::class, 'index']);
+                Route::post('locations', [\App\Http\Controllers\Api\V1\Admin\Content\LocationsController::class, 'store']);
+                Route::put('locations/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\LocationsController::class, 'update'])->whereNumber('id');
                 Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
                 Route::get('goals', [\App\Http\Controllers\Api\V1\Admin\Content\GoalsController::class, 'show']);
                 Route::get('ideas', [\App\Http\Controllers\Api\V1\Admin\Content\IdeasController::class, 'show']);
@@ -1328,6 +1366,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('inbox/seen', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'seen']);
                 Route::get('team', [\App\Http\Controllers\Api\V1\Admin\Content\TeamController::class, 'index']);
                 Route::put('me/morning-email', [\App\Http\Controllers\Api\V1\Admin\Content\MorningEmailController::class, 'update']);
+                Route::put('me/collaboration-email', [\App\Http\Controllers\Api\V1\Admin\Content\CollaborationEmailController::class, 'update']);
                 Route::get('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'show']);
                 Route::put('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'update']);
                 // Release 6 (spec 2026-10-20 §6.2): the brand's website, its scan and its pages.
@@ -1369,9 +1408,18 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('posts/{id}/visual-brief', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'visualBrief'])->whereNumber('id');
                 Route::post('posts/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'image'])->whereNumber('id');
                 Route::post('slots/fill', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'fill']);
+                Route::post('work', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'store']);
+                Route::get('work', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'index']);
+                Route::get('work/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'show'])->whereNumber('id');
+                Route::delete('work/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\WorkController::class, 'destroy'])->whereNumber('id');
                 Route::post('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'generate']);
                 // How the brand's Generate run stands (it runs on the queue worker): what the panel polls.
                 Route::get('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'status']);
+                Route::delete('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'cancel']);
+                Route::get('campaigns', [\App\Http\Controllers\Api\V1\Admin\Content\CampaignController::class, 'index']);
+                Route::post('campaigns', [\App\Http\Controllers\Api\V1\Admin\Content\CampaignController::class, 'store']);
+                Route::put('campaigns/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\CampaignController::class, 'update'])->whereNumber('id');
+                Route::get('exports/{format}', [\App\Http\Controllers\Api\V1\Admin\Content\ExportController::class, 'download'])->whereIn('format', ['csv', 'ics']);
                 Route::get('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'index']);
                 Route::post('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'store']);
                 Route::get('strategies/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'show'])->whereNumber('id');
@@ -1408,6 +1456,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::prefix('loyalty')->middleware('workspace:loyalty')->group(function () {
                 Route::get('overview/{module}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OverviewController::class, 'show']);
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Loyalty\BootstrapController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'find']);
                 Route::get('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'index']);
                 Route::get('members/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'show'])->whereNumber('id');
@@ -1425,10 +1474,27 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::put('devices', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DeviceController::class, 'save']);
                 Route::delete('devices', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DeviceController::class, 'remove']);
                 Route::post('scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ScanController::class, 'scan']);
+                Route::get('partner/context', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerScanController::class, 'context']);
+                Route::post('partner/scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerScanController::class, 'scan']);
+                Route::get('partners', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'index']);
+                Route::post('partners/invite', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'invite']);
+                Route::put('partners/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'update'])->whereNumber('id');
+                Route::put('partners/{id}/state', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'state'])->whereNumber('id');
+                Route::post('partners/{id}/resend', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'resend'])->whereNumber('id');
+                Route::get('card-batches', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardBatchesController::class, 'index']);
+                Route::post('card-batches', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardBatchesController::class, 'store']);
+                Route::get('card-batches/{id}/qr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardBatchesController::class, 'qr'])->whereNumber('id');
+                Route::get('physical-cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'index']);
+                Route::post('physical-cards/tag-lookup', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'tagLookup']);
+                Route::get('physical-cards/{id}/qr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'qr'])->whereNumber('id');
+                Route::put('physical-cards/{id}/nfc', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'pair'])->whereNumber('id');
+                Route::delete('physical-cards/{id}/nfc', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'releaseTag'])->whereNumber('id');
+                Route::put('physical-cards/{id}/assignment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PhysicalCardsController::class, 'assign'])->whereNumber('id');
                 // Release 5 (spec 2026-10-23 §3): a member's NFC cards — the list, link, switch off
                 Route::get('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'index'])->whereNumber('id');
                 Route::post('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'store'])->whereNumber('id');
                 Route::post('members/{id}/cards/{card}/off', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'off'])->whereNumber(['id', 'card']);
+                Route::get('members/{id}/cards/{card}/qr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'qr'])->whereNumber(['id', 'card']);
                 Route::get('program', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'show']);
                 Route::post('program/tiers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeTier']);
                 Route::put('program/tiers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateTier'])->whereNumber('id');
@@ -1449,12 +1515,19 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'index']);
                 Route::post('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'store']);
                 Route::put('rewards/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'update'])->whereNumber('id');
+                Route::put('rewards/{id}/state', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'state'])->whereNumber('id');
+                Route::delete('rewards/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'destroy'])->whereNumber('id');
                 Route::get('redemptions', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'index']);
                 Route::post('redemptions/{id}/fulfil', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'fulfil'])->whereNumber('id');
                 Route::post('redemptions/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'cancel'])->whereNumber('id');
                 Route::get('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'index']);
                 Route::post('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'store']);
                 Route::put('offers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'update'])->whereNumber('id');
+                Route::get('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'show'])->whereNumber('id');
+                Route::post('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'store'])->whereNumber('id');
+                Route::delete('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'destroy'])->whereNumber('id');
+                Route::post('offers/{id}/send-preview', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferSendController::class, 'preview'])->whereNumber('id');
+                Route::post('offers/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferSendController::class, 'store'])->whereNumber('id');
                 Route::get('referrals', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ReferralController::class, 'index']);
 
                 // ── Release 7 (spec 2026-10-25): ways to earn and reward
@@ -1480,6 +1553,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('places/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'destroy'])->whereNumber('id');
                 Route::get('places/{id}/entries', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'entries'])->whereNumber('id');
                 Route::put('members/{id}/validity', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ValidityController::class, 'update'])->whereNumber('id');
+                Route::put('members/{id}/membership', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipAssignmentController::class, 'update'])->whereNumber('id');
                 Route::get('events', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'index']);
                 Route::post('events', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'store']);
                 Route::get('events/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'show'])->whereNumber('id');
@@ -1600,12 +1674,46 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // has it unless an operator switched it off
             // (`php artisan workspace:crm <organisation id> --off`).
             Route::prefix('crm')->middleware('workspace:crm')->group(function () {
+                Route::get('whatsapp-status', [\App\Http\Controllers\Api\V1\Admin\CrmWhatsAppController::class, 'status']);
+                Route::match(['get', 'put'], 'sales-profile', \App\Http\Controllers\Api\V1\Admin\Crm\SalesProfileController::class);
+                Route::get('sales-profile/capture', [\App\Http\Controllers\Api\V1\Admin\Crm\SalesProfileController::class, 'capture']);
+                Route::post('sales-profile/capture', [\App\Http\Controllers\Api\V1\Admin\Crm\SalesProfileController::class, 'capture'])
+                    ->middleware('throttle:8,15,crm-sales-capture');
+                Route::match(['get', 'put'], 'leads/{inquiry}/assistant', \App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class)
+                    ->whereNumber('inquiry');
+                Route::post('leads/{inquiry}/assistant', \App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class)
+                    ->whereNumber('inquiry')->middleware('throttle:12,1,crm-lead-assistant');
+                Route::put('leads/{inquiry}/assistant/quote', [\App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class, 'quote'])->whereNumber('inquiry');
+                Route::put('leads/{inquiry}/assistant/review', [\App\Http\Controllers\Api\V1\Admin\Crm\LeadAssistantController::class, 'review'])->whereNumber('inquiry');
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'bootstrap']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);
+                Route::get('team-day-plan', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'teamDayPlan']);
+                Route::get('team-dashboard', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'teamDashboard']);
+                Route::get('team-customers', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'teamCustomers']);
                 Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'start']);
                 Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
                 Route::post('conversations/{id}/draft', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'draft'])
                     ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1,crm-draft']);
+                // CRM round 5 (Today and Insights, 2026-11-12): the team's activity (CrmActivityFeed) and the full
+                // admin's sales reports answered by the same code (SalesReports), under the Reports page's AccessMap rule.
+                Route::get('activity', [\App\Http\Controllers\Api\V1\Admin\Crm\ActivityController::class, 'index']);
+                Route::prefix('reports')->group(function () {
+                    Route::get('funnel', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'funnel']);
+                    Route::get('forecast', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'forecast']);
+                    Route::get('lost-reasons', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'lostReasons']);
+                    Route::get('sources', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'sources']);
+                    Route::get('owners', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'owners']);
+                    Route::get('companies', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'companies']);
+                });
+                // CRM round 5 (Integrations, 2026-11-12): lead-intake API tokens (IntakeTokens: they reach only
+                // POST integrations/leads), the emails' sender name and reply-to (SenderSettings), the month's AI spend.
+                Route::get('intake-tokens', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'tokens']);
+                Route::post('intake-tokens', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'createToken'])->middleware('throttle:10,1,crm-intake-tokens');
+                Route::delete('intake-tokens/{id}', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'revokeToken'])->whereNumber('id');
+                Route::get('mail-settings', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'mailSettings']);
+                Route::put('mail-settings', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'updateMailSettings']);
+                Route::get('ai-usage', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'aiUsage']);
             });
 
             // ─── HexaTech Time Planner workspace ────────────────────────────
@@ -1618,6 +1726,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::prefix('time')->middleware('workspace:time')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'bootstrap']);
                 Route::middleware('feature:time_management')->group(function () {
+                    // The venue's clock and weather for My day's card (2026-11-09, VenuePulse), behind the plan like My day.
+                    Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                     Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'today']);
                     Route::get('day', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'day']);
                     Route::get('week', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'week']);

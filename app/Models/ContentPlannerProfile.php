@@ -77,6 +77,7 @@ class ContentPlannerProfile extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<ContentPlannerAudience, $this> */
     public function audiences(): HasMany
     {
         return $this->hasMany(ContentPlannerAudience::class, 'planner_profile_id');
@@ -87,6 +88,7 @@ class ContentPlannerProfile extends Model
         return $this->hasMany(ContentPlannerChannel::class, 'planner_profile_id');
     }
 
+    /** @return HasMany<ContentPlannerSnippet, $this> */
     public function snippets(): HasMany
     {
         return $this->hasMany(ContentPlannerSnippet::class, 'planner_profile_id');
@@ -102,6 +104,7 @@ class ContentPlannerProfile extends Model
         return $this->hasMany(ContentPlannerTemplate::class, 'planner_profile_id');
     }
 
+    /** @return HasMany<ContentPlannerBrandVoice, $this> */
     public function brandVoices(): HasMany
     {
         return $this->hasMany(ContentPlannerBrandVoice::class, 'planner_profile_id');

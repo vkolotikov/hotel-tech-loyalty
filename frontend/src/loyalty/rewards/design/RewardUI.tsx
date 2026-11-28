@@ -7,9 +7,11 @@ import { useRedesignWords } from '../../redesign/words'
 import type { EarnGuard } from '../../earn/useLeaveGuard'
 import { useRewardWords } from './words'
 import { RewardIcon, RewardStatus, type RewardIconKind } from './presentation'
+import { ManagementHeading, ManagementRow } from '../../management/ManagementUI'
+import type { AdminAsset } from '../../management/assets'
 
 export function RewardHeading({ title, line, children }: { title: string; line: string; children?: ReactNode }) {
-  return <header className="l-rb-heading"><div><h1>{title}</h1><p>{line}</p></div><div className="l-rd-actions">{children}</div></header>
+  return <ManagementHeading title={title} line={line}>{children}</ManagementHeading>
 }
 export function RewardHero({ title, line, count }: { title: string; line: string; count: string }) {
   return <section className="l-rb-hero"><div><h2>{title}</h2><p>{line}</p></div><small>{count}</small></section>
@@ -17,9 +19,9 @@ export function RewardHero({ title, line, count }: { title: string; line: string
 export function RewardEyebrow({ children, icon = 'gift' }: { children: ReactNode; icon?: RewardIconKind }) {
   return <div className="l-rb-eyebrow"><RewardIcon kind={icon} />{children}</div>
 }
-export function RewardRow({ name, caption, value, status, tone, selected, onSelect, id, image, icon = 'gift' }: { name: string; caption: string; value: string; status: string; tone?: string; selected: boolean; onSelect: () => void; id: string; image?: ReactNode; icon?: RewardIconKind }) {
-  const say = useRewardWords()
-  return <li className={`l-rb-row ${selected ? 'l-rb-selected' : ''}`} data-record={id}>{image ?? <RewardIcon kind={icon} />}<button type="button" className="l-rb-row-content" aria-pressed={selected} onClick={onSelect}><span><strong>{name}</strong><small>{caption}</small></span><span className="l-rb-value">{value}</span><RewardStatus tone={tone}>{status}</RewardStatus></button><OverviewButton type="button" className="l-rb-arrow" aria-label={say('select', { name })} onClick={onSelect}>→</OverviewButton></li>
+export function RewardRow({ name, caption, value, status, tone, selected, onSelect, id, icon = 'gift' }: { name: string; caption: string; value: string; status: string; tone?: string; selected: boolean; onSelect: () => void; id: string; image?: ReactNode; icon?: RewardIconKind }) {
+  const icons: Record<RewardIconKind, AdminAsset> = { gift: 'perkSpark', members: 'perkPeople', claim: 'rewardTicket', points: 'redeemCoin', settings: 'pen', calendar: 'offerCalendar', discount: 'perkTag', ended: 'rewardClock', amberGift: 'offerGift', typeSettings: 'rewardFile', calendarNeutral: 'perkCalendar' }
+  return <ManagementRow record={id} icon={icons[icon]} tone={['discount', 'amberGift'].includes(icon) ? 'gold' : 'cyan'} title={name} caption={caption} value={value} status={<RewardStatus tone={tone}>{status}</RewardStatus>} selected={selected} onSelect={onSelect} />
 }
 export function RewardColumns({ first, value }: { first: string; value: string }) {
   const say = useRewardWords()
@@ -38,5 +40,5 @@ export function RewardLeaveDialog({ guard }: { guard: EarnGuard }) {
 }
 export function RewardActivityLinks() {
   const { t } = useTranslation()
-  return <footer className="l-rb-activity"><Link className="l-ov-link" to="/loyalty/rewards?tab=redemptions">{t('loyalty.rewards.tab.redemptions', 'Redemptions')} →</Link><Link className="l-ov-link" to="/loyalty/rewards?tab=referrals">{t('loyalty.rewards.tab.referrals', 'Referrals')} →</Link></footer>
+  return <footer className="l-rb-activity"><Link className="l-ov-link" to="/loyalty/rewards?tab=redemptions">{t('loyalty.rewards.tab.redemptions', 'Redemptions')} →</Link></footer>
 }

@@ -49,7 +49,7 @@ final class ContentPromotionPosts
             ], $slots, $hooks, $row->instructions);
         } catch (\Throwable $e) {
             report($e);
-            self::end($row, 'failed', 0, 'ai_failed');
+            self::end($row, 'failed', 0, $e instanceof ContentRefused && in_array($e->errorCode, ['ai_budget_used_up', 'ai_model_unpriced'], true) ? $e->errorCode : 'ai_failed');
 
             return;
         }
@@ -120,6 +120,9 @@ final class ContentPromotionPosts
     private function post(ContentPromotion $row, ContentPlannerProfile $profile, ContentSitePage $page, array $slot, array $answer, ?string $picture, ?int $strategyId): void
     {
         DB::transaction(function () use ($row, $profile, $page, $slot, $answer, $picture, $strategyId) {
+            ContentExecution::check(true);
+            $current = ContentPromotion::whereKey($row->id)->lockForUpdate()->first();
+            if (!$current || $current->status !== 'writing') throw new ContentRefused('cancelled', 'This promotion has stopped.', 409);
             $post = ContentPlannerPost::create([
                 'organization_id'    => $profile->organization_id,
                 'brand_id'           => $profile->brand_id,

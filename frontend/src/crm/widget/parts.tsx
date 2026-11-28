@@ -10,7 +10,7 @@ export function ReadOnlyNote() {
   const { t } = useTranslation()
   return (
     <Notice>
-      <span className="flex items-center gap-2"><Lock size={14} aria-hidden className="shrink-0" />{t('crm.widget.read_only', 'Only an owner or a manager can change the chat widget. You can read everything here.')}</span>
+      <span className="flex items-center gap-2"><Lock size={14} aria-hidden className="shrink-0" />{t('crm.widget.read_only_short', 'Read only: a manager makes changes here.')}</span>
     </Notice>
   )
 }
@@ -54,8 +54,10 @@ export function Choice<T extends string>({ label, options, value, onChange, disa
  * A colour of the widget: a picker and its hex code. Empty means the widget's own default (`fallback`, shown in the
  * picker). The swatch is the visitor's colour, so it is drawn inline.
  */
-export function ColourField({ label, value, fallback, onChange, disabled = false, problem }: {
+export function ColourField({ label, value, fallback, onChange, disabled = false, problem, hideLabel = false }: {
   label: string
+  /** The label is read out only (a row of swatches above already names the colour). */
+  hideLabel?: boolean
   value: string
   fallback: string
   onChange: (next: string) => void
@@ -65,7 +67,7 @@ export function ColourField({ label, value, fallback, onChange, disabled = false
   const shown = /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
   return (
     <div>
-      <span className="mb-1 block text-xs font-medium text-a-text-2">{label}</span>
+      {!hideLabel && <span className="mb-1 block text-xs font-medium text-a-text-2">{label}</span>}
       <div className="flex items-center gap-2">
         <label className="shrink-0">
           <span className="sr-only">{label}</span>
